@@ -32,6 +32,8 @@ void main() {
       tester,
       overrides: _overrides('ship-9'),
       child: StopDetailScreen(stop: stop),
+      // El ListView es perezoso: en 800x600 las acciones del pie no se construyen.
+      tall: true,
     );
 
     expect(find.text('Parada 2'), findsOneWidget); // appbar

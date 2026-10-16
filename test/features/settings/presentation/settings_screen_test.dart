@@ -85,6 +85,10 @@ void main() {
   });
 
   testWidgets('muestra las secciones y accesos de ajustes', (tester) async {
+    // El ListView es perezoso: en 800x600 las secciones del pie no se construyen.
+    tester.view.physicalSize = const Size(1200, 3600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await _pump(tester);
 
     expect(find.text('Ajustes'), findsOneWidget); // título del AppBar

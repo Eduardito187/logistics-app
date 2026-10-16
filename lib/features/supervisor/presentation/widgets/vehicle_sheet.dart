@@ -28,7 +28,9 @@ class VehicleSheet extends ConsumerWidget {
     final summary = ref.watch(vehicleSummaryProvider(vehicle.vehicleId));
     final speed = vehicle.speedKph;
 
-    return Padding(
+    // Scroll: la hoja modal se limita a ~9/16 de la pantalla; con el estado de
+    // error o letra grande el contenido no entra y se desbordaba.
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

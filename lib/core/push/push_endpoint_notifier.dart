@@ -17,28 +17,34 @@ class PushEndpointNotifier extends Notifier<String?> {
 
   FlutterSecureStorage get _storage => ref.read(secureStorageProvider);
 
+  /// Hubo un save/clear: la carga diferida ya no debe pisar ese estado.
+  bool _touched = false;
+
   @override
   String? build() {
     // Carga diferida: el estado nace en null y se completa al leer el storage.
+    _touched = false;
     unawaited(_load());
     return null;
   }
 
   Future<void> _load() async {
     final String? saved = await _storage.read(key: _endpointKey);
-    if (saved != null && saved.isNotEmpty) {
+    if (!_touched && saved != null && saved.isNotEmpty) {
       state = saved;
     }
   }
 
   /// Guarda el endpoint recibido del distribuidor (persistente + en memoria).
   Future<void> save(String endpoint) async {
+    _touched = true;
     state = endpoint;
     await _storage.write(key: _endpointKey, value: endpoint);
   }
 
   /// Borra el endpoint (baja del distribuidor).
   Future<void> clear() async {
+    _touched = true;
     state = null;
     await _storage.delete(key: _endpointKey);
   }

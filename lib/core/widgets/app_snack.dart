@@ -20,10 +20,14 @@ void showSuccessSnack(BuildContext context, String message) {
 }
 
 /// SnackBar rojo de error a partir de una excepción. Si es [ApiException] usa su
-/// `.message` (mensaje corto en español ya listo para UI); si no, un texto
-/// genérico.
+/// `.message` (mensaje corto en español ya listo para UI); si es un [String]
+/// (validaciones locales) lo muestra tal cual; si no, un texto genérico.
 void showErrorSnack(BuildContext context, Object error) {
-  final message = error is ApiException ? error.message : 'Ocurrió un error.';
+  final message = switch (error) {
+    ApiException(:final message) => message,
+    final String message => message,
+    _ => 'Ocurrió un error.',
+  };
   _showSnack(context, message, AppColors.danger);
 }
 

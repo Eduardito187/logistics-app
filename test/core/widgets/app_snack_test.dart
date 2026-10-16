@@ -65,11 +65,21 @@ void main() {
   testWidgets('showErrorSnack con un error cualquiera cae a genérico', (
     tester,
   ) async {
-    await _pumpButton(tester, (ctx) => showErrorSnack(ctx, 'boom'));
+    await _pumpButton(tester, (ctx) => showErrorSnack(ctx, Exception('boom')));
     await tester.tap(find.text('go'));
     await tester.pump();
 
     expect(find.widgetWithText(SnackBar, 'Ocurrió un error.'), findsOneWidget);
+  });
+
+  testWidgets('showErrorSnack con un String muestra ese mensaje', (
+    tester,
+  ) async {
+    await _pumpButton(tester, (ctx) => showErrorSnack(ctx, 'Falta el dato.'));
+    await tester.tap(find.text('go'));
+    await tester.pump();
+
+    expect(find.widgetWithText(SnackBar, 'Falta el dato.'), findsOneWidget);
   });
 
   testWidgets('un nuevo snack reemplaza al anterior (clearSnackBars)', (

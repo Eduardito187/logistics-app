@@ -91,6 +91,10 @@ void main() {
   testWidgets('con etiquetas muestra progreso y una fila por unidad', (
     tester,
   ) async {
+    // El ListView es perezoso: en 800x600 la segunda fila no se construye.
+    tester.view.physicalSize = const Size(1200, 3600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await _pump(
       tester,
       repo: FakePickingRepository(

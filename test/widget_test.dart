@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/app.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 
 void main() {
+  // Secure storage en memoria: sin mock, el canal de plataforma responde fuera
+  // del reloj falso del test y `signOut` (que espera clearToken) queda en vuelo,
+  // así que el siguiente "Cerrar sesión" se ignoraba por el guard `_closing`.
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+
   testWidgets('sin sesión muestra el login', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
     await tester.pumpAndSettle();
