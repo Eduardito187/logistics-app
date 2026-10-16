@@ -3,18 +3,11 @@ import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 
 import 'signed_label.dart';
+import 'verification_result.dart';
 
-enum VerificationResult {
-  valid,
-
-  /// La firma no corresponde al contenido: etiqueta editada o fabricada.
-  invalidSignature,
-
-  /// El id de clave ("k") no está entre las claves públicas que trae la app.
-  unknownKey;
-
-  bool get isValid => this == valid;
-}
+// Se reexporta [VerificationResult] (movido a su propio archivo por SRP) para no
+// romper a quienes importan `labels/label_verifier.dart`.
+export 'verification_result.dart';
 
 /// Verifica la firma Ed25519 de una etiqueta SIN internet.
 ///
@@ -36,7 +29,12 @@ class LabelVerifier {
   }
 
   /// Construye el verificador desde "id:base64,id:base64" (mismo formato que el backend).
-  factory LabelVerifier.fromConfig(String raw) {
+  factory LabelVerifier.fromConfig(String raw) =>
+      LabelVerifier(parseConfig(raw));
+
+  /// Parsea "id:base64,id:base64" (mismo formato que el backend) a bytes por id.
+  /// Lo comparte la fuente combinada de claves (config + caché + backend).
+  static Map<int, List<int>> parseConfig(String raw) {
     final keys = <int, List<int>>{};
     for (final entry
         in raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty)) {
@@ -49,7 +47,7 @@ class LabelVerifier {
       }
       keys[id] = base64.decode(entry.substring(separator + 1));
     }
-    return LabelVerifier(keys);
+    return keys;
   }
 
   final Map<int, SimplePublicKey> _publicKeys;

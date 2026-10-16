@@ -1,0 +1,5 @@
+{
+  "ENV": "staging",
+  "API_BASE_URL": "https://logistics-staging.dismac.com.bo/api/v1",
+  "LABEL_PUBLIC_KEYS": ""
+}

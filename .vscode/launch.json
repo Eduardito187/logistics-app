@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "logistics-app · USB (dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "deviceId": "android",
+      "preLaunchTask": "adb: iniciar servidor de Windows (USB)",
+      "toolArgs": ["--dart-define-from-file=config/dev.json"]
+    },
+    {
+      "name": "logistics-app · dev",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--dart-define-from-file=config/dev.json"]
+    },
+    {
+      "name": "logistics-app · staging",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "profile",
+      "toolArgs": ["--dart-define-from-file=config/staging.json"]
+    },
+    {
+      "name": "logistics-app · production",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "toolArgs": ["--dart-define-from-file=config/production.json"]
+    }
+  ]
+}
