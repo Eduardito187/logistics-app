@@ -53,24 +53,19 @@ class DiscoveredPrinters extends ConsumerWidget {
                 child: Text(emptyMessage),
               );
             }
-            return RadioGroup<String>(
-              groupValue: selectedAddress,
-              onChanged: (value) {
-                if (value == null) return;
-                final device = found.firstWhere((d) => d.address == value);
-                onSelect(device.toConfig());
-              },
-              child: Column(
-                children: [
-                  for (final device in found)
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      value: device.address,
-                      title: Text(device.name),
-                      subtitle: Text(device.address),
-                    ),
-                ],
-              ),
+            // Flutter 3.32: sin RadioGroup, cada tile lleva groupValue/onChanged.
+            return Column(
+              children: [
+                for (final device in found)
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    value: device.address,
+                    groupValue: selectedAddress,
+                    onChanged: (_) => onSelect(device.toConfig()),
+                    title: Text(device.name),
+                    subtitle: Text(device.address),
+                  ),
+              ],
             );
           },
         ),

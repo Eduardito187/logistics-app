@@ -18,6 +18,9 @@ class _FakeOfflineQueue implements OfflineQueue {
   Future<void> drain() async {}
 
   @override
+  Future<int> pendingCount() async => 0;
+
+  @override
   Future<SubmitOutcome> submit({
     required String kind,
     required Map<String, Object?> payload,

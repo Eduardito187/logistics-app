@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/navigation/feature_tasks.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/widgets/sync_badge.dart';
+import '../../../core/navigation/role_task.dart';
+import '../../../core/widgets/notifications_button.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/task_card.dart';
 
+/// Ancho máximo del contenido del inicio en tablets grandes: la grilla de 3
+/// columnas no se estira de borde a borde y el perfil queda alineado con ella.
+const double _homeMaxWidth = 1080;
+
+/// Separación entre tarjetas (filas y columnas).
+const double _gap = 12;
+
 /// Inicio según el rol de la sesión. Muestra el perfil del usuario y las
-/// tarjetas de acción que cada feature aporta para ese rol.
+/// tarjetas de acción que cada feature aporta para ese rol: una columna en
+/// teléfono y grilla de 2–3 columnas en tablet.
 class RoleHomeScreen extends ConsumerWidget {
   const RoleHomeScreen({super.key});
 
@@ -38,6 +46,13 @@ class RoleHomeScreen extends ConsumerWidget {
       return session.can(required);
     }).toList();
 
+    // Margen lateral que centra el contenido en tablets anchas (0 en teléfono
+    // salvo el padding normal). `sizeOf` solo reconstruye si cambia el tamaño.
+    final width = MediaQuery.sizeOf(context).width;
+    final sidePadding = width > _homeMaxWidth + 32
+        ? (width - _homeMaxWidth) / 2
+        : 16.0;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -45,25 +60,22 @@ class RoleHomeScreen extends ConsumerWidget {
             pinned: true,
             expandedHeight: 150,
             actions: [
-              const SyncBadge(),
-              IconButton(
-                tooltip: 'Sincronización',
-                icon: const Icon(Icons.sync_alt),
-                onPressed: () => context.push(AppRoutes.sync),
-              ),
+              // Único acceso a las notificaciones (todos los roles).
+              const NotificationsButton(),
               IconButton(
                 tooltip: 'Cerrar sesión',
                 icon: const Icon(Icons.logout),
                 onPressed: () => ref.read(sessionProvider.notifier).signOut(),
               ),
             ],
+            // Sin título: el rol ya se ve en el ProfileHeader y el título del
+            // FlexibleSpaceBar se agrandaba al expandir (se veía tosco).
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
-              title: Text(role.label),
               background: ProfileHeader(
                 name: session.userName,
                 role: role.label,
                 icon: role.icon,
+                horizontalPadding: sidePadding,
               ),
             ),
           ),
@@ -82,14 +94,48 @@ class RoleHomeScreen extends ConsumerWidget {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList.separated(
-                itemCount: tasks.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => TaskCard(task: tasks[i]),
+              padding: EdgeInsets.fromLTRB(sidePadding, 16, sidePadding, 24),
+              sliver: _TaskSliver(
+                tasks: tasks,
+                columns: AppBreakpoints.columnsFor(width),
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tarjetas del inicio: lista en teléfono (alto natural) y grilla con alto fijo
+/// de tarjeta en tablet. Ambas perezosas (solo construyen lo visible).
+class _TaskSliver extends StatelessWidget {
+  const _TaskSliver({required this.tasks, required this.columns});
+
+  final List<RoleTask> tasks;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (columns <= 1) {
+      return SliverList.separated(
+        itemCount: tasks.length,
+        separatorBuilder: (_, _) => const SizedBox(height: _gap),
+        itemBuilder: (context, i) => TaskCard(task: tasks[i]),
+      );
+    }
+    // Mismo alto para todas las tarjetas: título y subtítulo de hasta 2 líneas
+    // cada uno (con elipsis), según el tema y la letra del sistema.
+    final extent = TaskCard.gridExtent(context);
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: _gap,
+        crossAxisSpacing: _gap,
+        mainAxisExtent: extent,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, i) => TaskCard(task: tasks[i], maxLines: TaskCard.gridLines),
+        childCount: tasks.length,
       ),
     );
   }

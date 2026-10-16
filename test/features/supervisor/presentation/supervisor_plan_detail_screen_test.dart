@@ -7,6 +7,7 @@ import 'package:logistics_app/features/supervisor/presentation/supervisor_plan_d
 
 import '../support/fake_supervisor_repository.dart';
 import '../support/supervisor_fixtures.dart';
+import '../../../support/button_finders.dart';
 
 // SupervisorPlanDetailScreen: detalle SOLO lectura de un plan. Cabecera, métricas
 // (paradas + ETA final), sección de ETA por parada y secuencia de paradas. No
@@ -106,7 +107,7 @@ void main() {
         );
       }
       // No hay botones de acción primaria (FilledButton) en el detalle.
-      expect(find.byType(FilledButton), findsNothing);
+      expect(findButton<FilledButton>(), findsNothing);
     },
   );
 

@@ -5,9 +5,9 @@ import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 
-/// Única clase del feature que toca `api.execution`. Cada método espeja un
-/// endpoint, devuelve el modelo del contrato desde `.data` y normaliza el error
-/// de Dio a [ApiException].
+/// Única clase del feature que toca `api.execution` (y el detalle del envío en
+/// `api.shipments`). Cada método espeja un endpoint, devuelve el modelo del
+/// contrato desde `.data` y normaliza el error de Dio a [ApiException].
 class DriverRouteDataSource {
   const DriverRouteDataSource(this._ref);
 
@@ -23,6 +23,17 @@ class DriverRouteDataSource {
         vehicleId: vehicleId,
         date: date,
       );
+      return response.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Detalle del envío: cliente, teléfono, dirección y productos (líneas).
+  Future<Shipment> getShipment({required String shipmentId}) async {
+    final api = _ref.read(logisticsApiProvider);
+    try {
+      final response = await api.shipments.getShipment(shipment: shipmentId);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

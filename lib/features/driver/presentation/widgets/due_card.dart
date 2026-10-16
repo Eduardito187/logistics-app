@@ -6,6 +6,11 @@ import '../../domain/entities/due_maintenance_item.dart';
 import '../fleet_ops_common.dart';
 import 'urgency_pill.dart';
 
+// Formateadores compartidos: se crean una sola vez (perezosos) y no en cada
+// build de cada tarjeta.
+final NumberFormat _numberFormat = NumberFormat.decimalPattern('es');
+final DateFormat _dateFormat = DateFormat('d MMM y', 'es');
+
 /// Tarjeta de un mantenimiento por vencer: servicio, vehículo, vencimiento y
 /// urgencia.
 class DueCard extends StatelessWidget {
@@ -16,8 +21,8 @@ class DueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final numberFormat = NumberFormat.decimalPattern('es');
-    final dateFormat = DateFormat('d MMM y', 'es');
+    final numberFormat = _numberFormat;
+    final dateFormat = _dateFormat;
 
     final details = <String>[];
     if (item.nextDueAt != null) {

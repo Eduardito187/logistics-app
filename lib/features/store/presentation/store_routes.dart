@@ -22,8 +22,8 @@ const List<RoleTask> storeTasks = [
   ),
   RoleTask(
     id: 'store-pickup',
-    label: 'Entrega en mostrador',
-    subtitle: 'Recojo en tienda',
+    label: 'Recojo en tienda',
+    subtitle: 'Entrega en mostrador',
     icon: Icons.storefront,
     route: '/store/pickup',
     roles: {UserRole.store},

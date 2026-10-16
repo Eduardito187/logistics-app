@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/photo_upload_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
@@ -34,35 +37,34 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
     final ready = _unitId != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Entrega fallida')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: '1. Bulto',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(_unitId == null ? 'Escanea el bulto.' : 'Bulto: $_unitId'),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _scanUnit,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: Text(
-                    _unitId == null ? 'Escanear bulto' : 'Reescanear',
+      body: ResponsiveBody(
+        maxWidth: AppBreakpoints.maxFormWidth,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SectionCard(
+              title: '1. Bulto',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _unitId == null ? 'Escanea el bulto.' : 'Bulto: $_unitId',
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _scanUnit,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: Text(
+                      _unitId == null ? 'Escanear bulto' : 'Reescanear',
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '2. Motivo',
-            child: RadioGroup<FailureReason>(
-              groupValue: _reason,
-              onChanged: (value) {
-                if (_busy || value == null) return;
-                setState(() => _reason = value);
-              },
+            const SizedBox(height: 16),
+            SectionCard(
+              title: '2. Motivo',
+              // Flutter 3.32: sin RadioGroup, cada tile lleva groupValue/onChanged.
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -71,43 +73,55 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(_reasonLabel(reason)),
                       value: reason,
+                      groupValue: _reason,
+                      onChanged: (value) {
+                        if (_busy || value == null) return;
+                        setState(() => _reason = value);
+                      },
                     ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '3. Foto (opcional)',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_photo != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(_photo!.path),
-                      height: 180,
-                      fit: BoxFit.cover,
+            const SizedBox(height: 16),
+            SectionCard(
+              title: '3. Foto (opcional)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_photo != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      // cacheWidth: se decodifica a lo que se muestra, no a la
+                      // resolución de la cámara (ahorra memoria).
+                      child: Image.file(
+                        File(_photo!.path),
+                        height: 180,
+                        fit: BoxFit.cover,
+                        cacheWidth: _previewCacheWidth,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _takePhoto,
+                    icon: const Icon(Icons.camera_alt),
+                    label: Text(
+                      _photo == null ? 'Tomar foto' : 'Volver a tomar',
                     ),
                   ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _takePhoto,
-                  icon: const Icon(Icons.camera_alt),
-                  label: Text(_photo == null ? 'Tomar foto' : 'Volver a tomar'),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            onPressed: ready && !_busy ? _register : null,
-            icon: const Icon(Icons.cancel),
-            label: const Text('Registrar entrega fallida'),
-          ),
-        ],
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+              ),
+              onPressed: ready && !_busy ? _register : null,
+              icon: const Icon(Icons.cancel),
+              label: const Text('Registrar entrega fallida'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -118,7 +132,12 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
   }
 
   Future<void> _takePhoto() async {
-    final photo = await ImagePicker().pickImage(source: ImageSource.camera);
+    // Foto reducida (ancho y calidad acotados): en teléfonos de 1 GB una foto
+    // de 12 MP a resolución completa ocupa ~48 MB al decodificarse.
+    final photo = await ref.read(photoPickerProvider)(
+      maxWidth: kEvidencePhotoMaxWidth,
+      imageQuality: kEvidencePhotoQuality,
+    );
     if (photo != null && mounted) setState(() => _photo = photo);
   }
 
@@ -172,3 +191,7 @@ String _reasonLabel(FailureReason reason) => switch (reason) {
   FailureReason.other => 'Otro motivo',
   _ => 'Motivo',
 };
+
+/// Ancho de decodificación de la vista previa de la foto (px). La vista previa
+/// mide 180 dp de alto; 800 px alcanza con nitidez sin cargar la foto entera.
+const int _previewCacheWidth = 800;

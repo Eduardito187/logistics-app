@@ -4,6 +4,7 @@ import 'package:logistics_app/core/api/models/emit_label_line.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_result.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/line_editor.dart';
+import '../../../../support/button_finders.dart';
 
 // Formulario (bottom sheet) de emisión/reimpresión de etiquetas. Valida origen,
 // destino, motivo (si se exige) y las líneas; devuelve un LabelBatchResult.
@@ -18,7 +19,7 @@ Finder _sheetFields() => find.descendant(
 Future<void> _tapSubmit(WidgetTester tester) async {
   final submit = find.descendant(
     of: find.byType(LabelBatchSheet),
-    matching: find.widgetWithText(FilledButton, 'Emitir'),
+    matching: findButtonWithText<FilledButton>('Emitir'),
   );
   await tester.ensureVisible(submit);
   await tester.tap(submit);

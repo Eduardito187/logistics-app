@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/features/driver/presentation/incident_screen.dart';
 
 import '../support/driver_test_support.dart';
+import '../../../support/button_finders.dart';
 
 // Reporte de incidente del vehículo. No requiere escaneo; sí GPS (opcional) y la
 // cola offline. MINOR retrasa ETAs; MAJOR saca de servicio.
@@ -43,12 +44,12 @@ void main() {
   ) async {
     final queue = await _pumpIncident(tester, SubmitOutcome.sent);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Reportar incidente'));
+    await tester.tap(findButtonWithText<FilledButton>('Reportar incidente'));
     await tester.pump();
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Registrado y enviado.'), findsOneWidget);
+    expect(find.text('Registrado.'), findsOneWidget);
     expect(queue.lastKind, 'reportVehicleIncident');
     // Payload incluye el id del vehículo asignado.
     expect(queue.submissions.single['@vehicleId'], 'v1');
@@ -57,27 +58,24 @@ void main() {
   testWidgets('sin red queda en cola', (tester) async {
     await _pumpIncident(tester, SubmitOutcome.queued);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Reportar incidente'));
+    await tester.tap(findButtonWithText<FilledButton>('Reportar incidente'));
     await tester.pump();
     await tester.pump();
     await tester.pump();
 
-    expect(
-      find.text('Guardado sin conexión. Se enviará al recuperar señal.'),
-      findsOneWidget,
-    );
+    expect(find.text('Registrado.'), findsOneWidget);
   });
 
   testWidgets('error de datos no cierra la pantalla', (tester) async {
     await _pumpIncident(tester, SubmitOutcome.failed);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Reportar incidente'));
+    await tester.tap(findButtonWithText<FilledButton>('Reportar incidente'));
     await tester.pump();
     await tester.pump();
     await tester.pump();
 
     expect(
-      find.text('No se pudo registrar. Revísalo en Sincronización.'),
+      find.text('No se pudo registrar. Intentá de nuevo.'),
       findsOneWidget,
     );
     // No hace pop: el formulario sigue en pantalla.

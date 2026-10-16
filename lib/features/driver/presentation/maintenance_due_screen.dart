@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../domain/entities/due_maintenance_item.dart';
@@ -35,10 +36,9 @@ class MaintenanceDueScreen extends ConsumerWidget {
                 ],
               );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
+            return AdaptiveCardRows(
+              physics: const AlwaysScrollableScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) => DueCard(item: items[index]),
             );
           },

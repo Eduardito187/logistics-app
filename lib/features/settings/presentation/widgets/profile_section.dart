@@ -44,8 +44,13 @@ class ProfileSection extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    // scaleDown: un rol largo se achica en vez de desbordar
+                    // (`StatusPill` no parte su texto).
                     for (final role in me.user.roles)
-                      StatusPill(role, tone: PillTone.info),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: StatusPill(role, tone: PillTone.info),
+                      ),
                   ],
                 ),
               ],

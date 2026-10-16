@@ -13,7 +13,7 @@ abstract interface class FleetRepository {
 
   /// Registra el checklist pre-salida del camión. Devuelve el detalle del
   /// registro (incluido su `status`), o `null` si el backend no lo devuelve.
-  Future<Data4?> conductPreTripChecklist(
+  Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   );
 }

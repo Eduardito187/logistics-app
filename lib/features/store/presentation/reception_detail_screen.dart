@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/node.dart';
@@ -12,17 +11,14 @@ import '../../../core/api/models/open_node_reception_request_destination_node_ki
 import '../../../core/api/models/open_node_reception_request_origin_node_kind.dart';
 import '../../../core/api/models/reconcile_node_reception_request.dart';
 import '../../../core/api/models/shipment.dart';
+import '../../../core/layout/responsive_body.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
-import '../../../core/widgets/section_card.dart';
-import '../../../core/widgets/stat_tile.dart';
 import '../../../core/widgets/status_pill.dart';
-import '../../../core/widgets/sync_badge.dart';
 import '../domain/usecases/open_node_reception.dart';
 import '../domain/usecases/receive_unit_at_node.dart';
 import '../domain/usecases/reconcile_node_reception.dart';
@@ -30,8 +26,13 @@ import 'controllers/locally_received_notifier.dart';
 import 'controllers/shelf_locations_notifier.dart';
 import 'controllers/store_controllers.dart';
 import 'unit_scan.dart';
+import 'widgets/bottom_action_bar.dart';
 import 'widgets/open_reception_panel.dart';
+import 'widgets/reception_header.dart';
+import 'widgets/reception_stats.dart';
 import 'widgets/reception_units_card.dart';
+import 'widgets/reconcile_confirm_dialog.dart';
+import 'widgets/shelf_location_dialog.dart';
 
 /// Argumentos de navegación a la recepción de un envío en un nodo.
 typedef ReceptionArgs = ({Shipment shipment, Node node});
@@ -60,122 +61,85 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   Widget build(BuildContext context) {
     final receptionAsync = ref.watch(nodeReceptionProvider(_key));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recepción'),
-        actions: [
-          SyncBadge(onTap: () => context.push('/sync')),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: AsyncValueView<NodeReceptionView?>(
-        value: receptionAsync,
-        onRetry: () => ref.invalidate(nodeReceptionProvider(_key)),
-        data: (view) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _header(context),
-            const SizedBox(height: 16),
-            if (view == null)
-              OpenReceptionPanel(
-                shipment: _shipment,
-                node: _node,
-                busy: _busy,
-                onOpen: _openReception,
-              )
-            else
-              ..._receptionBody(context, view),
-          ],
+      appBar: AppBar(title: const Text('Recepción')),
+      body: ResponsiveBody(
+        child: AsyncValueView<NodeReceptionView?>(
+          value: receptionAsync,
+          onRetry: () => ref.invalidate(nodeReceptionProvider(_key)),
+          data: (view) {
+            final isOpen = view?.status == NodeReceptionViewStatus.open;
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      ReceptionHeader(shipment: _shipment, node: _node),
+                      const SizedBox(height: 16),
+                      if (view == null)
+                        OpenReceptionPanel(
+                          shipment: _shipment,
+                          node: _node,
+                          busy: _busy,
+                          onOpen: _openReception,
+                        )
+                      else
+                        ..._receptionBody(context, view),
+                    ],
+                  ),
+                ),
+                // Escaneo seguido: el botón queda fijo al pie, a mano del
+                // pulgar, y los avisos flotan encima (kBottomActionClearance).
+                if (isOpen)
+                  BottomActionBar(
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : _scanAndReceive,
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: const Text('Escanear bulto'),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    final theme = Theme.of(context);
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _shipment.customerName,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Pedido ${_shipment.externalId}',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Nodo: ${_node.name} · ${_node.code}',
-            style: theme.textTheme.bodySmall,
-          ),
-        ],
       ),
     );
   }
 
   List<Widget> _receptionBody(BuildContext context, NodeReceptionView view) {
-    final localMap = ref.watch(locallyReceivedProvider);
-    final local = localMap[_shipment.id] ?? const <String>{};
+    // Solo este envío: escaneos de otros envíos no reconstruyen la pantalla.
+    final local =
+        ref.watch(locallyReceivedProvider.select((m) => m[_shipment.id])) ??
+        const <String>{};
     final received = {...view.receivedUnitIds, ...local};
     final expected = view.expectedUnitIds;
+    final expectedSet = expected.toSet();
     final pending = expected.where((id) => !received.contains(id)).length;
     final surplus = {
       ...view.surplusUnitIds,
-      ...received.where((id) => !expected.contains(id)),
+      ...received.where((id) => !expectedSet.contains(id)),
     };
     final isOpen = view.status == NodeReceptionViewStatus.open;
 
     return [
-      Row(
-        children: [
-          Expanded(
-            child: StatTile(
-              value: '${received.length}/${view.expectedCount}',
-              label: 'Recibidos',
-              icon: Icons.inventory_2,
-              color: AppColors.brand,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: StatTile(
-              value: '$pending',
-              label: 'Faltan',
-              icon: Icons.hourglass_bottom,
-              color: pending == 0 ? AppColors.success : AppColors.warning,
-            ),
-          ),
-        ],
+      ReceptionStats(
+        receivedExpected: received.where(expectedSet.contains).length,
+        expectedCount: view.expectedCount,
+        pending: pending,
+        surplusCount: surplus.length,
       ),
-      if (surplus.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        StatTile(
-          value: '${surplus.length}',
-          label: 'Sobrantes (no esperados)',
-          icon: Icons.report_gmailerrorred,
-          color: AppColors.danger,
+      // Abierta: "Escanear bulto" va fijo al pie (ver build).
+      if (!isOpen) ...[
+        const SizedBox(height: 16),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: StatusPill(
+            'Recepción conciliada',
+            tone: PillTone.success,
+            icon: Icons.verified,
+          ),
         ),
       ],
-      const SizedBox(height: 16),
-      if (isOpen)
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: _busy ? null : _scanAndReceive,
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Escanear bulto'),
-          ),
-        )
-      else
-        const StatusPill(
-          'Recepción conciliada',
-          tone: PillTone.success,
-          icon: Icons.verified,
-        ),
       const SizedBox(height: 16),
       ReceptionUnitsCard(
         expected: expected,
@@ -216,7 +180,11 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
           );
       ref.invalidate(nodeReceptionProvider(_key));
       if (!mounted) return;
-      showSuccessSnack(context, 'Recepción abierta.');
+      showSuccessSnack(
+        context,
+        'Recepción abierta.',
+        bottomClearance: kBottomActionClearance,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       showErrorSnack(context, e);
@@ -247,6 +215,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
           title: 'Etiqueta inválida',
           detail: unitScanErrorMessage(scan),
         ),
+        bottomClearance: kBottomActionClearance,
       );
       return;
     }
@@ -268,7 +237,11 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
         ref.invalidate(nodeReceptionProvider(_key));
       }
       if (!mounted) return;
-      showSubmitOutcome(context, outcome);
+      showSubmitOutcome(
+        context,
+        outcome,
+        bottomClearance: kBottomActionClearance,
+      );
       await _askShelfLocation(scan.unitId);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -276,33 +249,11 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   }
 
   Future<void> _askShelfLocation(String unitId) async {
-    final controller = TextEditingController();
     final location = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ubicación en estante'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(
-            labelText: 'Dónde se guardó',
-            hintText: 'Ej. Pasillo 3 · Estante B2',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Omitir'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+      builder: (_) => const ShelfLocationDialog(),
     );
-    controller.dispose();
+    if (!mounted) return;
     if (location != null && location.isNotEmpty) {
       ref.read(shelfLocationsProvider.notifier).setLocation(unitId, location);
     }
@@ -311,25 +262,8 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   Future<void> _confirmReconcile(int pending, int surplus) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Conciliar recepción'),
-        content: Text(
-          pending == 0 && surplus == 0
-              ? 'Todo coincide con el manifiesto. Se cerrará la recepción.'
-              : 'Se cerrará la recepción con $pending faltante(s) y '
-                    '$surplus sobrante(s). Esta acción queda registrada.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Conciliar'),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          ReconcileConfirmDialog(pending: pending, surplus: surplus),
     );
     if (confirmed != true) return;
     await _reconcile();
@@ -352,7 +286,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
       showSuccessSnack(context, 'Recepción conciliada y cerrada.');
     } on ApiException catch (e) {
       if (!mounted) return;
-      showErrorSnack(context, e);
+      showErrorSnack(context, e, bottomClearance: kBottomActionClearance);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

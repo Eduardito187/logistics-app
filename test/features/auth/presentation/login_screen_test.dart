@@ -8,6 +8,7 @@ import 'package:logistics_app/features/auth/domain/repositories/auth_repository.
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
 import 'package:logistics_app/features/auth/presentation/login_screen.dart';
 import 'package:logistics_app/features/auth/presentation/widgets/auth_header.dart';
+import '../../../support/button_finders.dart';
 
 // Pantalla de login: encabezado de marca, dos campos y un único botón
 // "Ingresar". No tiene selección de rol ni botones de dev (el rol lo da el
@@ -54,7 +55,7 @@ void main() {
     expect(find.text('Ingresá a tu cuenta'), findsOneWidget);
     expect(find.text('Usuario o correo'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Ingresar'), findsOneWidget);
+    expect(findButtonWithText<FilledButton>('Ingresar'), findsOneWidget);
     // Dos campos: usuario y contraseña.
     expect(find.byType(TextField), findsNWidgets(2));
   });
@@ -75,7 +76,7 @@ void main() {
     expect(find.byType(DropdownButton<Object?>), findsNothing);
     expect(find.byType(SegmentedButton<Object?>), findsNothing);
     // Un solo botón de acción.
-    expect(find.byType(FilledButton), findsOneWidget);
+    expect(findButton<FilledButton>(), findsOneWidget);
   });
 
   testWidgets('campos vacíos: muestra aviso y NO intenta ingresar', (
@@ -147,17 +148,75 @@ void main() {
     // El botón muestra el spinner y queda deshabilitado.
     expect(
       find.descendant(
-        of: find.byType(FilledButton),
+        of: findButton<FilledButton>(),
         matching: find.byType(CircularProgressIndicator),
       ),
       findsOneWidget,
     );
-    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    final button = tester.widget<FilledButton>(findButton<FilledButton>());
     expect(button.onPressed, isNull);
 
     gate.complete();
     await tester.pumpAndSettle();
     // Terminó la carga: vuelve el texto "Ingresar".
     expect(find.text('Ingresar'), findsOneWidget);
+  });
+
+  testWidgets('el ojo alterna la contraseña entre puntos y texto', (
+    tester,
+  ) async {
+    await _pump(tester, _FakeAuthRepository());
+
+    TextField passwordField() =>
+        tester.widget<TextField>(find.byType(TextField).last);
+
+    expect(passwordField().obscureText, isTrue);
+    expect(find.byTooltip('Mostrar contraseña'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Mostrar contraseña'));
+    await tester.pump();
+    expect(passwordField().obscureText, isFalse);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Ocultar contraseña'));
+    await tester.pump();
+    expect(passwordField().obscureText, isTrue);
+    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+  });
+
+  testWidgets('sin conexión: no promete reintento automático y ofrece '
+      '"Reintentar"', (tester) async {
+    final repo = _FakeAuthRepository(
+      error: const ApiException(
+        status: 0,
+        title: 'Sin conexión',
+        isConnectionError: true,
+      ),
+    );
+    await _pump(tester, repo);
+    await tester.enterText(find.byType(TextField).first, 'chofer@dismac.bo');
+    await tester.enterText(find.byType(TextField).last, 'secreta');
+
+    await tester.tap(findButtonWithText<FilledButton>('Ingresar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.text(
+        'No se pudo conectar con el servidor. Revisá tu señal e intentá de '
+        'nuevo.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('se reintentará'), findsNothing);
+
+    // "Reintentar" vuelve a enviar el login con los mismos datos.
+    repo.loginCalled = false;
+    // Espera a que el aviso termine de entrar (si no, el toque cae debajo).
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Reintentar'));
+    await tester.pump();
+    expect(repo.loginCalled, isTrue);
+    expect(repo.lastEmail, 'chofer@dismac.bo');
   });
 }

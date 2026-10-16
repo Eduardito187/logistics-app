@@ -27,12 +27,11 @@ Future<ProviderContainer> _pump(
       ...syncBadgeOverrides(),
       storeNodesProvider.overrideWith((ref) async => nodes),
       storeShipmentsProvider.overrideWith((ref) async => shipments),
+      // La tienda es la del usuario (sesión); acá se inyecta directo.
+      selectedStoreNodeProvider.overrideWithValue(selected),
     ],
   );
   addTearDown(container.dispose);
-  if (selected != null) {
-    container.read(selectedStoreNodeProvider.notifier).select(selected);
-  }
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -44,11 +43,13 @@ Future<ProviderContainer> _pump(
 }
 
 void main() {
-  testWidgets('sin tienda elegida pide seleccionar el nodo', (tester) async {
+  testWidgets('sin tienda asignada avisa y no lista envíos', (tester) async {
     await _pump(tester, nodes: [storeNode()], shipments: [shipment()]);
 
     expect(find.byType(StoreSelector), findsOneWidget);
-    expect(find.text('Elige tu tienda'), findsOneWidget);
+    expect(find.text('Sin tienda asignada'), findsWidgets);
+    // No hay forma de elegir otra tienda.
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.byType(ShipmentsSection), findsNothing);
   });
 

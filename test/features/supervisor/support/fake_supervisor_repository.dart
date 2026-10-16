@@ -1,6 +1,6 @@
 import 'package:logistics_app/core/api/models/alert.dart';
 import 'package:logistics_app/core/api/models/auto_plan_run.dart';
-import 'package:logistics_app/core/api/models/data6.dart';
+import 'package:logistics_app/core/api/models/data7.dart';
 import 'package:logistics_app/core/api/models/generate_daily_plan_request_strategy.dart';
 import 'package:logistics_app/core/api/models/plan.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
@@ -46,7 +46,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   // Detalle de plan y ETA.
   Plan? planValue;
   Object? planError;
-  Data6? planEtaValue;
+  Data7? planEtaValue;
   Object? planEtaError;
 
   @override
@@ -97,7 +97,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   }
 
   @override
-  Future<Data6> getPlanEta(String planId) async {
+  Future<Data7> getPlanEta(String planId) async {
     if (planEtaError != null) throw planEtaError!;
     return planEtaValue!;
   }

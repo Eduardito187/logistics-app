@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/alert.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/supervisor_controllers.dart';
@@ -22,7 +23,11 @@ class SupervisorAlertsScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
+            // Wrap: con letra grande en un teléfono chico los dos filtros no
+            // entran en una fila y bajan a la siguiente en vez de desbordar.
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 ChoiceChip(
                   label: const Text('Sin reconocer'),
@@ -31,7 +36,6 @@ class SupervisorAlertsScreen extends ConsumerWidget {
                       .read(alertsFilterProvider.notifier)
                       .setUnacknowledgedOnly(value: true),
                 ),
-                const SizedBox(width: 8),
                 ChoiceChip(
                   label: const Text('Todas'),
                   selected: !unacknowledgedOnly,
@@ -51,6 +55,7 @@ class SupervisorAlertsScreen extends ConsumerWidget {
                 data: (data) {
                   if (data.isEmpty) {
                     return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: const [
                         SizedBox(height: 80),
                         EmptyState(
@@ -61,12 +66,23 @@ class SupervisorAlertsScreen extends ConsumerWidget {
                       ],
                     );
                   }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: data.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) =>
-                        AlertCard(alert: data[index]),
+                  // Perezosa y en columnas (1 en teléfono, 2–3 en tablet). La
+                  // key por id conserva el estado "reconociendo…" de cada
+                  // tarjeta aunque la lista cambie al refrescar.
+                  return CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverAdaptiveCardRows(
+                          itemCount: data.length,
+                          itemBuilder: (context, index) => AlertCard(
+                            key: ValueKey(data[index].id),
+                            alert: data[index],
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),

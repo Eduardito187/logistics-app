@@ -58,8 +58,9 @@ void main() {
     await pumpScoped(
       tester,
       overrides: [
-        deliveryStateProvider('ship-1')
-            .overrideWith((ref) async => buildDelivery()),
+        deliveryStateProvider(
+          'ship-1',
+        ).overrideWith((ref) async => buildDelivery()),
       ],
       child: Scaffold(
         body: StopCard(stop: buildStop(sequence: 1, shipmentId: 'ship-1')),

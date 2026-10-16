@@ -25,9 +25,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> login({required String email, required String password}) async {
     final deviceId = await _ref.read(tokenStoreProvider).deviceId();
-    // Endpoint de push (UnifiedPush/ntfy) si ya se registró; viaja como
-    // device.push_token para que el backend sepa a dónde notificar.
-    final pushToken = _ref.read(pushEndpointProvider);
+    // Token FCM si ya se registró; viaja como device.push_token para que el
+    // backend sepa a dónde notificar.
+    final pushToken = _ref.read(pushTokenProvider);
 
     final AppLoginResponse response;
     try {
@@ -58,11 +58,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final role = UserRole.firstOperational(response.user.roles);
     if (role == null) {
       // El usuario existe pero no tiene un rol operativo de terreno.
-      throw const ApiException(
-        status: 403,
-        title: 'Sin rol operativo',
-        detail: 'Tu usuario no tiene un rol de terreno asignado. Contactá al supervisor.',
-      );
+      throw const NoFieldRoleException();
     }
 
     final session = _ref.read(sessionProvider.notifier);
@@ -70,6 +66,7 @@ class AuthRepositoryImpl implements AuthRepository {
       token: response.token,
       userName: response.user.name,
       role: role,
+      storeNode: response.user.node,
     );
 
     // Con el Bearer ya puesto, pedimos las abilities del token (`/app/auth/me`)
@@ -78,7 +75,7 @@ class AuthRepositoryImpl implements AuthRepository {
     // queda con abilities vacías y la UI cae a filtro solo-rol.
     try {
       final me = await _remote.me();
-      session.setAbilities(me.abilities);
+      session.applyProfile(abilities: me.abilities, storeNode: me.user.node);
     } on ApiException {
       // Sesión sin abilities: la home no oculta nada por permiso (ver regla).
     }
@@ -91,3 +88,20 @@ class AuthRepositoryImpl implements AuthRepository {
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepositoryImpl(ref, ref.watch(authRemoteDataSourceProvider)),
 );
+
+/// 403 propio de la app: el usuario existe pero no tiene un rol de terreno.
+/// A diferencia de un 403 del backend (texto genérico "sin permiso"), acá el
+/// motivo es claro y está en español, así que se muestra tal cual.
+class NoFieldRoleException extends ApiException {
+  const NoFieldRoleException()
+    : super(
+        status: 403,
+        title: 'Sin rol operativo',
+        detail:
+            'Tu usuario no tiene un rol de terreno asignado. Contactá al '
+            'supervisor.',
+      );
+
+  @override
+  String get message => detail!;
+}

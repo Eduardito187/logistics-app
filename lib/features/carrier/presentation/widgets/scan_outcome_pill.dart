@@ -13,7 +13,8 @@ class ScanOutcomePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, tone, icon) = switch (outcome) {
       SubmitOutcome.sent => ('Enviado', PillTone.success, Icons.cloud_done),
-      SubmitOutcome.queued => ('Pendiente', PillTone.info, Icons.sync),
+      // Offline invisible: lo encolado se ve como enviado.
+      SubmitOutcome.queued => ('Enviado', PillTone.success, Icons.cloud_done),
       SubmitOutcome.failed => ('Error', PillTone.danger, Icons.error_outline),
     };
     return StatusPill(label, tone: tone, icon: icon);

@@ -7,7 +7,7 @@ import 'package:logistics_app/core/api/models/tariff.dart';
 import 'package:logistics_app/core/api/models/vehicle_class.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/connectivity_notifier.dart';
-import 'package:logistics_app/core/widgets/sync_badge.dart';
+import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/carrier/domain/repositories/carrier_repository.dart';
 
 /// Conectividad fija (siempre en línea) sin tocar el plugin connectivity_plus.

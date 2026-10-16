@@ -7,6 +7,7 @@ import 'package:logistics_app/features/driver/presentation/checklist_screen.dart
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 
 import '../support/driver_test_support.dart';
+import '../../../support/button_finders.dart';
 
 // Checklist pre-salida: snackbar "apto" cuando pasa todo, "con observaciones"
 // cuando falta algún ítem, y error de API.
@@ -14,7 +15,7 @@ import '../support/driver_test_support.dart';
 Future<void> _pumpChecklist(
   WidgetTester tester, {
   List<Driver> drivers = const [],
-  Data4? result,
+  Data5? result,
   Object? error,
 }) async {
   await pumpScoped(
@@ -52,7 +53,7 @@ void main() {
     await _pumpChecklist(
       tester,
       drivers: [buildDriver(name: 'Juan Pérez')],
-      result: const Data4(status: 'ok'),
+      result: const Data5(status: 'ok'),
     );
 
     await _selectDriver(tester, 'Juan Pérez');
@@ -78,7 +79,7 @@ void main() {
     await _pumpChecklist(
       tester,
       drivers: [buildDriver(name: 'Ana Gómez')],
-      result: const Data4(status: 'needs_review'),
+      result: const Data5(status: 'needs_review'),
     );
 
     await _selectDriver(tester, 'Ana Gómez');
@@ -120,18 +121,18 @@ void main() {
     await _pumpChecklist(
       tester,
       drivers: [buildDriver(name: 'Juan Pérez')],
-      result: const Data4(status: 'ok'),
+      result: const Data5(status: 'ok'),
     );
 
     // Sin chofer elegido el botón está deshabilitado.
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Registrar checklist'),
+      findButtonWithText<FilledButton>('Registrar checklist'),
     );
     expect(button.onPressed, isNull);
 
     await _selectDriver(tester, 'Juan Pérez');
     final enabled = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Registrar checklist'),
+      findButtonWithText<FilledButton>('Registrar checklist'),
     );
     expect(enabled.onPressed, isNotNull);
   });
