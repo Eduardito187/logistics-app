@@ -3,9 +3,9 @@
   "tasks": [
     {
       "label": "adb: iniciar servidor de Windows (USB)",
-      "detail": "Arranca el servidor adb de Windows para que el teléfono USB sea visible desde WSL.",
+      "detail": "Arranca el servidor adb de Windows para que el teléfono USB sea visible.",
       "type": "process",
-      "command": "/mnt/c/Users/ehhuallata/AppData/Local/Android/Sdk/platform-tools/adb.exe",
+      "command": "C:/Users/ehhuallata/AppData/Local/Android/Sdk/platform-tools/adb.exe",
       "args": ["start-server"],
       "presentation": {
         "reveal": "silent",

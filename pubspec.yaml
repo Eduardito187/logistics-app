@@ -97,6 +97,12 @@ dependencies:
   # Versión de la app para el control de compatibilidad con el backend.
   package_info_plus: ^10.2.0
 
+dependency_overrides:
+  # usb_serial 0.5.2 (última en pub.dev) usa jcenter() y no compila con Gradle 9 /
+  # AGP 9. Copia parcheada en third_party/ (ver su android/build.gradle).
+  usb_serial:
+    path: third_party/usb_serial
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

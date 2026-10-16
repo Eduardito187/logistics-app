@@ -41,6 +41,21 @@ fija `dart.flutterSdkPath`), no `C:\flutter` (CRLF → exited 127). Para el emul
 WSL: `adb start-server`, copiar `~/.android/adbkey*` desde `/mnt/c/Users/<user>/.android/`, arrancar el
 AVD con `emulator.exe`, luego `flutter run -d emulator-5554`.
 
+## Portabilidad (mover el proyecto / Windows nativo)
+
+Las rutas de arriba (`~/sdk/flutter`, `~/Android/Sdk`, `/dismac/...`) son de **este WSL**. Al mover el
+proyecto a otra ruta u OS:
+- **Skills:** viajan solas con el repo (`.claude/skills/`), funcionan en cualquier OS. Los scripts de
+  `github-pr-flow` son `.ps1` de Windows a propósito.
+- **Memorias:** NO viajan con el repo (viven en `~/.claude/projects/<slug>/memory/`, con el slug ligado a
+  la ruta). Hay espejo versionado en `.claude/memory/` + instalador: tras clonar/mover correr una vez
+  `.\.claude\memory\install.ps1` (Windows) o `bash .claude/memory/install.sh` (Linux/WSL/macOS). Ver
+  `.claude/memory/README.md`.
+- **Flutter en Windows nativo:** el SDK ya no está en `~/sdk/flutter`; usar la instalación de Windows
+  (p. ej. la que apunta `.vscode/settings.json`, o `flutter` en el PATH) y correr desde PowerShell.
+  `flutter analyze`/`test`/`run` son iguales; `config/{dev,staging,production}.json` + `--dart-define-from-file`
+  siguen igual.
+
 ## Dónde va cada cosa
 
 ```
@@ -100,6 +115,15 @@ agregá su `kind` al dispatcher; los path params (vehículo/envío) viajan en el
 (`'@vehicleId'`). Las **fotos** van por `photoUploadQueueProvider.enqueue(shipmentId, filePath, kind)`.
 Las acciones de oficina (listar, aprobar, publicar) van **directo** por `api.*`, no por la cola.
 
+**Semántica de resultado (no reintroducir falencias ya corregidas):**
+- `submit` devuelve `SubmitOutcome`: `sent` (OK), `queued` (quedó pendiente), `failed` (error de datos permanente).
+- **Transitorio = `queued`, no `failed`:** sin conexión, **429** (rate limit) y **5xx** NO se marcan `failed`
+  (se perdería la escritura de terreno) — quedan pendientes para reintento. Solo los 4xx de datos → `failed`.
+  El helper `_isTransient(ApiException)` concentra ese criterio.
+- El `kind` se valida **antes** de encolar (un kind desconocido lanza `StateError`, no deja fila envenenada).
+- `drain` atrapa `StateError` (kind obsoleto tras actualizar la app) y aísla esa fila sin frenar el resto.
+- `markFailed` incrementa `attempts` (base para backoff/tope).
+
 ## Bloques reutilizables (core)
 
 - **Providers:** `logisticsApiProvider`, `offlineQueueProvider`, `photoUploadQueueProvider`,
@@ -131,6 +155,15 @@ Las acciones de oficina (listar, aprobar, publicar) van **directo** por `api.*`,
    cámara/BT/GPS/mapa: smoke mínimo o se omiten documentando por qué.
 8. **Lints activos:** prefer_single_quotes, require_trailing_commas, always_declare_return_types,
    avoid_dynamic_calls, prefer_final_locals, unawaited_futures, strict-casts.
+9. **Clean Architecture + CQRS + SRP** (ver `docs/clean-architecture.md`): **una clase por archivo**
+   (excepción: `StatefulWidget` + su `_State` van juntos). El API **solo** se toca en `data/datasources/`
+   (y se expone vía use case / repositorio): **nunca** `ref.read(logisticsApiProvider)` en `presentation/`.
+   Sub-widgets privados reutilizables → archivo público en `presentation/widgets/`. Reutilizar los helpers
+   de core (`app_snack.dart`, `offline/submit_feedback.dart`, `commands/command_feedback.dart`) en vez de
+   duplicar SnackBars.
+10. **`copyWith` con nullables:** si un `copyWith` debe poder volver un campo a `null`, usar centinela
+    (`static const Object _unset = Object();` + `identical(x, _unset) ? this.x : x as T?`). El patrón
+    `x ?? this.x` NO puede limpiar a null (bug ya visto en push/tracking).
 
 ## Definición de terminado
 
@@ -156,3 +189,5 @@ reportados. Si cambia la UI, describir qué se probó en emulador o dispositivo 
 | Gradle: `requires core library desugaring to be enabled` (`flutter_local_notifications`) | Plugin usa APIs java.time en minSdk bajo | `isCoreLibraryDesugaringEnabled = true` + dep `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:…")` en `android/app/build.gradle.kts` |
 | `'bash\r': No such file or directory`, exited 127, consola de play se cierra al segundo | VS Code usa `C:\flutter` (CRLF) en vez del Flutter de WSL | `.vscode/settings.json` → `dart.flutterSdkPath=~/sdk/flutter` + Reload Window |
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |
+| `flutter test`: `Failed to load dynamic library 'libsqlite3.so'` (tests Drift) | WSL/Linux solo trae `libsqlite3.so.0`, no el symlink sin versión | Ya resuelto: `test/flutter_test_config.dart` redirige la carga a `.so.0` (no borrarlo). No requiere root |
+| Widget test de pantalla con providers: `Tried to modify a provider while the widget tree was building` | El harness/override modifica un provider dentro de build/initState, o un widget llama `.notifier.metodo()` en `build` | Mover la mutación fuera del ciclo de vida (p. ej. a `onPressed`) o arreglar el override del harness de test |
