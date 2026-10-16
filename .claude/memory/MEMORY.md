@@ -12,3 +12,4 @@
 - [Toolchain Windows nativo](windows-native-toolchain.md) — proyecto bajado a Flutter 3.32.0 / Dart 3.8 (C:/flutter) a pedido del usuario; deps, Gradle 8.12/AGP 8.7.3, trampas
 - [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
 - [Fase de optimización (RAM/pantallas)](perf-responsive-phase.md) — base común layout/fotos/avisos/tests de tamaños, R8+split-per-abi, trampas (Size.fromHeight en Row, EmptyState)
+- [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend

@@ -22,7 +22,7 @@ Objetivo del dueño: la app debe andar en teléfonos de **1 GB de RAM** y verse 
 **Trampas:**
 - El tema da a Filled/OutlinedButton `minimumSize: Size.fromHeight(56)` (ancho mínimo INFINITO, a propósito para botones a lo ancho): dentro de un `Row` sin `Expanded` rompe el layout → envolver en `Expanded` o pasar `minimumSize: Size(48, 56)`.
 - `EmptyState` no scrollea; NO meterle `LayoutBuilder`/scroll interno: las pantallas lo usan en `SliverFillRemaining(hasScrollBody: false)` (pide medidas intrínsecas → rompe). El scroll se resuelve en cada pantalla.
-- Grillas con `childAspectRatio` fijo desbordan con letra 1.3x: usar filas sin alto fijo (`SliverCardRows` en picking/supervisor, `SliverCardGrid` en store, `AdaptiveCardList` en driver — duplicados por feature; candidato a mover a `lib/core/layout`).
+- Grillas con `childAspectRatio` fijo desbordan con letra 1.3x: usar filas sin alto fijo → `lib/core/layout/adaptive_card_rows.dart` (`SliverAdaptiveCardRows` / `AdaptiveCardRows`), ya unificado (los duplicados por feature se borraron).
 - Offline invisible también en pastillas: encolado = "Registrado"/"Enviado".
 
 **Why:** pedido explícito del dueño; terreno con equipos baratos y tablets en andén/supervisión.
