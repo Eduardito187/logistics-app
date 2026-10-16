@@ -1,0 +1,12 @@
+- [App solo consume el backend](app-scope-backend-consumer.md) — la app nunca integra servicios externos; medir completitud por cobertura de endpoints /app/*
+- [Estado de cobertura del API](app-api-coverage-state.md) — 168/169 endpoints /app/* consumidos; ~20 features; contrato rutas/tareas; roles incl. admin
+- [Generación del cliente API](api-client-generation.md) — swagger_parser + preprocesado JSON (anchors/params), retrofit pinneado, cómo regenerar
+- [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas que el coordinador cablea al final
+- [Toolchain Android en WSL (histórico)](wsl-run-toolchain.md) — SOLO WSL; en Windows ver windows-native-toolchain
+- [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas saturaron la RAM; topes puestos, nunca apilar builds
+- [Entornos dev/staging/production](run-environments-config.md) — config/*.json con --dart-define-from-file en los botones de play; URLs/claves de staging/prod pendientes
+- [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
+- [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
+- [Batería de tests e infra](test-battery-and-infra.md) — 1080/1080 verde (2026-10-16); trampas comunes de widget tests (ListView perezoso, spinner, secure storage mock)
+- [Portabilidad de memorias/skills](portable-memory-skills.md) — skills viajan con el repo; memorias no → espejo en .claude/memory/ + instalador para Windows/otras rutas
+- [Toolchain Windows nativo](windows-native-toolchain.md) — migrado 2026-10-16; usar Flutter 3.47.6 en C:\sdk\flutter, no C:\flutter (3.32, de dismac-app)

@@ -1,0 +1,5 @@
+{
+  "ENV": "production",
+  "API_BASE_URL": "https://logistics.dismac.com.bo/api/v1",
+  "LABEL_PUBLIC_KEYS": ""
+}
