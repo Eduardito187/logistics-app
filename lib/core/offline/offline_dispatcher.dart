@@ -19,6 +19,9 @@ const Map<String, OfflineActionHandler> offlineHandlers = {
   'recordProofOfDelivery': _recordProofOfDelivery,
   'reportVehicleIncident': _reportVehicleIncident,
   'ingestTruckPosition': _ingestTruckPosition,
+  'reportDeliveryIssue': _reportDeliveryIssue,
+  // --- Push ---
+  'updateDevicePushToken': _updateDevicePushToken,
   // --- Tienda / nodos ---
   'recordNodeReception': _recordNodeReception,
   'receiveUnitAtNode': _receiveUnitAtNode,
@@ -101,6 +104,33 @@ Future<void> _ingestTruckPosition(
   return api.tracking.ingestTruckPositionFromApp(
     shipmentId: shipmentId,
     body: TruckPositionInput.fromJson(p),
+  );
+}
+
+/// Inconveniente de la entrega que NO la cierra (demora, acceso…). El envío va
+/// en el path: se guarda como `@shipmentId` en el payload.
+Future<void> _reportDeliveryIssue(
+  LogisticsApi api,
+  String key,
+  Map<String, Object?> p,
+) {
+  final shipmentId = p['@shipmentId']! as String;
+  return api.execution.reportDeliveryIssue(
+    shipmentId: shipmentId,
+    body: DeliveryIssueRequest.fromJson(p),
+    idempotencyKey: key,
+  );
+}
+
+/// Identificador push (FID de FCM) del dispositivo actual; `null` = baja.
+/// PUT idempotente por naturaleza: no lleva clave.
+Future<void> _updateDevicePushToken(
+  LogisticsApi api,
+  String key,
+  Map<String, Object?> p,
+) {
+  return api.auth.updateDevicePushToken(
+    body: AppDevicesCurrentPushTokenRequestBody.fromJson(p),
   );
 }
 

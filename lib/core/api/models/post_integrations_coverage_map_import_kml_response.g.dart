@@ -10,7 +10,7 @@ PostIntegrationsCoverageMapImportKmlResponse
 _$PostIntegrationsCoverageMapImportKmlResponseFromJson(
   Map<String, dynamic> json,
 ) => PostIntegrationsCoverageMapImportKmlResponse(
-  data: Data13.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data14.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostIntegrationsCoverageMapImportKmlResponseToJson(

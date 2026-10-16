@@ -8,8 +8,9 @@ import '../support/driver_test_support.dart';
 // Detalle de parada: datos del cliente, acciones de terreno y estado de entrega.
 
 List<Object> _overrides(String shipmentId) => [
-  deliveryStateProvider(shipmentId)
-      .overrideWith((ref) async => buildDelivery(shipmentId: shipmentId)),
+  deliveryStateProvider(
+    shipmentId,
+  ).overrideWith((ref) async => buildDelivery(shipmentId: shipmentId)),
 ];
 
 void main() {

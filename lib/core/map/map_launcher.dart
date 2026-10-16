@@ -1,6 +1,4 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Abre la navegación externa hacia una coordenada, sin depender de Google
@@ -18,7 +16,9 @@ Future<bool> openExternalNavigation(
 }) async {
   final String coords = '$lat,$lng';
 
-  if (!kIsWeb && Platform.isAndroid) {
+  // defaultTargetPlatform (no dart:io Platform): en tests se fuerza con
+  // debugDefaultTargetPlatformOverride para ejercitar la rama Android.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     // geo:lat,lng?q=lat,lng(etiqueta) para que la app de mapas muestre el pin.
     final String query = label != null && label.isNotEmpty
         ? '$coords(${Uri.encodeComponent(label)})'

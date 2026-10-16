@@ -7,6 +7,7 @@ import '../../../core/api/models/emit_labels_request.dart';
 import '../../../core/api/models/emitted_label.dart';
 import '../../../core/api/models/preparation_scan_request.dart';
 import '../../../core/api/models/reprint_labels_request.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/offline/offline_queue.dart';
@@ -16,7 +17,6 @@ import '../../../core/printing/printer_config.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../domain/usecases/emit_labels.dart';
 import '../domain/usecases/get_signed_zpl.dart';
 import '../domain/usecases/record_preparation_scan.dart';
@@ -24,8 +24,9 @@ import '../domain/usecases/reprint_labels.dart';
 import 'controllers/order_labels_controller.dart';
 import 'controllers/preparation_controller.dart';
 import 'widgets/assign_lane_dialog.dart';
-import 'widgets/button_spinner.dart';
 import 'widgets/label_batch_sheet.dart';
+import 'widgets/preparation_empty_body.dart';
+import 'widgets/preparation_units_layout.dart';
 import 'widgets/progress_card.dart';
 import 'widgets/unit_tile.dart';
 
@@ -49,6 +50,9 @@ class _OrderPreparationScreenState
 
   /// Operación a nivel pedido en curso (emitir, reimprimir lote, imprimir todo).
   bool _orderBusy = false;
+
+  /// La operación de pedido en curso es "Reimprimir lote" (spinner propio).
+  bool _reprintingBatch = false;
 
   String get _orderNumber => widget.orderNumber;
 
@@ -119,16 +123,12 @@ class _OrderPreparationScreenState
       ref
           .read(preparationControllerProvider(_orderNumber).notifier)
           .markPrepared(label.labelId);
-      await _printLabel(label);
-      if (!mounted) return;
-      if (outcome == SubmitOutcome.queued) {
-        showInfoSnack(
-          context,
-          'Unidad guardada sin señal. Se enviará al reconectar.',
-        );
-      } else {
-        showSuccessSnack(context, 'Unidad preparada e impresa.');
-      }
+      // Sin impresora, _printLabel ya avisó "Seleccioná una impresora": no se
+      // pisa ese aviso con un "impresa" falso.
+      final printed = await _printLabel(label);
+      if (!mounted || !printed) return;
+      // Offline invisible: encolado o enviado, para el usuario es lo mismo.
+      showSuccessSnack(context, 'Unidad preparada e impresa.');
     } finally {
       if (mounted) setState(() => _busyUnitId = null);
     }
@@ -137,18 +137,25 @@ class _OrderPreparationScreenState
   Future<void> _reprintUnit(EmittedLabel label) async {
     setState(() => _busyUnitId = label.labelId);
     try {
-      await _printLabel(label);
+      final printed = await _printLabel(label);
+      if (!mounted || !printed) return;
+      showSuccessSnack(context, 'Etiqueta reenviada a la impresora.');
     } finally {
       if (mounted) setState(() => _busyUnitId = null);
     }
   }
 
-  Future<void> _printLabel(EmittedLabel label) async {
+  /// Imprime la etiqueta; devuelve false si no hay impresora utilizable (ya
+  /// avisó al usuario).
+  Future<bool> _printLabel(EmittedLabel label) async {
     try {
       await ref.read(labelPrinterProvider).printZpl(label.zpl);
+      return true;
     } on PrinterException {
-      if (!mounted) return;
-      showInfoSnack(context, 'Seleccioná una impresora en Ajustes.');
+      if (mounted) {
+        showInfoSnack(context, 'Seleccioná una impresora en Ajustes.');
+      }
+      return false;
     }
   }
 
@@ -235,7 +242,10 @@ class _OrderPreparationScreenState
     );
     if (!mounted || result == null) return;
 
-    setState(() => _orderBusy = true);
+    setState(() {
+      _orderBusy = true;
+      _reprintingBatch = true;
+    });
     try {
       await ref
           .read(reprintLabelsProvider)
@@ -258,7 +268,12 @@ class _OrderPreparationScreenState
       if (!mounted) return;
       showErrorSnack(context, e);
     } finally {
-      if (mounted) setState(() => _orderBusy = false);
+      if (mounted) {
+        setState(() {
+          _orderBusy = false;
+          _reprintingBatch = false;
+        });
+      }
     }
   }
 
@@ -284,69 +299,61 @@ class _OrderPreparationScreenState
         onRetry: () => ref.invalidate(orderLabelsProvider(_orderNumber)),
         data: (labels) {
           final units = labels.where((l) => !l.revoked).toList(growable: false);
-          if (units.isEmpty) {
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const EmptyState(
-                  icon: Icons.label_off,
-                  title: 'Sin etiquetas vigentes',
-                  message: 'Este pedido todavía no tiene etiquetas emitidas para preparar.',
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _orderBusy ? null : _emitLabels,
-                  icon: _orderBusy
-                      ? const ButtonSpinner()
-                      : const Icon(Icons.new_label),
-                  label: const Text('Emitir etiquetas'),
-                ),
-              ],
-            );
-          }
-          final state = ref.watch(preparationControllerProvider(_orderNumber));
-          final prepared = units
-              .where((l) => state.isPrepared(l.labelId))
-              .length;
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(orderLabelsProvider(_orderNumber)),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ProgressCard(
-                  prepared: prepared,
-                  total: units.length,
-                  lane: state.lane,
-                  busy: _orderBusy,
-                  onAssign: _assignLane,
-                  onPrintAll: () => _printAll(units),
-                  onReprintBatch: () => _reprintBatch(units),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Unidades (${units.length})',
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                ...units.map(
-                  (label) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: UnitTile(
-                      label: label,
-                      prepared: state.isPrepared(label.labelId),
-                      busy: _busyUnitId == label.labelId,
-                      onPrepare: () => _prepareUnit(label),
-                      onReprint: () => _reprintUnit(label),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
+          if (units.isEmpty) return _buildEmpty();
+          return _buildUnits(context, units);
         },
       ),
+    );
+  }
+
+  Widget _buildEmpty() =>
+      PreparationEmptyBody(busy: _orderBusy, onEmit: _emitLabels);
+
+  Widget _buildUnits(BuildContext context, List<EmittedLabel> units) {
+    final state = ref.watch(preparationControllerProvider(_orderNumber));
+    final prepared = units.where((l) => state.isPrepared(l.labelId)).length;
+
+    final progress = ProgressCard(
+      prepared: prepared,
+      total: units.length,
+      lane: state.lane,
+      busy: _orderBusy,
+      reprinting: _reprintingBatch,
+      onAssign: _assignLane,
+      onPrintAll: () => _printAll(units),
+      onReprintBatch: () => _reprintBatch(units),
+    );
+    final title = Text(
+      'Unidades (${units.length})',
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    );
+    // La lista de unidades puede ser larga: se construye perezosa (solo las
+    // filas visibles) y en 2 columnas cuando el ancho lo permite.
+    final unitRows = SliverAdaptiveCardRows(
+      itemCount: units.length,
+      maxColumns: 2,
+      itemBuilder: (context, index) {
+        final label = units[index];
+        return UnitTile(
+          key: ValueKey(label.labelId),
+          label: label,
+          prepared: state.isPrepared(label.labelId),
+          busy: _busyUnitId == label.labelId,
+          onPrepare: () => _prepareUnit(label),
+          onReprint: () => _reprintUnit(label),
+        );
+      },
+    );
+    Future<void> refresh() async =>
+        ref.invalidate(orderLabelsProvider(_orderNumber));
+
+    return PreparationUnitsLayout(
+      progress: progress,
+      title: title,
+      unitRows: unitRows,
+      onRefresh: refresh,
     );
   }
 }

@@ -17,7 +17,7 @@ class FleetRepositoryImpl implements FleetRepository {
   Future<List<Driver>> listActiveDrivers() => _remote.listActiveDrivers();
 
   @override
-  Future<Data4?> conductPreTripChecklist(
+  Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) => _remote.conductPreTripChecklist(request);
 }

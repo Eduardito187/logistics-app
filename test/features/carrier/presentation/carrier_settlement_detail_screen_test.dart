@@ -11,6 +11,7 @@ import 'package:logistics_app/features/carrier/presentation/controllers/carrier_
 
 import '../carrier_fixtures.dart';
 import '../carrier_test_harness.dart';
+import '../../../support/button_finders.dart';
 
 // Detalle de liquidación: visibilidad de acciones según estado y los comandos
 // async (aprobar/disputar/pagar → 202 "Aceptado. Se está procesando.") en sus
@@ -27,8 +28,9 @@ Future<FakeCarrierRepository> _pump(
   final fakeRepo = repo ?? FakeCarrierRepository();
   final overrides = <Override>[
     carrierRepositoryProvider.overrideWithValue(fakeRepo),
-    carrierSettlementProvider(_id)
-        .overrideWith((ref) => loader != null ? loader() : Future.value(data)),
+    carrierSettlementProvider(
+      _id,
+    ).overrideWith((ref) => loader != null ? loader() : Future.value(data)),
   ];
   await tester.pumpWidget(
     ProviderScope(
@@ -50,10 +52,10 @@ void main() {
 
     expect(find.text('LPZ → SCZ'), findsOneWidget);
     expect(find.text('Enviada'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Aprobar'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Disputar'), findsOneWidget);
+    expect(findButtonWithText<FilledButton>('Aprobar'), findsOneWidget);
+    expect(findButtonWithText<OutlinedButton>('Disputar'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, 'Marcar como pagada'),
+      findButtonWithText<FilledButton>('Marcar como pagada'),
       findsNothing,
     );
   });
@@ -64,11 +66,11 @@ void main() {
     await _pump(tester, data: settlement(status: SettlementStatus.approved));
 
     expect(
-      find.widgetWithText(FilledButton, 'Marcar como pagada'),
+      findButtonWithText<FilledButton>('Marcar como pagada'),
       findsOneWidget,
     );
-    expect(find.widgetWithText(FilledButton, 'Aprobar'), findsNothing);
-    expect(find.widgetWithText(OutlinedButton, 'Disputar'), findsNothing);
+    expect(findButtonWithText<FilledButton>('Aprobar'), findsNothing);
+    expect(findButtonWithText<OutlinedButton>('Disputar'), findsNothing);
   });
 
   testWidgets('estado en disputa: ofrece Aprobar y muestra el motivo', (
@@ -82,8 +84,8 @@ void main() {
       ),
     );
 
-    expect(find.widgetWithText(FilledButton, 'Aprobar'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Disputar'), findsNothing);
+    expect(findButtonWithText<FilledButton>('Aprobar'), findsOneWidget);
+    expect(findButtonWithText<OutlinedButton>('Disputar'), findsNothing);
     expect(find.text('Monto no coincide'), findsOneWidget);
   });
 
@@ -95,7 +97,7 @@ void main() {
       data: settlement(status: SettlementStatus.submitted),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Aprobar'));
+    await tester.tap(findButtonWithText<FilledButton>('Aprobar'));
     await tester.pumpAndSettle();
 
     expect(repo.approveCalls, 1);
@@ -118,7 +120,7 @@ void main() {
       repo: repo,
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Aprobar'));
+    await tester.tap(findButtonWithText<FilledButton>('Aprobar'));
     await tester.pumpAndSettle();
 
     expect(find.text('Ya no se puede aprobar.'), findsOneWidget);
@@ -133,12 +135,12 @@ void main() {
         data: settlement(status: SettlementStatus.submitted),
       );
 
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Disputar'));
+      await tester.tap(findButtonWithText<OutlinedButton>('Disputar'));
       await tester.pumpAndSettle();
       expect(find.text('Disputar liquidación'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'Faltan bultos');
-      await tester.tap(find.widgetWithText(FilledButton, 'Disputar'));
+      await tester.tap(findButtonWithText<FilledButton>('Disputar'));
       await tester.pumpAndSettle();
 
       expect(repo.disputeCalls, 1);
@@ -153,10 +155,10 @@ void main() {
       data: settlement(status: SettlementStatus.submitted),
     );
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Disputar'));
+    await tester.tap(findButtonWithText<OutlinedButton>('Disputar'));
     await tester.pumpAndSettle();
     // Confirmar sin escribir motivo: el comando no debe ejecutarse.
-    await tester.tap(find.widgetWithText(FilledButton, 'Disputar'));
+    await tester.tap(findButtonWithText<FilledButton>('Disputar'));
     await tester.pumpAndSettle();
 
     expect(repo.disputeCalls, 0);
@@ -170,12 +172,12 @@ void main() {
       data: settlement(status: SettlementStatus.approved),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Marcar como pagada'));
+    await tester.tap(findButtonWithText<FilledButton>('Marcar como pagada'));
     await tester.pumpAndSettle();
     expect(find.text('Marcar como pagada'), findsWidgets);
 
     await tester.enterText(find.byType(TextField), 'TRX-9988');
-    await tester.tap(find.widgetWithText(FilledButton, 'Pagar'));
+    await tester.tap(findButtonWithText<FilledButton>('Pagar'));
     await tester.pumpAndSettle();
 
     expect(repo.payCalls, 1);

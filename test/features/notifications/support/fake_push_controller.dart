@@ -2,7 +2,7 @@ import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/push/push_status.dart';
 
 /// Controlador de push falso: devuelve un [PushStatus] fijo en `build()` (sin
-/// arrancar el plumbing real de UnifiedPush) y cuenta las llamadas a [register].
+/// arrancar el plumbing real de FCM) y cuenta las llamadas a [register].
 /// Permite probar el [PushStatusCard] en cada estado sin tocar la plataforma.
 class FakePushController extends PushController {
   FakePushController(this._initial);

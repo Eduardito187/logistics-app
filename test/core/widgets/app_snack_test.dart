@@ -56,7 +56,7 @@ void main() {
     expect(
       find.widgetWithText(
         SnackBar,
-        'Sin conexión. Se guardó y se reintentará al recuperar señal.',
+        'No se pudo completar. Intentá de nuevo en un momento.',
       ),
       findsOneWidget,
     );

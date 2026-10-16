@@ -23,6 +23,9 @@ class UnitTile extends StatelessWidget {
   final VoidCallback onPrepare;
   final VoidCallback onReprint;
 
+  /// Ancho de contenido por debajo del cual el estado va bajo el SKU.
+  static const double _stackBelow = 340;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -33,37 +36,49 @@ class UnitTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final info = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SKU ${label.sku}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Línea ${label.lineNumber} · Bulto …$shortId',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              );
+              final pill = prepared
+                  ? const StatusPill(
+                      'Preparada',
+                      tone: PillTone.success,
+                      icon: Icons.check,
+                    )
+                  : const StatusPill('Pendiente', icon: Icons.schedule);
+              // Angosto (teléfono chico, letra grande, columna de tablet): el
+              // estado va debajo y el SKU usa todo el ancho.
+              if (constraints.maxWidth < _stackBelow) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SKU ${label.sku}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Línea ${label.lineNumber} · Bulto …$shortId',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (prepared)
-                const StatusPill(
-                  'Preparada',
-                  tone: PillTone.success,
-                  icon: Icons.check,
-                )
-              else
-                const StatusPill('Pendiente', icon: Icons.schedule),
-            ],
+                  children: [info, const SizedBox(height: 8), pill],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: info),
+                  const SizedBox(width: 8),
+                  pill,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
           if (prepared)

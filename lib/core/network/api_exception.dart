@@ -56,7 +56,8 @@ class ApiException implements Exception {
   /// resto preferimos el `detail` del backend y caemos a un texto por estado.
   String get message {
     if (isConnectionError) {
-      return 'Sin conexión. Se guardó y se reintentará al recuperar señal.';
+      // Offline invisible: no se revela la falta de señal al usuario.
+      return 'No se pudo completar. Intentá de nuevo en un momento.';
     }
     if (isForbidden) {
       return 'No tenés permiso para esta acción.';

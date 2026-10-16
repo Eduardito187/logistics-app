@@ -8,7 +8,7 @@ part of 'accepted_envelope.dart';
 
 AcceptedEnvelope _$AcceptedEnvelopeFromJson(Map<String, dynamic> json) =>
     AcceptedEnvelope(
-      data: Data21.fromJson(json['data'] as Map<String, dynamic>),
+      data: Data22.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$AcceptedEnvelopeToJson(AcceptedEnvelope instance) =>

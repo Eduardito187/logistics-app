@@ -58,7 +58,9 @@ void main() {
     expect(ids, containsAll(<String>['carrier-pickup', 'carrier-deliver']));
     expect(ids, containsAll(<String>['sup-dashboard', 'sup-alerts']));
     // Transversales compartidas.
-    expect(ids, containsAll(<String>['notifications', 'settings']));
+    expect(ids, contains('settings'));
+    // Notificaciones no es tarjeta: se abre con la campana del header.
+    expect(ids, isNot(contains('notifications')));
   });
 
   test('las ids de las tarjetas son únicas', () {

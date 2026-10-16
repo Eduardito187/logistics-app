@@ -7,9 +7,36 @@ import '../../../../core/theme/app_colors.dart';
 /// Tarjeta de acción del inicio: representa un flujo (tarea) disponible para el
 /// rol y navega a su ruta al tocarla.
 class TaskCard extends StatelessWidget {
-  const TaskCard({super.key, required this.task});
+  const TaskCard({super.key, required this.task, this.maxLines});
 
   final RoleTask task;
+
+  /// Límite de líneas de título y subtítulo (con elipsis). `null` en la lista
+  /// del teléfono (alto natural); [gridLines] en la grilla de tablet, donde
+  /// todas las tarjetas tienen el mismo alto ([gridExtent]).
+  final int? maxLines;
+
+  /// Líneas de título y de subtítulo en la grilla.
+  static const int gridLines = 2;
+
+  /// Alto de la tarjeta en la grilla según el tema y la letra del sistema
+  /// (ya limitada a 1.3x): padding (2×18) + título (titleMedium) y subtítulo
+  /// (bodyMedium) de hasta [gridLines] líneas + separación, con un margen de
+  /// redondeo. Nunca menor al ícono (54) + padding.
+  static double gridExtent(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scaler = MediaQuery.textScalerOf(context);
+    double lineHeight(TextStyle? style) {
+      final size = scaler.scale(style?.fontSize ?? 14);
+      return size * (style?.height ?? 1.2);
+    }
+
+    final text =
+        (lineHeight(textTheme.titleMedium) + lineHeight(textTheme.bodyMedium)) *
+            gridLines +
+        2;
+    return 36 + (text > 54 ? text : 54) + 4;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,10 +73,13 @@ class TaskCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task.label,
+                      maxLines: maxLines,
+                      overflow: maxLines == null ? null : TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: fg,
@@ -59,6 +89,10 @@ class TaskCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         task.subtitle!,
+                        maxLines: maxLines,
+                        overflow: maxLines == null
+                            ? null
+                            : TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: fg.withValues(alpha: 0.7),
                         ),

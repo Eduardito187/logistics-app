@@ -7,6 +7,7 @@ import 'package:logistics_app/features/settings/presentation/controllers/printer
 import 'package:logistics_app/features/settings/presentation/widgets/discovered_printers.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/printer_section.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/wifi_printer_form.dart';
+import '../../../../support/button_finders.dart';
 
 // Sección de impresora: elige transporte, descubre/ingresa, guarda e imprime
 // prueba. Se override la impresora seleccionada y el descubrimiento; el core de
@@ -34,10 +35,12 @@ Future<void> _pump(
       overrides: [
         labelPrinterProvider.overrideWithValue(_FakeLabelPrinter()),
         selectedPrinterProvider.overrideWith((ref) async => selected),
-        discoveredPrintersProvider(PrinterTransport.bluetooth)
-            .overrideWith((ref) async => const []),
-        discoveredPrintersProvider(PrinterTransport.usb)
-            .overrideWith((ref) async => const []),
+        discoveredPrintersProvider(
+          PrinterTransport.bluetooth,
+        ).overrideWith((ref) async => const []),
+        discoveredPrintersProvider(
+          PrinterTransport.usb,
+        ).overrideWith((ref) async => const []),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -107,7 +110,7 @@ void main() {
 
     expect(
       find.descendant(
-        of: find.widgetWithText(OutlinedButton, 'Imprimir prueba'),
+        of: findButtonWithText<OutlinedButton>('Imprimir prueba'),
         matching: find.byType(CircularProgressIndicator),
       ),
       findsOneWidget,

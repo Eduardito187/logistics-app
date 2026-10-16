@@ -1,85 +1,91 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/push/push_service.dart';
 
-// Solo se prueba decodeMessage: es la única pieza de PushService libre de
-// plataforma (utf8 + json). El resto (initialize, register, showMessage,
-// permisos) habla con UnifiedPush / flutter_local_notifications vía
-// MethodChannel y necesita pruebas de integración.
-
-Uint8List _bytes(String s) => Uint8List.fromList(utf8.encode(s));
+// messageFrom/payloadOf: la parte de PushService libre de plataforma. Normaliza
+// un RemoteMessage de FCM al PushMessage que se muestra y al payload del tap.
+// El backend publica `notification` {title, body} + `data` {notification_id,
+// shipment_id, message_type}.
 
 void main() {
   final service = PushService();
 
-  group('decodeMessage', () {
-    test('JSON de ntfy con title, message y tag', () {
-      final msg = service.decodeMessage(
-        _bytes('{"title":"Ruta lista","message":"Sal ya","tag":"SHP-7"}'),
+  group('messageFrom', () {
+    test('usa el bloque notification de FCM', () {
+      final msg = service.messageFrom(
+        const RemoteMessage(
+          notification: RemoteNotification(title: 'Ruta lista', body: 'Sal ya'),
+          data: {'notification_id': 'N-1', 'shipment_id': 'SHP-7'},
+        ),
       );
       expect(msg.title, 'Ruta lista');
       expect(msg.body, 'Sal ya');
-      expect(msg.payload, 'SHP-7');
+      expect(msg.payload, 'N-1');
     });
 
-    test('usa "id" como payload cuando no hay "tag"', () {
-      final msg = service.decodeMessage(
-        _bytes('{"title":"t","message":"b","id":"N-99"}'),
+    test('mensaje solo-data: toma title y body de data', () {
+      final msg = service.messageFrom(
+        const RemoteMessage(data: {'title': 'Andén 3', 'body': 'Carga lista'}),
       );
-      expect(msg.payload, 'N-99');
+      expect(msg.title, 'Andén 3');
+      expect(msg.body, 'Carga lista');
     });
 
-    test('"tag" tiene prioridad sobre "id"', () {
-      final msg = service.decodeMessage(
-        _bytes('{"message":"b","tag":"T","id":"I"}'),
+    test('acepta "message" como cuerpo en data', () {
+      final msg = service.messageFrom(
+        const RemoteMessage(data: {'message': 'Texto'}),
       );
-      expect(msg.payload, 'T');
+      expect(msg.body, 'Texto');
     });
 
-    test('tag vacío deja payload en null', () {
-      final msg = service.decodeMessage(_bytes('{"message":"b","tag":""}'));
-      expect(msg.payload, isNull);
-    });
-
-    test('sin title usa el título genérico "Operación"', () {
-      final msg = service.decodeMessage(_bytes('{"message":"solo cuerpo"}'));
-      expect(msg.title, 'Operación');
-      expect(msg.body, 'solo cuerpo');
-    });
-
-    test('title vacío cae al genérico', () {
-      final msg = service.decodeMessage(_bytes('{"title":"","message":"x"}'));
-      expect(msg.title, 'Operación');
-    });
-
-    test('message ausente o vacío: el cuerpo es el texto crudo', () {
-      final raw = '{"title":"t"}';
-      final msg = service.decodeMessage(_bytes(raw));
-      expect(msg.title, 't');
-      expect(msg.body, raw);
-    });
-
-    test('texto plano (no JSON): título genérico y cuerpo = texto', () {
-      final msg = service.decodeMessage(_bytes('Tenés una entrega nueva'));
-      expect(msg.title, 'Operación');
-      expect(msg.body, 'Tenés una entrega nueva');
-      expect(msg.payload, isNull);
-    });
-
-    test('JSON que no es objeto (una lista) cae a texto crudo', () {
-      final raw = '[1,2,3]';
-      final msg = service.decodeMessage(_bytes(raw));
-      expect(msg.title, 'Operación');
-      expect(msg.body, raw);
-    });
-
-    test('bytes UTF-8 inválidos: aviso genérico sin lanzar', () {
-      final msg = service.decodeMessage(Uint8List.fromList([0xC3, 0x28]));
+    test('sin contenido cae a título y cuerpo genéricos', () {
+      final msg = service.messageFrom(const RemoteMessage());
       expect(msg.title, 'Operación');
       expect(msg.body, 'Tienes una novedad en la operación.');
       expect(msg.payload, isNull);
+    });
+
+    test('título vacío en notification usa el de data', () {
+      final msg = service.messageFrom(
+        const RemoteMessage(
+          notification: RemoteNotification(title: '', body: 'b'),
+          data: {'title': 'Desde data'},
+        ),
+      );
+      expect(msg.title, 'Desde data');
+    });
+  });
+
+  group('payloadOf', () {
+    test('prioridad: notification_id > shipment_id > tag > id', () {
+      expect(
+        service.payloadOf(
+          const RemoteMessage(
+            data: {'shipment_id': 'S', 'notification_id': 'N', 'id': 'I'},
+          ),
+        ),
+        'N',
+      );
+      expect(
+        service.payloadOf(
+          const RemoteMessage(data: {'shipment_id': 'S', 'tag': 'T'}),
+        ),
+        'S',
+      );
+      expect(
+        service.payloadOf(const RemoteMessage(data: {'tag': 'T', 'id': 'I'})),
+        'T',
+      );
+      expect(service.payloadOf(const RemoteMessage(data: {'id': 'I'})), 'I');
+    });
+
+    test('ignora valores vacíos', () {
+      expect(
+        service.payloadOf(
+          const RemoteMessage(data: {'notification_id': '', 'id': 'I'}),
+        ),
+        'I',
+      );
     });
   });
 }

@@ -1369,6 +1369,96 @@
         ]
       }
     },
+    "/app/deliveries/{shipmentId}/issues": {
+      "post": {
+        "tags": [
+          "execution"
+        ],
+        "operationId": "reportDeliveryIssue",
+        "summary": "Report an issue during an in-progress delivery (does not close it)",
+        "description": "The driver reports an obstacle during a delivery that is still IN PROGRESS. It is distinct from\na failed delivery (which closes the delivery) and from a vehicle incident (breakdown/accident).\nThe delivery is NOT closed: the platform records the issue as an immutable fact and notifies the\ncontrol tower / customer through the outbox. Idempotent by `Idempotency-Key`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExecutionShipmentId"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Offline-first idempotency key; resending the same report does not duplicate the fact."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryIssueRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Issue accepted and recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "shipment_id",
+                        "type",
+                        "status"
+                      ],
+                      "properties": {
+                        "shipment_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "type": {
+                          "$ref": "#/components/schemas/DeliveryIssueType"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "REPORTED"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      }
+    },
     "/app/deliveries/{shipmentId}": {
       "get": {
         "tags": [
@@ -5577,6 +5667,16 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/OrderSource"
+            }
+          },
+          {
+            "name": "destination_node_id",
+            "in": "query",
+            "required": false,
+            "description": "Filtra por nodo destino. Para el rol Tienda se fuerza server-side a su nodo asignado e ignora este parámetro, de modo que una tienda solo ve sus propios envíos.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -10928,6 +11028,60 @@
         ]
       }
     },
+    "/app/devices/current/push-token": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "updateDevicePushToken",
+        "summary": "Update the push token (FCM FID) of the current device (gate /app)",
+        "description": "Sets the FCM push token (Firebase Installation ID) of the device bound to the current Sanctum token. A null token opts the device out of push. Idempotent.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "push_token"
+                ],
+                "properties": {
+                  "push_token": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 512,
+                    "description": "Firebase Installation ID, or null to opt out of push."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Push token updated."
+          },
+          "404": {
+            "description": "The current token is not bound to a device.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      }
+    },
     "/app/devices/{uuid}": {
       "delete": {
         "tags": [
@@ -11408,6 +11562,17 @@
             "items": {
               "type": "string"
             }
+          },
+          "node": {
+            "description": "Store node the account belongs to, or null for roles without a store.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Node"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -12730,7 +12895,8 @@
           "id",
           "shipment_id",
           "sequence",
-          "status"
+          "status",
+          "items"
         ],
         "properties": {
           "id": {
@@ -12752,9 +12918,46 @@
             "type": "string",
             "nullable": true
           },
+          "customer_phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Customer phone resolved from the shipment (cross-context). Null if unknown."
+          },
           "address": {
             "type": "string",
             "nullable": true
+          },
+          "address_reference": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address reference/landmark (gate, floor) resolved from the shipment. Null if unknown."
+          },
+          "items": {
+            "type": "array",
+            "description": "Order lines dropped at this stop, resolved from the shipment. Always present (empty when unknown).",
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "name",
+                "quantity"
+              ],
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "image_url": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
           },
           "eta_at": {
             "type": "string",
@@ -12832,6 +13035,17 @@
             "items": {
               "$ref": "#/components/schemas/DriverRouteStop"
             }
+          },
+          "route_geometry": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RouteGeometry"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Street-level route geometry from the published plan (planning), matched by vehicle+date. Null until the routing run computes it or if no plan matches."
           }
         }
       },
@@ -13592,13 +13806,12 @@
       "Channel": {
         "type": "string",
         "enum": [
-          "PUSH_NTFY",
-          "WEB_PUSH",
+          "FCM",
           "TELEGRAM",
           "EMAIL",
           "SMS"
         ],
-        "description": "Delivery channel; the cascade walks them in cost order (all open-source transports)."
+        "description": "Delivery channel; the cascade walks them in cost order (FCM push, then Telegram, Email, SMS)."
       },
       "CollectionMeta": {
         "type": "object",
@@ -15634,7 +15847,7 @@
           },
           "fcm_topic": {
             "type": "string",
-            "description": "FCM topic of the shipment (primary and web-push channel)."
+            "description": "Firebase Cloud Messaging topic of the shipment (shipment_<id>); the app subscribes to it."
           },
           "channels": {
             "type": "array",
@@ -17509,6 +17722,18 @@
           "status": {
             "$ref": "#/components/schemas/ShipmentStatus"
           },
+          "destination_node_id": {
+            "description": "UUID del nodo destino del envío (network_nodes). Null mientras el ingest/SAP no lo pueble.",
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "lines": {
             "type": "array",
             "items": {
@@ -17538,6 +17763,74 @@
           },
           "quantity": {
             "type": "integer"
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Product image URL. Null if unknown."
+          },
+          "price": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "DeliveryIssueType": {
+        "type": "string",
+        "enum": [
+          "DELAY",
+          "ACCESS",
+          "CUSTOMER_REQUEST",
+          "ADDRESS_UNCLEAR",
+          "OTHER"
+        ],
+        "description": "Type of in-progress delivery issue reported by the driver."
+      },
+      "DeliveryIssueRequest": {
+        "type": "object",
+        "required": [
+          "type",
+          "occurred_at"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DeliveryIssueType"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "lat": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "lng": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the issue happened in the field (sealed by the app, even offline)."
+          },
+          "photo_path": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2048,
+            "description": "Optional evidence photo path (uploaded via the delivery photos endpoint)."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Fallback idempotency key when the Idempotency-Key header is not sent."
           }
         }
       },

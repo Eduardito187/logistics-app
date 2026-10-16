@@ -31,7 +31,7 @@ enum UserRole {
     tasks: [
       'Recepción contra manifiesto',
       'Ubicación en estante',
-      'Entrega en mostrador (recojo)',
+      'Recojo en tienda',
     ],
   ),
   carrier(

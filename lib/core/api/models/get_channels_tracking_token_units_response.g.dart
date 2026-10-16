@@ -9,7 +9,7 @@ part of 'get_channels_tracking_token_units_response.dart';
 GetChannelsTrackingTokenUnitsResponse
 _$GetChannelsTrackingTokenUnitsResponseFromJson(Map<String, dynamic> json) =>
     GetChannelsTrackingTokenUnitsResponse(
-      data: Data11.fromJson(json['data'] as Map<String, dynamic>),
+      data: Data12.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$GetChannelsTrackingTokenUnitsResponseToJson(

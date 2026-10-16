@@ -24,12 +24,7 @@ class AsyncValueView<T> extends StatelessWidget {
       skipLoadingOnReload: true,
       skipLoadingOnRefresh: true,
       data: data,
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(48),
-          child: CircularProgressIndicator(),
-        ),
-      ),
+      loading: () => const LoadingView(),
       error: (error, _) {
         final message = error is ApiException
             ? error.message
@@ -47,6 +42,27 @@ class AsyncValueView<T> extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+/// Indicador de carga centrado y liviano.
+///
+/// El spinner va en un [RepaintBoundary]: su animación repinta 60 veces por
+/// segundo y, sin el límite, arrastra a repintar al resto de la pantalla (lo
+/// que más se nota en teléfonos de gama baja).
+class LoadingView extends StatelessWidget {
+  const LoadingView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(48),
+        child: RepaintBoundary(
+          child: CircularProgressIndicator(semanticsLabel: 'Cargando'),
+        ),
+      ),
     );
   }
 }

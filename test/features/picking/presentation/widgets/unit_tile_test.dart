@@ -4,6 +4,7 @@ import 'package:logistics_app/features/picking/presentation/widgets/button_spinn
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
 import '../../picking_test_harness.dart';
+import '../../../../support/button_finders.dart';
 
 // Fila de una unidad del pedido. Pendiente → "Escanear EAN e imprimir";
 // preparada → pastilla "Preparada" y "Reimprimir etiqueta". busy la bloquea.
@@ -49,7 +50,7 @@ void main() {
     expect(find.text('Línea 4 · Bulto …00000001'), findsOneWidget);
     expect(find.text('Pendiente'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, 'Escanear EAN e imprimir'),
+      findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
       findsOneWidget,
     );
     expect(find.text('Reimprimir etiqueta'), findsNothing);
@@ -62,7 +63,7 @@ void main() {
 
     expect(find.text('Preparada'), findsOneWidget);
     expect(
-      find.widgetWithText(OutlinedButton, 'Reimprimir etiqueta'),
+      findButtonWithText<OutlinedButton>('Reimprimir etiqueta'),
       findsOneWidget,
     );
     expect(find.text('Escanear EAN e imprimir'), findsNothing);
@@ -87,11 +88,11 @@ void main() {
 
     expect(find.byType(ButtonSpinner), findsOneWidget);
     final btn = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear EAN e imprimir'),
+      findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
     );
     expect(btn.onPressed, isNull);
 
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(findButton<FilledButton>());
     await tester.pump();
     expect(taps.prepare, 0);
   });

@@ -38,7 +38,7 @@ void main() {
       ],
     );
 
-    expect(find.text('Entrega en mostrador'), findsOneWidget);
+    expect(find.text('Recojo en tienda'), findsOneWidget);
     expect(find.byType(PickupCard), findsNWidgets(2));
     expect(find.text('Ana Pérez'), findsOneWidget);
     expect(find.text('Luis Gómez'), findsOneWidget);

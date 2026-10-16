@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/api/models/scan_request.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/sync_badge.dart';
+import '../../../core/widgets/app_snack.dart';
 import '../domain/usecases/record_load_scan.dart';
 import 'widgets/carrier_scan_record.dart';
+import 'widgets/carrier_scan_session_view.dart';
 import 'widgets/carrier_scan_support.dart';
-import 'widgets/scan_outcome_pill.dart';
 
 /// Escaneo del transportista al RECOGER la carga: registra cada bulto como
 /// escaneo de carga (offline-first). Un escaneo nunca espera a la red.
@@ -64,7 +62,12 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
           ),
         );
       });
-      showSubmitOutcome(context, outcome);
+      // El aviso flota encima del botón del pie: no tapa el próximo escaneo.
+      showSubmitOutcome(
+        context,
+        outcome,
+        bottomClearance: kBottomActionClearance,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -72,73 +75,24 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat.Hm();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Escanear al recoger'),
-        actions: [
-          SyncBadge(onTap: () {}),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_records.isEmpty)
-            const Expanded(
-              child: EmptyState(
-                icon: Icons.upload_file,
-                title: 'Sin bultos recogidos',
-                message: 'Escanea la etiqueta de cada bulto al cargarlo.',
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: _records.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final record = _records[index];
-                  return ListTile(
-                    tileColor: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    leading: const Icon(Icons.inventory_2_outlined),
-                    title: Text(
-                      record.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Text(
-                      '${record.unitId} · ${timeFormat.format(record.at)}',
-                    ),
-                    trailing: ScanOutcomePill(record.outcome),
-                  );
-                },
-              ),
-            ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _busy ? null : _scan,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.accentInk,
-                  ),
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Escanear bulto'),
-                ),
-              ),
-            ),
-          ),
-        ],
+      appBar: AppBar(title: const Text('Escanear al recoger')),
+      body: CarrierScanSessionView(
+        records: _records,
+        emptyIcon: Icons.upload_file,
+        emptyTitle: 'Sin bultos recogidos',
+        emptyMessage: 'Escanea la etiqueta de cada bulto al cargarlo.',
+        rowIcon: Icons.inventory_2_outlined,
+        actionLabel: 'Escanear bulto',
+        busy: _busy,
+        onAction: _scan,
+        actionStyle: _actionStyle,
       ),
     );
   }
+
+  static final ButtonStyle _actionStyle = FilledButton.styleFrom(
+    backgroundColor: AppColors.accent,
+    foregroundColor: AppColors.accentInk,
+  );
 }

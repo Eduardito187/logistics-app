@@ -4,33 +4,24 @@ import 'push_registration_state.dart';
 // no romper a quienes importan `push/push_status.dart`.
 export 'push_registration_state.dart';
 
-/// Instantánea del estado de push. Transporta el endpoint y el distribuidor
-/// elegido para que la UI y el coordinador puedan mostrarlos y actuar.
+/// Instantánea del estado de push. Transporta el token FCM para que la UI y el
+/// coordinador puedan mostrarlo y actuar.
 class PushStatus {
-  const PushStatus({
-    required this.state,
-    this.endpoint,
-    this.distributor,
-    this.message,
-  });
+  const PushStatus({required this.state, this.token, this.message});
 
-  /// Estado inicial: sin registro y sin endpoint.
+  /// Estado inicial: sin registro y sin token.
   const PushStatus.idle() : this(state: PushRegistrationState.idle);
 
   final PushRegistrationState state;
 
-  /// URL del endpoint entregado por el distribuidor (ntfy). `null` si no hay.
-  final String? endpoint;
-
-  /// Identificador del distribuidor UnifiedPush en uso (paquete Android).
-  final String? distributor;
+  /// Token FCM del dispositivo. `null` si no hay.
+  final String? token;
 
   /// Mensaje legible para la UI ante un error o aviso.
   final String? message;
 
   bool get isRegistered =>
-      state == PushRegistrationState.registered &&
-      (endpoint?.isNotEmpty ?? false);
+      state == PushRegistrationState.registered && (token?.isNotEmpty ?? false);
 
   /// Centinela para distinguir "no se pasó el campo" de "se pasó null". Sin esto,
   /// `message ?? this.message` hace que `copyWith(message: null)` conserve el
@@ -40,18 +31,12 @@ class PushStatus {
 
   PushStatus copyWith({
     PushRegistrationState? state,
-    Object? endpoint = _unset,
-    Object? distributor = _unset,
+    Object? token = _unset,
     Object? message = _unset,
   }) {
     return PushStatus(
       state: state ?? this.state,
-      endpoint: identical(endpoint, _unset)
-          ? this.endpoint
-          : endpoint as String?,
-      distributor: identical(distributor, _unset)
-          ? this.distributor
-          : distributor as String?,
+      token: identical(token, _unset) ? this.token : token as String?,
       message: identical(message, _unset) ? this.message : message as String?,
     );
   }

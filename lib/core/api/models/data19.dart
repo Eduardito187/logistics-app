@@ -4,19 +4,15 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'status4.dart';
-
 part 'data19.g.dart';
 
 @JsonSerializable()
 class Data19 {
-  const Data19({required this.eventId, required this.status});
+  const Data19({required this.code});
 
   factory Data19.fromJson(Map<String, Object?> json) => _$Data19FromJson(json);
 
-  @JsonKey(name: 'event_id')
-  final String eventId;
-  final Status4 status;
+  final String code;
 
   Map<String, Object?> toJson() => _$Data19ToJson(this);
 }

@@ -1,344 +1,348 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/auth/session.dart';
+import 'package:logistics_app/core/auth/user_role.dart';
+import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/push/push_service.dart';
 import 'package:logistics_app/core/push/push_status.dart';
 
-// PushController orquesta el registro push y publica PushStatus. Se sustituye
-// PushService por un fake (captura los callbacks y controla distribuidores) y
-// el endpoint provider por uno en memoria, para no tocar UnifiedPush ni el
-// secure storage.
+// PushController (FCM) con un PushService falso: arranque con/sin credenciales,
+// re-registro con permiso previo, activación por el usuario, permiso denegado,
+// rotación/baja del identificador y taps de notificación.
 
-class _FakePushService extends PushService {
-  void Function(String endpoint, String instance)? newEndpoint;
-  void Function(String instance)? registrationFailed;
-  void Function(String instance)? unregistered;
-  void Function(Uint8List message, String instance)? message;
-  void Function(String? payload)? tap;
-
-  bool initializeThrows = false;
-  String? saved;
-  List<String> distributors = ['org.ntfy'];
-  bool permissionGranted = true;
-
+class _FakePushService implements PushService {
+  bool configured = true;
+  bool permissionGranted = false;
+  bool grantOnRequest = true;
+  Object? initError;
   int registerCalls = 0;
   int unregisterCalls = 0;
-  int permissionCalls = 0;
-  int availableCalls = 0;
-  final List<String> savedDistributors = [];
-  PushMessage decoded = const PushMessage(title: 'd', body: 'db');
-  final List<PushMessage> shown = [];
+
+  void Function(String token)? onToken;
+  void Function(String? payload)? onTap;
+  void Function()? onUnregistered;
 
   @override
-  Future<void> initialize({
-    required void Function(String endpoint, String instance) onNewEndpoint,
-    required void Function(String instance) onRegistrationFailed,
-    required void Function(String instance) onUnregistered,
-    required void Function(Uint8List message, String instance) onMessage,
+  Future<bool> initialize({
+    required void Function(String token) onToken,
     required void Function(String? payload) onTap,
+    void Function()? onUnregistered,
   }) async {
-    if (initializeThrows) {
-      throw StateError('no hay distribuidor');
-    }
-    newEndpoint = onNewEndpoint;
-    registrationFailed = onRegistrationFailed;
-    unregistered = onUnregistered;
-    message = onMessage;
-    tap = onTap;
+    if (initError != null) throw initError!;
+    this.onToken = onToken;
+    this.onTap = onTap;
+    this.onUnregistered = onUnregistered;
+    return configured;
   }
 
   @override
-  Future<bool> requestNotificationPermission() async {
-    permissionCalls++;
-    return permissionGranted;
+  Future<bool> hasPermission() async => permissionGranted;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionGranted = grantOnRequest;
+    return grantOnRequest;
   }
 
   @override
-  Future<List<String>> availableDistributors() async {
-    availableCalls++;
-    return distributors;
-  }
-
-  @override
-  Future<String?> savedDistributor() async => saved;
-
-  @override
-  Future<void> saveDistributor(String distributor) async {
-    saved = distributor;
-    savedDistributors.add(distributor);
-  }
-
-  @override
-  Future<void> register() async {
+  Future<void> registerDevice() async {
     registerCalls++;
+    onToken?.call('fid-$registerCalls');
   }
 
   @override
-  Future<void> unregister() async {
-    unregisterCalls++;
-  }
+  Future<void> unregister() async => unregisterCalls++;
+
+  final List<String> topicCalls = [];
 
   @override
-  PushMessage decodeMessage(Uint8List bytes) => decoded;
+  Future<void> subscribeToTopic(String topic) async =>
+      topicCalls.add('+$topic');
 
   @override
-  Future<void> showMessage(PushMessage message) async {
-    shown.add(message);
-  }
+  Future<void> unsubscribeFromTopic(String topic) async =>
+      topicCalls.add('-$topic');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeEndpoint extends PushEndpointNotifier {
-  _FakeEndpoint([this._seed]);
-  final String? _seed;
+/// Cola offline falsa: registra lo encolado.
+class _FakeQueue implements OfflineQueue {
+  final List<({String kind, Map<String, Object?> payload})> submitted = [];
 
   @override
-  String? build() => _seed;
-
-  @override
-  Future<void> save(String endpoint) async {
-    state = endpoint;
+  Future<SubmitOutcome> submit({
+    required String kind,
+    required Map<String, Object?> payload,
+    required String label,
+    DateTime? occurredAt,
+    String? idempotencyKey,
+  }) async {
+    submitted.add((kind: kind, payload: payload));
+    return SubmitOutcome.queued;
   }
 
   @override
-  Future<void> clear() async {
-    state = null;
-  }
-}
-
-Future<void> _flush() => Future<void>.delayed(Duration.zero);
-
-ProviderContainer _container(_FakePushService service, {String? seedEndpoint}) {
-  final container = ProviderContainer(
-    overrides: [
-      pushServiceProvider.overrideWithValue(service),
-      pushEndpointProvider.overrideWith(() => _FakeEndpoint(seedEndpoint)),
-    ],
-  );
-  addTearDown(container.dispose);
-  return container;
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
-  group('bootstrap (build)', () {
-    test('sin distribuidor guardado queda idle y no registra', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service);
+  late _FakePushService service;
+
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+    service = _FakePushService();
+  });
+
+  late _FakeQueue queue;
+
+  ProviderContainer make({bool configured = true}) {
+    queue = _FakeQueue();
+    final container = ProviderContainer(
+      overrides: [
+        pushServiceProvider.overrideWithValue(service),
+        pushConfiguredProvider.overrideWithValue(configured),
+        offlineQueueProvider.overrideWithValue(queue),
+      ],
+    );
+    addTearDown(container.dispose);
+    return container;
+  }
+
+  test(
+    'sin credenciales de Firebase queda "no disponible" y no inicia',
+    () async {
+      final container = make(configured: false);
+
+      final status = container.read(pushRegistrationProvider);
+      await pumpEventQueue();
+
+      expect(status.state, PushRegistrationState.unavailable);
+      expect(service.onToken, isNull); // nunca inicializó
+    },
+  );
+
+  test('register sin credenciales tampoco intenta nada', () async {
+    final container = make(configured: false);
+    container.read(pushRegistrationProvider);
+
+    await container.read(pushRegistrationProvider.notifier).register();
+
+    expect(
+      container.read(pushRegistrationProvider).state,
+      PushRegistrationState.unavailable,
+    );
+    expect(service.registerCalls, 0);
+  });
+
+  test('arranque con permiso previo: se re-registra y guarda el id', () async {
+    service.permissionGranted = true;
+    final container = make();
+
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    final status = container.read(pushRegistrationProvider);
+    expect(status.isRegistered, isTrue);
+    expect(status.token, 'fid-1');
+    expect(container.read(pushTokenProvider), 'fid-1');
+  });
+
+  test(
+    'arranque sin permiso: queda inactivo hasta que el usuario active',
+    () async {
+      final container = make();
 
       container.read(pushRegistrationProvider);
-      await _flush();
+      await pumpEventQueue();
 
       expect(
         container.read(pushRegistrationProvider).state,
         PushRegistrationState.idle,
       );
       expect(service.registerCalls, 0);
-    });
+    },
+  );
 
+  test('register: pide permiso, registra y queda activo', () async {
+    final container = make();
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    await container.read(pushRegistrationProvider.notifier).register();
+
+    final status = container.read(pushRegistrationProvider);
+    expect(status.isRegistered, isTrue);
+    expect(status.message, isNull);
+    expect(container.read(pushTokenProvider), 'fid-1');
+  });
+
+  test('register con permiso denegado: error claro y sin registrar', () async {
+    service.grantOnRequest = false;
+    final container = make();
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    await container.read(pushRegistrationProvider.notifier).register();
+
+    final status = container.read(pushRegistrationProvider);
+    expect(status.state, PushRegistrationState.failed);
+    expect(status.message, contains('Permiso de notificaciones denegado'));
+    expect(service.registerCalls, 0);
+  });
+
+  test('un identificador rotado por FCM reemplaza al anterior', () async {
+    service.permissionGranted = true;
+    final container = make();
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    service.onToken!('fid-rotado');
+    await pumpEventQueue();
+
+    expect(container.read(pushRegistrationProvider).token, 'fid-rotado');
+    expect(container.read(pushTokenProvider), 'fid-rotado');
+  });
+
+  test('unregister da de baja en FCM y olvida el identificador', () async {
+    service.permissionGranted = true;
+    final container = make();
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    await container.read(pushRegistrationProvider.notifier).unregister();
+
+    expect(service.unregisterCalls, 1);
+    expect(
+      container.read(pushRegistrationProvider).state,
+      PushRegistrationState.idle,
+    );
+    expect(container.read(pushTokenProvider), isNull);
+  });
+
+  test('baja informada por FCM (onUnregistered) también lo olvida', () async {
+    service.permissionGranted = true;
+    final container = make();
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    service.onUnregistered!();
+    await pumpEventQueue();
+
+    expect(container.read(pushRegistrationProvider).isRegistered, isFalse);
+    expect(container.read(pushTokenProvider), isNull);
+  });
+
+  test('un error de plataforma al iniciar no tumba la app', () async {
+    service.initError = StateError('sin Google Play Services');
+    final container = make();
+
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+
+    final status = container.read(pushRegistrationProvider);
+    expect(status.state, PushRegistrationState.failed);
+    expect(status.message, contains('No se pudo iniciar el push'));
+  });
+
+  test('los taps se publican en pushTapProvider (payload o vacío)', () async {
+    final container = make();
+    final taps = <String>[];
+    container.read(pushRegistrationProvider);
+    await pumpEventQueue();
+    final sub = container
+        .read(pushRegistrationProvider.notifier)
+        .taps
+        .listen(taps.add);
+    addTearDown(sub.cancel);
+
+    service.onTap!('N-1');
+    service.onTap!(null);
+    await pumpEventQueue();
+
+    expect(taps, ['N-1', '']);
+  });
+
+  group('sincronización con el backend', () {
     test(
-      'con distribuidor y sin endpoint: registering y reintenta registro',
+      'sin sesión el token NO se manda (viaja en el próximo login)',
       () async {
-        final service = _FakePushService()..saved = 'org.ntfy';
-        final container = _container(service);
-
+        service.permissionGranted = true;
+        final container = make();
         container.read(pushRegistrationProvider);
-        await _flush();
+        await pumpEventQueue();
 
-        final status = container.read(pushRegistrationProvider);
-        expect(status.state, PushRegistrationState.registering);
-        expect(status.distributor, 'org.ntfy');
-        expect(service.registerCalls, 1);
+        expect(container.read(pushTokenProvider), 'fid-1');
+        expect(queue.submitted, isEmpty);
       },
     );
 
-    test('con distribuidor y endpoint guardado: registered', () async {
-      final service = _FakePushService()..saved = 'org.ntfy';
-      final container = _container(service, seedEndpoint: 'https://ntfy.sh/e');
-
+    test('con sesión, un token rotado se encola como PUT push-token', () async {
+      service.permissionGranted = true;
+      final container = make();
+      await container
+          .read(sessionProvider.notifier)
+          .signIn(token: 't', userName: 'U', role: UserRole.driver);
       container.read(pushRegistrationProvider);
-      await _flush();
+      await pumpEventQueue();
 
-      final status = container.read(pushRegistrationProvider);
-      expect(status.state, PushRegistrationState.registered);
-      expect(status.endpoint, 'https://ntfy.sh/e');
+      service.onToken!('fid-rotado');
+      await pumpEventQueue();
+
+      expect(queue.submitted.last.kind, 'updateDevicePushToken');
+      expect(queue.submitted.last.payload, {'push_token': 'fid-rotado'});
     });
 
-    test(
-      'un fallo en initialize no tumba la app: estado failed con mensaje',
-      () async {
-        final service = _FakePushService()..initializeThrows = true;
-        final container = _container(service);
+    test('el mismo token no se reenvía', () async {
+      service.permissionGranted = true;
+      final container = make();
+      await container
+          .read(sessionProvider.notifier)
+          .signIn(token: 't', userName: 'U', role: UserRole.driver);
+      container.read(pushRegistrationProvider);
+      await pumpEventQueue();
+      final before = queue.submitted.length;
 
+      service.onToken!('fid-1');
+      await pumpEventQueue();
+
+      expect(queue.submitted.length, before);
+    });
+
+    test('unregister con sesión avisa push_token: null', () async {
+      service.permissionGranted = true;
+      final container = make();
+      await container
+          .read(sessionProvider.notifier)
+          .signIn(token: 't', userName: 'U', role: UserRole.driver);
+      container.read(pushRegistrationProvider);
+      await pumpEventQueue();
+
+      await container.read(pushRegistrationProvider.notifier).unregister();
+
+      expect(queue.submitted.last.payload, {'push_token': null});
+    });
+  });
+
+  group('topics por rol y tienda', () {
+    test(
+      'se suscribe a role_<rol> al iniciar sesión y se baja al salir',
+      () async {
+        final container = make();
         container.read(pushRegistrationProvider);
-        await _flush();
+        await pumpEventQueue();
 
-        final status = container.read(pushRegistrationProvider);
-        expect(status.state, PushRegistrationState.failed);
-        expect(status.message, contains('No se pudo iniciar el push'));
+        container.read(sessionProvider.notifier).devSignIn(UserRole.driver);
+        await pumpEventQueue();
+        expect(service.topicCalls, ['+role_chofer']);
+
+        await container.read(sessionProvider.notifier).signOut();
+        await pumpEventQueue();
+        expect(service.topicCalls, ['+role_chofer', '-role_chofer']);
       },
     );
-  });
-
-  group('register()', () {
-    test('pide permiso, toma el primer distribuidor y registra', () async {
-      final service = _FakePushService()
-        ..saved = null
-        ..distributors = ['org.ntfy', 'org.otro'];
-      final container = _container(service);
-      final notifier = container.read(pushRegistrationProvider.notifier);
-      await _flush();
-
-      await notifier.register();
-
-      expect(service.permissionCalls, greaterThanOrEqualTo(1));
-      expect(service.savedDistributors, contains('org.ntfy'));
-      expect(service.registerCalls, greaterThanOrEqualTo(1));
-      final status = container.read(pushRegistrationProvider);
-      expect(status.state, PushRegistrationState.registering);
-      expect(status.distributor, 'org.ntfy');
-    });
-
-    test(
-      'sin distribuidores instalados: unavailable con instrucción',
-      () async {
-        final service = _FakePushService()
-          ..saved = null
-          ..distributors = [];
-        final container = _container(service);
-        final notifier = container.read(pushRegistrationProvider.notifier);
-        await _flush();
-
-        await notifier.register();
-
-        final status = container.read(pushRegistrationProvider);
-        expect(status.state, PushRegistrationState.unavailable);
-        expect(status.message, contains('ntfy'));
-      },
-    );
-
-    test('si ya hay distribuidor guardado no busca la lista', () async {
-      final service = _FakePushService()..saved = 'org.ntfy';
-      final container = _container(service);
-      final notifier = container.read(pushRegistrationProvider.notifier);
-      await _flush();
-      service.availableCalls = 0; // ignorar lo del bootstrap
-
-      await notifier.register();
-
-      expect(service.availableCalls, 0);
-      expect(container.read(pushRegistrationProvider).distributor, 'org.ntfy');
-    });
-  });
-
-  group('unregister()', () {
-    test('da de baja, limpia el endpoint y vuelve a idle', () async {
-      final service = _FakePushService()..saved = 'org.ntfy';
-      final container = _container(service, seedEndpoint: 'https://ntfy.sh/e');
-      final notifier = container.read(pushRegistrationProvider.notifier);
-      await _flush();
-
-      await notifier.unregister();
-
-      expect(service.unregisterCalls, 1);
-      expect(container.read(pushEndpointProvider), isNull);
-      expect(
-        container.read(pushRegistrationProvider).state,
-        PushRegistrationState.idle,
-      );
-    });
-  });
-
-  group('callbacks de UnifiedPush', () {
-    test('onNewEndpoint guarda el endpoint y pasa a registered', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service);
-      container.read(pushRegistrationProvider);
-      await _flush();
-
-      service.newEndpoint!('https://ntfy.sh/nuevo', 'instancia');
-      await _flush();
-
-      expect(container.read(pushEndpointProvider), 'https://ntfy.sh/nuevo');
-      final status = container.read(pushRegistrationProvider);
-      expect(status.state, PushRegistrationState.registered);
-      expect(status.endpoint, 'https://ntfy.sh/nuevo');
-    });
-
-    test('onRegistrationFailed pasa a failed con mensaje', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service);
-      container.read(pushRegistrationProvider);
-      await _flush();
-
-      service.registrationFailed!('instancia');
-      await _flush();
-
-      final status = container.read(pushRegistrationProvider);
-      expect(status.state, PushRegistrationState.failed);
-      expect(status.message, 'El distribuidor rechazó el registro.');
-    });
-
-    test('onUnregistered limpia endpoint y pasa a unregistered', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service, seedEndpoint: 'https://ntfy.sh/e');
-      container.read(pushRegistrationProvider);
-      await _flush();
-
-      service.unregistered!('instancia');
-      await _flush();
-
-      expect(container.read(pushEndpointProvider), isNull);
-      expect(
-        container.read(pushRegistrationProvider).state,
-        PushRegistrationState.unregistered,
-      );
-    });
-
-    test('onMessage decodifica y muestra la notificación local', () async {
-      final service = _FakePushService()..saved = null;
-      service.decoded = const PushMessage(title: 'Ruta', body: 'Sal ya');
-      final container = _container(service);
-      container.read(pushRegistrationProvider);
-      await _flush();
-
-      service.message!(Uint8List.fromList([1, 2, 3]), 'instancia');
-      await _flush();
-
-      expect(service.shown, hasLength(1));
-      expect(service.shown.single.title, 'Ruta');
-    });
-
-    test('onTap emite el payload en el stream taps', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service);
-      final notifier = container.read(pushRegistrationProvider.notifier);
-      await _flush();
-
-      final emitted = <String>[];
-      final sub = notifier.taps.listen(emitted.add);
-
-      service.tap!('SHP-1');
-      service.tap!(null); // payload null -> cadena vacía
-      await _flush();
-
-      expect(emitted, ['SHP-1', '']);
-      await sub.cancel();
-    });
-
-    test('pushTapProvider refleja el último tap emitido', () async {
-      final service = _FakePushService()..saved = null;
-      final container = _container(service);
-      // Suscribir el StreamProvider antes de emitir (también construye el
-      // controller, que es quien captura el callback onTap).
-      final sub = container.listen(pushTapProvider, (_, next) {});
-      await _flush();
-
-      service.tap!('N-7');
-      await _flush();
-
-      expect(container.read(pushTapProvider).value, 'N-7');
-      sub.close();
-    });
   });
 }

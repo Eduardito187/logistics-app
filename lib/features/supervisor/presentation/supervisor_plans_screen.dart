@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/plan.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/supervisor_controllers.dart';
@@ -31,23 +32,33 @@ class SupervisorPlansScreen extends ConsumerWidget {
                 data: (data) {
                   if (data.isEmpty) {
                     return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: const [
                         SizedBox(height: 80),
                         EmptyState(
                           icon: Icons.alt_route,
                           title: 'Sin planes para este día',
                           message:
-                              'Elige otra fecha o genera la planificación.',
+                              'Elige otra fecha o espera a que se publique la planificación.',
                         ),
                       ],
                     );
                   }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: data.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) =>
-                        PlanCard(plan: data[index]),
+                  // Perezosa y en columnas (1 en teléfono, 2–3 en tablet).
+                  return CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverAdaptiveCardRows(
+                          itemCount: data.length,
+                          itemBuilder: (context, index) => PlanCard(
+                            key: ValueKey(data[index].id),
+                            plan: data[index],
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),

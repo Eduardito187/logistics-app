@@ -9,7 +9,7 @@ part of 'post_integrations_network_nodes_response.dart';
 PostIntegrationsNetworkNodesResponse
 _$PostIntegrationsNetworkNodesResponseFromJson(Map<String, dynamic> json) =>
     PostIntegrationsNetworkNodesResponse(
-      data: Data18.fromJson(json['data'] as Map<String, dynamic>),
+      data: Data19.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PostIntegrationsNetworkNodesResponseToJson(

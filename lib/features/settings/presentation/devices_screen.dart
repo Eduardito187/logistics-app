@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/device_list_item.dart';
 import '../../../core/auth/session.dart';
+import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../domain/usecases/revoke_device.dart';
@@ -58,52 +59,78 @@ class DevicesScreen extends ConsumerWidget {
     final devices = ref.watch(devicesProvider);
     // El dispositivo actual viene del perfil (`/app/auth/me`); si aún no cargó
     // no marcamos ninguno como actual (y no bloqueamos la revocación por error).
-    final currentUuid = ref.watch(appMeProvider).value?.device?.uuid;
+    // `select`: solo reconstruye si cambia el uuid, no ante cualquier cambio
+    // del perfil.
+    final currentUuid = ref.watch(
+      appMeProvider.select((me) => me.value?.device?.uuid),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mis dispositivos')),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(devicesProvider);
-          ref.invalidate(appMeProvider);
-          await ref.read(devicesProvider.future);
-        },
-        child: AsyncValueView<List<DeviceListItem>>(
-          value: devices,
-          onRetry: () => ref.invalidate(devicesProvider),
-          data: (items) {
-            if (items.isEmpty) {
-              return const EmptyState(
-                icon: Icons.devices_other,
-                title: 'Sin dispositivos',
-                message: 'No hay sesiones activas registradas.',
-              );
-            }
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final device in items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: DeviceCard(
-                      device: device,
-                      isCurrent:
-                          currentUuid != null && device.uuid == currentUuid,
-                      onRevoke: device.revoked
-                          ? null
-                          : () => _revoke(
-                              context,
-                              ref,
-                              device,
-                              isCurrent:
-                                  currentUuid != null &&
-                                  device.uuid == currentUuid,
-                            ),
-                    ),
-                  ),
-              ],
-            );
+      body: ResponsiveBody(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(devicesProvider);
+            ref.invalidate(appMeProvider);
+            await ref.read(devicesProvider.future);
           },
+          // Un solo scroll con slivers: la lista es perezosa y el estado
+          // vacío/error también se refresca tirando hacia abajo.
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: switch (devices) {
+              AsyncValue(:final value?, hasError: false) =>
+                value.isEmpty
+                    ? const [
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyState(
+                            icon: Icons.devices_other,
+                            title: 'Sin dispositivos',
+                            message: 'No hay sesiones activas registradas.',
+                          ),
+                        ),
+                      ]
+                    : [
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverList.separated(
+                            itemCount: value.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, i) {
+                              final device = value[i];
+                              final isCurrent =
+                                  currentUuid != null &&
+                                  device.uuid == currentUuid;
+                              return DeviceCard(
+                                device: device,
+                                isCurrent: isCurrent,
+                                onRevoke: device.revoked
+                                    ? null
+                                    : () => _revoke(
+                                        context,
+                                        ref,
+                                        device,
+                                        isCurrent: isCurrent,
+                                      ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+              _ => [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AsyncValueView<List<DeviceListItem>>(
+                    value: devices,
+                    onRetry: () => ref.invalidate(devicesProvider),
+                    data: (_) => const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+            },
+          ),
         ),
       ),
     );

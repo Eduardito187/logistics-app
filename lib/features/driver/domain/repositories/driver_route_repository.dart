@@ -11,6 +11,9 @@ abstract interface class DriverRouteRepository {
     required DateTime date,
   });
 
+  /// Detalle del envío de una parada (teléfono del cliente y productos).
+  Future<Shipment> getShipment({required String shipmentId});
+
   /// Entregas asignadas al vehículo (hoja de ruta de carga).
   Future<List<Delivery>> listVehicleDeliveries({required String vehicleId});
 

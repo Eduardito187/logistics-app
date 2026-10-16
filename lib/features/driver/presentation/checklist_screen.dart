@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -75,64 +78,67 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     List<Driver> drivers,
   ) {
     final passedCount = _checks.values.where((v) => v).length;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Chofer',
-          child: DropdownButtonFormField<String>(
-            initialValue: _driverId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Selecciona el chofer',
-            ),
-            items: [
-              for (final driver in drivers)
-                DropdownMenuItem<String>(
-                  value: driver.id,
-                  child: Text(driver.name ?? driver.id),
-                ),
-            ],
-            onChanged: _busy ? null : (v) => setState(() => _driverId = v),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SectionCard(
-          title: 'Inspección ($passedCount/${_checklistItems.length})',
-          child: Column(
-            children: [
-              for (final entry in _checklistItems.entries)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.value),
-                  value: _checks[entry.key] ?? false,
-                  onChanged: _busy
-                      ? null
-                      : (v) => setState(() => _checks[entry.key] = v),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SectionCard(
-          title: 'Observaciones',
-          child: TextField(
-            controller: _notes,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Notas opcionales de la inspección',
+    return ResponsiveBody(
+      maxWidth: AppBreakpoints.maxFormWidth,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: 'Chofer',
+            child: DropdownButtonFormField<String>(
+              value: _driverId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Selecciona el chofer',
+              ),
+              items: [
+                for (final driver in drivers)
+                  DropdownMenuItem<String>(
+                    value: driver.id,
+                    child: Text(driver.name ?? driver.id),
+                  ),
+              ],
+              onChanged: _busy ? null : (v) => setState(() => _driverId = v),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        FilledButton.icon(
-          onPressed: _driverId != null && !_busy
-              ? () => _submit(vehicleId)
-              : null,
-          icon: const Icon(Icons.save),
-          label: const Text('Registrar checklist'),
-        ),
-      ],
+          const SizedBox(height: 16),
+          SectionCard(
+            title: 'Inspección ($passedCount/${_checklistItems.length})',
+            child: Column(
+              children: [
+                for (final entry in _checklistItems.entries)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(entry.value),
+                    value: _checks[entry.key] ?? false,
+                    onChanged: _busy
+                        ? null
+                        : (v) => setState(() => _checks[entry.key] = v),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SectionCard(
+            title: 'Observaciones',
+            child: TextField(
+              controller: _notes,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Notas opcionales de la inspección',
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _driverId != null && !_busy
+                ? () => _submit(vehicleId)
+                : null,
+            icon: const Icon(Icons.save),
+            label: const Text('Registrar checklist'),
+          ),
+        ],
+      ),
     );
   }
 

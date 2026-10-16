@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/layout/responsive_body.dart';
 import '../../../core/printing/label_printer.dart';
 import '../../../core/printing/printer_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/section_card.dart';
+import 'widgets/field_use_section.dart';
 import 'widgets/printer_section.dart';
 import 'widgets/profile_section.dart';
 import 'widgets/session_section.dart';
@@ -45,39 +47,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const ProfileSection(),
-          const SizedBox(height: 12),
-          PrinterSection(printing: _printing, onPrintTest: _printTest),
-          const SizedBox(height: 12),
-          SessionSection(session: session),
-          const SizedBox(height: 12),
-          SectionCard(
-            title: 'Cuenta y seguridad',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.devices),
-              title: const Text('Mis dispositivos'),
-              subtitle: const Text('Sesiones activas y revocar acceso.'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/settings/devices'),
+      // En tablet las secciones no se estiran de borde a borde.
+      body: ResponsiveBody(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const ProfileSection(),
+            const SizedBox(height: 12),
+            PrinterSection(printing: _printing, onPrintTest: _printTest),
+            const SizedBox(height: 12),
+            const FieldUseSection(),
+            const SizedBox(height: 12),
+            SessionSection(session: session),
+            const SizedBox(height: 12),
+            SectionCard(
+              title: 'Cuenta y seguridad',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.devices),
+                title: const Text('Mis dispositivos'),
+                subtitle: const Text('Sesiones activas y revocar acceso.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/devices'),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            title: 'Sincronización',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.sync),
-              title: const Text('Estado de sincronización'),
-              subtitle: const Text('Escaneos y envíos pendientes de subir.'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/sync'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

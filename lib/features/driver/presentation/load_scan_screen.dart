@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_pill.dart';
@@ -32,10 +33,8 @@ class LoadScanScreen extends ConsumerWidget {
                 message: 'No hay envíos asignados a este vehículo.',
               );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
+            return AdaptiveCardRows(
               itemCount: list.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, i) {
                 final delivery = list[i];
                 return Card(

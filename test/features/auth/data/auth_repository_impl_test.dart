@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/clients/auth_client.dart';
 import 'package:logistics_app/core/api/logistics_api.dart';
 import 'package:logistics_app/core/api/models/app_device_payload.dart';
@@ -19,6 +20,8 @@ import 'package:logistics_app/core/network/dio_client.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
+
+import '../../store/store_fixtures.dart';
 
 // Capa data de auth. Dos niveles:
 //  1. AuthRepositoryImpl (vía SignIn): mapea rol, abre sesión, carga abilities
@@ -39,10 +42,16 @@ class _FakeTokenStore extends TokenStore {
   Future<void> clearToken() async {}
   @override
   Future<String?> readToken() async => null;
+  @override
+  Future<void> writeSessionSnapshot(Map<String, Object?> snapshot) async {}
+  @override
+  Future<Map<String, Object?>?> readSessionSnapshot() async => null;
+  @override
+  Future<void> clearSessionSnapshot() async {}
 }
 
-/// Endpoint push: nace en null y no lee el almacén.
-class _FakePushEndpoint extends PushEndpointNotifier {
+/// Token push: nace en null y no lee el almacén.
+class _FakePushToken extends PushTokenNotifier {
   @override
   String? build() => null;
 }
@@ -82,30 +91,32 @@ class _FakeAuthRemote implements AuthRemoteDataSource {
   }
 }
 
-AppLoginResponse _loginWithRoles(List<String> roles) => AppLoginResponse(
-  token: 'tok-123',
-  tokenType: 'Bearer',
-  expiresAt: null,
-  user: AppUserProfile(
-    id: 1,
-    name: 'Juan Pérez',
-    email: 'juan@x.com',
-    roles: roles,
-  ),
-  device: const AppDevicePayload(
-    uuid: 'dev-uuid',
-    platform: 'android',
-    name: 'App interna',
-    lastSeenAt: null,
-  ),
-);
+AppLoginResponse _loginWithRoles(List<String> roles, {Node? node}) =>
+    AppLoginResponse(
+      token: 'tok-123',
+      tokenType: 'Bearer',
+      expiresAt: null,
+      user: AppUserProfile(
+        id: 1,
+        name: 'Juan Pérez',
+        email: 'juan@x.com',
+        roles: roles,
+        node: node,
+      ),
+      device: const AppDevicePayload(
+        uuid: 'dev-uuid',
+        platform: 'android',
+        name: 'App interna',
+        lastSeenAt: null,
+      ),
+    );
 
 ProviderContainer _container(_FakeAuthRemote remote) {
   final container = ProviderContainer(
     overrides: [
       authRemoteDataSourceProvider.overrideWithValue(remote),
       tokenStoreProvider.overrideWithValue(_FakeTokenStore()),
-      pushEndpointProvider.overrideWith(_FakePushEndpoint.new),
+      pushTokenProvider.overrideWith(_FakePushToken.new),
       labelKeysProvider.overrideWith(_FakeLabelKeys.new),
     ],
   );
@@ -159,6 +170,33 @@ class _FakeApi extends LogisticsApi {
 
 void main() {
   group('AuthRepositoryImpl (vía SignIn)', () {
+    test('usuario tienda: la sesión guarda su tienda (login y /me)', () async {
+      final tienda = storeNode(name: 'Tienda Norte', code: 'ST-09');
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['tienda'], node: tienda),
+        meResponse: AppMeResponse(
+          user: AppUserProfile(
+            id: 1,
+            name: 'Juan',
+            email: 'j@x.com',
+            roles: const ['tienda'],
+            node: tienda,
+          ),
+          device: null,
+          abilities: const [],
+        ),
+      );
+      final container = _container(remote);
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      final session = container.read(sessionProvider)!;
+      expect(session.role, UserRole.store);
+      expect(session.storeNode?.code, 'ST-09');
+    });
+
     test('login ok con rol operativo: abre sesión y carga abilities', () async {
       final remote = _FakeAuthRemote(
         loginResponse: _loginWithRoles(['chofer']),
@@ -223,7 +261,13 @@ void main() {
           throwsA(
             isA<ApiException>()
                 .having((e) => e.status, 'status', 403)
-                .having((e) => e.detail, 'detail', contains('rol')),
+                .having((e) => e.detail, 'detail', contains('rol'))
+                // Se muestra el motivo real, no el genérico "sin permiso".
+                .having(
+                  (e) => e.message,
+                  'message',
+                  contains('rol de terreno'),
+                ),
           ),
         );
         expect(container.read(sessionProvider), isNull);

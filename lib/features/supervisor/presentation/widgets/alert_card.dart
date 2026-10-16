@@ -67,7 +67,11 @@ class _AlertCardState extends ConsumerState<AlertCard> {
                   size: 20,
                 ),
                 const SizedBox(width: 6),
-                Text('Reconocida ${formatHour(alert.acknowledgedAt!)}'),
+                Flexible(
+                  child: Text(
+                    'Reconocida ${formatHour(alert.acknowledgedAt!)}',
+                  ),
+                ),
               ],
             )
           else

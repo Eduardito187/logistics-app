@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data13.dart';
+import 'data14.dart';
 
 part 'post_integrations_coverage_map_import_kml_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostIntegrationsCoverageMapImportKmlResponse {
     Map<String, Object?> json,
   ) => _$PostIntegrationsCoverageMapImportKmlResponseFromJson(json);
 
-  final Data13 data;
+  final Data14 data;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsCoverageMapImportKmlResponseToJson(this);

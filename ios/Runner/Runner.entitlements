@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push (APNs). Xcode lo cambia a "production" al exportar para TestFlight/App Store/MDM. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Protección de datos por defecto de los archivos de la app (cola offline Drift,
+	     fotos POD, preferencias). Se usa "hasta el primer desbloqueo" y NO
+	     NSFileProtectionComplete: con Complete los archivos quedan ilegibles con el
+	     equipo bloqueado y la sincronización en segundo plano / el GPS del camión
+	     (que escriben en la cola con la pantalla apagada) fallarían. Los tokens viven
+	     en el Keychain (flutter_secure_storage), no en archivos. Ver docs/ios.md. -->
+	<key>com.apple.developer.default-data-protection</key>
+	<string>NSFileProtectionCompleteUntilFirstUserAuthentication</string>
+</dict>
+</plist>
