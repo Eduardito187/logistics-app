@@ -6,7 +6,8 @@ description: Build or change a feature in the Dismac logistics internal Flutter 
 # Feature en la app interna — logistics-app
 
 La app **solo consume el backend** (`/api/v1/app/*`); nunca integra servicios externos (SMS, SAP,
-Telegram, ntfy, tiles) — eso es del backend/ops. "Completo" para el dueño = **cubrir todos los
+Telegram, tiles) — eso es del backend/ops. Única excepción: el push se **recibe** con Firebase Cloud
+Messaging (`firebase_messaging`, credenciales `FIREBASE_*` en `config/*.json`); el **envío** es del backend. "Completo" para el dueño = **cubrir todos los
 endpoints `/app/*`** útiles, no un MVP. Antes de diseñar, leer `CLAUDE.md` y `docs/architecture.md`;
 la visión y los ADRs viven en el backend: `/dismac/logistics/docs/`.
 
@@ -177,15 +178,14 @@ reportados. Si cambia la UI, describir qué se probó en emulador o dispositivo 
 | Aserción `fontSize != null` en `TextStyle.apply` al arrancar | `Typography.black` y `ThemeData.textTheme` no traen tamaños: viven en `typography.englishLike` | Escalar `base.typography.englishLike.merge(base.textTheme)` |
 | `scrollUntilVisible` → `Bad state: Too many elements`, o botón "no se toca" / sigue en login en widget test | Cada `TextField` trae su propio `Scrollable`; `scrollUntilVisible` scrollea el equivocado | `await tester.ensureVisible(btn); await tester.pumpAndSettle();` antes de `tap` |
 | `logout`/acción no surte efecto o cuelga en test | `flutter_secure_storage` y otros plugins no existen en widget tests | En `signOut` limpiar estado **síncrono primero**, luego `await` del almacén en try/catch |
-| App no monta en test: `UnimplementedError` de `UnifiedPush.initialize` | Lanza **Error** (no Exception) en entornos sin plugin | En el bootstrap del push `catch` amplio (`on Object`); nunca tumbar la app por el push |
+| App no monta en test / push revienta en dispositivo sin Google Play | Firebase lanza **Error** (no Exception) sin plugin o sin credenciales | Bootstrap del push con `catch` amplio (`on Object`); sin `FIREBASE_*` el push queda "No disponible", nunca tumbar la app |
 | `AsyncValue.valueOrNull` no existe | Riverpod 3.x | Usar `.value` (nullable) |
-| `RadioListTile.groupValue/onChanged` deprecado | SDK ≥ 3.33 | Usar `RadioGroup` |
+| `RadioGroup` / `DropdownButtonFormField(initialValue:)` no existen | El proyecto usa Flutter 3.32 | `groupValue`/`onChanged` en cada `RadioListTile`; `value:` en el dropdown |
 | `package:latlong2/latlong2.dart` no existe | nombre del archivo | Importar `package:latlong2/latlong.dart` |
 | `swagger_parser` falla (`List` no es `Map`) al generar | anchors YAML + `parameters` a nivel path | Preprocesar a JSON (ver "Cliente API generado" / `scripts/preprocess_openapi.py`) |
 | `export: not a valid identifier` | Comillas de PowerShell → `wsl bash -lc` | Correr los comandos desde un `.sh` o `export PATH=…` inline |
 | VS Code: "Errors exist in your project" / clases `undefined` (`PendingPhoto`, `DriverRoute`) que sí existen | `.g.dart` desactualizado tras cambiar tabla Drift o modelo API | `dart run build_runner build`; si persiste, `Dart: Restart Analysis Server` |
 | APK no compila: `meta` no-nullable con constructor opcional en `*_response.dart` | Bug de swagger_parser (campo no-nullable, param opcional) | Parchar a `MetaSealed? meta` + regenerar; **fix de fondo en backend `openapi/`** (se pisa al regenerar) |
-| Gradle: `Language version 1.7 is no longer supported` | `unifiedpush_android` fija Kotlin 1.7, el compilador del proyecto es 2.x | Override a `KOTLIN_2_0` para ese módulo en `android/build.gradle.kts` |
 | Gradle: `requires core library desugaring to be enabled` (`flutter_local_notifications`) | Plugin usa APIs java.time en minSdk bajo | `isCoreLibraryDesugaringEnabled = true` + dep `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:…")` en `android/app/build.gradle.kts` |
 | `'bash\r': No such file or directory`, exited 127, consola de play se cierra al segundo | VS Code usa `C:\flutter` (CRLF) en vez del Flutter de WSL | `.vscode/settings.json` → `dart.flutterSdkPath=~/sdk/flutter` + Reload Window |
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |

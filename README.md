@@ -8,7 +8,7 @@ chofer, preparador/andén, tienda, transportista externo y supervisor.
 
 ## Requisitos
 
-- Flutter stable (probado con 3.47.6). En WSL: `~/sdk/flutter`.
+- Flutter 3.32.0 (Dart 3.8). En Windows: `C:\flutter`.
 - Para compilar el APK: Android SDK (Android Studio en Windows) o el CI.
 
 ## Comandos
