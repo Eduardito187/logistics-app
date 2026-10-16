@@ -4,6 +4,12 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    # Cliente API generado desde openapi/v1.yaml (regla #5): no se edita a mano.
+    - lib/core/api/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - ios/**
+    - linux/**
   language:
     strict-casts: true
     strict-raw-types: true

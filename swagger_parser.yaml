@@ -1,0 +1,20 @@
+# Genera el cliente Dart del API desde el contrato del backend.
+# Regla #5 de CLAUDE.md: los DTOs del API no se escriben a mano, salen de aquí.
+#   dart run swagger_parser
+# Luego:
+#   dart run build_runner build --delete-conflicting-outputs
+swagger_parser:
+  schema_path: openapi/v1.json
+  output_directory: lib/core/api
+  language: dart
+  json_serializer: json_serializable
+  root_client: true
+  root_client_name: LogisticsApi
+  client_postfix: Client
+  put_clients_in_folder: true
+  enums_to_json: true
+  unknown_enum_value: true
+  use_default_null_for_lists: false
+  default_content_type: application/json
+  prefer_schema_source: true
+  name: core_api
