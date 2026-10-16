@@ -1,70 +1,118 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/auth/session.dart';
-import '../../../core/auth/user_role.dart';
+import '../../../core/widgets/app_snack.dart';
+import 'controllers/login_controller.dart';
+import 'widgets/auth_header.dart';
 
-class LoginScreen extends ConsumerWidget {
+/// Pantalla de bienvenida e inicio de sesión de la app interna.
+///
+/// Estilo onboarding: encabezado con degradado de marca, campos grandes y un
+/// solo botón de acción. "Ingresar" autentica contra la puerta /app/* (A-02):
+/// email + contraseña + dispositivo → token Sanctum; el rol sale del backend.
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _userController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _userController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onSignInPressed() async {
+    final email = _userController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      showInfoSnack(context, 'Ingresá tu usuario y contraseña.');
+      return;
+    }
+    // El router redirige solo al home cuando hay sesión. El error se muestra
+    // vía el listener de `loginControllerProvider`.
+    await ref
+        .read(loginControllerProvider.notifier)
+        .submit(email: email, password: password);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loginState = ref.watch(loginControllerProvider);
+    final isLoading = loginState.isLoading;
+
+    // Muestra el error del login (credenciales, sin rol, servidor) en un aviso.
+    ref.listen(loginControllerProvider, (_, next) {
+      final error = next.error;
+      if (error != null) {
+        showErrorSnack(context, error);
+      }
+    });
+
     return Scaffold(
       body: SafeArea(
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.zero,
           children: [
-            const SizedBox(height: 32),
-            Icon(
-              Icons.local_shipping,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Dismac Logística',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 32),
-            const TextField(decoration: InputDecoration(labelText: 'Usuario')),
-            const SizedBox(height: 16),
-            const TextField(
-              obscureText: true,
-              decoration: InputDecoration(labelText: 'Contraseña'),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'El inicio de sesión todavía no está conectado al servidor.',
+            const AuthHeader(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Ingresá a tu cuenta',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ),
-              child: const Text('Ingresar'),
-            ),
-            if (kDebugMode) ...[
-              const SizedBox(height: 40),
-              const Divider(),
-              Text(
-                'Desarrollo: entrar como',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              for (final role in UserRole.values)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: OutlinedButton.icon(
-                    key: ValueKey('dev-login-${role.name}'),
-                    icon: Icon(role.icon),
-                    label: Text(role.label),
-                    onPressed: () =>
-                        ref.read(sessionProvider.notifier).devSignIn(role),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _userController,
+                    textInputAction: TextInputAction.next,
+                    autocorrect: false,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Usuario o correo',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
                   ),
-                ),
-            ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _onSignInPressed(),
+                    decoration: const InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  FilledButton(
+                    onPressed: isLoading ? null : _onSignInPressed,
+                    child: isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Ingresar'),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

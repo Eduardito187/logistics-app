@@ -8,15 +8,17 @@ Visión, decisiones y ADRs viven en el repo backend: https://github.com/Eduardit
 
 ## Cómo correr cosas
 
-SDK: Flutter stable en `~/sdk/flutter` (WSL).
+SDK: Flutter 3.47.6 (Dart ^3.13.5). En Windows: `C:\sdk\flutter` (NO `C:\flutter`, que es 3.32 y
+lo usa `dismac-app`). VS Code y `android/local.properties` ya apuntan ahí. Antes en WSL: `~/sdk/flutter`.
 
 - Dependencias: `flutter pub get`
 - Análisis: `flutter analyze`
 - Tests: `flutter test`
 - Formato: `dart format lib test`
 
-En WSL no hay Android SDK: compilar el APK se hace desde Windows/Android Studio o en CI.
-`flutter analyze` y `flutter test` sí corren en WSL.
+En Windows el toolchain Android es nativo (SDK en `%LOCALAPPDATA%\Android\Sdk`, JDK 21 en
+`~\jdk21`): `flutter run` / `flutter build apk` funcionan directo. Los scripts `scripts/*.sh` y
+`docs/run-usb.md` (usbipd) son solo para WSL.
 
 ## Estructura
 
@@ -45,3 +47,11 @@ lib/
 `lib/core/labels/` replica la verificación Ed25519 del backend. El mensaje canónico debe ser idéntico
 byte a byte a `LabelPayload::canonical()` del backend. `test/fixtures/label_test_vector.json` es una
 copia exacta del vector del backend; si el backend lo regenera, se copia acá.
+
+## Portabilidad (al mover/clonar el proyecto, incl. a Windows nativo)
+
+Las **skills** (`.claude/skills/`) viajan con el repo y funcionan en cualquier OS. Las **memorias** de
+Claude Code NO viajan (viven en `~/.claude/projects/<slug>/memory/`, con el slug ligado a la ruta). Por
+eso hay un espejo versionado en `.claude/memory/` con un instalador: tras clonar o mover el proyecto,
+correr **una vez** `.\.claude\memory\install.ps1` (Windows) o `bash .claude/memory/install.sh`
+(Linux/WSL/macOS) para dejarlas disponibles. Detalle en `.claude/memory/README.md`.
