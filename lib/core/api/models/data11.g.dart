@@ -7,11 +7,11 @@ part of 'data11.dart';
 // **************************************************************************
 
 Data11 _$Data11FromJson(Map<String, dynamic> json) => Data11(
-  units: (json['units'] as List<dynamic>)
-      .map((e) => PublicUnit.fromJson(e as Map<String, dynamic>))
-      .toList(),
+  shipmentId: json['shipment_id'] as String,
+  accepted: json['accepted'] as bool,
 );
 
 Map<String, dynamic> _$Data11ToJson(Data11 instance) => <String, dynamic>{
-  'units': instance.units,
+  'shipment_id': instance.shipmentId,
+  'accepted': instance.accepted,
 };

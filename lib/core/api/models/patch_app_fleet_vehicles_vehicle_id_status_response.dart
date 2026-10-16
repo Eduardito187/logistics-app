@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data5.dart';
+import 'data6.dart';
 
 part 'patch_app_fleet_vehicles_vehicle_id_status_response.g.dart';
 
@@ -16,7 +16,7 @@ class PatchAppFleetVehiclesVehicleIdStatusResponse {
     Map<String, Object?> json,
   ) => _$PatchAppFleetVehiclesVehicleIdStatusResponseFromJson(json);
 
-  final Data5? data;
+  final Data6? data;
 
   Map<String, Object?> toJson() =>
       _$PatchAppFleetVehiclesVehicleIdStatusResponseToJson(this);

@@ -8,12 +8,12 @@ part 'data27.g.dart';
 
 @JsonSerializable()
 class Data27 {
-  const Data27({required this.key, required this.value});
+  const Data27({required this.accepted, required this.key});
 
   factory Data27.fromJson(Map<String, Object?> json) => _$Data27FromJson(json);
 
+  final bool accepted;
   final String key;
-  final dynamic value;
 
   Map<String, Object?> toJson() => _$Data27ToJson(this);
 }

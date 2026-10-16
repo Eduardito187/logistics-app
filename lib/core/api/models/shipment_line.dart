@@ -13,6 +13,9 @@ class ShipmentLine {
     required this.sku,
     required this.productName,
     required this.quantity,
+    this.imageUrl,
+    this.price,
+    this.currency,
   });
 
   factory ShipmentLine.fromJson(Map<String, Object?> json) =>
@@ -23,6 +26,12 @@ class ShipmentLine {
   @JsonKey(name: 'product_name')
   final String productName;
   final int quantity;
+
+  /// Product image URL. Null if unknown.
+  @JsonKey(name: 'image_url')
+  final String? imageUrl;
+  final double? price;
+  final String? currency;
 
   Map<String, Object?> toJson() => _$ShipmentLineToJson(this);
 }

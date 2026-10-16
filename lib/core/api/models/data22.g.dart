@@ -6,12 +6,9 @@ part of 'data22.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Data22 _$Data22FromJson(Map<String, dynamic> json) => Data22(
-  notificationId: json['notification_id'] as String,
-  status: json['status'] as String,
-);
+Data22 _$Data22FromJson(Map<String, dynamic> json) =>
+    Data22(accepted: json['accepted'] as bool);
 
 Map<String, dynamic> _$Data22ToJson(Data22 instance) => <String, dynamic>{
-  'notification_id': instance.notificationId,
-  'status': instance.status,
+  'accepted': instance.accepted,
 };

@@ -8,14 +8,17 @@ part 'data3.g.dart';
 
 @JsonSerializable()
 class Data3 {
-  const Data3({this.status, this.helperId, this.active});
+  const Data3({this.status, this.driverId, this.vehicleId, this.assembledFor});
 
   factory Data3.fromJson(Map<String, Object?> json) => _$Data3FromJson(json);
 
   final String? status;
-  @JsonKey(name: 'helper_id')
-  final String? helperId;
-  final bool? active;
+  @JsonKey(name: 'driver_id')
+  final String? driverId;
+  @JsonKey(name: 'vehicle_id')
+  final String? vehicleId;
+  @JsonKey(name: 'assembled_for')
+  final DateTime? assembledFor;
 
   Map<String, Object?> toJson() => _$Data3ToJson(this);
 }

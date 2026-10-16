@@ -4,25 +4,18 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'message_type.dart';
+import 'outbox_status.dart';
 
 part 'data24.g.dart';
 
 @JsonSerializable()
 class Data24 {
-  const Data24({
-    required this.shipmentId,
-    required this.messageType,
-    required this.status,
-  });
+  const Data24({required this.id, required this.status});
 
   factory Data24.fromJson(Map<String, Object?> json) => _$Data24FromJson(json);
 
-  @JsonKey(name: 'shipment_id')
-  final String shipmentId;
-  @JsonKey(name: 'message_type')
-  final MessageType messageType;
-  final String status;
+  final String id;
+  final OutboxStatus status;
 
   Map<String, Object?> toJson() => _$Data24ToJson(this);
 }

@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data22.dart';
+import 'data23.dart';
 
 part 'advance_cascade_envelope.g.dart';
 
@@ -15,7 +15,7 @@ class AdvanceCascadeEnvelope {
   factory AdvanceCascadeEnvelope.fromJson(Map<String, Object?> json) =>
       _$AdvanceCascadeEnvelopeFromJson(json);
 
-  final Data22 data;
+  final Data23 data;
 
   Map<String, Object?> toJson() => _$AdvanceCascadeEnvelopeToJson(this);
 }

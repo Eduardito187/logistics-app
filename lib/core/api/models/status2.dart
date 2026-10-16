@@ -6,8 +6,8 @@ import 'package:json_annotation/json_annotation.dart';
 
 @JsonEnum()
 enum Status2 {
-  @JsonValue('ENQUEUED')
-  enqueued('ENQUEUED'),
+  @JsonValue('REPORTED')
+  reported('REPORTED'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data3.dart';
+import 'data4.dart';
 
 part 'patch_app_fleet_helpers_helper_id_availability_response.g.dart';
 
@@ -16,7 +16,7 @@ class PatchAppFleetHelpersHelperIdAvailabilityResponse {
     Map<String, Object?> json,
   ) => _$PatchAppFleetHelpersHelperIdAvailabilityResponseFromJson(json);
 
-  final Data3? data;
+  final Data4? data;
 
   Map<String, Object?> toJson() =>
       _$PatchAppFleetHelpersHelperIdAvailabilityResponseToJson(this);

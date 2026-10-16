@@ -20,6 +20,9 @@ DriverRoute _$DriverRouteFromJson(Map<String, dynamic> json) => DriverRoute(
   currentStop: json['current_stop'] == null
       ? null
       : DriverRouteStop.fromJson(json['current_stop'] as Map<String, dynamic>),
+  routeGeometry: json['route_geometry'] == null
+      ? null
+      : RouteGeometry.fromJson(json['route_geometry'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$DriverRouteToJson(DriverRoute instance) =>
@@ -33,4 +36,5 @@ Map<String, dynamic> _$DriverRouteToJson(DriverRoute instance) =>
       'stops_remaining': instance.stopsRemaining,
       'current_stop': instance.currentStop,
       'stops': instance.stops,
+      'route_geometry': instance.routeGeometry,
     };

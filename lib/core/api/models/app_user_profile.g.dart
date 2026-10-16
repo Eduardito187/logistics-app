@@ -12,6 +12,9 @@ AppUserProfile _$AppUserProfileFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       email: json['email'] as String,
       roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
+      node: json['node'] == null
+          ? null
+          : Node.fromJson(json['node'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$AppUserProfileToJson(AppUserProfile instance) =>
@@ -20,4 +23,5 @@ Map<String, dynamic> _$AppUserProfileToJson(AppUserProfile instance) =>
       'name': instance.name,
       'email': instance.email,
       'roles': instance.roles,
+      'node': instance.node,
     };
