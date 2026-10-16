@@ -155,7 +155,7 @@ void main() {
       );
       expect(
         e.message,
-        'Sin conexión. Se guardó y se reintentará al recuperar señal.',
+        'No se pudo completar. Intentá de nuevo en un momento.',
       );
     });
 
