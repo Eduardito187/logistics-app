@@ -58,7 +58,7 @@ dependencies:
   ulid: ^2.0.1
 
   # Escaneo de EAN/QR con la cámara (preparador, chofer, tienda, transportista).
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^7.4.2
 
   # Mapas OSM self-host (ADR 013, sin Google) y geometría de ruta.
   flutter_map: ^7.0.2
