@@ -17,13 +17,17 @@ Future<void> _pump(WidgetTester tester, {String? helper}) {
 void main() {
   testWidgets('dibuja el recuadro y no intercepta toques', (tester) async {
     await _pump(tester);
-    expect(find.byType(IgnorePointer), findsOneWidget);
+    // MaterialApp/Scaffold traen sus propios IgnorePointer: se busca solo el
+    // del overlay.
+    final ignorePointer = find.descendant(
+      of: find.byType(ScanFrame),
+      matching: find.byType(IgnorePointer),
+    );
+    expect(ignorePointer, findsOneWidget);
+    expect(tester.widget<IgnorePointer>(ignorePointer).ignoring, isTrue);
 
     final box = tester.widget<Container>(
-      find.descendant(
-        of: find.byType(IgnorePointer),
-        matching: find.byType(Container),
-      ),
+      find.descendant(of: ignorePointer, matching: find.byType(Container)),
     );
     expect(box.constraints?.maxWidth, 260);
     expect(box.constraints?.maxHeight, 260);

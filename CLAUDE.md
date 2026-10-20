@@ -8,15 +8,17 @@ Visión, decisiones y ADRs viven en el repo backend: https://github.com/Eduardit
 
 ## Cómo correr cosas
 
-SDK: Flutter stable en `~/sdk/flutter` (WSL).
+SDK: Flutter 3.47.6 (Dart ^3.13.5). En Windows: `C:\sdk\flutter` (NO `C:\flutter`, que es 3.32 y
+lo usa `dismac-app`). VS Code y `android/local.properties` ya apuntan ahí. Antes en WSL: `~/sdk/flutter`.
 
 - Dependencias: `flutter pub get`
 - Análisis: `flutter analyze`
 - Tests: `flutter test`
 - Formato: `dart format lib test`
 
-En WSL no hay Android SDK: compilar el APK se hace desde Windows/Android Studio o en CI.
-`flutter analyze` y `flutter test` sí corren en WSL.
+En Windows el toolchain Android es nativo (SDK en `%LOCALAPPDATA%\Android\Sdk`, JDK 21 en
+`~\jdk21`): `flutter run` / `flutter build apk` funcionan directo. Los scripts `scripts/*.sh` y
+`docs/run-usb.md` (usbipd) son solo para WSL.
 
 ## Estructura
 

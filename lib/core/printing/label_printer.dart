@@ -81,7 +81,10 @@ class LabelPrinter {
             ),
           )
           .toList();
+      // UnsupportedError: plataforma sin Bluetooth (escritorio, tests).
     } on Exception {
+      return const <PrinterDevice>[];
+    } on UnsupportedError {
       return const <PrinterDevice>[];
     }
   }
@@ -112,8 +115,11 @@ class LabelPrinter {
       rethrow;
     } on Exception catch (e) {
       throw PrinterException('No se pudo imprimir por Bluetooth: $e');
+    } on UnsupportedError catch (e) {
+      throw PrinterException('No se pudo imprimir por Bluetooth: $e');
     } finally {
-      unawaited(device.disconnect());
+      // Sin plugin, disconnect también falla: no debe escaparse como error suelto.
+      unawaited(device.disconnect().catchError((Object _) {}));
     }
   }
 

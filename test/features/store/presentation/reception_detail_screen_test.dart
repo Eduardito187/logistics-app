@@ -231,8 +231,10 @@ void main() {
     tester,
   ) async {
     final repo = FakeStoreRepository(
+      // 422 (regla de negocio): la UI muestra el `detail` del backend. Un 5xx
+      // mostraría el texto genérico de servidor (ver ApiException.message).
       onReconcileNodeReception: (_) async => throw const ApiException(
-        status: 500,
+        status: 422,
         title: 'Error',
         detail: 'No se pudo conciliar.',
       ),

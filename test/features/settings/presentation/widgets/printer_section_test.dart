@@ -46,7 +46,14 @@ Future<void> _pump(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (printing) {
+    // El spinner anima sin fin: pumpAndSettle nunca terminaría. Unos frames
+    // alcanzan para resolver los providers async.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+  } else {
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
