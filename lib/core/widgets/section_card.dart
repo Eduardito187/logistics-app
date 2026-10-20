@@ -34,10 +34,16 @@ class SectionCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        title!,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      // Encabezado: el lector de pantalla permite saltar de
+                      // sección en sección.
+                      child: Semantics(
+                        container: true,
+                        header: true,
+                        child: Text(
+                          title!,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),

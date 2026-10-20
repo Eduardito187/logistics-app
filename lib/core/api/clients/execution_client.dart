@@ -10,6 +10,7 @@ import 'package:retrofit/retrofit.dart';
 
 import '../models/app_vehicles_vehicle_id_incidents_request_body.dart';
 import '../models/app_vehicles_vehicle_id_route_request_body.dart';
+import '../models/delivery_issue_request.dart';
 import '../models/enum0.dart';
 import '../models/failed_delivery_request.dart';
 import '../models/get_app_deliveries_shipment_id_response.dart';
@@ -25,6 +26,7 @@ import '../models/post_app_deliveries_scans_load_response.dart';
 import '../models/post_app_deliveries_scans_node_reception_response.dart';
 import '../models/post_app_deliveries_scans_preparation_response.dart';
 import '../models/post_app_deliveries_scans_unload_response.dart';
+import '../models/post_app_deliveries_shipment_id_issues_response.dart';
 import '../models/post_app_labels_verify_response.dart';
 import '../models/post_app_node_receptions_reconcile_response.dart';
 import '../models/post_app_node_receptions_response.dart';
@@ -148,6 +150,23 @@ abstract class ExecutionClient {
   @POST('/app/deliveries/scans/unload')
   Future<PostAppDeliveriesScansUnloadResponse> recordUnloadScan({
     @Body() required UnloadScanRequest body,
+    @Header('Idempotency-Key') String? idempotencyKey,
+  });
+
+  /// Report an issue during an in-progress delivery (does not close it).
+  ///
+  /// The driver reports an obstacle during a delivery that is still IN PROGRESS. It is distinct from.
+  /// a failed delivery (which closes the delivery) and from a vehicle incident (breakdown/accident).
+  /// The delivery is NOT closed: the platform records the issue as an immutable fact and notifies the.
+  /// control tower / customer through the outbox. Idempotent by `Idempotency-Key`.
+  ///
+  /// [shipmentId] - Shipment UUID.
+  ///
+  /// [idempotencyKey] - Offline-first idempotency key; resending the same report does not duplicate the fact.
+  @POST('/app/deliveries/{shipmentId}/issues')
+  Future<PostAppDeliveriesShipmentIdIssuesResponse> reportDeliveryIssue({
+    @Path('shipmentId') required String shipmentId,
+    @Body() required DeliveryIssueRequest body,
     @Header('Idempotency-Key') String? idempotencyKey,
   });
 

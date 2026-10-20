@@ -22,7 +22,7 @@ class StopMapScreen extends StatelessWidget {
       body: FlutterMap(
         options: MapOptions(initialCenter: point, initialZoom: 15),
         children: [
-          buildOsmTileLayer(),
+          const OsmTileLayer(),
           MarkerLayer(
             markers: [
               Marker(

@@ -1,5 +1,13 @@
 {
   "ENV": "production",
   "API_BASE_URL": "https://logistics.dismac.com.bo/api/v1",
-  "LABEL_PUBLIC_KEYS": ""
+  "LABEL_PUBLIC_KEYS": "",
+  "APP_UPDATE_URL": "",
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_MESSAGING_SENDER_ID": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_IOS_API_KEY": "",
+  "FIREBASE_IOS_APP_ID": "",
+  "FIREBASE_IOS_BUNDLE_ID": ""
 }

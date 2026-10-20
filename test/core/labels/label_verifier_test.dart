@@ -45,15 +45,17 @@ void main() {
 
   group('LabelVerifier — validación del constructor', () {
     test('rechaza una clave pública que no mide 32 bytes', () {
-      // Comportamiento CORRECTO esperado: ArgumentError con el mensaje propio.
-      // RIESGO LATENTE (ver reporte): el constructor crea los SimplePublicKey en
-      // la lista de inicialización ANTES de validar la longitud en el cuerpo.
-      // Hoy funciona porque SimplePublicKey (cryptography 2.9.0) no valida la
-      // longitud al construir; si una versión futura la validara, lanzaría su
-      // propio error y este ArgumentError quedaría inalcanzable.
+      // Se valida ANTES de construir SimplePublicKey: el error es siempre el
+      // propio, sin depender de lo que valide `cryptography` en su constructor.
       expect(
         () => LabelVerifier({1: List<int>.filled(16, 0)}),
-        throwsArgumentError,
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            'La clave pública 1 debe tener 32 bytes.',
+          ),
+        ),
       );
     });
 

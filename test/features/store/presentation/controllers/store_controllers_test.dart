@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/auth/session.dart';
+import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
@@ -29,21 +31,21 @@ ProviderContainer _container(FakeStoreRepository repo) {
 }
 
 void main() {
-  group('SelectedStoreNodeNotifier', () {
-    test('arranca en null y guarda el nodo elegido', () {
+  group('selectedStoreNodeProvider (tienda fija del usuario)', () {
+    test('sin sesión no hay tienda', () {
       final container = _container(FakeStoreRepository());
+      expect(container.read(selectedStoreNodeProvider), isNull);
+    });
+
+    test('es la tienda asignada en la sesión (/me), sin selector', () {
+      final container = _container(FakeStoreRepository());
+      final session = container.read(sessionProvider.notifier)
+        ..devSignIn(UserRole.store);
       expect(container.read(selectedStoreNodeProvider), isNull);
 
       final node = storeNode();
-      container.read(selectedStoreNodeProvider.notifier).select(node);
+      session.applyProfile(abilities: const [], storeNode: node);
       expect(container.read(selectedStoreNodeProvider), same(node));
-    });
-
-    test('select(null) limpia la elección', () {
-      final container = _container(FakeStoreRepository());
-      container.read(selectedStoreNodeProvider.notifier).select(storeNode());
-      container.read(selectedStoreNodeProvider.notifier).select(null);
-      expect(container.read(selectedStoreNodeProvider), isNull);
     });
   });
 
@@ -161,8 +163,10 @@ void main() {
         ),
       );
       final view = await container.read(
-        nodeReceptionProvider((shipmentId: 'ship-1', nodeId: 'node-store'))
-            .future,
+        nodeReceptionProvider((
+          shipmentId: 'ship-1',
+          nodeId: 'node-store',
+        )).future,
       );
       expect(view, isA<NodeReceptionView>());
       expect(view!.destinationNodeId, 'node-store');
@@ -173,8 +177,10 @@ void main() {
         FakeStoreRepository(onGetNodeReception: (_, _) async => null),
       );
       final view = await container.read(
-        nodeReceptionProvider((shipmentId: 'ship-1', nodeId: 'node-store'))
-            .future,
+        nodeReceptionProvider((
+          shipmentId: 'ship-1',
+          nodeId: 'node-store',
+        )).future,
       );
       expect(view, isNull);
     });

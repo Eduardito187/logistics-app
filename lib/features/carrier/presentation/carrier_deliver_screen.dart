@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/proof_of_delivery_request.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/sync_badge.dart';
+import '../../../core/widgets/app_snack.dart';
 import '../domain/usecases/record_proof_of_delivery.dart';
 import 'widgets/carrier_scan_record.dart';
+import 'widgets/carrier_scan_session_view.dart';
 import 'widgets/carrier_scan_support.dart';
-import 'widgets/scan_outcome_pill.dart';
 
 /// Escaneo del transportista al ENTREGAR: prueba de entrega. Escanea el bulto,
 /// luego el QR de confirmación del cliente, y registra la entrega offline-first.
@@ -75,7 +73,12 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
           ),
         );
       });
-      showSubmitOutcome(context, outcome);
+      // El aviso flota encima del botón del pie: no tapa el próximo escaneo.
+      showSubmitOutcome(
+        context,
+        outcome,
+        bottomClearance: kBottomActionClearance,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -83,68 +86,18 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat.Hm();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Escanear al entregar'),
-        actions: [
-          SyncBadge(onTap: () {}),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_records.isEmpty)
-            const Expanded(
-              child: EmptyState(
-                icon: Icons.task_alt,
-                title: 'Sin entregas registradas',
-                message: 'Escanea el bulto y el QR del cliente para registrar la entrega.',
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: _records.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final record = _records[index];
-                  return ListTile(
-                    tileColor: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    leading: const Icon(Icons.check_circle_outline),
-                    title: Text(
-                      record.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Text(
-                      '${record.unitId} · ${timeFormat.format(record.at)}',
-                    ),
-                    trailing: ScanOutcomePill(record.outcome),
-                  );
-                },
-              ),
-            ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _busy ? null : _deliver,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Registrar entrega'),
-                ),
-              ),
-            ),
-          ),
-        ],
+      appBar: AppBar(title: const Text('Escanear al entregar')),
+      body: CarrierScanSessionView(
+        records: _records,
+        emptyIcon: Icons.task_alt,
+        emptyTitle: 'Sin entregas registradas',
+        emptyMessage:
+            'Escanea el bulto y el QR del cliente para registrar la entrega.',
+        rowIcon: Icons.check_circle_outline,
+        actionLabel: 'Registrar entrega',
+        busy: _busy,
+        onAction: _deliver,
       ),
     );
   }

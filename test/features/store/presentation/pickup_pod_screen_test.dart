@@ -7,12 +7,11 @@ import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart
 
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
+import '../../../support/button_finders.dart';
 
-// Prueba de entrega en mostrador (POD). El escaneo real necesita cámara, así que
-// se cubre el gating por confirmación del cliente y la lista de bultos.
-// FALENCIA DETECTADA: los caminos de escaneo/entrega (_scanAndDeliver, mensaje
-// "Etiqueta inválida: la firma no se verificó.") no son testeables en widget
-// test porque `scanCode` abre la pantalla de cámara. Ver sección de falencias.
+// Prueba de entrega en mostrador (POD): gating por confirmación del cliente y la
+// lista de bultos. Los flujos escaneo -> entrega (con `FakeCodeScanner`) están
+// en pickup_pod_scan_test.dart.
 
 final _shipment = shipment(
   customerName: 'Ana Pérez',
@@ -24,6 +23,11 @@ Future<void> _pump(
   WidgetTester tester, {
   List<UnitTracking> units = const [],
 }) async {
+  // Superficie alta: el ListView es perezoso y la lista de bultos queda debajo
+  // del pie fijo en 800x600.
+  tester.view.physicalSize = const Size(1200, 3600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -56,7 +60,7 @@ void main() {
       findsOneWidget,
     );
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar bulto'),
     );
     expect(button.onPressed, isNull);
   });
@@ -77,7 +81,7 @@ void main() {
       findsNothing,
     );
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar bulto'),
     );
     expect(button.onPressed, isNotNull);
   });

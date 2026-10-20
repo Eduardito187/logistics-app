@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data23.dart';
+import 'data24.dart';
 
 part 'outbox_action_envelope.g.dart';
 
@@ -15,7 +15,7 @@ class OutboxActionEnvelope {
   factory OutboxActionEnvelope.fromJson(Map<String, Object?> json) =>
       _$OutboxActionEnvelopeFromJson(json);
 
-  final Data23 data;
+  final Data24 data;
 
   Map<String, Object?> toJson() => _$OutboxActionEnvelopeToJson(this);
 }

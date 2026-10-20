@@ -7,7 +7,7 @@ import 'package:logistics_app/core/navigation/feature_tasks.dart';
 import 'package:logistics_app/core/navigation/role_task.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/connectivity_notifier.dart';
-import 'package:logistics_app/core/widgets/sync_badge.dart';
+import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/profile_header.dart';
 import 'package:logistics_app/features/home/presentation/widgets/task_card.dart';
@@ -84,12 +84,19 @@ void main() {
     final container = _session(UserRole.driver);
     await _pump(tester, container);
 
-    // La etiqueta del rol aparece (en el perfil y en el título del AppBar).
-    expect(find.text('Chofer'), findsWidgets);
+    // La etiqueta del rol aparece una sola vez, en el perfil: el título grande
+    // del FlexibleSpaceBar se quitó (se veía tosco al expandir).
+    expect(find.text('Chofer'), findsOneWidget);
+    expect(
+      tester.widget<FlexibleSpaceBar>(find.byType(FlexibleSpaceBar)).title,
+      isNull,
+    );
     expect(find.text('dev.driver'), findsOneWidget); // nombre del devSignIn
     expect(find.byType(ProfileHeader), findsOneWidget);
     expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
-    expect(find.byTooltip('Sincronización'), findsOneWidget);
+    // Header: campana de notificaciones; la sincronización va por debajo.
+    expect(find.byTooltip('Notificaciones'), findsOneWidget);
+    expect(find.byTooltip('Sincronización'), findsNothing);
   });
 
   testWidgets('con la ability presente muestra la tarjeta con permiso', (

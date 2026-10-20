@@ -6,6 +6,7 @@ import 'package:logistics_app/features/driver/presentation/controllers/fleet_ops
 import 'package:logistics_app/features/driver/presentation/odometer_screen.dart';
 
 import '../support/driver_test_support.dart';
+import '../../../support/button_finders.dart';
 
 // Registro de odómetro.
 //
@@ -45,7 +46,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Registrar lectura'));
+    await tester.tap(findButtonWithText<FilledButton>('Registrar lectura'));
     await tester.pump();
 
     expect(find.text('Ingresa los kilómetros actuales.'), findsOneWidget);
@@ -60,7 +61,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, '0');
-    await tester.tap(find.widgetWithText(FilledButton, 'Registrar lectura'));
+    await tester.tap(findButtonWithText<FilledButton>('Registrar lectura'));
     await tester.pump();
 
     expect(find.text('Ingresa los kilómetros actuales.'), findsOneWidget);

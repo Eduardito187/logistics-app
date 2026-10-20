@@ -5,12 +5,16 @@ import '../../../../core/widgets/status_pill.dart';
 
 /// Formatea un monto en centavos con su moneda (p. ej. 123456 BOB → "Bs 1.234,56").
 String formatCents(int amountCents, String currency) {
-  final format = NumberFormat.currency(
-    name: currency,
-    symbol: _symbolFor(currency),
+  // Un NumberFormat por moneda, reutilizado: crearlo en cada fila de una lista
+  // larga es caro (parsea patrones del locale).
+  final format = _formats.putIfAbsent(
+    currency,
+    () => NumberFormat.currency(name: currency, symbol: _symbolFor(currency)),
   );
   return format.format(amountCents / 100);
 }
+
+final Map<String, NumberFormat> _formats = {};
 
 String _symbolFor(String currency) => switch (currency.toUpperCase()) {
   'BOB' => 'Bs ',

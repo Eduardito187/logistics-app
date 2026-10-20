@@ -11,7 +11,7 @@
 		<string>es</string>
 	</array>
 	<key>CFBundleDisplayName</key>
-	<string>Logistics App</string>
+	<string>Dismac Logística</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,27 +30,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
-		<dict>
-			<key>UIWindowSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneClassName</key>
-					<string>UIWindowScene</string>
-					<key>UISceneConfigurationName</key>
-					<string>flutter</string>
-					<key>UISceneDelegateClassName</key>
-					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-					<key>UISceneStoryboardFile</key>
-					<string>Main</string>
-				</dict>
-			</array>
-		</dict>
-	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -70,24 +49,61 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Permisos: descripciones en espanol, las ve el usuario -->
+	<!-- App interna sin cifrado propio (solo HTTPS del sistema): evita la pregunta de
+	     exportación en cada subida a TestFlight. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!-- Permisos: textos en español, los ve el chofer/personal de tienda. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Para escanear códigos EAN y etiquetas QR.</string>
+	<string>La cámara se usa para escanear códigos de barras y etiquetas QR de los bultos, y para sacar las fotos de prueba de entrega.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Para registrar la ubicación de escaneos y entregas.</string>
+	<string>La ubicación se usa para registrar dónde se hace cada escaneo y cada entrega.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Para seguir enviando la ubicación del camión en ruta aunque la app esté en segundo plano.</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Para imprimir etiquetas en la impresora Zebra por Bluetooth.</string>
+	<string>Mientras estás en ruta, la ubicación del camión se sigue enviando aunque la app quede en segundo plano, para que la central y el cliente vean el avance de la entrega.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Mientras estás en ruta, la ubicación del camión se sigue enviando aunque la app quede en segundo plano.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Para imprimir etiquetas en la impresora Zebra por Bluetooth.</string>
+	<string>El Bluetooth se usa para conectar e imprimir etiquetas en la impresora Zebra portátil.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>El Bluetooth se usa para conectar e imprimir etiquetas en la impresora Zebra portátil.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Para adjuntar fotos de prueba de entrega y daños.</string>
+	<string>Se usan tus fotos para adjuntar pruebas de entrega o de daños.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Para adjuntar fotos de prueba de entrega y daños.</string>
+	<string>Se guardan las fotos de prueba de entrega o de daños que tomes.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Las notificaciones avisan de nuevas tareas, cambios de ruta y mensajes de la central.</string>
+
+	<!-- Segundo plano: GPS del camión (location), push silencioso de tareas
+	     (remote-notification) y sincronización de la cola offline (fetch/processing,
+	     vía workmanager y flutter_foreground_task). -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>processing</string>
 	</array>
+	<!-- BGTaskScheduler: el de sync se registra en AppDelegate.swift (kSyncTaskIdentifier)
+	     y el código Dart de workmanager debe usar exactamente el mismo identificador. -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>bo.com.dismac.logisticsApp.sync</string>
+		<string>com.pravera.flutter_foreground_task.refresh</string>
+	</array>
+
+	<!-- url_launcher: canLaunchUrl de llamar al cliente y abrir la navegación. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>comgooglemaps</string>
+		<string>maps</string>
+		<string>geo</string>
+	</array>
+
+	<!-- firebase_messaging necesita el swizzling del AppDelegate (token APNs y
+	     entrega de mensajes); se deja explícito para que nadie lo desactive. -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
 </dict>
 </plist>

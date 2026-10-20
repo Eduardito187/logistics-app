@@ -99,7 +99,7 @@ void main() {
 
     expect(find.byType(NoAssignment), findsOneWidget);
     expect(
-      find.text('Sin conexión. Se guardó y se reintentará al recuperar señal.'),
+      find.text('No se pudo completar. Intentá de nuevo en un momento.'),
       findsOneWidget,
     );
   });

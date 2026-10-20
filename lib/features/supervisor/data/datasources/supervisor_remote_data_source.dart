@@ -5,7 +5,7 @@ import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/app_plans_plan_id_sequence_request_body.dart';
 import '../../../../core/api/models/app_plans_plan_id_stops_request_body.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data6.dart';
+import '../../../../core/api/models/data7.dart';
 import '../../../../core/api/models/generate_daily_plan_request.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/generate_plan_proposal_request.dart';
@@ -129,7 +129,7 @@ class SupervisorRemoteDataSource {
   }
 
   /// ETA por parada de un plan.
-  Future<Data6> getPlanEta(String planId) async {
+  Future<Data7> getPlanEta(String planId) async {
     try {
       final response = await _ref
           .read(logisticsApiProvider)

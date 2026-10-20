@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release: solo HTTPS. El tráfico en claro (http://) queda bloqueado para todo
+     host. Debug/profile pisan este archivo (src/debug, src/profile) para permitir
+     http://10.0.2.2 y localhost del backend local. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

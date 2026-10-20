@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../domain/usecases/get_delivery_state.dart';
+import '../../domain/usecases/get_shipment_detail.dart';
 import '../../domain/usecases/get_driver_route.dart';
 import '../../domain/usecases/get_my_crew.dart';
 import '../../domain/usecases/get_vehicle_cost_summary.dart';
@@ -34,12 +35,17 @@ final myCrewProvider = FutureProvider<MyCrew>(
 /// Id del vehículo ASIGNADO al chofer (derivado de la tripulación del día).
 /// `null` mientras carga o cuando no hay asignación. Varias pantallas (ruta,
 /// carga, GPS, resumen) dependen de este id.
+///
+/// `select`: solo notifica cuando cambia el id, no en cada recarga de la
+/// tripulación (evita recalcular ruta/carga/costos sin necesidad).
 final assignedVehicleIdProvider = Provider<String?>(
-  (ref) => ref.watch(myCrewProvider).asData?.value.vehicle.id,
+  (ref) =>
+      ref.watch(myCrewProvider.select((crew) => crew.asData?.value.vehicle.id)),
 );
 
-/// Choferes activos (para firmar el checklist pre-salida).
-final driversProvider = FutureProvider<List<Driver>>(
+/// Choferes activos (para firmar el checklist pre-salida). `autoDispose`: solo
+/// lo usa el checklist; al salir se libera la lista.
+final driversProvider = FutureProvider.autoDispose<List<Driver>>(
   (ref) => ref.watch(listActiveDriversProvider).call(),
 );
 
@@ -78,6 +84,13 @@ final vehicleCostSummaryProvider =
       return ref
           .watch(getVehicleCostSummaryProvider)
           .call(vehicleId: vehicleId, from: from, to: to);
+    });
+
+/// Detalle del envío de una parada: teléfono del cliente y productos. Se usa en
+/// la pantalla de entrega en curso.
+final shipmentDetailProvider = FutureProvider.autoDispose
+    .family<Shipment, String>((ref, shipmentId) {
+      return ref.watch(getShipmentDetailProvider).call(shipmentId: shipmentId);
     });
 
 /// Estado detallado de la entrega de un envío/parada (status + escaneos).

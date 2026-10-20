@@ -10,10 +10,18 @@ part 'data8.g.dart';
 
 @JsonSerializable()
 class Data8 {
-  const Data8({required this.status});
+  const Data8({
+    required this.eventId,
+    required this.shipmentRef,
+    required this.status,
+  });
 
   factory Data8.fromJson(Map<String, Object?> json) => _$Data8FromJson(json);
 
+  @JsonKey(name: 'event_id')
+  final String eventId;
+  @JsonKey(name: 'shipment_ref')
+  final String shipmentRef;
   final Status3 status;
 
   Map<String, Object?> toJson() => _$Data8ToJson(this);

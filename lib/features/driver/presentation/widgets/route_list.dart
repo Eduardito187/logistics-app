@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/layout/adaptive_card_rows.dart';
 import 'stop_card.dart';
 
-/// Lista de paradas de la ruta, ordenadas por secuencia.
+/// Lista de paradas de la ruta, ordenadas por secuencia. En tablets las
+/// tarjetas se reparten en 2–3 columnas.
 class RouteList extends StatelessWidget {
   const RouteList({super.key, required this.route});
 
@@ -13,14 +15,9 @@ class RouteList extends StatelessWidget {
   Widget build(BuildContext context) {
     final stops = [...route.stops]
       ..sort((a, b) => a.sequence.compareTo(b.sequence));
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
+    return AdaptiveCardRows(
       itemCount: stops.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final stop = stops[i];
-        return StopCard(stop: stop);
-      },
+      itemBuilder: (context, i) => StopCard(stop: stops[i]),
     );
   }
 }

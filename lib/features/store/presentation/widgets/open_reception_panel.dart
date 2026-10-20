@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,7 +62,7 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                       .where((n) => n.id != widget.node.id)
                       .toList();
                   return DropdownButtonFormField<String>(
-                    initialValue: _originId,
+                    value: _originId,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.outbound_outlined),
@@ -71,7 +72,10 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                       for (final node in origins)
                         DropdownMenuItem<String>(
                           value: node.id,
-                          child: Text('${node.name} · ${node.code}'),
+                          child: Text(
+                            '${node.name} · ${node.code}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                     ],
                     onChanged: (id) => setState(() => _originId = id),
@@ -85,7 +89,9 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                   onPressed: widget.busy || _originId == null
                       ? null
                       : () {
-                          final origin = nodesAsync.value?.firstWhere(
+                          // La lista pudo refrescarse sin el origen elegido:
+                          // sin orElse, firstWhere lanzaría StateError.
+                          final origin = nodesAsync.value?.firstWhereOrNull(
                             (n) => n.id == _originId,
                           );
                           if (origin != null) {

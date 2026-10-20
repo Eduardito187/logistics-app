@@ -292,7 +292,8 @@ void main() {
       // Reemplaza algunos bytes por un patrón que produce - y _ en base64url.
       final label = SignedLabel.fromQrContent(
         _qr({
-          's': 'vGUuqT7zusA-xPjt0iW0TSy6i8F5QojH3ajEFLQ5b3Mf5ze9QOzTT1MHCk-9QnWYil2H5Hj9cBcC2awgauFADw',
+          's':
+              'vGUuqT7zusA-xPjt0iW0TSy6i8F5QojH3ajEFLQ5b3Mf5ze9QOzTT1MHCk-9QnWYil2H5Hj9cBcC2awgauFADw',
         }),
       );
       expect(label.signature, hasLength(64));

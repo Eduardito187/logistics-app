@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data17.dart';
+import 'data18.dart';
 
 part 'post_integrations_fleet_vehicles_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostIntegrationsFleetVehiclesResponse {
     Map<String, Object?> json,
   ) => _$PostIntegrationsFleetVehiclesResponseFromJson(json);
 
-  final Data17? data;
+  final Data18? data;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsFleetVehiclesResponseToJson(this);

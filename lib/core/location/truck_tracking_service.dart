@@ -54,7 +54,15 @@ const String _trackingChannelName = 'Rastreo del camión';
 ///    flujo. Por eso cada posición se encola offline-first y se sincroniza al
 ///    recuperar señal; nunca se pierde por falta de red momentánea.
 class TruckTrackingService extends Notifier<TruckTrackingState> {
+  /// Separación mínima entre posiciones encoladas. Cada posición es una fila
+  /// en la cola local y un POST: a 60 km/h con filtro de 20 m serían ~3000 por
+  /// hora. Con 10 s quedan ~360/h, suficiente para el seguimiento en vivo.
+  static const Duration minFixInterval = Duration(seconds: 10);
+
   StreamSubscription<GpsFix>? _sub;
+
+  /// Momento de la última posición encolada (para [minFixInterval]).
+  DateTime? _lastEnqueuedAt;
   bool _channelReady = false;
 
   /// Envío al que se asocian las posiciones capturadas. Se puede re-apuntar en
@@ -139,6 +147,7 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     if (result is ServiceRequestFailure) return false;
 
     _shipmentId = shipmentId;
+    _lastEnqueuedAt = null;
     _sub = location.stream().listen(_onFix);
     state = TruckTrackingState(
       active: true,
@@ -165,6 +174,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     final shipmentId = _shipmentId;
     if (shipmentId == null) return;
     final now = DateTime.now();
+    final last = _lastEnqueuedAt;
+    // Lecturas demasiado seguidas se descartan: ni fila, ni POST, ni rebuild.
+    if (last != null && now.difference(last) < minFixInterval) return;
+    _lastEnqueuedAt = now;
     state = state.copyWith(lastFix: fix);
     final payload = <String, Object?>{
       ...TruckPositionInput(

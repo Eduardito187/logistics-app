@@ -24,6 +24,8 @@ class PickupCard extends StatelessWidget {
               children: [
                 Text(
                   shipment.customerName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

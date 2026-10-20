@@ -24,13 +24,20 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.outline),
+            // Ícono decorativo: el lector de pantalla lee título y mensaje.
+            ExcludeSemantics(
+              child: Icon(icon, size: 64, color: theme.colorScheme.outline),
+            ),
             const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+            Semantics(
+              container: true,
+              header: true,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             if (message != null) ...[

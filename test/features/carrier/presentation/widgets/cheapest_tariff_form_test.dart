@@ -8,6 +8,7 @@ import 'package:logistics_app/features/carrier/presentation/widgets/cheapest_tar
 
 import '../../carrier_fixtures.dart';
 import '../../carrier_test_harness.dart';
+import '../../../../support/button_finders.dart';
 
 // Tarifa más barata: validación (corredor requerido), resultado y error.
 
@@ -22,7 +23,7 @@ Future<void> _pump(WidgetTester tester, FakeCarrierRepository repo) async {
 }
 
 Future<void> _submit(WidgetTester tester) async {
-  final button = find.widgetWithText(FilledButton, 'Buscar más barata');
+  final button = findButtonWithText<FilledButton>('Buscar más barata');
   await tester.ensureVisible(button);
   await tester.tap(button);
   await tester.pumpAndSettle();

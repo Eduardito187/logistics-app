@@ -188,27 +188,33 @@ void main() {
       expect(execution.lastBody!.keyId, _vector()['key_id']);
     });
 
-    test('offline manda: offline valid + backend invalid no cambia isValid', () async {
-      final execution = _FakeExecutionClient(
-        (_) async => _verifyResponse(
-          valid: false,
-          result: LabelVerificationResult.invalidSignature,
-        ),
-      );
-      final scanner = LabelScanner(_vectorVerifier(), api: _FakeApi(execution));
+    test(
+      'offline manda: offline valid + backend invalid no cambia isValid',
+      () async {
+        final execution = _FakeExecutionClient(
+          (_) async => _verifyResponse(
+            valid: false,
+            result: LabelVerificationResult.invalidSignature,
+          ),
+        );
+        final scanner = LabelScanner(
+          _vectorVerifier(),
+          api: _FakeApi(execution),
+        );
 
-      final result = await scanner.scanAndReport(
-        _vector()['qr_content'] as String,
-      );
+        final result = await scanner.scanAndReport(
+          _vector()['qr_content'] as String,
+        );
 
-      // La decisión en terreno es la offline (valid); el backend solo informa.
-      expect(result.isValid, isTrue);
-      expect(result.backendVerification!.valid, isFalse);
-      expect(
-        result.backendVerification!.result,
-        LabelVerificationResult.invalidSignature,
-      );
-    });
+        // La decisión en terreno es la offline (valid); el backend solo informa.
+        expect(result.isValid, isTrue);
+        expect(result.backendVerification!.valid, isFalse);
+        expect(
+          result.backendVerification!.result,
+          LabelVerificationResult.invalidSignature,
+        );
+      },
+    );
 
     test(
       'si el backend falla (sin red), se ignora y queda el offline',

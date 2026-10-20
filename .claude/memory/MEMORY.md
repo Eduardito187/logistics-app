@@ -7,6 +7,9 @@
 - [Entornos dev/staging/production](run-environments-config.md) — config/*.json con --dart-define-from-file en los botones de play; URLs/claves de staging/prod pendientes
 - [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
 - [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
-- [Batería de tests e infra](test-battery-and-infra.md) — 1080/1080 verde (2026-10-16); trampas comunes de widget tests (ListView perezoso, spinner, secure storage mock)
+- [Batería de tests e infra](test-battery-and-infra.md) — 1180/1180 verde; seam codeScannerProvider + FakeCodeScanner; plugins vía PlatformInterface; falta seam de ImagePicker
 - [Portabilidad de memorias/skills](portable-memory-skills.md) — skills viajan con el repo; memorias no → espejo en .claude/memory/ + instalador para Windows/otras rutas
-- [Toolchain Windows nativo](windows-native-toolchain.md) — migrado 2026-10-16; usar Flutter 3.47.6 en C:\sdk\flutter, no C:\flutter (3.32, de dismac-app)
+- [Toolchain Windows nativo](windows-native-toolchain.md) — proyecto bajado a Flutter 3.32.0 / Dart 3.8 (C:/flutter) a pedido del usuario; deps, Gradle 8.12/AGP 8.7.3, trampas
+- [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
+- [Fase de optimización (RAM/pantallas)](perf-responsive-phase.md) — base común layout/fotos/avisos/tests de tamaños, R8+split-per-abi, trampas (Size.fromHeight en Row, EmptyState)
+- [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend

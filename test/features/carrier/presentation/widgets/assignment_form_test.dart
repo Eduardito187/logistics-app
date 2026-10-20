@@ -8,6 +8,7 @@ import 'package:logistics_app/features/carrier/presentation/widgets/assignment_r
 
 import '../../carrier_fixtures.dart';
 import '../../carrier_test_harness.dart';
+import '../../../../support/button_finders.dart';
 
 // Asignación por volumen: validación del formulario (corredor + volumen > 0),
 // resultado con tarifa, resultado sin tarifa y error de API.
@@ -43,7 +44,7 @@ Future<void> _fill(
 }
 
 Future<void> _submit(WidgetTester tester) async {
-  final button = find.widgetWithText(FilledButton, 'Calcular asignación');
+  final button = findButtonWithText<FilledButton>('Calcular asignación');
   await tester.ensureVisible(button);
   await tester.tap(button);
   await tester.pumpAndSettle();

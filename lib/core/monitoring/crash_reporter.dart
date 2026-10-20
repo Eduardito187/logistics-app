@@ -1,0 +1,115 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Claves de contexto que acompañan a cada reporte. Nunca datos personales:
+/// solo identificadores operativos (rol, nodo, vehículo, dispositivo).
+abstract final class CrashKeys {
+  static const role = 'role';
+  static const storeNodeId = 'store_node_id';
+  static const vehicleId = 'vehicle_id';
+  static const deviceId = 'device_id';
+  static const env = 'env';
+}
+
+/// Contexto del usuario logueado para los reportes. El [userId] es un
+/// identificador seudónimo (nunca email ni nombre).
+@immutable
+class CrashUserContext {
+  const CrashUserContext({
+    required this.userId,
+    required this.role,
+    this.storeNodeId,
+    this.vehicleId,
+  });
+
+  final String userId;
+  final String role;
+  final String? storeNodeId;
+  final String? vehicleId;
+}
+
+/// Puerto de reporte de errores en terreno. La app depende de esta interfaz,
+/// no de Crashlytics: sin credenciales de Firebase se usa [NoopCrashReporter].
+abstract interface class CrashReporter {
+  /// ¿Los reportes salen del teléfono? (solo release y con Firebase).
+  bool get isEnabled;
+
+  /// Error capturado (no fatal por defecto).
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+    String? reason,
+  });
+
+  /// Error del framework de Flutter (`FlutterError.onError`).
+  Future<void> recordFlutterError(
+    FlutterErrorDetails details, {
+    bool fatal = false,
+  });
+
+  /// Migas de pan: navegación y acciones clave, SIN datos personales.
+  void breadcrumb(String event);
+
+  /// Clave de contexto. `null` la limpia.
+  Future<void> setCustomKey(String key, Object? value);
+
+  /// Usuario logueado (`null` = sesión cerrada: limpia id y claves).
+  Future<void> setUser(CrashUserContext? user);
+}
+
+/// Reporter inerte: sin Firebase, en tests y en debug sin credenciales.
+class NoopCrashReporter implements CrashReporter {
+  const NoopCrashReporter();
+
+  @override
+  bool get isEnabled => false;
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> recordFlutterError(
+    FlutterErrorDetails details, {
+    bool fatal = false,
+  }) async {}
+
+  @override
+  void breadcrumb(String event) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object? value) async {}
+
+  @override
+  Future<void> setUser(CrashUserContext? user) async {}
+}
+
+/// Normaliza una miga de pan para que nunca lleve datos personales ni textos
+/// libres: solo `[a-z0-9_.:/-]` y espacio, máximo 120 caracteres. Los segmentos que
+/// parecen identificadores (números largos, ULID/UUID) se reemplazan por `:id`.
+String sanitizeBreadcrumb(String event) {
+  final lower = event.trim().toLowerCase();
+  final segments = lower.split('/').map((segment) {
+    if (RegExp(r'^[0-9]{3,}$').hasMatch(segment) ||
+        RegExp(r'^[0-9a-z]{26}$').hasMatch(segment) ||
+        RegExp(r'^[0-9a-f-]{32,36}$').hasMatch(segment)) {
+      return ':id';
+    }
+    return segment;
+  });
+  final cleaned = segments
+      .join('/')
+      .replaceAll(RegExp(r'[^a-z0-9_.:/\- ]'), '_');
+  return cleaned.length > 120 ? cleaned.substring(0, 120) : cleaned;
+}
+
+/// Reporter activo. Por defecto inerte; `main.dart` lo sobreescribe con el
+/// que devuelve `initCrashReporting()`.
+final crashReporterProvider = Provider<CrashReporter>(
+  (ref) => const NoopCrashReporter(),
+);

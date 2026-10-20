@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
@@ -34,17 +37,14 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
     return DriverVehicleGate(
       title: 'Reportar incidente',
       builder: (context, vehicleId) {
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectionCard(
-              title: 'Tipo de incidente',
-              child: RadioGroup<Type>(
-                groupValue: _type,
-                onChanged: (v) {
-                  if (_busy || v == null) return;
-                  setState(() => _type = v);
-                },
+        return ResponsiveBody(
+          maxWidth: AppBreakpoints.maxFormWidth,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SectionCard(
+                title: 'Tipo de incidente',
+                // Flutter 3.32: sin RadioGroup, cada tile lleva groupValue/onChanged.
                 child: Column(
                   children: [
                     for (final type in Type.$valuesDefined)
@@ -52,20 +52,18 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(_typeLabel(type)),
                         value: type,
+                        groupValue: _type,
+                        onChanged: (v) {
+                          if (_busy || v == null) return;
+                          setState(() => _type = v);
+                        },
                       ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: 'Gravedad',
-              child: RadioGroup<Severity>(
-                groupValue: _severity,
-                onChanged: (v) {
-                  if (_busy || v == null) return;
-                  setState(() => _severity = v);
-                },
+              const SizedBox(height: 16),
+              SectionCard(
+                title: 'Gravedad',
                 child: Column(
                   children: [
                     for (final severity in Severity.$valuesDefined)
@@ -74,32 +72,37 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
                         title: Text(_severityLabel(severity)),
                         subtitle: Text(_severityHint(severity)),
                         value: severity,
+                        groupValue: _severity,
+                        onChanged: (v) {
+                          if (_busy || v == null) return;
+                          setState(() => _severity = v);
+                        },
                       ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: 'Descripción',
-              child: TextField(
-                controller: _note,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Qué pasó (opcional)',
+              const SizedBox(height: 16),
+              SectionCard(
+                title: 'Descripción',
+                child: TextField(
+                  controller: _note,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Qué pasó (opcional)',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                ),
+                onPressed: _busy ? null : () => _report(vehicleId),
+                icon: const Icon(Icons.report),
+                label: const Text('Reportar incidente'),
               ),
-              onPressed: _busy ? null : () => _report(vehicleId),
-              icon: const Icon(Icons.report),
-              label: const Text('Reportar incidente'),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/models/data6.dart';
+import '../../../../core/api/models/data7.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/supervisor_controllers.dart';
@@ -19,7 +19,7 @@ class EtaSection extends ConsumerWidget {
     final eta = ref.watch(planEtaProvider(planId));
     return SectionCard(
       title: 'ETA por parada',
-      child: AsyncValueView<Data6>(
+      child: AsyncValueView<Data7>(
         value: eta,
         onRetry: () => ref.invalidate(planEtaProvider(planId)),
         data: (data) {

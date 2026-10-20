@@ -11,7 +11,7 @@ PostAppFleetCrewsResponse _$PostAppFleetCrewsResponseFromJson(
 ) => PostAppFleetCrewsResponse(
   data: json['data'] == null
       ? null
-      : Data2.fromJson(json['data'] as Map<String, dynamic>),
+      : Data3.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostAppFleetCrewsResponseToJson(

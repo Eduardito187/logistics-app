@@ -10,7 +10,7 @@ GetAppTrackingShipmentsShipmentIdUnitsResponse
 _$GetAppTrackingShipmentsShipmentIdUnitsResponseFromJson(
   Map<String, dynamic> json,
 ) => GetAppTrackingShipmentsShipmentIdUnitsResponse(
-  data: Data9.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data10.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GetAppTrackingShipmentsShipmentIdUnitsResponseToJson(

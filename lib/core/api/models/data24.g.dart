@@ -7,13 +7,11 @@ part of 'data24.dart';
 // **************************************************************************
 
 Data24 _$Data24FromJson(Map<String, dynamic> json) => Data24(
-  shipmentId: json['shipment_id'] as String,
-  messageType: MessageType.fromJson(json['message_type'] as String),
-  status: json['status'] as String,
+  id: json['id'] as String,
+  status: OutboxStatus.fromJson(json['status'] as String),
 );
 
 Map<String, dynamic> _$Data24ToJson(Data24 instance) => <String, dynamic>{
-  'shipment_id': instance.shipmentId,
-  'message_type': instance.messageType,
+  'id': instance.id,
   'status': instance.status,
 };

@@ -7,11 +7,11 @@ part of 'data23.dart';
 // **************************************************************************
 
 Data23 _$Data23FromJson(Map<String, dynamic> json) => Data23(
-  id: json['id'] as String,
-  status: OutboxStatus.fromJson(json['status'] as String),
+  notificationId: json['notification_id'] as String,
+  status: json['status'] as String,
 );
 
 Map<String, dynamic> _$Data23ToJson(Data23 instance) => <String, dynamic>{
-  'id': instance.id,
+  'notification_id': instance.notificationId,
   'status': instance.status,
 };

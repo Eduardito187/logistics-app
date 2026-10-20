@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 e inferiores (android:fullBackupContent). Nada de la app va a
+     copias de seguridad: la cola offline (Drift), los tokens y las fotos POD no
+     deben poder extraerse ni restaurarse en otro equipo. -->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

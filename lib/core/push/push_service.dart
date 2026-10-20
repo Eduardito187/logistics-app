@@ -1,26 +1,67 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:unifiedpush/unifiedpush.dart';
 
+import 'firebase_options.dart';
 import 'push_message.dart';
 
 // Se reexporta [PushMessage] (movido a su propio archivo por SRP) para no romper
 // a quienes importan `push/push_service.dart`.
 export 'push_message.dart';
 
-/// Plumbing de push sin Firebase (UnifiedPush/ntfy + notificaciones locales,
-/// ADR 014). No conoce Riverpod: el `PushController` lo orquesta y traduce sus
-/// callbacks a [PushStatus]. Centraliza el canal Android y el formato de los
-/// mensajes para que la capa de estado quede libre de detalles del SDK.
+/// Inicializa Firebase con las credenciales de `config/*.json` (idempotente).
+/// Devuelve `false` si no hay credenciales: el push queda desactivado.
+Future<bool> initFirebaseFromConfig() async {
+  final options = firebaseOptionsFromConfig();
+  if (options == null) return false;
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: options);
+  }
+  return true;
+}
+
+/// Mensajes FCM con la app en segundo plano o cerrada. Debe ser una función
+/// top-level (corre en otro isolate). Los mensajes con bloque `notification`
+/// los muestra el sistema solo; acá se muestran los que traen solo `data`.
+@pragma('vm:entry-point')
+Future<void> pushBackgroundHandler(RemoteMessage message) async {
+  if (message.notification != null) return;
+  if (!await initFirebaseFromConfig()) return;
+  final service = PushService();
+  await service.initializeLocalNotifications(onTap: (_) {});
+  await service.showMessage(service.messageFrom(message));
+}
+
+/// Plumbing de push con Firebase Cloud Messaging + notificaciones locales. No
+/// conoce Riverpod: el `PushController` lo orquesta y traduce sus callbacks a
+/// `PushStatus`. Centraliza el canal Android y el formato de los mensajes.
 class PushService {
-  PushService({FlutterLocalNotificationsPlugin? localNotifications})
-    : _localNotifications =
-          localNotifications ?? FlutterLocalNotificationsPlugin();
+  PushService({
+    FlutterLocalNotificationsPlugin? localNotifications,
+    FirebaseMessaging? messaging,
+    Future<bool> Function()? initFirebase,
+    Stream<RemoteMessage>? foregroundMessages,
+    Stream<RemoteMessage>? openedMessages,
+  }) : _localNotifications =
+           localNotifications ?? FlutterLocalNotificationsPlugin(),
+       _messagingOverride = messaging,
+       _initFirebase = initFirebase ?? initFirebaseFromConfig,
+       _foregroundMessages = foregroundMessages,
+       _openedMessages = openedMessages;
 
   final FlutterLocalNotificationsPlugin _localNotifications;
+  final FirebaseMessaging? _messagingOverride;
+  final Future<bool> Function() _initFirebase;
+  final Stream<RemoteMessage>? _foregroundMessages;
+  final Stream<RemoteMessage>? _openedMessages;
+  final List<StreamSubscription<Object?>> _subs = [];
+
+  // Se resuelve tarde: FirebaseMessaging.instance exige Firebase inicializado.
+  FirebaseMessaging get _messaging =>
+      _messagingOverride ?? FirebaseMessaging.instance;
 
   /// Canal Android de la operación: avisos de ruta, entrega y andén. Alta
   /// prioridad porque se usan en terreno y no pueden pasar desapercibidos.
@@ -33,36 +74,59 @@ class PushService {
         importance: Importance.high,
       );
 
-  /// Inicializa UnifiedPush y las notificaciones locales.
+  /// Inicializa Firebase, las notificaciones locales y los listeners de FCM.
   ///
-  /// Registra los cuatro callbacks de UnifiedPush y prepara el canal Android.
-  /// [onTap] se dispara cuando el usuario toca una notificación local y entrega
-  /// el `payload` guardado (si lo hay), para navegar a la bandeja.
-  Future<void> initialize({
-    required void Function(String endpoint, String instance) onNewEndpoint,
-    required void Function(String instance) onRegistrationFailed,
-    required void Function(String instance) onUnregistered,
-    required void Function(Uint8List message, String instance) onMessage,
+  /// Devuelve `false` (sin tocar la plataforma) si faltan las credenciales de
+  /// Firebase. [onToken] recibe el identificador push del dispositivo cada vez
+  /// que FCM lo registra (FID, API vigente de firebase_messaging 17),
+  /// [onUnregistered] cuando FCM lo da de baja y [onTap] el `payload` de la
+  /// notificación tocada (para navegar a la bandeja).
+  Future<bool> initialize({
+    required void Function(String token) onToken,
+    required void Function(String? payload) onTap,
+    void Function()? onUnregistered,
+  }) async {
+    if (!await _initFirebase()) return false;
+
+    await initializeLocalNotifications(onTap: onTap);
+    if (_messagingOverride == null) {
+      FirebaseMessaging.onBackgroundMessage(pushBackgroundHandler);
+    }
+
+    _subs
+      ..add(_messaging.onRegistered.listen(onToken))
+      ..add(_messaging.onUnregistered.listen((_) => onUnregistered?.call()))
+      // Con la app abierta FCM no muestra nada: se muestra con una local.
+      ..add(
+        (_foregroundMessages ?? FirebaseMessaging.onMessage).listen(
+          (m) => unawaited(showMessage(messageFrom(m))),
+        ),
+      )
+      // Notificación del sistema tocada con la app en segundo plano.
+      ..add(
+        (_openedMessages ?? FirebaseMessaging.onMessageOpenedApp).listen(
+          (m) => onTap(payloadOf(m)),
+        ),
+      );
+
+    // La app se abrió desde una notificación estando cerrada.
+    final initial = await _messaging.getInitialMessage();
+    if (initial != null) onTap(payloadOf(initial));
+    return true;
+  }
+
+  /// Notificaciones locales + canal Android "operacion".
+  Future<void> initializeLocalNotifications({
     required void Function(String? payload) onTap,
   }) async {
-    await UnifiedPush.initialize(
-      onNewEndpoint: onNewEndpoint,
-      onRegistrationFailed: onRegistrationFailed,
-      onUnregistered: onUnregistered,
-      onMessage: onMessage,
-    );
-
-    const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initSettings = InitializationSettings(
-      android: androidInit,
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) =>
           onTap(response.payload),
     );
-
     await _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -70,42 +134,46 @@ class PushService {
         ?.createNotificationChannel(operationChannel);
   }
 
-  /// Pide el permiso de notificaciones (Android 13+, POST_NOTIFICATIONS).
-  /// Devuelve `true` si quedó concedido.
-  Future<bool> requestNotificationPermission() async {
-    final PermissionStatus status = await Permission.notification.request();
-    return status.isGranted;
+  /// Pide el permiso de notificaciones (Android 13+ / iOS). `true` si quedó
+  /// concedido (o provisional).
+  Future<bool> requestPermission() async {
+    final settings = await _messaging.requestPermission();
+    return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
   }
 
-  /// Distribuidores UnifiedPush instalados en el dispositivo (p. ej. ntfy).
-  Future<List<String>> availableDistributors() => UnifiedPush.getDistributors();
+  /// ¿Ya estaba concedido el permiso? (sin volver a preguntar).
+  Future<bool> hasPermission() async {
+    final settings = await _messaging.getNotificationSettings();
+    return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+  }
 
-  /// Distribuidor ya elegido/guardado en una ejecución previa, si existe.
-  Future<String?> savedDistributor() => UnifiedPush.getDistributor();
+  /// Registra el dispositivo en FCM. El identificador llega por `onToken`
+  /// (ver [initialize]) y viaja al backend como `device.push_token`.
+  Future<void> registerDevice() => _messaging.register();
 
-  Future<void> saveDistributor(String distributor) =>
-      UnifiedPush.saveDistributor(distributor);
+  /// Baja del push en este dispositivo: FCM invalida el identificador.
+  Future<void> unregister() => _messaging.unregister();
 
-  /// Pide un endpoint al distribuidor. El resultado llega de forma asíncrona
-  /// por el callback `onNewEndpoint`.
-  Future<void> register() => UnifiedPush.registerApp();
+  /// Suscribe a un topic FCM (p. ej. `NotificationView.fcmTopic` de un envío).
+  Future<void> subscribeToTopic(String topic) =>
+      _messaging.subscribeToTopic(topic);
 
-  /// Da de baja el registro en el distribuidor.
-  Future<void> unregister() => UnifiedPush.unregister();
+  Future<void> unsubscribeFromTopic(String topic) =>
+      _messaging.unsubscribeFromTopic(topic);
 
-  /// Muestra una notificación local a partir del cuerpo recibido.
+  /// Muestra una notificación local a partir del mensaje recibido.
   Future<void> showMessage(PushMessage message) {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'operacion',
-          'Operación',
-          channelDescription:
-              'Avisos de la operación logística (rutas, entregas, andén).',
-          importance: Importance.high,
-          priority: Priority.high,
-        );
     const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
+      android: AndroidNotificationDetails(
+        'operacion',
+        'Operación',
+        channelDescription:
+            'Avisos de la operación logística (rutas, entregas, andén).',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
     );
     // Un id variable por tiempo evita que una notificación pise a la anterior.
     final int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -118,39 +186,45 @@ class PushService {
     );
   }
 
-  /// Normaliza los bytes crudos del distribuidor a un [PushMessage].
-  ///
-  /// Intenta leerlos como JSON de ntfy (`title`, `message`, `tag`/`id`); si no
-  /// es JSON, usa el texto plano como cuerpo. Nunca lanza: ante contenido raro
-  /// cae a un aviso genérico para no perder el mensaje.
-  PushMessage decodeMessage(Uint8List bytes) {
-    const String fallbackTitle = 'Operación';
-    String text;
-    try {
-      text = utf8.decode(bytes);
-    } on FormatException {
-      return const PushMessage(
-        title: fallbackTitle,
-        body: 'Tienes una novedad en la operación.',
-      );
+  /// Normaliza un mensaje FCM a [PushMessage]. Prefiere el bloque
+  /// `notification`; si no viene, usa `data` (`title`, `body`/`message`). Nunca
+  /// lanza: ante contenido vacío cae a un aviso genérico.
+  PushMessage messageFrom(RemoteMessage message) {
+    final data = message.data;
+    String? text(String key) {
+      final value = data[key];
+      return value is String && value.isNotEmpty ? value : null;
     }
 
-    try {
-      final Object? decoded = jsonDecode(text);
-      if (decoded is Map<String, Object?>) {
-        final Object? body = decoded['message'];
-        final Object? title = decoded['title'];
-        final Object? tag = decoded['tag'] ?? decoded['id'];
-        return PushMessage(
-          title: title is String && title.isNotEmpty ? title : fallbackTitle,
-          body: body is String && body.isNotEmpty ? body : text,
-          payload: tag is String && tag.isNotEmpty ? tag : null,
-        );
-      }
-    } on FormatException {
-      // No era JSON: se usa el texto plano como cuerpo.
-    }
+    final title = message.notification?.title;
+    final body = message.notification?.body;
+    return PushMessage(
+      title: (title != null && title.isNotEmpty)
+          ? title
+          : text('title') ?? 'Operación',
+      body: (body != null && body.isNotEmpty)
+          ? body
+          : text('body') ??
+                text('message') ??
+                'Tienes una novedad en la operación.',
+      payload: payloadOf(message),
+    );
+  }
 
-    return PushMessage(title: fallbackTitle, body: text);
+  /// Dato para navegar al tocar: id de notificación, de envío o el tag.
+  String? payloadOf(RemoteMessage message) {
+    for (final key in const ['notification_id', 'shipment_id', 'tag', 'id']) {
+      final value = message.data[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  @visibleForTesting
+  Future<void> dispose() async {
+    for (final sub in _subs) {
+      await sub.cancel();
+    }
+    _subs.clear();
   }
 }

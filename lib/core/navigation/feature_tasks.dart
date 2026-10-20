@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/carrier/presentation/carrier_routes.dart';
 import '../../features/driver/presentation/driver_routes.dart';
-import '../../features/notifications/presentation/notifications_routes.dart';
 import '../../features/picking/presentation/picking_routes.dart';
 import '../../features/settings/presentation/settings_routes.dart';
 import '../../features/store/presentation/store_routes.dart';
@@ -20,7 +19,6 @@ final featureTasksProvider = Provider<List<RoleTask>>((ref) {
     ...storeTasks,
     ...carrierTasks,
     ...supervisorTasks,
-    ...notificationsTasks,
     ...settingsTasks,
   ];
 });

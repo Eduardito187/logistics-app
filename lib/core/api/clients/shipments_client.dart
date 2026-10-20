@@ -28,6 +28,8 @@ abstract class ShipmentsClient {
   ///
   /// Supports optional offset or cursor pagination (E-02). Without any pagination parameter the full collection is returned unchanged; with `page`/`per_page` or `cursor` the response is sliced and a `meta` object is added. Cursor pagination is preferred for this growing collection.
   ///
+  /// [destinationNodeId] - Filtra por nodo destino. Para el rol Tienda se fuerza server-side a su nodo asignado e ignora este parámetro, de modo que una tienda solo ve sus propios envíos.
+  ///
   /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
   ///
   /// [perPage] - Page size for offset or cursor pagination (max 200).
@@ -39,6 +41,7 @@ abstract class ShipmentsClient {
     @Query('per_page') int? perPage = 50,
     @Query('status') ShipmentStatus? status,
     @Query('source') OrderSource? source,
+    @Query('destination_node_id') String? destinationNodeId,
     @Query('cursor') String? cursor,
   });
 

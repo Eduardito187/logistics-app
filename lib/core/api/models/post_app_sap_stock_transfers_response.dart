@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data7.dart';
+import 'data8.dart';
 import 'meta3.dart';
 
 part 'post_app_sap_stock_transfers_response.g.dart';
@@ -20,7 +20,7 @@ class PostAppSapStockTransfersResponse {
     Map<String, Object?> json,
   ) => _$PostAppSapStockTransfersResponseFromJson(json);
 
-  final Data7 data;
+  final Data8 data;
   final Meta3 meta;
 
   Map<String, Object?> toJson() =>

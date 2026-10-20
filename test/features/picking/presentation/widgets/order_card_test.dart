@@ -8,12 +8,13 @@ import 'package:logistics_app/features/picking/presentation/widgets/shipment_sta
 import '../../picking_test_harness.dart';
 
 // Tarjeta de pedido de la worklist. Muestra número, cliente, cantidad de
-// paquetes (= líneas) y la pastilla de estado; al tocarla navega a la
+// paquetes (suma de quantity de las líneas) y la pastilla de estado; al tocarla navega a la
 // preparación del pedido vía go_router.
 
 Future<void> _pumpCard(
   WidgetTester tester, {
   required int lineCount,
+  int quantityPerLine = 1,
   String externalId = 'EXT-7',
   String customerName = 'Ferretería Sur',
   ShipmentStatus status = ShipmentStatus.received,
@@ -30,6 +31,7 @@ Future<void> _pumpCard(
               customerName: customerName,
               status: status,
               lineCount: lineCount,
+              quantityPerLine: quantityPerLine,
             ),
           ),
         ),
@@ -64,6 +66,12 @@ void main() {
 
     expect(find.text('3 paquetes'), findsOneWidget);
     expect(find.text('Planificado'), findsOneWidget);
+  });
+
+  testWidgets('cuenta unidades (quantity), no líneas', (tester) async {
+    await _pumpCard(tester, lineCount: 2, quantityPerLine: 3);
+
+    expect(find.text('6 paquetes'), findsOneWidget);
   });
 
   testWidgets('al tocarla navega a la preparación del pedido', (tester) async {

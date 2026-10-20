@@ -31,7 +31,7 @@ class RouteMap extends StatelessWidget {
     return FlutterMap(
       options: MapOptions(initialCenter: center, initialZoom: 12),
       children: [
-        buildOsmTileLayer(),
+        const OsmTileLayer(),
         MarkerLayer(
           markers: [
             for (final stop in located)

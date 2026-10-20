@@ -45,8 +45,9 @@ void main() {
       final container = ProviderContainer(
         retry: (_, _) => null,
         overrides: [
-          carrierSettlementsProvider(c.id)
-              .overrideWith((ref) async => <Settlement>[]),
+          carrierSettlementsProvider(
+            c.id,
+          ).overrideWith((ref) async => <Settlement>[]),
         ],
       );
       addTearDown(container.dispose);

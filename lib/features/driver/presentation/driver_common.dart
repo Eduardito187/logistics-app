@@ -12,10 +12,14 @@ import '../../../core/widgets/app_snack.dart';
 /// Escanea una etiqueta de unidad y verifica su firma Ed25519 sin red.
 /// Devuelve el id del bulto (`unit_id`), o `null` si se canceló o la etiqueta
 /// no es válida. Avisa en pantalla cuando la firma no verifica.
+///
+/// [bottomClearance]: en pantallas con botón fijo al pie pasar
+/// `kBottomActionClearance` para que el aviso no tape el botón.
 Future<String?> scanVerifiedUnit(
   BuildContext context,
   WidgetRef ref, {
   String helper = 'Apunta al QR del bulto',
+  double? bottomClearance,
 }) async {
   final qr = await scanCode(
     context,
@@ -25,26 +29,35 @@ Future<String?> scanVerifiedUnit(
   );
   if (qr == null || !context.mounted) return null;
 
+  // Avisa que la etiqueta no sirve y devuelve null (sin bulto).
+  String? invalid() {
+    if (context.mounted) {
+      showInfoSnack(
+        context,
+        'Etiqueta no válida',
+        bottomClearance: bottomClearance,
+      );
+    }
+    return null;
+  }
+
   final scanner = ref.read(labelScannerProvider);
   try {
     final result = await scanner.scanAndReport(qr);
     if (!result.isValid) {
-      if (context.mounted) showInfoSnack(context, 'Etiqueta no válida');
-      return null;
+      return invalid();
     }
     return result.label.payload.id;
   } on LabelFormatException {
     // Con claves configuradas, un formato inválido es una etiqueta no válida.
     if (scanner.canVerify) {
-      if (context.mounted) showInfoSnack(context, 'Etiqueta no válida');
-      return null;
+      return invalid();
     }
     // Sin claves (app sin configurar): se lee el id sin poder verificar firma.
     try {
       return SignedLabel.fromQrContent(qr).payload.id;
     } on LabelFormatException {
-      if (context.mounted) showInfoSnack(context, 'Etiqueta no válida');
-      return null;
+      return invalid();
     }
   }
 }

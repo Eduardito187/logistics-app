@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/notification_view.dart';
+import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../domain/notification_labels.dart';
@@ -26,82 +27,93 @@ class NotificationDetailBody extends StatelessWidget {
     final reference =
         notification.shipmentExternalId ?? notification.shipmentId;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Resumen',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              NotificationField(
-                label: 'Tipo',
-                value: notification.messageType.label,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(
-                    'Estado',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
+    // En tablet el detalle no se estira de borde a borde.
+    return ResponsiveBody(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: 'Resumen',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NotificationField(
+                  label: 'Tipo',
+                  value: notification.messageType.label,
+                ),
+                const SizedBox(height: 12),
+                // Wrap: si el estado no entra al lado de la etiqueta (letra
+                // grande, teléfono chico) baja a la línea siguiente.
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      Text(
+                        'Estado',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                      StatusPill(
+                        notification.status.label,
+                        tone: notification.status.tone,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                NotificationField(label: 'Envío', value: reference),
+                const SizedBox(height: 12),
+                NotificationField(
+                  label: 'Canal actual',
+                  value: notification.currentChannel.label,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Cascada de canales',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final channel in notification.channels)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: NotificationField(
+                      label: channel.label,
+                      value:
+                          '${notification.attempts[channel.json] ?? 0} intento(s)',
                     ),
                   ),
-                  const Spacer(),
-                  StatusPill(
-                    notification.status.label,
-                    tone: notification.status.tone,
+                if (notification.channels.isEmpty)
+                  Text(
+                    'Sin canales configurados.',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              NotificationField(label: 'Envío', value: reference),
-              const SizedBox(height: 12),
-              NotificationField(
-                label: 'Canal actual',
-                value: notification.currentChannel.label,
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Cascada de canales',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final channel in notification.channels)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: NotificationField(
-                    label: channel.label,
-                    value:
-                        '${notification.attempts[channel.json] ?? 0} intento(s)',
-                  ),
-                ),
-              if (notification.channels.isEmpty)
-                Text(
-                  'Sin canales configurados.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-            ],
-          ),
-        ),
-        if (notification.status.canSuppress) ...[
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: suppressing ? null : () => onSuppress(),
-            icon: suppressing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.block),
-            label: const Text('Suprimir notificación'),
-          ),
+          if (notification.status.canSuppress) ...[
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: suppressing ? null : () => onSuppress(),
+              icon: suppressing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.block),
+              label: const Text('Suprimir notificación'),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
