@@ -47,6 +47,17 @@ description: Branch, commit, push, PR and CI workflow for the Dismac logistics r
    El script lee los textos como UTF-8, envía bytes UTF-8 y **falla si GitHub guardó mojibake**.
 3. Corregir solo el título: `-Number <n> -TitleFile title.txt`.
 
+**Gotchas al invocar los `.ps1` desde WSL (vía `powershell.exe`):**
+- **ExecutionPolicy**: los scripts no están firmados → PowerShell los bloquea. Correr siempre con
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "..."`.
+- **Rutas UNC**: si el cwd es `\\wsl.localhost\...`, el `Resolve-Path` de `create-pr.ps1` sobre
+  `title.txt`/`body.md` falla con "No se admite el formato proporcionado de la ruta". Fix: **no**
+  hacer `Set-Location` a la ruta UNC; copiar los textos a un temp de Windows
+  (`cp title.txt /mnt/c/Users/<user>/AppData/Local/Temp/pr_title.txt`) y pasar **rutas Windows
+  absolutas** (`-TitleFile 'C:\Users\<user>\AppData\Local\Temp\pr_title.txt'`), invocando el script
+  por su ruta UNC completa. Borrar `title.txt`/`body.md` del repo después (quedan sin trackear).
+- Ejemplo que funcionó: `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '\\wsl.localhost\Ubuntu-22.04\dismac\logistics-app\.claude\skills\github-pr-flow\scripts\create-pr.ps1' -Repo logistics-app -Head feature/x -Base dev -TitleFile 'C:\...\Temp\pr_title.txt' -BodyFile 'C:\...\Temp\pr_body.md'"`.
+
 ## Revisar el CI
 
 - Estado (una sola lectura, sin loops ni polling):
