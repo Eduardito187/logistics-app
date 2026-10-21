@@ -2,73 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "📶 WiFi: autoconectar teléfono (recomendado)",
-      "detail": "Autoconecta por mDNS el teléfono ya vinculado en la misma WiFi (ideal Honor: el puerto rota).",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "${workspaceFolder}/scripts/adb-wireless.ps1", "mdns"
-      ],
+      "label": "📶 WiFi: autoconectar teléfono (mDNS)",
+      "detail": "Autodescubre y conecta el teléfono por WiFi usando el adb de WSL.",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "mdns"],
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
     {
       "label": "📶 WiFi: conectar por ip:puerto",
-      "detail": "Pegás la 'Dirección IP y puerto' de Depuración inalámbrica y conecta.",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "${workspaceFolder}/scripts/adb-wireless.ps1", "connect", "${input:adbTarget}"
-      ],
+      "detail": "Pegás la 'Dirección IP y puerto' de Depuración inalámbrica y conecta (adb de WSL).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "connect", "${input:adbTarget}"],
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
     {
-      "label": "📶 WiFi: vincular por código (1ra vez / QR)",
-      "detail": "Vincula con el código de 'Vincular dispositivo'. Para QR usá Android Studio (ver docs/run-wireless.md).",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "${workspaceFolder}/scripts/adb-wireless.ps1",
-        "pair", "${input:adbPairTarget}", "${input:adbPairCode}", "${input:adbTarget}"
-      ],
+      "label": "📶 WiFi: reconectar (último)",
+      "detail": "Reconecta al último ip:puerto (def. 192.168.1.42:5555).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "reconnect"],
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
     {
-      "label": "🔌 WiFi: USB → WiFi (una vez)",
-      "detail": "Con el cable puesto: pasa el teléfono a WiFi (5555) y te dice cuándo desenchufar.",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "${workspaceFolder}/scripts/adb-wireless.ps1", "usb"
-      ],
+      "label": "🔌 WiFi: USB → WiFi (una vez, requiere usbipd)",
+      "detail": "Con el teléfono atado a WSL por usbipd: tcpip 5555 + connect (5555 estable).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "usb"],
       "presentation": { "reveal": "always", "panel": "shared" },
-      "problemMatcher": []
-    },
-    {
-      "label": "📶 WiFi: reconectar (último ip:puerto)",
-      "detail": "Reconecta al último ip:puerto usado (si el puerto no rotó).",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "${workspaceFolder}/scripts/adb-wireless.ps1", "reconnect"
-      ],
-      "presentation": { "reveal": "always", "panel": "shared" },
-      "problemMatcher": []
-    },
-    {
-      "label": "adb: iniciar servidor de Windows (USB)",
-      "detail": "Arranca el servidor adb de Windows para que el teléfono USB sea visible.",
-      "type": "process",
-      "command": "C:/Users/ehhuallata/AppData/Local/Android/Sdk/platform-tools/adb.exe",
-      "args": ["start-server"],
-      "presentation": { "reveal": "silent", "panel": "shared", "close": true },
       "problemMatcher": []
     }
   ],
@@ -76,19 +42,8 @@
     {
       "id": "adbTarget",
       "type": "promptString",
-      "description": "Teléfono ip:puerto de CONEXIÓN (Depuración inalámbrica → Dirección IP y puerto)",
-      "default": "192.168.1.42:40507"
-    },
-    {
-      "id": "adbPairTarget",
-      "type": "promptString",
-      "description": "ip:puerto de VINCULACIÓN (diálogo 'Vincular dispositivo con código')",
-      "default": "192.168.1.42:"
-    },
-    {
-      "id": "adbPairCode",
-      "type": "promptString",
-      "description": "Código de 6 dígitos de 'Vincular dispositivo con código'"
+      "description": "Teléfono ip:puerto (Depuración inalámbrica → Dirección IP y puerto)",
+      "default": "192.168.1.42:5555"
     }
   ]
 }
