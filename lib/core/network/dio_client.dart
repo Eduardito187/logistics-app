@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/logistics_api.dart';
 import '../auth/session.dart';
 import '../config/app_config.dart';
+import 'app_version_interceptor.dart';
 import 'auth_headers.dart';
 
 /// Interceptor que agrega el Bearer por usuario+dispositivo y el `X-Device-Id`
@@ -67,6 +68,8 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.add(_AuthInterceptor(ref));
+  // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
+  dio.interceptors.add(AppVersionInterceptor(ref));
 
   if (kDebugMode) {
     dio.interceptors.add(

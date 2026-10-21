@@ -45,8 +45,7 @@ void main() {
 
   group('ChannelLabel', () {
     test('traduce cada canal', () {
-      expect(Channel.pushNtfy.label, 'Push (ntfy)');
-      expect(Channel.webPush.label, 'Web push');
+      expect(Channel.fcm.label, 'Push (Firebase)');
       expect(Channel.telegram.label, 'Telegram');
       expect(Channel.email.label, 'Correo');
       expect(Channel.sms.label, 'SMS');

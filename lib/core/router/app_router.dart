@@ -13,6 +13,8 @@ import '../../features/store/presentation/store_routes.dart';
 import '../../features/supervisor/presentation/supervisor_routes.dart';
 import '../../features/sync/presentation/sync_screen.dart';
 import '../auth/session.dart';
+import '../monitoring/crash_navigation_observer.dart';
+import '../monitoring/crash_reporter.dart';
 
 abstract final class AppRoutes {
   static const login = '/login';
@@ -35,6 +37,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: AppRoutes.login,
+    // Rastro de navegación para Crashlytics (patrón de ruta, sin ids).
+    observers: [CrashNavigationObserver(ref.read(crashReporterProvider))],
     refreshListenable: sessionChanges,
     redirect: (context, state) {
       final signedIn = ref.read(sessionProvider) != null;

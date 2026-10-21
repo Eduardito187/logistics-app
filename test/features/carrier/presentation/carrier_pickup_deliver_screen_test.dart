@@ -6,6 +6,7 @@ import 'package:logistics_app/features/carrier/presentation/carrier_deliver_scre
 import 'package:logistics_app/features/carrier/presentation/carrier_pickup_screen.dart';
 
 import '../carrier_test_harness.dart';
+import '../../../support/button_finders.dart';
 
 // Pantallas de escaneo del transportista (recoger/entregar). El escaneo real
 // requiere cámara (scanAndVerifyLabel → scanCode), así que se cubre el estado
@@ -34,7 +35,7 @@ void main() {
     expect(find.byType(EmptyState), findsOneWidget);
     expect(find.text('Sin bultos recogidos'), findsOneWidget);
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear bulto'),
+      findButtonWithText<FilledButton>('Escanear bulto'),
     );
     expect(button.onPressed, isNotNull);
   });
@@ -47,7 +48,7 @@ void main() {
       expect(find.text('Escanear al entregar'), findsOneWidget);
       expect(find.text('Sin entregas registradas'), findsOneWidget);
       final button = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Registrar entrega'),
+        findButtonWithText<FilledButton>('Registrar entrega'),
       );
       expect(button.onPressed, isNotNull);
     },

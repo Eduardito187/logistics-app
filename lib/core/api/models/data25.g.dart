@@ -7,13 +7,13 @@ part of 'data25.dart';
 // **************************************************************************
 
 Data25 _$Data25FromJson(Map<String, dynamic> json) => Data25(
-  source: OrderSource.fromJson(json['source'] as String),
-  externalId: json['external_id'] as String,
-  status: Status7.fromJson(json['status'] as String),
+  shipmentId: json['shipment_id'] as String,
+  messageType: MessageType.fromJson(json['message_type'] as String),
+  status: json['status'] as String,
 );
 
 Map<String, dynamic> _$Data25ToJson(Data25 instance) => <String, dynamic>{
-  'source': instance.source,
-  'external_id': instance.externalId,
+  'shipment_id': instance.shipmentId,
+  'message_type': instance.messageType,
   'status': instance.status,
 };

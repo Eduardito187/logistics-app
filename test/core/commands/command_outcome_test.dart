@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/accepted_envelope.dart';
-import 'package:logistics_app/core/api/models/data21.dart';
+import 'package:logistics_app/core/api/models/data22.dart';
 // command_outcome.dart reexporta command_status.dart (CommandStatus).
 import 'package:logistics_app/core/commands/command_outcome.dart';
 
@@ -42,7 +42,7 @@ void main() {
       'un envelope 202 con accepted:true produce un accepted sin mensaje',
       () {
         final outcome = CommandOutcome.fromAccepted(
-          const AcceptedEnvelope(data: Data21(accepted: true)),
+          const AcceptedEnvelope(data: Data22(accepted: true)),
         );
         expect(outcome.status, CommandStatus.accepted);
         expect(outcome.isAccepted, isTrue);
@@ -58,7 +58,7 @@ void main() {
         // error de contrato del backend y debe fallar ruidosamente.
         expect(
           () => CommandOutcome.fromAccepted(
-            const AcceptedEnvelope(data: Data21(accepted: false)),
+            const AcceptedEnvelope(data: Data22(accepted: false)),
           ),
           throwsA(isA<AssertionError>()),
         );

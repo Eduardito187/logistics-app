@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
+import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/sync_badge.dart';
 import 'controllers/store_controllers.dart';
 import 'widgets/pickup_card.dart';
 
@@ -17,38 +17,42 @@ class CounterPickupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shipmentsAsync = ref.watch(storeShipmentsProvider);
+    // Lista con datos: tarjetas perezosas (grilla en tablets). Cargando, vacío
+    // o error ocupan el resto de la pantalla pero siguen siendo "scrolleables"
+    // para que el gesto de refrescar funcione también ahí.
+    final shipments = shipmentsAsync.hasError ? null : shipmentsAsync.value;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Entrega en mostrador'),
-        actions: [
-          SyncBadge(onTap: () => context.push('/sync')),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Recojo en tienda')),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(storeShipmentsProvider),
-        child: AsyncValueView<List<Shipment>>(
-          value: shipmentsAsync,
-          onRetry: () => ref.invalidate(storeShipmentsProvider),
-          data: (shipments) {
-            if (shipments.isEmpty) {
-              return const EmptyState(
-                icon: Icons.storefront,
-                title: 'Sin recojos',
-                message: 'No hay envíos para entregar en mostrador.',
-              );
-            }
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final shipment in shipments)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: PickupCard(shipment: shipment),
+        child: ResponsiveBody(
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              if (shipments != null && shipments.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverAdaptiveCardRows(
+                    itemCount: shipments.length,
+                    itemBuilder: (context, i) =>
+                        PickupCard(shipment: shipments[i]),
                   ),
-              ],
-            );
-          },
+                )
+              else
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AsyncValueView<List<Shipment>>(
+                    value: shipmentsAsync,
+                    onRetry: () => ref.invalidate(storeShipmentsProvider),
+                    data: (_) => const EmptyState(
+                      icon: Icons.storefront,
+                      title: 'Sin recojos',
+                      message: 'No hay pedidos para recojo en tienda.',
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

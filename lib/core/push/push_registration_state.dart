@@ -1,23 +1,19 @@
-/// Estado del registro push del dispositivo (UnifiedPush/ntfy, ADR 014).
+/// Estado del registro push del dispositivo (Firebase Cloud Messaging).
 ///
-/// La UI lo observa (vía [PushStatus]) para mostrar el indicador de push
-/// (registrado / registrando / sin distribuidor / error).
+/// La UI lo observa (vía `PushStatus`) para mostrar el indicador de push.
 enum PushRegistrationState {
-  /// Aún no se intentó registrar (o no hay endpoint guardado).
+  /// Aún no se activó (o no hay token guardado).
   idle,
 
-  /// Pidiendo endpoint al distribuidor; en curso.
+  /// Pidiendo permiso / token a FCM; en curso.
   registering,
 
-  /// Registrado: hay un endpoint válido del distribuidor.
+  /// Registrado: hay un token FCM válido.
   registered,
 
-  /// No hay ningún distribuidor UnifiedPush instalado en el dispositivo.
+  /// Push no configurado: faltan las credenciales de Firebase (config/*.json).
   unavailable,
 
-  /// El distribuidor rechazó el registro.
+  /// Falló el registro (permiso denegado, sin token o error de FCM).
   failed,
-
-  /// El dispositivo quedó dado de baja del distribuidor.
-  unregistered,
 }

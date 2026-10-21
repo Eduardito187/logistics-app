@@ -404,6 +404,42 @@ class _ExecutionClient implements ExecutionClient {
   }
 
   @override
+  Future<PostAppDeliveriesShipmentIdIssuesResponse> reportDeliveryIssue({
+    required String shipmentId,
+    required DeliveryIssueRequest body,
+    String? idempotencyKey,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppDeliveriesShipmentIdIssuesResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/deliveries/${shipmentId}/issues',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppDeliveriesShipmentIdIssuesResponse _value;
+    try {
+      _value = PostAppDeliveriesShipmentIdIssuesResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<GetAppDeliveriesShipmentIdResponse> getDeliveryState({
     required String shipmentId,
   }) async {

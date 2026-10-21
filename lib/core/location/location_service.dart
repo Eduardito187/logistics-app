@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
@@ -60,12 +61,39 @@ class LocationService {
     }
   }
 
-  /// Flujo de posiciones para la telemetría en vivo del camión (chofer en ruta).
-  Stream<GpsFix> stream({int distanceFilterMeters = 20}) {
-    return Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
+  /// Intervalo mínimo que se le pide al GPS de Android entre lecturas.
+  ///
+  /// Sin esto el FusedLocationProvider entrega ~1 lectura/seg con el camión en
+  /// movimiento: batería, CPU y una fila en la cola por segundo. Junto con el
+  /// filtro de distancia, alcanza para seguir un camión en ciudad.
+  static const Duration streamInterval = Duration(seconds: 10);
+
+  /// Ajustes del flujo de posiciones (expuestos para test).
+  @visibleForTesting
+  static LocationSettings streamSettings({
+    required int distanceFilterMeters,
+    TargetPlatform? platform,
+  }) {
+    if ((platform ?? defaultTargetPlatform) == TargetPlatform.android) {
+      return AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: distanceFilterMeters,
+        intervalDuration: streamInterval,
+      );
+    }
+    return LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: distanceFilterMeters,
+    );
+  }
+
+  /// Flujo de posiciones para la telemetría en vivo del camión (chofer en ruta).
+  /// Filtra por distancia ([distanceFilterMeters]) y, en Android, por
+  /// intervalo ([streamInterval]).
+  Stream<GpsFix> stream({int distanceFilterMeters = 20}) {
+    return Geolocator.getPositionStream(
+      locationSettings: streamSettings(
+        distanceFilterMeters: distanceFilterMeters,
       ),
     ).map(
       (p) => GpsFix(lat: p.latitude, lng: p.longitude, accuracy: p.accuracy),

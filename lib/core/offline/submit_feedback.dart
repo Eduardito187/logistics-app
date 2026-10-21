@@ -10,36 +10,44 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/app_snack.dart';
 import 'submit_outcome.dart';
 
 /// Mensaje en español según el desenlace de un envío a la cola offline.
+///
+/// Offline invisible: lo encolado se informa igual que lo enviado. El usuario
+/// no ve si hubo señal o no; la cola sube todo por debajo (ver `SyncNotice`).
 String submitOutcomeMessage(SubmitOutcome outcome) => switch (outcome) {
-  SubmitOutcome.sent => 'Registrado y enviado.',
-  SubmitOutcome.queued =>
-    'Guardado sin conexión. Se enviará al recuperar señal.',
-  SubmitOutcome.failed => 'No se pudo registrar. Revísalo en Sincronización.',
+  SubmitOutcome.sent || SubmitOutcome.queued => 'Registrado.',
+  SubmitOutcome.failed => 'No se pudo registrar. Intentá de nuevo.',
 };
 
 /// Color semántico para teñir el aviso según el desenlace.
 Color submitOutcomeColor(SubmitOutcome outcome) => switch (outcome) {
-  SubmitOutcome.sent => AppColors.success,
-  SubmitOutcome.queued => AppColors.warning,
+  SubmitOutcome.sent || SubmitOutcome.queued => AppColors.success,
   SubmitOutcome.failed => AppColors.danger,
 };
 
 /// Muestra el SnackBar del resultado de un envío offline-first, con el mensaje y
 /// el color adecuados. Úsese tras `await queue.submit(...)`.
-void showSubmitOutcome(BuildContext context, SubmitOutcome outcome) {
+///
+/// En pantallas con botón fijo al pie (escaneo seguido) pasar
+/// `bottomClearance: kBottomActionClearance` para que el aviso no lo tape.
+void showSubmitOutcome(
+  BuildContext context,
+  SubmitOutcome outcome, {
+  double? bottomClearance,
+}) {
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
     ..showSnackBar(
-      SnackBar(
-        content: Text(
-          submitOutcomeMessage(outcome),
-          style: const TextStyle(fontSize: 15),
-        ),
-        backgroundColor: submitOutcomeColor(outcome),
-        behavior: SnackBarBehavior.floating,
+      buildAppSnackBar(
+        submitOutcomeMessage(outcome),
+        submitOutcomeColor(outcome),
+        duration: outcome == SubmitOutcome.failed
+            ? kErrorSnackDuration
+            : kShortSnackDuration,
+        bottomClearance: bottomClearance,
       ),
     );
 }

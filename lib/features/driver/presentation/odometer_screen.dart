@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
@@ -37,52 +40,55 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
     return DriverVehicleGate(
       title: 'Odómetro',
       builder: (context, vehicleId) {
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectionCard(
-              title: 'Nueva lectura',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _km,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
+        return ResponsiveBody(
+          maxWidth: AppBreakpoints.maxFormWidth,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SectionCard(
+                title: 'Nueva lectura',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _km,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Kilómetros actuales',
+                        suffixText: 'km',
+                      ),
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Kilómetros actuales',
-                      suffixText: 'km',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _note,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Nota (opcional)',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _note,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Nota (opcional)',
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => _submit(vehicleId),
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.speed),
+                      label: Text(_busy ? 'Registrando…' : 'Registrar lectura'),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _submit(vehicleId),
-                    icon: _busy
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.speed),
-                    label: Text(_busy ? 'Registrando…' : 'Registrar lectura'),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const RecentReadings(),
-          ],
+              const SizedBox(height: 16),
+              const RecentReadings(),
+            ],
+          ),
         );
       },
     );

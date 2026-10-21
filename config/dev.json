@@ -1,5 +1,13 @@
 {
   "ENV": "dev",
   "API_BASE_URL": "http://10.0.2.2:8110/api/v1",
-  "LABEL_PUBLIC_KEYS": "1:zOoO3DEULPdeVHmozqu0xm6E8njSdpO0jIZN7y+K/yo="
+  "LABEL_PUBLIC_KEYS": "1:zOoO3DEULPdeVHmozqu0xm6E8njSdpO0jIZN7y+K/yo=",
+  "APP_UPDATE_URL": "",
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_MESSAGING_SENDER_ID": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_IOS_API_KEY": "",
+  "FIREBASE_IOS_APP_ID": "",
+  "FIREBASE_IOS_BUNDLE_ID": ""
 }

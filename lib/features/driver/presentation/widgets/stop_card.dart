@@ -30,6 +30,8 @@ class StopCard extends StatelessWidget {
         ),
         title: Text(
           stop.customerName ?? stop.orderReference ?? 'Parada ${stop.sequence}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -37,7 +39,8 @@ class StopCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (stop.address != null) Text(stop.address!),
+            if (stop.address != null)
+              Text(stop.address!, maxLines: 2, overflow: TextOverflow.ellipsis),
             if (stop.etaAt != null) Text('ETA ${formatTime(stop.etaAt!)}'),
           ],
         ),

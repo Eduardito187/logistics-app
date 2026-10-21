@@ -8,6 +8,7 @@ import 'package:logistics_app/features/carrier/presentation/widgets/tariff_resul
 
 import '../../carrier_fixtures.dart';
 import '../../carrier_test_harness.dart';
+import '../../../../support/button_finders.dart';
 
 // Consulta de tarifa por corredor y clase de vehículo para el transportista
 // elegido: validación, resultado y error.
@@ -25,7 +26,7 @@ Future<void> _pump(WidgetTester tester, FakeCarrierRepository repo) async {
 }
 
 Future<void> _submit(WidgetTester tester) async {
-  final button = find.widgetWithText(FilledButton, 'Consultar tarifa');
+  final button = findButtonWithText<FilledButton>('Consultar tarifa');
   await tester.ensureVisible(button);
   await tester.tap(button);
   await tester.pumpAndSettle();

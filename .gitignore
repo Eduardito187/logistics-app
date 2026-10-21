@@ -46,3 +46,13 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Firma de release: NUNCA versionar el keystore ni sus contraseñas
+# (respaldarlos fuera del repo; en CI salen de secrets). Ver docs/release.md.
+/android/key.properties
+/android/keystore/
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+/ios/Runner/GoogleService-Info.plist

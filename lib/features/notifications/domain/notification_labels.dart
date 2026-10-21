@@ -38,8 +38,7 @@ extension NotificationStatusLabel on NotificationStatus {
 
 extension ChannelLabel on Channel {
   String get label => switch (this) {
-    Channel.pushNtfy => 'Push (ntfy)',
-    Channel.webPush => 'Web push',
+    Channel.fcm => 'Push (Firebase)',
     Channel.telegram => 'Telegram',
     Channel.email => 'Correo',
     Channel.sms => 'SMS',

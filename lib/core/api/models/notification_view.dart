@@ -41,7 +41,7 @@ class NotificationView {
   @JsonKey(name: 'current_channel')
   final Channel currentChannel;
 
-  /// FCM topic of the shipment (primary and web-push channel).
+  /// Firebase Cloud Messaging topic of the shipment (shipment_<id>); the app subscribes to it.
   @JsonKey(name: 'fcm_topic')
   final String fcmTopic;
 

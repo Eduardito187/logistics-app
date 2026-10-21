@@ -5,6 +5,7 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
+import '../models/app_devices_current_push_token_request_body.dart';
 import '../models/app_login_request.dart';
 import '../models/app_login_response.dart';
 import '../models/app_me_response.dart';
@@ -41,6 +42,14 @@ abstract class AuthClient {
   /// List the authenticated user's devices (gate /app)
   @GET('/app/devices')
   Future<GetAppDevicesResponse> listDevices();
+
+  /// Update the push token (FCM FID) of the current device (gate /app).
+  ///
+  /// Sets the FCM push token (Firebase Installation ID) of the device bound to the current Sanctum token. A null token opts the device out of push. Idempotent.
+  @PUT('/app/devices/current/push-token')
+  Future<void> updateDevicePushToken({
+    @Body() required AppDevicesCurrentPushTokenRequestBody body,
+  });
 
   /// Revoke one of the user's devices by UUID (gate /app).
   ///

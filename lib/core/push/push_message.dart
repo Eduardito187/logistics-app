@@ -1,9 +1,9 @@
-/// Contenido ya normalizado de un mensaje push entrante (ntfy/UnifiedPush).
+/// Contenido ya normalizado de un mensaje push entrante (FCM).
 ///
-/// ntfy entrega el cuerpo como bytes; puede venir en JSON (`{title, message,
-/// ...}`) o como texto plano. Esta clase deja listo lo que la notificación
-/// local necesita mostrar y el `payload` para navegar al tocarla. La arma
-/// `PushService.decodeMessage` (push/push_service.dart).
+/// FCM puede traer un bloque `notification` (título/cuerpo) y/o `data`
+/// (clave-valor). Esta clase deja listo lo que la notificación local necesita
+/// mostrar y el `payload` para navegar al tocarla. La arma
+/// `PushService.messageFrom` (push/push_service.dart).
 class PushMessage {
   const PushMessage({required this.title, required this.body, this.payload});
 

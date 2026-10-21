@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/map/map_launcher.dart';
 import '../../../core/widgets/section_card.dart';
@@ -31,101 +33,109 @@ class StopDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text('Parada ${stop.sequence}')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: stop.customerName ?? 'Cliente',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (stop.orderReference != null)
-                  InfoRow(icon: Icons.receipt_long, text: stop.orderReference!),
-                if (stop.address != null)
-                  InfoRow(icon: Icons.place, text: stop.address!),
-                if (stop.etaAt != null)
-                  InfoRow(
-                    icon: Icons.schedule,
-                    text: 'ETA ${formatTime(stop.etaAt!)}',
+      body: ResponsiveBody(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SectionCard(
+              title: stop.customerName ?? 'Cliente',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (stop.orderReference != null)
+                    InfoRow(
+                      icon: Icons.receipt_long,
+                      text: stop.orderReference!,
+                      mono: true,
+                    ),
+                  if (stop.address != null)
+                    InfoRow(icon: Icons.place, text: stop.address!),
+                  if (stop.etaAt != null)
+                    InfoRow(
+                      icon: Icons.schedule,
+                      text: 'ETA ${formatTime(stop.etaAt!)}',
+                    ),
+                  const SizedBox(height: 8),
+                  StatusPill(
+                    _label(stop.status),
+                    tone: done
+                        ? PillTone.success
+                        : failed
+                        ? PillTone.danger
+                        : PillTone.info,
                   ),
-                const SizedBox(height: 8),
-                StatusPill(
-                  _label(stop.status),
-                  tone: done
-                      ? PillTone.success
-                      : failed
-                      ? PillTone.danger
-                      : PillTone.info,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          DeliveryStateCard(shipmentId: stop.shipmentId),
-          const SizedBox(height: 16),
-          if (hasCoords) ...[
-            // Botón grande: abre la navegación externa (geo:/OSM, sin Google).
-            SizedBox(
-              height: 64,
-              child: FilledButton.icon(
-                onPressed: () => _navigate(context),
-                icon: const Icon(Icons.navigation, size: 28),
-                label: const Text(
-                  'Navegar',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            const SizedBox(height: 16),
+            DeliveryStateCard(shipmentId: stop.shipmentId),
+            const SizedBox(height: 16),
+            if (hasCoords) ...[
+              // Botón grande: abre la navegación externa (geo:/OSM, sin Google).
+              SizedBox(
+                height: 64,
+                child: FilledButton.icon(
+                  onPressed: () => _navigate(context),
+                  icon: const Icon(Icons.navigation, size: 28),
+                  label: const Text(
+                    'Navegar',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _openMap(context),
+                icon: const Icon(Icons.map),
+                label: const Text('Ver en el mapa'),
+              ),
+            ],
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ScanUnitsScreen(
+                      mode: ScanMode.unload,
+                      shipmentId: stop.shipmentId,
+                      nodeId: stop.id,
+                      title: 'Descargar parada ${stop.sequence}',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.download),
+              label: const Text('Descargar bultos'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PodScreen(stop: stop),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Entregado (prueba de entrega)'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => _openMap(context),
-              icon: const Icon(Icons.map),
-              label: const Text('Ver en el mapa'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade700,
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => FailedDeliveryScreen(stop: stop),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.cancel),
+              label: const Text('Entrega fallida'),
             ),
           ],
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ScanUnitsScreen(
-                    mode: ScanMode.unload,
-                    shipmentId: stop.shipmentId,
-                    nodeId: stop.id,
-                    title: 'Descargar parada ${stop.sequence}',
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.download),
-            label: const Text('Descargar bultos'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => PodScreen(stop: stop)),
-              );
-            },
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Entregado (prueba de entrega)'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red.shade700,
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => FailedDeliveryScreen(stop: stop),
-                ),
-              );
-            },
-            icon: const Icon(Icons.cancel),
-            label: const Text('Entrega fallida'),
-          ),
-        ],
+        ),
       ),
     );
   }

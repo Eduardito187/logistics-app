@@ -10,7 +10,7 @@ PostIntegrationsCoverageMapImportResponse
 _$PostIntegrationsCoverageMapImportResponseFromJson(
   Map<String, dynamic> json,
 ) => PostIntegrationsCoverageMapImportResponse(
-  data: Data12.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data13.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostIntegrationsCoverageMapImportResponseToJson(

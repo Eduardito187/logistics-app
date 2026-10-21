@@ -93,6 +93,8 @@ void main() {
         'recordFailedDelivery',
         'recordProofOfDelivery',
         'reportVehicleIncident',
+        'reportDeliveryIssue',
+        'updateDevicePushToken',
         'ingestTruckPosition',
         'recordNodeReception',
         'receiveUnitAtNode',
@@ -187,19 +189,22 @@ void main() {
       },
     );
 
-    test('ingestTruckPosition → tracking.ingestTruckPositionFromApp con @shipmentId', () async {
-      await run('ingestTruckPosition', {
-        '@shipmentId': 'sh-7',
-        'lat': -16.5,
-        'lng': -68.1,
-        'reported_at': '2026-10-15T12:00:00.000Z',
-      });
-      expect(trackRec.member, #ingestTruckPositionFromApp);
-      expect(trackRec.named[#shipmentId], 'sh-7');
-      expect(trackRec.named[#body], isA<TruckPositionInput>());
-      // Nota: por diseño (GPS de alta frecuencia) este handler NO reenvía la
-      // Idempotency-Key; no debe esperarse en los argumentos.
-      expect(trackRec.named.containsKey(#idempotencyKey), isFalse);
-    });
+    test(
+      'ingestTruckPosition → tracking.ingestTruckPositionFromApp con @shipmentId',
+      () async {
+        await run('ingestTruckPosition', {
+          '@shipmentId': 'sh-7',
+          'lat': -16.5,
+          'lng': -68.1,
+          'reported_at': '2026-10-15T12:00:00.000Z',
+        });
+        expect(trackRec.member, #ingestTruckPositionFromApp);
+        expect(trackRec.named[#shipmentId], 'sh-7');
+        expect(trackRec.named[#body], isA<TruckPositionInput>());
+        // Nota: por diseño (GPS de alta frecuencia) este handler NO reenvía la
+        // Idempotency-Key; no debe esperarse en los argumentos.
+        expect(trackRec.named.containsKey(#idempotencyKey), isFalse);
+      },
+    );
   });
 }

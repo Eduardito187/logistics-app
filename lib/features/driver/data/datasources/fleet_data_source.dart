@@ -40,7 +40,7 @@ class FleetDataSource {
     }
   }
 
-  Future<Data4?> conductPreTripChecklist(
+  Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {
     final api = _ref.read(logisticsApiProvider);

@@ -11,9 +11,9 @@ NotificationView notificationView({
   String? shipmentExternalId,
   MessageType messageType = MessageType.enRoute,
   NotificationStatus status = NotificationStatus.queued,
-  Channel currentChannel = Channel.pushNtfy,
+  Channel currentChannel = Channel.fcm,
   String fcmTopic = 'topic-1',
-  List<Channel> channels = const [Channel.pushNtfy, Channel.email],
+  List<Channel> channels = const [Channel.fcm, Channel.email],
   Map<String, int> attempts = const {},
 }) => NotificationView(
   id: id,

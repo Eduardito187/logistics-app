@@ -22,11 +22,13 @@ void main() {
     expect(pill.icon, Icons.cloud_done);
   });
 
-  testWidgets('encolado → info con ícono sync', (tester) async {
+  testWidgets('encolado → igual que enviado (offline invisible)', (
+    tester,
+  ) async {
     final pill = await _pill(tester, SubmitOutcome.queued);
-    expect(pill.label, 'Pendiente');
-    expect(pill.tone, PillTone.info);
-    expect(pill.icon, Icons.sync);
+    expect(pill.label, 'Enviado');
+    expect(pill.tone, PillTone.success);
+    expect(pill.icon, Icons.cloud_done);
   });
 
   testWidgets('fallido → peligro con ícono error', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/carrier.dart';
+import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/carrier_controllers.dart';
@@ -24,17 +25,25 @@ class CarrierGuard extends ConsumerWidget {
     return AsyncValueView<List<Carrier>>(
       value: carriers,
       onRetry: () => ref.invalidate(carriersListProvider),
-      data: (list) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Elige tu transportista',
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          for (final carrier in list)
-            Padding(
+      // Lista perezosa y centrada en tablets; la cabecera es el ítem 0.
+      data: (list) => ResponsiveBody(
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: list.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Elige tu transportista',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              );
+            }
+            final carrier = list[index - 1];
+            return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: SectionCard(
                 onTap: () =>
@@ -59,8 +68,9 @@ class CarrierGuard extends ConsumerWidget {
                   ],
                 ),
               ),
-            ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }

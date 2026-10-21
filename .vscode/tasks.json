@@ -2,17 +2,48 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "adb: iniciar servidor de Windows (USB)",
-      "detail": "Arranca el servidor adb de Windows para que el teléfono USB sea visible.",
-      "type": "process",
-      "command": "C:/Users/ehhuallata/AppData/Local/Android/Sdk/platform-tools/adb.exe",
-      "args": ["start-server"],
-      "presentation": {
-        "reveal": "silent",
-        "panel": "shared",
-        "close": true
-      },
+      "label": "📶 WiFi: autoconectar teléfono (mDNS)",
+      "detail": "Autodescubre y conecta el teléfono por WiFi usando el adb de WSL.",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "mdns"],
+      "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
+    },
+    {
+      "label": "📶 WiFi: conectar por ip:puerto",
+      "detail": "Pegás la 'Dirección IP y puerto' de Depuración inalámbrica y conecta (adb de WSL).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "connect", "${input:adbTarget}"],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "📶 WiFi: reconectar (último)",
+      "detail": "Reconecta al último ip:puerto (def. 192.168.1.42:5555).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "reconnect"],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔌 WiFi: USB → WiFi (una vez, requiere usbipd)",
+      "detail": "Con el teléfono atado a WSL por usbipd: tcpip 5555 + connect (5555 estable).",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "usb"],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "adbTarget",
+      "type": "promptString",
+      "description": "Teléfono ip:puerto (Depuración inalámbrica → Dirección IP y puerto)",
+      "default": "192.168.1.42:5555"
     }
   ]
 }

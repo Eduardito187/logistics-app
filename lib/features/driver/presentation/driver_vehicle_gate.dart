@@ -26,17 +26,24 @@ class DriverVehicleGate extends ConsumerWidget {
     required this.title,
     required this.builder,
     this.actions,
+    this.immersive = false,
   });
 
   final String title;
   final Widget Function(BuildContext context, String vehicleId) builder;
   final List<Widget>? actions;
 
+  /// Pantalla a pantalla completa (p. ej. entrega en curso sobre el mapa): sin
+  /// AppBar ni cabecera de asignación cuando hay datos. Los estados de carga,
+  /// error y permiso siguen mostrando la AppBar para poder volver.
+  final bool immersive;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final crew = ref.watch(myCrewProvider);
+    final bare = immersive && crew.hasValue;
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
+      appBar: bare ? null : AppBar(title: Text(title), actions: actions),
       body: crew.when(
         skipLoadingOnReload: true,
         skipLoadingOnRefresh: true,
@@ -54,13 +61,15 @@ class DriverVehicleGate extends ConsumerWidget {
         ),
         data: (myCrew) => LocationPermissionGate(
           child: DriverTrackingAutostart(
-            child: Column(
-              children: [
-                AssignmentHeader(crew: myCrew),
-                const Divider(height: 1),
-                Expanded(child: builder(context, myCrew.vehicle.id)),
-              ],
-            ),
+            child: immersive
+                ? builder(context, myCrew.vehicle.id)
+                : Column(
+                    children: [
+                      AssignmentHeader(crew: myCrew),
+                      const Divider(height: 1),
+                      Expanded(child: builder(context, myCrew.vehicle.id)),
+                    ],
+                  ),
           ),
         ),
       ),

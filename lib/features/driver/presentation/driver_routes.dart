@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/user_role.dart';
 import '../../../core/navigation/role_task.dart';
+import 'active_delivery_screen.dart';
 import 'checklist_screen.dart';
 import 'driver_route_screen.dart';
 import 'fuel_screen.dart';
@@ -10,6 +11,7 @@ import 'incident_screen.dart';
 import 'live_gps_screen.dart';
 import 'load_scan_screen.dart';
 import 'maintenance_due_screen.dart';
+import 'my_day_screen.dart';
 import 'odometer_screen.dart';
 import 'vehicle_summary_screen.dart';
 
@@ -17,13 +19,29 @@ import 'vehicle_summary_screen.dart';
 /// la entrega fallida se abren desde la parada dentro de la ruta.
 const List<RoleTask> driverTasks = [
   RoleTask(
+    id: 'driver-active-delivery',
+    label: 'Entrega en curso',
+    subtitle: 'Mapa, datos del cliente, pedido y entrega con foto',
+    icon: Icons.local_shipping,
+    route: '/driver/delivery',
+    roles: {UserRole.driver},
+    accent: true,
+  ),
+  RoleTask(
     id: 'driver-route',
     label: 'Mi ruta de hoy',
     subtitle: 'Paradas en mapa y lista, con navegación',
     icon: Icons.map,
     route: '/driver/route',
     roles: {UserRole.driver},
-    accent: true,
+  ),
+  RoleTask(
+    id: 'driver-my-day',
+    label: 'Mi día',
+    subtitle: 'Entregadas, pendientes y tiempos de hoy',
+    icon: Icons.today,
+    route: '/driver/my-day',
+    roles: {UserRole.driver},
   ),
   RoleTask(
     id: 'driver-checklist',
@@ -97,6 +115,14 @@ final List<RouteBase> driverRoutes = [
   GoRoute(
     path: '/driver/route',
     builder: (context, state) => const DriverRouteScreen(),
+  ),
+  GoRoute(
+    path: '/driver/delivery',
+    builder: (context, state) => const ActiveDeliveryScreen(),
+  ),
+  GoRoute(
+    path: '/driver/my-day',
+    builder: (context, state) => const MyDayScreen(),
   ),
   GoRoute(
     path: '/driver/checklist',

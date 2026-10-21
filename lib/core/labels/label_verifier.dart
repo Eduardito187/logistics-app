@@ -15,10 +15,12 @@ export 'verification_result.dart';
 /// anterior siguen siendo válidas durante una rotación.
 class LabelVerifier {
   LabelVerifier(Map<int, List<int>> publicKeys)
-    : _publicKeys = {
-        for (final entry in publicKeys.entries)
-          entry.key: SimplePublicKey(entry.value, type: KeyPairType.ed25519),
-      } {
+    : _publicKeys = _buildKeys(publicKeys);
+
+  /// Valida el largo ANTES de construir [SimplePublicKey]: así el error es
+  /// siempre nuestro [ArgumentError] y no depende de si la versión de
+  /// `cryptography` valida (o no) en su constructor.
+  static Map<int, SimplePublicKey> _buildKeys(Map<int, List<int>> publicKeys) {
     for (final entry in publicKeys.entries) {
       if (entry.value.length != 32) {
         throw ArgumentError(
@@ -26,6 +28,10 @@ class LabelVerifier {
         );
       }
     }
+    return {
+      for (final entry in publicKeys.entries)
+        entry.key: SimplePublicKey(entry.value, type: KeyPairType.ed25519),
+    };
   }
 
   /// Construye el verificador desde "id:base64,id:base64" (mismo formato que el backend).

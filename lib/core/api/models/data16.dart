@@ -8,12 +8,13 @@ part 'data16.g.dart';
 
 @JsonSerializable()
 class Data16 {
-  const Data16({this.status, this.name});
+  const Data16({this.status, this.licenseNumber});
 
   factory Data16.fromJson(Map<String, Object?> json) => _$Data16FromJson(json);
 
   final String? status;
-  final String? name;
+  @JsonKey(name: 'license_number')
+  final String? licenseNumber;
 
   Map<String, Object?> toJson() => _$Data16ToJson(this);
 }

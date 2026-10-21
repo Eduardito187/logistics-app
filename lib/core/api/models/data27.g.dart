@@ -7,9 +7,9 @@ part of 'data27.dart';
 // **************************************************************************
 
 Data27 _$Data27FromJson(Map<String, dynamic> json) =>
-    Data27(key: json['key'] as String, value: json['value']);
+    Data27(accepted: json['accepted'] as bool, key: json['key'] as String);
 
 Map<String, dynamic> _$Data27ToJson(Data27 instance) => <String, dynamic>{
+  'accepted': instance.accepted,
   'key': instance.key,
-  'value': instance.value,
 };

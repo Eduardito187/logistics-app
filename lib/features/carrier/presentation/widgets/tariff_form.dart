@@ -5,6 +5,8 @@ import '../../../../core/api/models/carrier.dart';
 import '../../../../core/api/models/corridor_type.dart';
 import '../../../../core/api/models/tariff.dart';
 import '../../../../core/api/models/vehicle_class.dart';
+import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -61,84 +63,90 @@ class _TariffFormState extends ConsumerState<TariffForm> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Corredor',
-          child: Column(
-            children: [
-              TextField(
-                controller: _from,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Origen (código)',
-                  hintText: 'Ej. LPB',
+    // En tablets el formulario no se estira de borde a borde.
+    return ResponsiveBody(
+      maxWidth: AppBreakpoints.maxFormWidth,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: 'Corredor',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _from,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Origen (código)',
+                    hintText: 'Ej. LPB',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _to,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Destino (código)',
-                  hintText: 'Ej. SCZ',
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _to,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Destino (código)',
+                    hintText: 'Ej. SCZ',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<CorridorType>(
-                initialValue: _corridorType,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de corredor',
+                const SizedBox(height: 12),
+                DropdownButtonFormField<CorridorType>(
+                  value: _corridorType,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de corredor',
+                  ),
+                  items: [
+                    for (final type in CorridorType.$valuesDefined)
+                      DropdownMenuItem(
+                        value: type,
+                        child: Text(corridorTypeLabel(type)),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _corridorType = value);
+                  },
                 ),
-                items: [
-                  for (final type in CorridorType.$valuesDefined)
-                    DropdownMenuItem(
-                      value: type,
-                      child: Text(corridorTypeLabel(type)),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _corridorType = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<VehicleClass>(
-                initialValue: _vehicleClass,
-                decoration: const InputDecoration(
-                  labelText: 'Clase de vehículo',
+                const SizedBox(height: 12),
+                DropdownButtonFormField<VehicleClass>(
+                  value: _vehicleClass,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Clase de vehículo',
+                  ),
+                  items: [
+                    for (final vClass in VehicleClass.$valuesDefined)
+                      DropdownMenuItem(
+                        value: vClass,
+                        child: Text(vehicleClassLabel(vClass)),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _vehicleClass = value);
+                  },
                 ),
-                items: [
-                  for (final vClass in VehicleClass.$valuesDefined)
-                    DropdownMenuItem(
-                      value: vClass,
-                      child: Text(vehicleClassLabel(vClass)),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _vehicleClass = value);
-                },
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _query,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Consultar tarifa'),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _query,
+                    icon: const Icon(Icons.search),
+                    label: const Text('Consultar tarifa'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        if (_result != null)
-          AsyncValueView<Tariff>(
-            value: _result!,
-            onRetry: _query,
-            data: (tariff) => TariffResult(tariff: tariff),
-          ),
-      ],
+          const SizedBox(height: 16),
+          if (_result != null)
+            AsyncValueView<Tariff>(
+              value: _result!,
+              onRetry: _query,
+              data: (tariff) => TariffResult(tariff: tariff),
+            ),
+        ],
+      ),
     );
   }
 }

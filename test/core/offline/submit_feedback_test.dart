@@ -27,18 +27,15 @@ SnackBar _snackBar(WidgetTester tester) =>
 void main() {
   group('submitOutcomeMessage', () {
     test('sent', () {
-      expect(submitOutcomeMessage(SubmitOutcome.sent), 'Registrado y enviado.');
+      expect(submitOutcomeMessage(SubmitOutcome.sent), 'Registrado.');
     });
     test('queued', () {
-      expect(
-        submitOutcomeMessage(SubmitOutcome.queued),
-        'Guardado sin conexión. Se enviará al recuperar señal.',
-      );
+      expect(submitOutcomeMessage(SubmitOutcome.queued), 'Registrado.');
     });
     test('failed', () {
       expect(
         submitOutcomeMessage(SubmitOutcome.failed),
-        'No se pudo registrar. Revísalo en Sincronización.',
+        'No se pudo registrar. Intentá de nuevo.',
       );
     });
   });
@@ -47,8 +44,8 @@ void main() {
     test('sent → verde éxito', () {
       expect(submitOutcomeColor(SubmitOutcome.sent), AppColors.success);
     });
-    test('queued → ámbar advertencia', () {
-      expect(submitOutcomeColor(SubmitOutcome.queued), AppColors.warning);
+    test('queued → verde, igual que enviado (offline invisible)', () {
+      expect(submitOutcomeColor(SubmitOutcome.queued), AppColors.success);
     });
     test('failed → rojo peligro', () {
       expect(submitOutcomeColor(SubmitOutcome.failed), AppColors.danger);
@@ -58,26 +55,23 @@ void main() {
   group('showSubmitOutcome', () {
     testWidgets('sent muestra mensaje y color de éxito', (tester) async {
       await _pumpAndShow(tester, SubmitOutcome.sent);
-      expect(find.text('Registrado y enviado.'), findsOneWidget);
+      expect(find.text('Registrado.'), findsOneWidget);
       expect(_snackBar(tester).backgroundColor, AppColors.success);
       expect(_snackBar(tester).behavior, SnackBarBehavior.floating);
     });
 
-    testWidgets('queued muestra mensaje y color de advertencia', (
+    testWidgets('queued se ve igual que enviado (offline invisible)', (
       tester,
     ) async {
       await _pumpAndShow(tester, SubmitOutcome.queued);
-      expect(
-        find.text('Guardado sin conexión. Se enviará al recuperar señal.'),
-        findsOneWidget,
-      );
-      expect(_snackBar(tester).backgroundColor, AppColors.warning);
+      expect(find.text('Registrado.'), findsOneWidget);
+      expect(_snackBar(tester).backgroundColor, AppColors.success);
     });
 
     testWidgets('failed muestra mensaje y color de peligro', (tester) async {
       await _pumpAndShow(tester, SubmitOutcome.failed);
       expect(
-        find.text('No se pudo registrar. Revísalo en Sincronización.'),
+        find.text('No se pudo registrar. Intentá de nuevo.'),
         findsOneWidget,
       );
       expect(_snackBar(tester).backgroundColor, AppColors.danger);
@@ -115,10 +109,10 @@ void main() {
       // clearSnackBars() dejó un único SnackBar visible: el último.
       expect(find.byType(SnackBar), findsOneWidget);
       expect(
-        find.text('No se pudo registrar. Revísalo en Sincronización.'),
+        find.text('No se pudo registrar. Intentá de nuevo.'),
         findsOneWidget,
       );
-      expect(find.text('Registrado y enviado.'), findsNothing);
+      expect(find.text('Registrado.'), findsNothing);
     });
   });
 }

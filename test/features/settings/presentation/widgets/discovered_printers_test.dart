@@ -90,8 +90,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          discoveredPrintersProvider(PrinterTransport.bluetooth)
-              .overrideWith((ref) async => const [_zebra]),
+          discoveredPrintersProvider(
+            PrinterTransport.bluetooth,
+          ).overrideWith((ref) async => const [_zebra]),
         ],
         child: MaterialApp(
           home: Scaffold(

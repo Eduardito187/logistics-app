@@ -15,7 +15,7 @@ import 'package:logistics_app/core/offline/connectivity_notifier.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/printing/printer_config.dart';
-import 'package:logistics_app/core/widgets/sync_badge.dart';
+import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/picking/domain/repositories/picking_repository.dart';
 
 /// Repositorio de preparación totalmente controlable por los tests. Cada método
@@ -149,12 +149,14 @@ List<Override> syncBadgeOverrides() => [
 
 // --- Fixtures del contrato -------------------------------------------------
 
-/// Pedido de ejemplo. [lineCount] define cuántas líneas (paquetes) trae.
+/// Pedido de ejemplo. [lineCount] define cuántas líneas trae y
+/// [quantityPerLine] cuántas unidades (paquetes) tiene cada una.
 Shipment buildShipment({
   String externalId = 'EXT-1',
   String customerName = 'Cliente Demo',
   ShipmentStatus status = ShipmentStatus.received,
   int lineCount = 1,
+  int quantityPerLine = 1,
 }) {
   return Shipment(
     id: 'id-$externalId',
@@ -171,7 +173,7 @@ Shipment buildShipment({
         id: 'line-$i',
         sku: 'SKU$i',
         productName: 'Producto $i',
-        quantity: 1,
+        quantity: quantityPerLine,
       ),
     ),
   );

@@ -10,7 +10,7 @@ PostIntegrationsSapStockTransfersAcknowledgeResponse
 _$PostIntegrationsSapStockTransfersAcknowledgeResponseFromJson(
   Map<String, dynamic> json,
 ) => PostIntegrationsSapStockTransfersAcknowledgeResponse(
-  data: Data19.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data20.fromJson(json['data'] as Map<String, dynamic>),
   meta: Meta7.fromJson(json['meta'] as Map<String, dynamic>),
 );
 

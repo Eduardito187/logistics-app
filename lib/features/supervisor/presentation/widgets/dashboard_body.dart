@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
@@ -57,31 +59,78 @@ class DashboardBody extends StatelessWidget {
       ),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Resumen de ${formatDay(date)}',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    // En tablet el tablero no se estira de borde a borde: hasta ~1040 dp con
+    // 3 mosaicos por fila; en teléfono, 2 por fila.
+    return ResponsiveBody(
+      maxWidth: _maxDashboardWidth,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: 'Resumen de ${formatDay(date)}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${metrics.total} envíos del día en total'),
+                const SizedBox(height: 4),
+                Text('${metrics.openAlerts} alertas sin reconocer'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) => _TileGrid(
+              columns: AppBreakpoints.columnsFor(constraints.maxWidth) == 1
+                  ? 2
+                  : 3,
+              tiles: tiles,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const double _maxDashboardWidth = 1040;
+
+/// Grilla de mosaicos sin alto fijo: filas de [columns] mosaicos que se
+/// igualan en alto. A diferencia de `GridView.count` con `childAspectRatio`,
+/// la letra grande (1.3x) en un teléfono de 320 dp no desborda el mosaico.
+class _TileGrid extends StatelessWidget {
+  const _TileGrid({required this.columns, required this.tiles});
+
+  final int columns;
+  final List<Widget> tiles;
+
+  static const double _gap = 12;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var start = 0; start < tiles.length; start += columns) {
+      if (start > 0) rows.add(const SizedBox(height: _gap));
+      rows.add(
+        // Son 6 mosaicos fijos: IntrinsicHeight es barato y deja las filas
+        // parejas aunque una etiqueta ocupe dos líneas.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('${metrics.total} envíos del día en total'),
-              const SizedBox(height: 4),
-              Text('${metrics.openAlerts} alertas sin reconocer'),
+              for (var i = 0; i < columns; i++) ...[
+                if (i > 0) const SizedBox(width: _gap),
+                Expanded(
+                  child: start + i < tiles.length
+                      ? tiles[start + i]
+                      : const SizedBox.shrink(),
+                ),
+              ],
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          children: tiles,
-        ),
-      ],
-    );
+      );
+    }
+    return Column(children: rows);
   }
 }

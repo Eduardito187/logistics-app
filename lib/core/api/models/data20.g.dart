@@ -7,11 +7,11 @@ part of 'data20.dart';
 // **************************************************************************
 
 Data20 _$Data20FromJson(Map<String, dynamic> json) => Data20(
-  shipmentId: json['shipment_id'] as String,
-  accepted: json['accepted'] as bool,
+  eventId: json['event_id'] as String,
+  status: Status5.fromJson(json['status'] as String),
 );
 
 Map<String, dynamic> _$Data20ToJson(Data20 instance) => <String, dynamic>{
-  'shipment_id': instance.shipmentId,
-  'accepted': instance.accepted,
+  'event_id': instance.eventId,
+  'status': instance.status,
 };

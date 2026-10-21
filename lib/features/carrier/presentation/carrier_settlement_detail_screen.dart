@@ -91,28 +91,12 @@ class _CarrierSettlementDetailScreenState
     required String label,
     required String confirmLabel,
   }) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: label),
-          minLines: 1,
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(confirmLabel),
-          ),
-        ],
+      builder: (context) => _TextPromptDialog(
+        title: title,
+        label: label,
+        confirmLabel: confirmLabel,
       ),
     );
   }
@@ -136,6 +120,60 @@ class _CarrierSettlementDetailScreenState
           onPay: _pay,
         ),
       ),
+    );
+  }
+}
+
+/// Diálogo con un campo de texto (motivo de disputa, referencia de pago). Es
+/// dueño de su [TextEditingController] y lo libera al cerrarse (antes quedaba
+/// sin `dispose` en cada apertura).
+class _TextPromptDialog extends StatefulWidget {
+  const _TextPromptDialog({
+    required this.title,
+    required this.label,
+    required this.confirmLabel,
+  });
+
+  final String title;
+  final String label;
+  final String confirmLabel;
+
+  @override
+  State<_TextPromptDialog> createState() => _TextPromptDialogState();
+}
+
+class _TextPromptDialogState extends State<_TextPromptDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      // Scrollable: con teclado abierto en un teléfono chico no se desborda.
+      scrollable: true,
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(labelText: widget.label),
+        minLines: 1,
+        maxLines: 3,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(widget.confirmLabel),
+        ),
+      ],
     );
   }
 }

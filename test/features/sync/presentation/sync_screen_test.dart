@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
-import 'package:logistics_app/core/widgets/sync_badge.dart';
+import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/sync/presentation/sync_screen.dart';
 import 'package:logistics_app/features/sync/presentation/widgets/sync_action_tile.dart';
 
@@ -27,6 +27,9 @@ class _FakeOfflineQueue implements OfflineQueue {
 
   @override
   Future<void> drain() async => drained = true;
+
+  @override
+  Future<int> pendingCount() async => 0;
 
   @override
   Future<void> retryFailed(String id) async => retried.add(id);

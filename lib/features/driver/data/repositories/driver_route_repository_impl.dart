@@ -19,6 +19,10 @@ class DriverRouteRepositoryImpl implements DriverRouteRepository {
   }) => _remote.getDriverRoute(vehicleId: vehicleId, date: date);
 
   @override
+  Future<Shipment> getShipment({required String shipmentId}) =>
+      _remote.getShipment(shipmentId: shipmentId);
+
+  @override
   Future<List<Delivery>> listVehicleDeliveries({required String vehicleId}) =>
       _remote.listVehicleDeliveries(vehicleId: vehicleId);
 

@@ -1,11 +1,14 @@
 name: CI
 
 # Corre en cada PR hacia las ramas de entorno y en cada push a ellas (después del merge).
+# El APK de release FIRMADO solo se arma en push a main o en tags (v*): necesita los
+# secrets del keystore, que GitHub no expone a PRs. Ver docs/release.md.
 on:
   push:
-    branches: [dev, staging, production]
+    branches: [main, dev, staging, production]
+    tags: ['v*']
   pull_request:
-    branches: [dev, staging, production]
+    branches: [main, dev, staging, production]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,6 +24,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Misma versión que las PCs de desarrollo (Dart 3.8): el formato y el
+          # build de Android (Gradle 8.12 / AGP 8.7.3) dependen de ella.
+          flutter-version: 3.32.0
           channel: stable
           cache: true
 
@@ -50,13 +56,16 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Misma versión que las PCs de desarrollo (Dart 3.8): el formato y el
+          # build de Android (Gradle 8.12 / AGP 8.7.3) dependen de ella.
+          flutter-version: 3.32.0
           channel: stable
           cache: true
 
       - run: flutter pub get
 
-      # Debug porque todavía no hay keystore de firma. El release firmado llega con el
-      # pipeline de distribución (Managed Google Play), con el keystore como secreto del repo.
+      # Debug para cada PR/push (no necesita secrets). El release firmado lo arma
+      # el job `release-apk` (solo main/tags).
       - name: Build
         run: flutter build apk --debug
 
@@ -65,3 +74,101 @@ jobs:
           name: logistics-app-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
+
+  release-apk:
+    name: Release APK firmado (split por ABI)
+    # Solo push a main o tags: en PRs los secrets no están disponibles.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: analyze-test
+    env:
+      # Sin key.properties la build de release FALLA (no cae a la clave de debug).
+      REQUIRE_RELEASE_SIGNING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.32.0
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Reconstruye el keystore de subida y android/key.properties desde secrets
+      # (nunca están en git). El archivo se borra al terminar el job.
+      - name: Keystore de firma
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Falta el secret ANDROID_KEYSTORE_BASE64 (ver docs/release.md)"
+            exit 1
+          fi
+          mkdir -p android/keystore
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/keystore/upload-keystore.jks
+          {
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "storeFile=../keystore/upload-keystore.jks"
+          } > android/key.properties
+
+      # Tags (v*) = producción; main = staging.
+      - name: Build
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then ENV_FILE=config/production.json; else ENV_FILE=config/staging.json; fi
+          echo "Entorno: $ENV_FILE"
+          flutter build apk --release --split-per-abi --dart-define-from-file=$ENV_FILE
+
+      # minSdk 24 => solo firma v2 (keytool -printcert no la lee): usar apksigner.
+      - name: Verificar firma
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          for apk in build/app/outputs/flutter-apk/app-*-release.apk; do
+            echo "== $apk ($(du -h "$apk" | cut -f1))"
+            "$APKSIGNER" verify --print-certs "$apk" | grep -E "certificate (DN|SHA-256)"
+            if "$APKSIGNER" verify --print-certs "$apk" | grep -q "CN=Android Debug"; then
+              echo "::error::$apk está firmado con la clave de DEBUG"; exit 1
+            fi
+          done
+
+      - name: Limpiar keystore
+        if: always()
+        run: rm -f android/key.properties android/keystore/upload-keystore.jks
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logistics-app-release-apks
+          path: build/app/outputs/flutter-apk/app-*-release.apk
+          retention-days: 30
+
+  ios-build:
+    name: Build iOS (sin firma)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: analyze-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.32.0
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Solo verifica que el proyecto iOS compila (pods + Swift). La firma y la
+      # subida a TestFlight/MDM se hacen desde una Mac (ver docs/ios.md).
+      - name: Build
+        run: flutter build ios --release --no-codesign --dart-define-from-file=config/dev.json

@@ -9,7 +9,7 @@ part of 'advance_cascade_envelope.dart';
 AdvanceCascadeEnvelope _$AdvanceCascadeEnvelopeFromJson(
   Map<String, dynamic> json,
 ) => AdvanceCascadeEnvelope(
-  data: Data22.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data23.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$AdvanceCascadeEnvelopeToJson(

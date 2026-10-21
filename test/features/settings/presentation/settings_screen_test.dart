@@ -61,8 +61,9 @@ Future<_FakeLabelPrinter> _pump(
       labelPrinterProvider.overrideWithValue(printer),
       appMeProvider.overrideWith((ref) async => _me),
       selectedPrinterProvider.overrideWith((ref) async => null),
-      discoveredPrintersProvider(PrinterTransport.bluetooth)
-          .overrideWith((ref) async => const []),
+      discoveredPrintersProvider(
+        PrinterTransport.bluetooth,
+      ).overrideWith((ref) async => const []),
     ],
   );
   addTearDown(container.dispose);
@@ -96,7 +97,8 @@ void main() {
     expect(find.byType(PrinterSection), findsOneWidget);
     expect(find.byType(SessionSection), findsOneWidget);
     expect(find.text('Mis dispositivos'), findsOneWidget);
-    expect(find.text('Estado de sincronización'), findsOneWidget);
+    // Offline invisible: Ajustes no expone la sincronización.
+    expect(find.text('Estado de sincronización'), findsNothing);
   });
 
   testWidgets('imprimir prueba envía el ZPL fijo y avisa del éxito', (
@@ -108,7 +110,7 @@ void main() {
     await tester.pump(); // dispara impresión
     await tester.pump(const Duration(milliseconds: 50)); // aviso
 
-    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba Dismac^FS^XZ');
+    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ');
     expect(find.text('Etiqueta de prueba enviada.'), findsOneWidget);
   });
 

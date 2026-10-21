@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ulid/ulid.dart';
@@ -13,6 +15,7 @@ class TokenStore {
 
   static const _tokenKey = 'app_bearer_token';
   static const _deviceIdKey = 'device_id';
+  static const _sessionKey = 'app_session';
 
   Future<String?> readToken() => _storage.read(key: _tokenKey);
 
@@ -20,6 +23,25 @@ class TokenStore {
       _storage.write(key: _tokenKey, value: token);
 
   Future<void> clearToken() => _storage.delete(key: _tokenKey);
+
+  /// Copia de la sesión (nombre, rol, abilities) para reabrir la app logueado
+  /// tras cerrarla o reiniciar el teléfono, incluso sin señal. `null` si no hay
+  /// o si está corrupta.
+  Future<Map<String, Object?>?> readSessionSnapshot() async {
+    final raw = await _storage.read(key: _sessionKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, Object?> ? decoded : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<void> writeSessionSnapshot(Map<String, Object?> snapshot) =>
+      _storage.write(key: _sessionKey, value: jsonEncode(snapshot));
+
+  Future<void> clearSessionSnapshot() => _storage.delete(key: _sessionKey);
 
   /// Identificador estable del dispositivo. Se crea (ULID) la primera vez.
   Future<String> deviceId() async {

@@ -12,7 +12,7 @@ _$PatchAppFleetVehiclesVehicleIdStatusResponseFromJson(
 ) => PatchAppFleetVehiclesVehicleIdStatusResponse(
   data: json['data'] == null
       ? null
-      : Data5.fromJson(json['data'] as Map<String, dynamic>),
+      : Data6.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PatchAppFleetVehiclesVehicleIdStatusResponseToJson(
