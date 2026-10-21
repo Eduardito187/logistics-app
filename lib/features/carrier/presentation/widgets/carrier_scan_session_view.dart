@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/layout/responsive_body.dart';
+import '../../../../core/theme/code_text.dart';
 import '../../../../core/widgets/empty_state.dart';
 import 'carrier_scan_record.dart';
 import 'scan_outcome_pill.dart';
@@ -127,7 +128,7 @@ class CarrierScanTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  CodeText(
                     record.unitId,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

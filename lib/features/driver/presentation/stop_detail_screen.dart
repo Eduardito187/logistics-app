@@ -46,6 +46,7 @@ class StopDetailScreen extends ConsumerWidget {
                     InfoRow(
                       icon: Icons.receipt_long,
                       text: stop.orderReference!,
+                      mono: true,
                     ),
                   if (stop.address != null)
                     InfoRow(icon: Icons.place, text: stop.address!),

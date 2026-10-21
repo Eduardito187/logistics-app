@@ -14,7 +14,7 @@ import 'widgets/profile_section.dart';
 import 'widgets/session_section.dart';
 
 /// ZPL mínimo para verificar que la impresora responde.
-const _testZpl = '^XA^FO40,40^A0N,40,40^FDPrueba Dismac^FS^XZ';
+const _testZpl = '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ';
 
 /// Ajustes del dispositivo: impresora Zebra, sesión y acceso a sincronización.
 class SettingsScreen extends ConsumerStatefulWidget {

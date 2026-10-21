@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/code_text.dart';
+
 /// Fila etiqueta/valor del detalle de una liquidación.
 class SettlementDetailRow extends StatelessWidget {
   const SettlementDetailRow({
     super.key,
     required this.label,
     required this.value,
+    this.mono = false,
   });
 
   final String label;
   final String value;
+
+  /// Si el valor es un id/referencia (referencia de liquidación o de pago), lo
+  /// muestra en tipografía mono (IBM Plex Mono); la etiqueta no cambia.
+  final bool mono;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +39,9 @@ class SettlementDetailRow extends StatelessWidget {
             flex: 3,
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: mono
+                  ? CodeText.mono(const TextStyle(fontWeight: FontWeight.w600))
+                  : const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -48,7 +48,7 @@ class PlanDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           DetailRow(label: 'Fecha', value: formatDay(plan.planDate)),
-          DetailRow(label: 'Plan', value: plan.id),
+          DetailRow(label: 'Plan', value: plan.id, mono: true),
           if (plan.routeGeometry != null)
             const DetailRow(label: 'Ruta', value: 'Trazado disponible'),
         ],

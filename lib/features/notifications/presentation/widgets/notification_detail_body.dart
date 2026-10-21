@@ -66,7 +66,7 @@ class NotificationDetailBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                NotificationField(label: 'Envío', value: reference),
+                NotificationField(label: 'Envío', value: reference, mono: true),
                 const SizedBox(height: 12),
                 NotificationField(
                   label: 'Canal actual',

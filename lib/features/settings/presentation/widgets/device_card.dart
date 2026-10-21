@@ -96,7 +96,8 @@ class DeviceCard extends StatelessWidget {
             device.uuid,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
-              fontFamily: 'monospace',
+              // Valor tipo código (uuid): IBM Plex Mono según el brand kit.
+              fontFamily: 'IBMPlexMono',
             ),
           ),
           if (onRevoke != null) ...[

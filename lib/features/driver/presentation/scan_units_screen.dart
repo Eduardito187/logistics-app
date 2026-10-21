@@ -6,6 +6,7 @@ import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
+import '../../../core/theme/code_text.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_pill.dart';
@@ -181,7 +182,11 @@ class _ScannedTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.inventory_2),
-      title: Text(item.unitId, maxLines: 2, overflow: TextOverflow.ellipsis),
+      title: CodeText(
+        item.unitId,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: StatusPill(
         failed ? 'Error' : 'Registrado',
         tone: failed ? PillTone.danger : PillTone.success,

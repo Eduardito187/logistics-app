@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/code_text.dart';
+
 /// Fila etiqueta/valor usada en el detalle de una notificación: la etiqueta en
 /// gris a la izquierda y el valor resaltado alineado a la derecha. Ambos
 /// textos se parten en varias líneas si no entran.
@@ -8,10 +10,15 @@ class NotificationField extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
+    this.mono = false,
   });
 
   final String label;
   final String value;
+
+  /// Si el valor es un id/referencia (p. ej. la referencia del envío), lo
+  /// muestra en tipografía mono (IBM Plex Mono); la etiqueta no cambia.
+  final bool mono;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +43,15 @@ class NotificationField extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: mono
+                ? CodeText.mono(
+                    theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                : theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
           ),
         ),
       ],

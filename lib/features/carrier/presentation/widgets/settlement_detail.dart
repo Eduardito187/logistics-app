@@ -70,6 +70,7 @@ class SettlementDetail extends StatelessWidget {
                 SettlementDetailRow(
                   label: 'Referencia',
                   value: settlement.reference,
+                  mono: true,
                 ),
                 if (settlement.carrierName != null)
                   SettlementDetailRow(
@@ -85,6 +86,7 @@ class SettlementDetail extends StatelessWidget {
                   SettlementDetailRow(
                     label: 'Referencia de pago',
                     value: settlement.paymentReference!,
+                    mono: true,
                   ),
                 SettlementDetailRow(
                   label: 'Documentos',
