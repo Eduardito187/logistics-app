@@ -110,7 +110,7 @@ void main() {
     await tester.pump(); // dispara impresión
     await tester.pump(const Duration(milliseconds: 50)); // aviso
 
-    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba Dismac^FS^XZ');
+    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ');
     expect(find.text('Etiqueta de prueba enviada.'), findsOneWidget);
   });
 
