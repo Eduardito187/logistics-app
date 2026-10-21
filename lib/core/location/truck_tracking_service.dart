@@ -141,7 +141,7 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     }
 
     final result = await FlutterForegroundTask.startService(
-      notificationTitle: 'Dismac Logística',
+      notificationTitle: 'DisTrack',
       notificationText: 'Registrando ubicación del camión',
     );
     if (result is ServiceRequestFailure) return false;

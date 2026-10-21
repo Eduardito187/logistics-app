@@ -1,5 +1,5 @@
 name: logistics_app
-description: "App interna de la plataforma logística Dismac"
+description: "DisTrack — app logística interna de Dismac: andén, carga, escaneo, GPS de flota y entrega"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -112,6 +112,10 @@ dependencies:
   # - Firma del cliente en pantalla para la prueba de entrega.
   signature: ^6.0.0
 
+  # Marca DisTrack: logo/isotipo vectorial (SVG) y splash animado (Lottie).
+  flutter_svg: ^2.0.17
+  lottie: ^3.1.3
+
 dependency_overrides:
   # workmanager 0.9.2: workmanager_android 0.9.3 arrastra platform_interface
   # 0.9.4 (agrega foregroundServiceConfig) que workmanager_apple 0.9.4 no
@@ -145,6 +149,10 @@ dev_dependencies:
   retrofit_generator: ^10.2.0
   swagger_parser: ^1.21.3
 
+  # Generadores de marca DisTrack: íconos de app y splash nativo.
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -155,6 +163,53 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Assets de marca DisTrack (logos/isotipo SVG, splash Lottie, PNG fuente).
+  assets:
+    - assets/brand/
+    - assets/brand/png/
+
+  # Tipografías de marca (OFL): Barlow (texto/botones/wordmark),
+  # Barlow Condensed (títulos), IBM Plex Mono (códigos y referencias).
+  fonts:
+    - family: Barlow
+      fonts:
+        - asset: assets/fonts/Barlow-Regular.ttf
+        - asset: assets/fonts/Barlow-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Barlow-Bold.ttf
+          weight: 700
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/BarlowCondensed-ExtraBold.ttf
+          weight: 800
+    - family: IBMPlexMono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+
+# Íconos de app DisTrack. Generar con: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/brand/png/app-icon-1024.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 24
+  adaptive_icon_background: "#141414"
+  adaptive_icon_foreground: "assets/brand/png/app-icon-1024.png"
+
+# Splash nativo DisTrack (fondo Noche + isotipo). Generar con:
+# dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#141414"
+  image: "assets/brand/png/app-icon-512.png"
+  android_12:
+    color: "#141414"
+    image: "assets/brand/png/app-icon-512.png"
+  android: true
+  ios: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

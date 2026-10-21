@@ -50,7 +50,7 @@ abstract final class AppTheme {
       onPrimary: white,
       primaryContainer: AppColors.hcBrand,
       onPrimaryContainer: white,
-      // El lima de marca con tinta negra supera 15:1: se conserva como acento.
+      // El ámbar de marca con tinta Noche supera 10:1: se conserva como acento.
       secondary: AppColors.accent,
       onSecondary: ink,
       secondaryContainer: AppColors.accent,
@@ -148,12 +148,29 @@ abstract final class AppTheme {
     );
   }
 
+  /// Pone Barlow Condensed 800 en los títulos (display/headline/title) y deja
+  /// el resto en Barlow (familia base del tema). Conserva tamaños y colores.
+  static TextTheme _brandTextTheme(TextTheme t) {
+    TextStyle? head(TextStyle? s) =>
+        s?.copyWith(fontFamily: 'BarlowCondensed', fontWeight: FontWeight.w800);
+    return t.copyWith(
+      displayLarge: head(t.displayLarge),
+      displayMedium: head(t.displayMedium),
+      displaySmall: head(t.displaySmall),
+      headlineLarge: head(t.headlineLarge),
+      headlineMedium: head(t.headlineMedium),
+      headlineSmall: head(t.headlineSmall),
+      titleLarge: head(t.titleLarge),
+    );
+  }
+
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.brand,
       brightness: brightness,
-      primary: isDark ? const Color(0xFF6FA8FF) : AppColors.brand,
+      // En oscuro el rojo pleno vibra; se usa un rojo claro legible como primario.
+      primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
       secondary: AppColors.accent,
       error: AppColors.danger,
     );
@@ -162,13 +179,21 @@ abstract final class AppTheme {
     // geometría (typography.englishLike) que Flutter combina recién en
     // Theme.of. Escalar sin tamaños dispara una aserción de TextStyle.apply,
     // así que primero se combinan y luego se escala.
-    final base = ThemeData(colorScheme: scheme, useMaterial3: true);
-    final sizedText = base.typography.englishLike.merge(base.textTheme);
+    final base = ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      // Barlow es la tipografía base de marca (texto, botones, wordmark).
+      fontFamily: 'Barlow',
+    );
+    // Títulos en Barlow Condensed 800 (señalética vial); el resto en Barlow.
+    final sizedText = _brandTextTheme(
+      base.typography.englishLike.merge(base.textTheme),
+    );
 
     return base.copyWith(
       scaffoldBackgroundColor: isDark
           ? AppColors.nightBg
-          : const Color(0xFFF4F6F8),
+          : AppColors.platformLight,
       // Densidad estándar: `comfortable` resta 4 dp a botones y objetivos
       // táctiles (un IconButton quedaba en 44x44, debajo del mínimo de 48).
       visualDensity: VisualDensity.standard,
@@ -182,11 +207,12 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 2,
         backgroundColor: isDark ? AppColors.nightSurface : Colors.white,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF101418),
+        foregroundColor: isDark ? Colors.white : AppColors.nightBg,
         titleTextStyle: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-          color: isDark ? Colors.white : const Color(0xFF101418),
+          fontFamily: 'BarlowCondensed',
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: isDark ? Colors.white : AppColors.nightBg,
         ),
       ),
       cardTheme: CardThemeData(

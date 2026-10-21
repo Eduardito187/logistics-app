@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Encabezado con degradado de marca, logo y bienvenida del login.
+/// Encabezado del login con el degradado de marca DisTrack y el logo.
 ///
-/// El degradado ocupa todo el ancho; el texto se centra con el ancho del
-/// formulario (tablet). Con poco alto (horizontal, teclado) se achica el aire
-/// superior para dejar el formulario a la vista.
+/// El degradado (rojo Dismac) ocupa todo el ancho; el logo y el lema se centran
+/// con el ancho del formulario (tablet). Con poco alto (horizontal, teclado) se
+/// achica el aire superior y se muestra el logo compacto, sin lema.
 class AuthHeader extends StatelessWidget {
   const AuthHeader({super.key});
 
@@ -42,26 +43,29 @@ class AuthHeader extends StatelessWidget {
         constraints: const BoxConstraints(
           maxWidth: AppBreakpoints.maxFormWidth - 48,
         ),
-        // Ancho completo hasta el tope: el texto queda alineado al formulario.
         child: SizedBox(
           width: double.infinity,
           child: short
-              // Poco alto (horizontal): logo y marca en una fila, sin lema,
-              // para que el formulario quede a la vista.
-              ? Row(
-                  children: [
-                    const _Logo(size: 28, padding: 10),
-                    const SizedBox(width: 14),
-                    Expanded(child: _brand(theme.textTheme.titleLarge)),
-                  ],
+              // Poco alto (horizontal): solo el logo compacto, alineado a la
+              // izquierda, para dejar el formulario a la vista.
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: SvgPicture.asset(
+                    'assets/brand/distrack-logo-inverse.svg',
+                    height: 30,
+                    semanticsLabel: 'DisTrack',
+                  ),
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _Logo(size: 44, padding: 14),
-                    const SizedBox(height: 20),
-                    _brand(theme.textTheme.headlineMedium),
-                    const SizedBox(height: 8),
+                    // Wordmark + lema de marca ("DE ANDÉN A PUERTA.").
+                    SvgPicture.asset(
+                      'assets/brand/distrack-wordmark-tagline-inverse.svg',
+                      height: 72,
+                      semanticsLabel: 'DisTrack · DE ANDÉN A PUERTA.',
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'La operación de reparto y tienda, en una sola app.',
                       style: theme.textTheme.bodyLarge?.copyWith(
@@ -71,33 +75,6 @@ class AuthHeader extends StatelessWidget {
                   ],
                 ),
         ),
-      ),
-    );
-  }
-}
-
-Widget _brand(TextStyle? style) => Text(
-  'Dismac Logística',
-  style: style?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-);
-
-/// Logo de la app (camión) sobre un recuadro translúcido.
-class _Logo extends StatelessWidget {
-  const _Logo({required this.size, required this.padding});
-
-  final double size;
-  final double padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(padding),
-        child: Icon(Icons.local_shipping, size: size, color: Colors.white),
       ),
     );
   }

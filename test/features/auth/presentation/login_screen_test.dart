@@ -51,7 +51,7 @@ void main() {
     await _pump(tester, _FakeAuthRepository());
 
     expect(find.byType(AuthHeader), findsOneWidget);
-    expect(find.text('Dismac Logística'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('DisTrack')), findsWidgets);
     expect(find.text('Ingresá a tu cuenta'), findsOneWidget);
     expect(find.text('Usuario o correo'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);

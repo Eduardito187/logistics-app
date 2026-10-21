@@ -1,7 +1,9 @@
-# Dismac Logística — app interna
+# DisTrack — app logística interna de Dismac
 
-App Flutter de uso interno de la plataforma logística Dismac. Una sola app con vista según el rol:
-chofer, preparador/andén, tienda, transportista externo y supervisor.
+**DE ANDÉN A PUERTA.**
+
+DisTrack es la app Flutter de uso interno de la plataforma logística Dismac. Una sola app con vista
+según el rol: chofer, preparador/andén, tienda, transportista externo y supervisor.
 
 - Backend, visión y decisiones: [`logistics`](https://github.com/Eduardito187/logistics)
 - Arquitectura de la app: [`docs/architecture.md`](docs/architecture.md)

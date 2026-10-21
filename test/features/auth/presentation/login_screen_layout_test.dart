@@ -65,8 +65,10 @@ void main() {
       // centrados en la pantalla.
       expect(field.width, AppBreakpoints.maxFormWidth - 48);
       expect(field.center.dx, closeTo(width / 2, 0.5));
-      // El texto de marca arranca alineado con el formulario.
-      final brand = tester.getRect(find.text('Dismac Logística'));
+      // El logo de marca (SVG) arranca alineado con el formulario.
+      final brand = tester.getRect(
+        find.bySemanticsLabel(RegExp('DisTrack')).first,
+      );
       expect(brand.left, closeTo(field.left, 0.5));
     } else {
       // Teléfono: el formulario usa el ancho disponible.

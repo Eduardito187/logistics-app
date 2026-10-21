@@ -13,3 +13,4 @@
 - [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
 - [Fase de optimización (RAM/pantallas)](perf-responsive-phase.md) — base común layout/fotos/avisos/tests de tamaños, R8+split-per-abi, trampas (Size.fromHeight en Row, EmptyState)
 - [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
+- [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login

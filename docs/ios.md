@@ -8,7 +8,7 @@ Decisión del dueño: la app **sí** tendrá iOS. No hay Mac en el equipo de des
 | Campo | Valor |
 |---|---|
 | Bundle id | `bo.com.dismac.logisticsApp` (tests: `…logisticsApp.RunnerTests`) |
-| Nombre visible | Dismac Logística |
+| Nombre visible | DisTrack |
 | Mínimo | iOS **15.0** (lo exigen firebase_core 5 / firebase_messaging 17; Podfile, pbxproj y AppFrameworkInfo alineados) |
 | Dependencias nativas | **CocoaPods** (`ios/Podfile`, `use_frameworks!`). Flutter 3.32 no usa Swift Package Manager por defecto. |
 | Versión | `version:` de `pubspec.yaml` (`FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER`) |

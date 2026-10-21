@@ -68,7 +68,7 @@ class LogisticsApp extends ConsumerWidget {
     final highContrast = ref.watch(highContrastProvider);
 
     return MaterialApp.router(
-      title: 'Dismac Logística',
+      title: 'DisTrack',
       // Letra del sistema muy grande desborda botones y tarjetas en teléfonos
       // chicos: se respeta la preferencia del usuario pero con tope 1.3x.
       // VersionGate: si el backend exige una versión mayor, bloquea con

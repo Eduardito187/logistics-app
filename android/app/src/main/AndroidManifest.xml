@@ -36,7 +36,7 @@
          solo HTTPS en release (network_security_config; debug/profile permiten
          http a 10.0.2.2/localhost). Ver docs/release.md. -->
     <application
-        android:label="Dismac Logística"
+        android:label="DisTrack"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
