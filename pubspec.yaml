@@ -58,7 +58,10 @@ dependencies:
   ulid: ^2.0.1
 
   # Escaneo de EAN/QR con la cámara (preparador, chofer, tienda, transportista).
-  mobile_scanner: ^7.4.2
+  # 7.2.x: iOS ya usa Apple Vision (sin ML Kit → sin choque de GoogleDataTransport
+  # con Firebase), y en Android usa CameraX 1.5.3, que compila con AGP 8.7.3.
+  # NO subir a 7.3+: traen CameraX 1.6.1, que exige AGP 8.9.1 (> el tope de Flutter 3.32).
+  mobile_scanner: ">=7.2.0 <7.3.0"
 
   # Mapas OSM self-host (ADR 013, sin Google) y geometría de ruta.
   flutter_map: ^7.0.2
