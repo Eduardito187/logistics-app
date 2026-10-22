@@ -115,7 +115,7 @@ class _LaneRow extends StatelessWidget {
     );
     final icon = Icon(
       Icons.alt_route,
-      color: Theme.of(context).colorScheme.primary,
+      color: Theme.of(context).colorScheme.onSurface,
     );
     return LayoutBuilder(
       builder: (context, constraints) {

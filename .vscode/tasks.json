@@ -2,6 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "🔌 Backend: puente adb reverse (8110)",
+      "detail": "Túnel teléfono:8110 → PC:8110 para que la app alcance el Docker (localhost). No falla si no hay device.",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "$HOME/Android/Sdk/platform-tools/adb reverse tcp:8110 tcp:8110 && echo 'puente backend 8110 listo' || echo 'sin device: conectá el teléfono primero'"
+      ],
+      "presentation": { "reveal": "silent", "panel": "shared", "close": true },
+      "problemMatcher": []
+    },
+    {
       "label": "📶 WiFi: autoconectar teléfono (mDNS)",
       "detail": "Autodescubre y conecta el teléfono por WiFi usando el adb de WSL.",
       "type": "shell",
@@ -29,6 +41,18 @@
       "problemMatcher": []
     },
     {
+      "label": "🆕 WiFi: vincular dispositivo nuevo (código)",
+      "detail": "Vincula un teléfono NUEVO: pide ip:puerto de vinculación, el código y (opcional) ip:puerto de conexión.",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/scripts/adb-wireless.sh", "pair",
+        "${input:adbPairTarget}", "${input:adbPairCode}", "${input:adbConnectTarget}"
+      ],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
       "label": "🔌 WiFi: USB → WiFi (una vez, requiere usbipd)",
       "detail": "Con el teléfono atado a WSL por usbipd: tcpip 5555 + connect (5555 estable).",
       "type": "shell",
@@ -43,6 +67,22 @@
       "id": "adbTarget",
       "type": "promptString",
       "description": "Teléfono ip:puerto (Depuración inalámbrica → Dirección IP y puerto)",
+      "default": "192.168.1.42:5555"
+    },
+    {
+      "id": "adbPairTarget",
+      "type": "promptString",
+      "description": "ip:puerto de VINCULACIÓN (diálogo 'Vincular dispositivo con código')"
+    },
+    {
+      "id": "adbPairCode",
+      "type": "promptString",
+      "description": "Código de 6 dígitos de 'Vincular dispositivo con código'"
+    },
+    {
+      "id": "adbConnectTarget",
+      "type": "promptString",
+      "description": "ip:puerto de CONEXIÓN (pantalla principal de Depuración inalámbrica)",
       "default": "192.168.1.42:5555"
     }
   ]

@@ -54,7 +54,12 @@ class TokenStore {
 }
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => const FlutterSecureStorage(
+    // resetOnError: si la clave del Keystore quedó inservible (p. ej. tras
+    // reinstalar o restaurar un backup) y no se puede descifrar, limpia el
+    // almacén y sigue (se pide login) en vez de volcar un SecurityException.
+    aOptions: AndroidOptions(resetOnError: true),
+  ),
 );
 
 final tokenStoreProvider = Provider<TokenStore>(

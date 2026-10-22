@@ -83,6 +83,36 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
   /// Zoom al seguir: suficiente para ver la cuadra siguiente.
   static const double _followZoom = 17;
 
+  /// Paradas siguientes (puntos grises) y trazo de calles del plan. Dependen
+  /// sólo de la ruta/parada, no de la posición en vivo, así que se calculan una
+  /// vez y se recalculan sólo si cambia la ruta. Antes se recomputaban en cada
+  /// `build`, es decir con cada fix del GPS (uno por segundo), recorriendo todas
+  /// las paradas y toda la geometría de calles por frame.
+  late List<LatLng> _upcoming = _computeUpcoming();
+  late List<LatLng> _streets = routeGeometryPoints(widget.route.routeGeometry);
+
+  List<LatLng> _computeUpcoming() => widget.route.stops
+      .where(
+        (s) =>
+            s.id != widget.stop.id &&
+            s.status == DriverRouteStopStatus.pending &&
+            s.lat != null &&
+            s.lng != null,
+      )
+      .map((s) => LatLng(s.lat!, s.lng!))
+      .toList(growable: false);
+
+  @override
+  void didUpdateWidget(DeliveryMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sólo recalcular lo caché si cambió la ruta o la parada en curso.
+    if (!identical(oldWidget.route, widget.route) ||
+        oldWidget.stop.id != widget.stop.id) {
+      _upcoming = _computeUpcoming();
+      _streets = routeGeometryPoints(widget.route.routeGeometry);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -147,16 +177,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
     final fix = ref.watch(deliveryDriverFixProvider).value;
     final driver = fix == null ? null : LatLng(fix.lat, fix.lng);
     final destination = _destination;
-    final upcoming = widget.route.stops
-        .where(
-          (s) =>
-              s.id != widget.stop.id &&
-              s.status == DriverRouteStopStatus.pending &&
-              s.lat != null &&
-              s.lng != null,
-        )
-        .map((s) => LatLng(s.lat!, s.lng!))
-        .toList(growable: false);
+    final upcoming = _upcoming;
 
     final anchor =
         destination ??
@@ -164,7 +185,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
         (upcoming.isNotEmpty ? upcoming.first : null) ??
         const LatLng(-17.7833, -63.1821); // Santa Cruz por defecto.
     final scheme = Theme.of(context).colorScheme;
-    final streets = routeGeometryPoints(widget.route.routeGeometry);
+    final streets = _streets;
 
     return Stack(
       children: [

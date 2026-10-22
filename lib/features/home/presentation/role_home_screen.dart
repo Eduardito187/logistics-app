@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/brand/distrack_app_bar_logo.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/navigation/feature_tasks.dart';
 import '../../../core/navigation/role_task.dart';
@@ -68,15 +69,59 @@ class RoleHomeScreen extends ConsumerWidget {
                 onPressed: () => ref.read(sessionProvider.notifier).signOut(),
               ),
             ],
-            // Sin título: el rol ya se ve en el ProfileHeader y el título del
+            // Sin `title` de toolbar: el logo se pinta dentro del
+            // `flexibleSpace` (abajo) para poder desvanecerlo según el colapso.
+            // El rol ya se ve en el ProfileHeader y el título del
             // FlexibleSpaceBar se agrandaba al expandir (se veía tosco).
-            flexibleSpace: FlexibleSpaceBar(
-              background: ProfileHeader(
-                name: session.userName,
-                role: role.label,
-                icon: role.icon,
-                horizontalPadding: sidePadding,
-              ),
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                // Fracción de colapso (0 expandido, 1 colapsado) tomada de los
+                // ajustes del propio SliverAppBar, igual que hace FlexibleSpaceBar.
+                final settings = context
+                    .dependOnInheritedWidgetOfExactType<
+                      FlexibleSpaceBarSettings
+                    >();
+                var collapsed = 1.0;
+                if (settings != null) {
+                  final delta = settings.maxExtent - settings.minExtent;
+                  if (delta > 0) {
+                    final expandRatio =
+                        ((settings.currentExtent - settings.minExtent) / delta)
+                            .clamp(0.0, 1.0);
+                    collapsed = 1 - expandRatio;
+                  }
+                }
+                // El logo solo se nota en la mitad final del recorrido: así
+                // nunca se superpone con el degradado del ProfileHeader al
+                // expandir y aparece nítido sobre la barra plana (blanca/Noche)
+                // ya colapsada, a la izquierda, frente a la campana.
+                final logoOpacity = ((collapsed - 0.5) / 0.5).clamp(0.0, 1.0);
+                final topInset = MediaQuery.paddingOf(context).top;
+                const logoHeight = 26.0;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    FlexibleSpaceBar(
+                      background: ProfileHeader(
+                        name: session.userName,
+                        role: role.label,
+                        icon: role.icon,
+                        horizontalPadding: sidePadding,
+                      ),
+                    ),
+                    // Logo DisTrack centrado en la franja del toolbar, pegado
+                    // a la izquierda (16 px), frente a las acciones de la derecha.
+                    Positioned(
+                      top: topInset + (kToolbarHeight - logoHeight) / 2,
+                      left: 16,
+                      child: Opacity(
+                        opacity: logoOpacity,
+                        child: const DisTrackAppBarLogo(height: logoHeight),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           if (tasks.isEmpty)

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/printing/label_printer.dart';
 import '../../../../core/printing/printer_config.dart';
+import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../controllers/printer_controllers.dart';
@@ -29,8 +30,16 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
   PrinterTransport _transport = PrinterTransport.bluetooth;
 
   Future<void> _save(PrinterConfig config) async {
-    await ref.read(labelPrinterProvider).selectPrinter(config);
-    ref.invalidate(selectedPrinterProvider);
+    // El guardado (almacén seguro) puede fallar: se avisa al operario en vez de
+    // dejar una excepción async sin manejar (pantalla roja en debug / silencio).
+    try {
+      await ref.read(labelPrinterProvider).selectPrinter(config);
+      ref.invalidate(selectedPrinterProvider);
+    } on Object {
+      if (mounted) {
+        showInfoSnack(context, 'No se pudo guardar la impresora. Probá de nuevo.');
+      }
+    }
   }
 
   @override

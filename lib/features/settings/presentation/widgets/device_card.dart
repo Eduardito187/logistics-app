@@ -35,7 +35,7 @@ class DeviceCard extends StatelessWidget {
                 'ios' => Icons.phone_iphone,
                 'web' => Icons.computer,
                 _ => Icons.devices,
-              }, color: theme.colorScheme.primary),
+              }, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

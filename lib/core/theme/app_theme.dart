@@ -173,6 +173,17 @@ abstract final class AppTheme {
       primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
       secondary: AppColors.accent,
       error: AppColors.danger,
+    ).copyWith(
+      // El seed rojo tiñe de rosa los roles neutros que M3 deriva (íconos
+      // funcionales, bordes, divisores, texto secundario). Se fijan a gris
+      // real: el rojo queda para marca y acción, no para la "tinta" de la UI.
+      onSurfaceVariant: isDark
+          ? const Color(0xFFC9C9C9)
+          : const Color(0xFF4A4A4A),
+      outline: isDark ? const Color(0xFF8E8E8E) : const Color(0xFF787878),
+      outlineVariant: isDark
+          ? const Color(0xFF3A3A3A)
+          : const Color(0xFFD9D9D9),
     );
 
     // ThemeData.textTheme solo trae colores y pesos; los tamaños viven en la
@@ -201,6 +212,10 @@ abstract final class AppTheme {
       // InkRipple en vez de InkSparkle (default M3 en Android): el sparkle usa
       // un shader que en GPUs de gama baja traba el primer toque.
       splashFactory: InkRipple.splashFactory,
+      // Íconos funcionales (acciones de AppBar, list tiles, íconos de tarjeta)
+      // en tinta neutra, nunca rojo: el rojo es marca/acción, no decoración de
+      // íconos. Botones y pastillas fijan su propio color y no se ven afectados.
+      iconTheme: IconThemeData(color: isDark ? Colors.white : AppColors.nightBg),
       textTheme: sizedText.apply(fontSizeFactor: 1.1),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -256,7 +271,11 @@ abstract final class AppTheme {
           minimumSize: const Size(minTouchTarget, minTouchTarget),
         ),
       ),
-      listTileTheme: const ListTileThemeData(minTileHeight: 56),
+      listTileTheme: ListTileThemeData(
+        minTileHeight: 56,
+        // Íconos de lista en tinta neutra (no el rojo tonal que M3 derivaría).
+        iconColor: isDark ? Colors.white : AppColors.nightBg,
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(primaryButtonHeight),

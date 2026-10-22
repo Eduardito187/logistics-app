@@ -17,6 +17,7 @@
       "type": "dart",
       "program": "lib/main.dart",
       "flutterMode": "debug",
+      "preLaunchTask": "🔌 Backend: puente adb reverse (8110)",
       "toolArgs": ["--dart-define-from-file=config/dev.json"]
     },
     {

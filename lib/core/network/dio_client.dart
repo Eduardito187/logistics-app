@@ -51,9 +51,17 @@ class _AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 
-  /// Rutas de autenticación cuyo 401 no debe disparar el logout global.
+  /// Rutas de autenticación cuyo 401 NO debe disparar el logout global.
+  ///
+  /// - `/login` y `/token`: su 401 es "credenciales inválidas", no sesión caída.
+  /// - `/auth/me`: se pide SOLO justo después del login (para las abilities) y es
+  ///   "degradación segura" (si falla, la sesión queda sin abilities, no se
+  ///   cierra). Sin esta excepción, un 401 de `/me` recién logueado sacaba al
+  ///   usuario al login con "tu sesión expiró" (bug reportado).
   bool _isAuthEndpoint(String path) =>
-      path.contains('/login') || path.contains('/token');
+      path.contains('/login') ||
+      path.contains('/token') ||
+      path.contains('/auth/me');
 }
 
 final dioProvider = Provider<Dio>((ref) {

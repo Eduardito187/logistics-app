@@ -10,6 +10,8 @@
 #   ./scripts/adb-wireless.sh reconnect                   # reconecta al último (def. 192.168.1.42:5555)
 #   ./scripts/adb-wireless.sh usb                         # con cable: tcpip 5555 + connect (5555 estable)
 #   ./scripts/adb-wireless.sh mdns                        # autodescubre por mDNS (openscreen)
+#   ./scripts/adb-wireless.sh pair 192.168.1.50:37123 123456 [192.168.1.50:40777]
+#                                                         # vincula un dispositivo NUEVO (ip:puertoVinculacion codigo [ip:puertoConexion])
 set -euo pipefail
 
 ADB="${ADB:-$HOME/Android/Sdk/platform-tools/adb}"
@@ -21,6 +23,7 @@ connect() {
   local t="$1"
   echo "Conectando (WSL) a $t ..."
   "$ADB" connect "$t" || true
+  "$ADB" reverse tcp:8110 tcp:8110 >/dev/null 2>&1 && echo "tunel backend 8110 listo (adb reverse)"
   "$ADB" devices -l
   printf '%s' "$t" > "$LAST"
   echo "Guardado como último destino ($t). La próxima: reconnect."
@@ -32,6 +35,17 @@ case "${1:-}" in
   connect)   connect "${2:?Falta ip:puerto}";;
   reconnect) connect "$([ -f "$LAST" ] && cat "$LAST" || echo "$DEFAULT")";;
   mdns)      "$ADB" kill-server || true; "$ADB" start-server; sleep 3; "$ADB" mdns services; "$ADB" devices -l;;
+  pair)
+    tgt="${2:?Falta ip:puertoVinculacion}"; code="${3:?Falta codigo de vinculacion}"
+    echo "Vinculando dispositivo nuevo en $tgt ..."
+    "$ADB" pair "$tgt" "$code"
+    if [ -n "${4:-}" ]; then
+      connect "$4"
+    else
+      echo "Vinculado. Ahora conectá con el puerto de CONEXION (pantalla principal de Depuracion inalambrica):"
+      echo "  $0 connect <ip:puertoConexion>"
+    fi
+    ;;
   usb)
     echo "Esperando teléfono por USB (debe estar atado a WSL con usbipd)..."
     "$ADB" wait-for-device
@@ -41,5 +55,5 @@ case "${1:-}" in
     connect "$ip:5555"
     echo "LISTO: desenchufá el cable. Queda en $ip:5555 hasta reiniciar el teléfono."
     ;;
-  *) echo "Uso: $0 {connect <ip:puerto>|reconnect|usb|mdns}"; exit 2;;
+  *) echo "Uso: $0 {connect <ip:puerto>|reconnect|usb|mdns|pair <ip:pair> <codigo> [ip:conexion]}"; exit 2;;
 esac

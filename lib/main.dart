@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
 import 'core/auth/session.dart';
+import 'core/brand/boot_splash_gate.dart';
 import 'core/auth/token_store.dart';
 import 'core/background/background_sync.dart';
 import 'core/monitoring/crash_reporter.dart';
@@ -70,7 +71,10 @@ Future<void> main() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: const LogisticsApp(),
+      // Splash animado one-shot: se muestra una vez al arranque y luego entrega
+      // la app. Va acá (no en el builder de MaterialApp) para que el Lottie se
+      // cree una sola vez y no recargue en cada navegación/rebuild.
+      child: const BootSplashGate(app: LogisticsApp()),
     ),
   );
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../domain/usecases/sign_in.dart';
 
 /// Controla el estado del formulario de login (cargando / error).
@@ -18,7 +17,10 @@ class LoginController extends AsyncNotifier<void> {
       await ref.read(signInProvider).call(email: email, password: password);
       state = const AsyncData(null);
       return true;
-    } on ApiException catch (error, stack) {
+    } on Object catch (error, stack) {
+      // Se atrapa CUALQUIER error (no solo ApiException): si algo inesperado
+      // falla, el botón no debe quedar girando para siempre. La pantalla muestra
+      // el mensaje (genérico si no es ApiException).
       state = AsyncError(error, stack);
       return false;
     }

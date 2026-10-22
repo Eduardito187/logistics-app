@@ -26,6 +26,9 @@ class MaintenanceDueScreen extends ConsumerWidget {
           data: (items) {
             if (items.isEmpty) {
               return ListView(
+                // Permite tirar para refrescar aunque el estado vacío no llene
+                // la pantalla (coherente con el resto de listas refrescables).
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 80),
                   EmptyState(
