@@ -7,6 +7,7 @@ import '../../../core/layout/responsive_body.dart';
 import '../../../core/api/export.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/section_card.dart';
 import 'driver_common.dart';
 import 'driver_vehicle_gate.dart';
@@ -95,7 +96,7 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
               const SizedBox(height: 24),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
+                  backgroundColor: AppColors.danger,
                 ),
                 onPressed: _busy ? null : () => _report(vehicleId),
                 icon: const Icon(Icons.report),

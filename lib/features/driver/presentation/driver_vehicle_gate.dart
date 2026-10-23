@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/location_permission_gate.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/widgets/brand_loader.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/driver_tracking_autostart.dart';
 import 'widgets/assignment_header.dart';
@@ -50,7 +51,7 @@ class DriverVehicleGate extends ConsumerWidget {
         loading: () => const Center(
           child: Padding(
             padding: EdgeInsets.all(48),
-            child: CircularProgressIndicator(),
+            child: BrandLoader(),
           ),
         ),
         error: (error, _) => NoAssignment(

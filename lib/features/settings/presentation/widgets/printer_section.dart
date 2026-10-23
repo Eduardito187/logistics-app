@@ -5,7 +5,7 @@ import '../../../../core/printing/label_printer.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/section_card.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/status_pill.dart';
 import '../controllers/printer_controllers.dart';
 import 'discovered_printers.dart';
 import 'wifi_printer_form.dart';
@@ -54,8 +54,18 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
           if (selected != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _ActivePrinter(
-                'Activa: ${selected.label} (${selected.transport.label})',
+              child: Align(
+                alignment: Alignment.centerLeft,
+                // scaleDown: con letra grande en teléfono chico la pastilla se
+                // achica en vez de desbordar (mismo patrón que device_card).
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StatusPill(
+                    'Activa: ${selected.label} (${selected.transport.label})',
+                    tone: PillTone.success,
+                    icon: Icons.print,
+                  ),
+                ),
               ),
             ),
           // En teléfonos muy angostos (o con letra grande) los íconos no entran
@@ -123,49 +133,6 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
             label: const Text('Imprimir prueba'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Impresora activa: chip verde que, a diferencia de `StatusPill`, deja
-/// partir el texto en varias líneas (nombres largos de impresora en teléfonos
-/// chicos no desbordan).
-class _ActivePrinter extends StatelessWidget {
-  const _ActivePrinter(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    const color = AppColors.success;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.print, size: 16, color: color),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -6,10 +6,7 @@
       "detail": "Túnel teléfono:8110 → PC:8110 para que la app alcance el Docker (localhost). No falla si no hay device.",
       "type": "shell",
       "command": "bash",
-      "args": [
-        "-c",
-        "$HOME/Android/Sdk/platform-tools/adb reverse tcp:8110 tcp:8110 && echo 'puente backend 8110 listo' || echo 'sin device: conectá el teléfono primero'"
-      ],
+      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "reverse"],
       "presentation": { "reveal": "silent", "panel": "shared", "close": true },
       "problemMatcher": []
     },

@@ -102,12 +102,13 @@ class _LaneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final lane = this.lane;
     final text = Text(
       lane == null || lane.isEmpty
           ? 'Carril / vehículo sin asignar'
           : 'Carril / vehículo: $lane',
-      style: const TextStyle(fontWeight: FontWeight.w600),
+      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
     );
     final button = TextButton(
       onPressed: onAssign,

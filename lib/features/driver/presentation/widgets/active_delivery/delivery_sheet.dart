@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/api/export.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
+import '../../../../../core/widgets/brand_loader.dart';
 import '../../controllers/driver_controllers.dart';
 import 'delivery_contact.dart';
 
@@ -296,7 +297,7 @@ class _OrderSection extends ConsumerWidget {
         if (items.isEmpty && detail != null && detail.isLoading)
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: BrandLoader()),
           )
         else if (items.isEmpty && detail != null && detail.hasError)
           Row(

@@ -5,23 +5,14 @@ import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/navigation/feature_tasks.dart';
 import 'package:logistics_app/core/navigation/role_task.dart';
-import 'package:logistics_app/core/offline/app_database.dart';
-import 'package:logistics_app/core/offline/connectivity_notifier.dart';
-import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
-import 'package:logistics_app/features/home/presentation/widgets/profile_header.dart';
-import 'package:logistics_app/features/home/presentation/widgets/task_card.dart';
+import 'package:logistics_app/features/home/presentation/widgets/big_action_tile.dart';
+import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
 
-// Inicio por rol: muestra el perfil del usuario y filtra las tarjetas por rol y
-// por ability. Se override la sesión (devSignIn + setAbilities), el stream de
-// cola y la conectividad (que usa el SyncBadge de la AppBar) para no tocar
-// Drift ni el canal de plataforma.
-
-/// Conectividad falsa: siempre en línea, sin suscribirse al canal real.
-class _FakeConnectivity extends ConnectivityNotifier {
-  @override
-  Future<bool> build() async => true;
-}
+// Inicio por rol (rediseño): panel glanceable con saludo (rol + nombre), la
+// acción principal y accesos rápidos, filtrados por rol y por ability. Se
+// override la sesión (devSignIn + setAbilities) y las tareas; no toca Drift ni
+// canales de plataforma. La barra inferior vive en el shell (no se prueba acá).
 
 /// Tareas de ejemplo: una exige ability, otra no; cada rol tiene la suya.
 const _needsAbility = RoleTask(
@@ -55,10 +46,6 @@ ProviderContainer _session(UserRole role, {List<String>? abilities}) {
         _noAbility,
         _pickerTask,
       ]),
-      syncQueueProvider.overrideWith(
-        (ref) => Stream<List<OutboxAction>>.value(const []),
-      ),
-      connectivityProvider.overrideWith(_FakeConnectivity.new),
     ],
   );
   addTearDown(container.dispose);
@@ -78,25 +65,14 @@ Future<void> _pump(WidgetTester tester, ProviderContainer container) async {
 }
 
 void main() {
-  testWidgets('muestra la etiqueta del rol, el perfil y el botón de salir', (
-    tester,
-  ) async {
+  testWidgets('muestra el rol, el nombre y el botón de salir', (tester) async {
     final container = _session(UserRole.driver);
     await _pump(tester, container);
 
-    // La etiqueta del rol aparece una sola vez, en el perfil: el título grande
-    // del FlexibleSpaceBar se quitó (se veía tosco al expandir).
-    expect(find.text('Chofer'), findsOneWidget);
-    expect(
-      tester.widget<FlexibleSpaceBar>(find.byType(FlexibleSpaceBar)).title,
-      isNull,
-    );
+    expect(find.byType(GreetingHeader), findsOneWidget);
+    expect(find.text('Chofer'), findsWidgets); // etiqueta del rol en el saludo
     expect(find.text('dev.driver'), findsOneWidget); // nombre del devSignIn
-    expect(find.byType(ProfileHeader), findsOneWidget);
     expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
-    // Header: campana de notificaciones; la sincronización va por debajo.
-    expect(find.byTooltip('Notificaciones'), findsOneWidget);
-    expect(find.byTooltip('Sincronización'), findsNothing);
   });
 
   testWidgets('con la ability presente muestra la tarjeta con permiso', (
@@ -151,10 +127,12 @@ void main() {
       find.text('No hay flujos disponibles para este rol todavía.'),
       findsOneWidget,
     );
-    expect(find.byType(TaskCard), findsNothing);
+    expect(find.byType(BigActionTile), findsNothing);
   });
 
-  testWidgets('cada uno de los 5 roles ve su etiqueta', (tester) async {
+  testWidgets('cada uno de los 5 roles ve su etiqueta en el saludo', (
+    tester,
+  ) async {
     for (final role in UserRole.values) {
       final container = _session(role);
       await _pump(tester, container);

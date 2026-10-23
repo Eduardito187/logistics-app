@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
+import 'package:logistics_app/features/auth/domain/entities/login_result.dart';
+import 'package:logistics_app/features/auth/domain/entities/two_factor_enrollment.dart';
 import 'package:logistics_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
 import 'package:logistics_app/features/auth/presentation/login_screen.dart';
@@ -25,13 +27,42 @@ class _FakeAuthRepository implements AuthRepository {
   String? lastPassword;
 
   @override
-  Future<void> login({required String email, required String password}) async {
+  Future<LoginResult> login({
+    required String email,
+    required String password,
+  }) async {
     loginCalled = true;
     lastEmail = email;
     lastPassword = password;
     if (gate != null) await gate!.future;
     if (error != null) throw error!;
+    return const LoginSignedIn();
   }
+
+  @override
+  Future<void> verifyTwoFactor({
+    required String challengeId,
+    required String code,
+  }) async {}
+
+  @override
+  Future<TwoFactorEnrollment> enrollTwoFactor() => throw UnimplementedError();
+
+  @override
+  Future<void> confirmTwoFactor(String code) async {}
+
+  @override
+  Future<void> disableTwoFactor({String? code, String? password}) async {}
+
+  @override
+  Future<void> forgotPassword(String email) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {}
 }
 
 Future<void> _pump(WidgetTester tester, _FakeAuthRepository repo) async {

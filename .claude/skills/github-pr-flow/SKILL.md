@@ -7,7 +7,9 @@ description: Branch, commit, push, PR and CI workflow for the Dismac logistics r
 
 ## Reglas que no se negocian
 
-1. **No commitear ni pushear sin que el usuario lo pida en ese turno.**
+1. **No commitear ni pushear sin que el usuario lo pida en ese turno** (un OK anterior no vale para los
+   cambios siguientes). **Avisar SIEMPRE toda acción de git apenas se hace, con el hash corto** — nada de
+   commits silenciosos: el dueño perdió confianza por eso una vez. Ante la duda, preguntar primero.
 2. **Flujo de ramas** (lo vigila `.github/workflows/branch-policy.yml`):
    ```
    feature/* | fix/* | chore/*  ──PR──▶  dev  ──PR──▶  staging  ──PR──▶  production

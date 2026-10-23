@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/login_result.dart';
 import '../../domain/usecases/sign_in.dart';
 
 /// Controla el estado del formulario de login (cargando / error).
@@ -10,19 +11,25 @@ class LoginController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
-  /// Intenta ingresar. Devuelve `true` si fue exitoso (el router redirige solo).
-  Future<bool> submit({required String email, required String password}) async {
+  /// Intenta ingresar. Devuelve el [LoginResult] (sesión abierta o reto 2FA) o
+  /// `null` si hubo error (la pantalla muestra el mensaje por el listener).
+  Future<LoginResult?> submit({
+    required String email,
+    required String password,
+  }) async {
     state = const AsyncLoading();
     try {
-      await ref.read(signInProvider).call(email: email, password: password);
+      final result = await ref
+          .read(signInProvider)
+          .call(email: email, password: password);
       state = const AsyncData(null);
-      return true;
+      return result;
     } on Object catch (error, stack) {
       // Se atrapa CUALQUIER error (no solo ApiException): si algo inesperado
       // falla, el botón no debe quedar girando para siempre. La pantalla muestra
       // el mensaje (genérico si no es ApiException).
       state = AsyncError(error, stack);
-      return false;
+      return null;
     }
   }
 }

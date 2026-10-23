@@ -64,6 +64,37 @@ class _AuthInterceptor extends Interceptor {
       path.contains('/auth/me');
 }
 
+/// El cliente generado serializa los `DateTime` de query como datetime ISO
+/// (`2026-10-20T00:00:00.000`), pero el backend valida los FILTROS DE FECHA como
+/// `Y-m-d` y responde 422 ("The date field must match the format Y-m-d"). Este
+/// interceptor recorta a la parte de fecha cualquier query cuyo nombre contenga
+/// `date` (date, assembly_date, from_date, ...). Afecta a varios endpoints
+/// (my-crew, supervisor/plans, etc.) → se arregla en un solo lugar.
+class _DateQueryInterceptor extends Interceptor {
+  static final _isoDateTime = RegExp(r'^\d{4}-\d{2}-\d{2}T');
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final params = options.queryParameters;
+    if (params.isNotEmpty) {
+      final fixed = <String, dynamic>{};
+      var changed = false;
+      params.forEach((key, value) {
+        if (value is String &&
+            key.toLowerCase().contains('date') &&
+            _isoDateTime.hasMatch(value)) {
+          fixed[key] = value.substring(0, 10); // Y-m-d
+          changed = true;
+        } else {
+          fixed[key] = value;
+        }
+      });
+      if (changed) options.queryParameters = fixed;
+    }
+    handler.next(options);
+  }
+}
+
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
@@ -75,6 +106,9 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
+  // Filtros de fecha: Y-m-d (ver arriba). Antes del resto para que el log y la
+  // request salgan ya corregidos.
+  dio.interceptors.add(_DateQueryInterceptor());
   dio.interceptors.add(_AuthInterceptor(ref));
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
   dio.interceptors.add(AppVersionInterceptor(ref));

@@ -11,6 +11,7 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/photo_upload_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/section_card.dart';
 import 'driver_common.dart';
 
@@ -114,7 +115,7 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
+                backgroundColor: AppColors.danger,
               ),
               onPressed: ready && !_busy ? _register : null,
               icon: const Icon(Icons.cancel),

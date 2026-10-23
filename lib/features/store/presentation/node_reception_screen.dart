@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/selected_store_node_notifier.dart';
@@ -30,7 +31,12 @@ class NodeReceptionScreen extends ConsumerWidget {
                 sliver: SliverToBoxAdapter(child: StoreSelector()),
               ),
               SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  navScrollBottomPadding(context),
+                ),
                 sliver: selected == null
                     ? const SliverToBoxAdapter(
                         child: EmptyState(

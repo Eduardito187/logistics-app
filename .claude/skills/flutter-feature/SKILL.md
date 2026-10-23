@@ -42,6 +42,17 @@ fija `dart.flutterSdkPath`), no `C:\flutter` (CRLF → exited 127). Para el emul
 WSL: `adb start-server`, copiar `~/.android/adbkey*` desde `/mnt/c/Users/<user>/.android/`, arrancar el
 AVD con `emulator.exe`, luego `flutter run -d emulator-5554`.
 
+**Correr en teléfono físico por ADB INALÁMBRICO desde WSL** (sin cable; funciona, Honor Magic 5 Lite):
+`scripts/adb-wireless.sh` (connect/reconnect/mdns/pair) + tareas de VS Code; detalle en
+`docs/run-wireless.md`. Claves: copiar las llaves adb de Windows a `~/.android/` (no re-emparejar),
+`export ADB_MDNS_OPENSCREEN=1` para que mDNS reconecte solo, y para el backend `adb reverse tcp:8110
+tcp:8110` + `config/dev.json` con `API_BASE_URL=http://localhost:8110/api/v1` (el teléfono NO llega a la
+IP LAN de la PC por firewall). **Trampas:** los puertos de depuración inalámbrica ROTAN al dormir el
+teléfono (dir vieja → `Connection refused`, releer `IP:puerto`); si duerme a mitad de build, la
+instalación da `adb: device offline` aunque el APK sí se construyó (reconectar e instalar el APK ya hecho,
+no reconstruir); mDNS puede listar dispositivos AJENOS (verificar `model:`/`product:` en `adb devices -l`
+antes de instalar). Memoria completa: ver `.claude/memory/device-run-wireless-adb.md`.
+
 ## Portabilidad (mover el proyecto / Windows nativo)
 
 Las rutas de arriba (`~/sdk/flutter`, `~/Android/Sdk`, `/dismac/...`) son de **este WSL**. Al mover el
@@ -191,3 +202,8 @@ reportados. Si cambia la UI, describir qué se probó en emulador o dispositivo 
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |
 | `flutter test`: `Failed to load dynamic library 'libsqlite3.so'` (tests Drift) | WSL/Linux solo trae `libsqlite3.so.0`, no el symlink sin versión | Ya resuelto: `test/flutter_test_config.dart` redirige la carga a `.so.0` (no borrarlo). No requiere root |
 | Widget test de pantalla con providers: `Tried to modify a provider while the widget tree was building` | El harness/override modifica un provider dentro de build/initState, o un widget llama `.notifier.metodo()` en `build` | Mover la mutación fuera del ciclo de vida (p. ej. a `onPressed`) o arreglar el override del harness de test |
+| APK no compila por CameraX 1.6.1 / AGP 8.9.1, o CocoaPods choca con `GoogleDataTransport` | `mobile_scanner` > 7.2.0 (7.2.1+ sube CameraX; en iOS vuelve a MLKit) | Fijar `mobile_scanner: 7.2.0` EXACTO (ni `^` ni rango). No subirlo sin subir Flutter/AGP. Commit 9fdce63 |
+| "Tu sesión expiró" apenas se inicia sesión y vuelve al login | El 401-logout global (`_AuthInterceptor.onError` en `dio_client.dart`) se disparaba con el 401 de `/app/auth/me` que pide el login (degradación segura) | `_isAuthEndpoint` excluye `/login`, `/token` **y** `/auth/me`. Si "sesión expiró" sale al ABRIR la app, es token viejo restaurado (otro tema) |
+| La app calienta/cuelga "en todas las páginas" en dispositivo real (no en emulador/tests) | `ConnectivityNotifier` drenaba las colas offline en CADA evento de conectividad | Drenar solo en el flanco offline→online (`if (online && !wasOnline)`). Patrón: nada caro en callbacks que se disparan seguido |
+| Listeners de FCM duplicados / "Could not decrypt key" en secure storage / botón girando para siempre | Re-suscripción sin cancelar; clave corrupta tras reinstalar; `on ApiException` deja pasar otros errores | `push_service.initialize()` cancela `_subs` antes de re-suscribir; `AndroidOptions(resetOnError: true)` en `token_store.dart`; atrapar `on Object` en controllers de submit. Ver `.claude/memory/perf-rebrand-stability-fixes.md` |
+| Splash animado no se reproduce (imagen fija) o la app re-decodifica el Lottie en cada navegación | El splash estaba sin cablear, o el gate en el `builder` de MaterialApp se recreaba | `BrandSplash` vía `BootSplashGate` one-shot creado en `runApp` (en `main.dart`, NO en el `builder`); guarda `_started` porque Lottie puede re-invocar `onLoaded` |

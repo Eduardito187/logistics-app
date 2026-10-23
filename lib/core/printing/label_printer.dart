@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:usb_serial/usb_serial.dart';
 
 import '../auth/token_store.dart';
@@ -70,6 +71,15 @@ class LabelPrinter {
 
   Future<List<PrinterDevice>> _bondedBluetooth() async {
     try {
+      // Android 12+: `bondedDevices` exige el permiso BLUETOOTH_CONNECT en
+      // runtime; sin él, el canal nativo lanza SecurityException. Se pide; si no
+      // se concede, se devuelve vacío SIN consultar (nada de excepción suelta).
+      if (Platform.isAndroid) {
+        final status = await Permission.bluetoothConnect.request();
+        if (!status.isGranted) {
+          return const <PrinterDevice>[];
+        }
+      }
       final bonded = await FlutterBluePlus.bondedDevices;
       return bonded
           .where((d) => d.platformName.isNotEmpty)
