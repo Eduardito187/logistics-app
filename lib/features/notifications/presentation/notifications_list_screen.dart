@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/notification_view.dart';
+import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -81,7 +82,12 @@ class _NotificationsSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverPadding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        navScrollBottomPadding(context),
+      ),
       sliver: SliverList.separated(
         itemCount: items.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),

@@ -4,11 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Encabezado del login con el degradado de marca DisTrack y el logo.
+/// Encabezado del login con el fondo Noche de marca DisTrack y el logo.
 ///
-/// El degradado (rojo Dismac) ocupa todo el ancho; el logo y el lema se centran
-/// con el ancho del formulario (tablet). Con poco alto (horizontal, teclado) se
-/// achica el aire superior y se muestra el logo compacto, sin lema.
+/// Fondo Noche (#141414) con un degradado sutil hacia #1E1E1E, según el kit de
+/// marca "Fondo noche, visor rojo": sobre Noche, el logo inverse (rojo + blanco)
+/// contrasta y queda 100% legible. Ocupa todo el ancho; el logo y el lema se
+/// centran con el ancho del formulario (tablet). Con poco alto (horizontal,
+/// teclado) se achica el aire superior y se muestra el logo compacto, sin lema.
 class AuthHeader extends StatelessWidget {
   const AuthHeader({super.key});
 
@@ -30,7 +32,9 @@ class AuthHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.brand, AppColors.brandDark],
+          // Fondo Noche con degradado sutil: el logo inverse (rojo + blanco)
+          // queda legible, a diferencia del rojo sobre rojo anterior.
+          colors: [AppColors.nightBg, AppColors.nightSurface],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(32),

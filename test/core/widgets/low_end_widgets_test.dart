@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/async_value_view.dart';
+import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
 
 import '../../support/screen_sizes.dart';
 
 // Widgets compartidos livianos y sin desbordes en pantallas chicas.
 void main() {
-  testWidgets('AsyncValueView loading aísla el spinner en un RepaintBoundary', (
+  testWidgets('AsyncValueView loading aísla el loader en un RepaintBoundary', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -22,16 +23,17 @@ void main() {
       ),
     );
     expect(find.byType(LoadingView), findsOneWidget);
-    // El RepaintBoundary más cercano es el padre directo del spinner.
+    // El RepaintBoundary más cercano es el padre directo del loader de marca:
+    // su animación repinta seguido y el límite evita arrastrar al resto.
     final boundary = tester.widget<RepaintBoundary>(
       find
           .ancestor(
-            of: find.byType(CircularProgressIndicator),
+            of: find.byType(BrandLoader),
             matching: find.byType(RepaintBoundary),
           )
           .first,
     );
-    expect(boundary.child, isA<CircularProgressIndicator>());
+    expect(boundary.child, isA<BrandLoader>());
   });
 
   testOnScreens(

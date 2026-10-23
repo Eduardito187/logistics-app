@@ -66,7 +66,7 @@ class DeliveryStatusCard extends StatelessWidget {
                 Icon(
                   Icons.local_shipping,
                   size: 32,
-                  color: theme.colorScheme.primary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ],
             ),

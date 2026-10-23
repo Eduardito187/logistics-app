@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
+import '../domain/entities/login_result.dart';
 import 'controllers/login_controller.dart';
 import 'widgets/auth_header.dart';
 
@@ -40,11 +44,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       showInfoSnack(context, 'Ingresá tu usuario y contraseña.');
       return;
     }
-    // El router redirige solo al home cuando hay sesión. El error se muestra
-    // vía el listener de `loginControllerProvider`.
-    await ref
+    // El router redirige solo al home cuando hay sesión (login sin 2FA). El
+    // error se muestra vía el listener de `loginControllerProvider`.
+    final result = await ref
         .read(loginControllerProvider.notifier)
         .submit(email: email, password: password);
+    if (!mounted) return;
+    // Si el usuario tiene 2FA, el login no abre sesión: vamos al paso del código.
+    if (result is LoginNeedsTwoFactor) {
+      unawaited(context.push('/login/2fa', extra: result.challenge));
+    }
   }
 
   @override
@@ -149,6 +158,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               )
                             : const Text('Ingresar'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => context.push('/login/forgot'),
+                        child: const Text('Olvidé mi contraseña'),
                       ),
                     ],
                   ),

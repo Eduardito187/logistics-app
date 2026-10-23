@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/offline/offline_queue.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/brand_loader.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/offline/sync_queue_provider.dart';
@@ -33,7 +35,8 @@ class SyncScreen extends ConsumerWidget {
         ],
       ),
       body: queue.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () =>
+            const Center(child: BrandLoader(message: 'Cargando cola...')),
         error: (e, _) => EmptyState(
           icon: Icons.error_outline,
           title: 'No se pudo leer la cola',
@@ -61,7 +64,7 @@ class SyncScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList.separated(
                     itemCount: actions.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, i) =>
                         SyncActionTile(action: actions[i]),
                   ),
@@ -88,7 +91,7 @@ class _ConnectivityBanner extends StatelessWidget {
         children: [
           Icon(
             online ? Icons.wifi : Icons.wifi_off,
-            color: online ? Colors.green : Colors.orange,
+            color: online ? AppColors.success : AppColors.warning,
           ),
           const SizedBox(width: 12),
           Expanded(

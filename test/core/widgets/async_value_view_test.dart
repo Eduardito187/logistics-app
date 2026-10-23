@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/widgets/async_value_view.dart';
+import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/core/widgets/empty_state.dart';
 
 // AsyncValueView unifica loading/data/error. En error mapea ApiException a su
@@ -27,9 +28,9 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('loading: muestra el spinner', (tester) async {
+  testWidgets('loading: muestra el loader de marca', (tester) async {
     await _pump(tester, const AsyncLoading<String>());
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(BrandLoader), findsOneWidget);
   });
 
   testWidgets('data: muestra el widget construido con el dato', (tester) async {

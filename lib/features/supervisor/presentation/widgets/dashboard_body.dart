@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/nav_clearance.dart';
+
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -17,8 +19,11 @@ class DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final rate = metrics.fulfillmentRate;
     final rateLabel = rate == null ? '—' : '${(rate * 100).round()}%';
+    // Alertas sin reconocer: ámbar cuando hay pendientes, verde cuando no.
+    final hasOpenAlerts = metrics.openAlerts > 0;
 
     final tiles = <Widget>[
       StatTile(
@@ -39,11 +44,12 @@ class DashboardBody extends StatelessWidget {
         icon: Icons.cancel,
         color: AppColors.danger,
       ),
+      // KPI principal del día: tinta neutra (estilo "finanzas"). El rojo de
+      // marca queda para acciones, no para una métrica sin estado.
       StatTile(
         value: rateLabel,
         label: 'Cumplimiento',
         icon: Icons.verified,
-        color: AppColors.brand,
       ),
       StatTile(
         value: '${metrics.pending}',
@@ -51,11 +57,12 @@ class DashboardBody extends StatelessWidget {
         icon: Icons.inventory_2,
         color: AppColors.warning,
       ),
+      // Planes activos: estado "en curso" → tinta de información, no rojo.
       StatTile(
         value: '${metrics.activePlans}',
         label: 'Rutas en curso',
         icon: Icons.alt_route,
-        color: AppColors.brand,
+        color: AppColors.info,
       ),
     ];
 
@@ -65,16 +72,31 @@ class DashboardBody extends StatelessWidget {
       maxWidth: _maxDashboardWidth,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          navScrollBottomPadding(context),
+        ),
         children: [
           SectionCard(
             title: 'Resumen de ${formatDay(date)}',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${metrics.total} envíos del día en total'),
-                const SizedBox(height: 4),
-                Text('${metrics.openAlerts} alertas sin reconocer'),
+                _SummaryLine(
+                  icon: Icons.local_shipping_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  text: '${metrics.total} envíos del día en total',
+                ),
+                const SizedBox(height: 8),
+                _SummaryLine(
+                  icon: hasOpenAlerts
+                      ? Icons.notifications_active
+                      : Icons.notifications_none,
+                  color: hasOpenAlerts ? AppColors.warning : AppColors.success,
+                  text: '${metrics.openAlerts} alertas sin reconocer',
+                ),
               ],
             ),
           ),
@@ -94,6 +116,31 @@ class DashboardBody extends StatelessWidget {
 }
 
 const double _maxDashboardWidth = 1040;
+
+/// Línea del resumen: ícono semántico + texto, tipografía del tema.
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text, style: theme.textTheme.bodyLarge)),
+      ],
+    );
+  }
+}
 
 /// Grilla de mosaicos sin alto fijo: filas de [columns] mosaicos que se
 /// igualan en alto. A diferencia de `GridView.count` con `childAspectRatio`,

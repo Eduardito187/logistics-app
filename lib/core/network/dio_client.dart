@@ -51,9 +51,48 @@ class _AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 
-  /// Rutas de autenticación cuyo 401 no debe disparar el logout global.
+  /// Rutas de autenticación cuyo 401 NO debe disparar el logout global.
+  ///
+  /// - `/login` y `/token`: su 401 es "credenciales inválidas", no sesión caída.
+  /// - `/auth/me`: se pide SOLO justo después del login (para las abilities) y es
+  ///   "degradación segura" (si falla, la sesión queda sin abilities, no se
+  ///   cierra). Sin esta excepción, un 401 de `/me` recién logueado sacaba al
+  ///   usuario al login con "tu sesión expiró" (bug reportado).
   bool _isAuthEndpoint(String path) =>
-      path.contains('/login') || path.contains('/token');
+      path.contains('/login') ||
+      path.contains('/token') ||
+      path.contains('/auth/me');
+}
+
+/// El cliente generado serializa los `DateTime` de query como datetime ISO
+/// (`2026-10-20T00:00:00.000`), pero el backend valida los FILTROS DE FECHA como
+/// `Y-m-d` y responde 422 ("The date field must match the format Y-m-d"). Este
+/// interceptor recorta a la parte de fecha cualquier query cuyo nombre contenga
+/// `date` (date, assembly_date, from_date, ...). Afecta a varios endpoints
+/// (my-crew, supervisor/plans, etc.) → se arregla en un solo lugar.
+class _DateQueryInterceptor extends Interceptor {
+  static final _isoDateTime = RegExp(r'^\d{4}-\d{2}-\d{2}T');
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final params = options.queryParameters;
+    if (params.isNotEmpty) {
+      final fixed = <String, dynamic>{};
+      var changed = false;
+      params.forEach((key, value) {
+        if (value is String &&
+            key.toLowerCase().contains('date') &&
+            _isoDateTime.hasMatch(value)) {
+          fixed[key] = value.substring(0, 10); // Y-m-d
+          changed = true;
+        } else {
+          fixed[key] = value;
+        }
+      });
+      if (changed) options.queryParameters = fixed;
+    }
+    handler.next(options);
+  }
 }
 
 final dioProvider = Provider<Dio>((ref) {
@@ -67,6 +106,9 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
+  // Filtros de fecha: Y-m-d (ver arriba). Antes del resto para que el log y la
+  // request salgan ya corregidos.
+  dio.interceptors.add(_DateQueryInterceptor());
   dio.interceptors.add(_AuthInterceptor(ref));
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
   dio.interceptors.add(AppVersionInterceptor(ref));

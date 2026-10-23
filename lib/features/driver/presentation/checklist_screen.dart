@@ -6,6 +6,7 @@ import '../../../core/layout/responsive_body.dart';
 
 import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
@@ -165,10 +166,13 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                 ? 'Checklist registrado: apto para salir.'
                 : 'Checklist registrado con observaciones'
                       '${status == null ? '' : ' ($status)'}.',
+            // Sobre ámbar el texto claro no contrasta: tinta Noche (par de marca
+            // ámbar+Noche). Sobre verde, texto claro.
+            style: TextStyle(
+              color: allPassed ? Colors.white : AppColors.accentInk,
+            ),
           ),
-          backgroundColor: allPassed
-              ? Colors.green.shade700
-              : Colors.orange.shade800,
+          backgroundColor: allPassed ? AppColors.success : AppColors.warning,
         ),
       );
       navigator.pop();

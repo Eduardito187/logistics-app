@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/layout/breakpoints.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
+import 'package:logistics_app/features/auth/domain/entities/login_result.dart';
+import 'package:logistics_app/features/auth/domain/entities/two_factor_enrollment.dart';
 import 'package:logistics_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
 import 'package:logistics_app/features/auth/presentation/login_screen.dart';
@@ -16,7 +18,35 @@ import '../../../support/screen_sizes.dart';
 
 class _NoopAuthRepository implements AuthRepository {
   @override
-  Future<void> login({required String email, required String password}) async {}
+  Future<LoginResult> login({
+    required String email,
+    required String password,
+  }) async => const LoginSignedIn();
+
+  @override
+  Future<void> verifyTwoFactor({
+    required String challengeId,
+    required String code,
+  }) async {}
+
+  @override
+  Future<TwoFactorEnrollment> enrollTwoFactor() => throw UnimplementedError();
+
+  @override
+  Future<void> confirmTwoFactor(String code) async {}
+
+  @override
+  Future<void> disableTwoFactor({String? code, String? password}) async {}
+
+  @override
+  Future<void> forgotPassword(String email) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {}
 }
 
 Future<void> _pump(WidgetTester tester, {double textScale = 1.0}) async {

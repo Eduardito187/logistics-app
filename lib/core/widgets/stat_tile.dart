@@ -42,7 +42,9 @@ class StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final high = AppContrast.isHigh(context);
-    final base = color ?? theme.colorScheme.primary;
+    // Sin color semántico explícito, el mosaico es tinta neutra (no el rojo de
+    // marca): una métrica sin significado de estado no debe salir roja.
+    final base = color ?? theme.colorScheme.onSurface;
     final tint = high ? highContrastTint(base) : base;
     // El número se lee antes de saber qué mide si se dejan nodos sueltos: se
     // anuncia todo junto.

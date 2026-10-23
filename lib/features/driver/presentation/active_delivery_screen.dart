@@ -65,8 +65,11 @@ class _ActiveDelivery extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.paddingOf(context).top;
-    final fix = ref.watch(deliveryDriverFixProvider).value;
-    final remaining = remainingToStop(route, stop, fix);
+    // Importante: este árbol NO observa la posición en vivo. El fix del GPS
+    // llega cada segundo y sólo debe reconstruir la tarjeta de estado (y el
+    // mapa, que observa el fix por su cuenta); si lo observáramos acá se
+    // reconstruirían también la hoja deslizable y la barra de acciones en cada
+    // emisión, saturando la CPU.
     return Column(
       children: [
         Expanded(
@@ -99,11 +102,7 @@ class _ActiveDelivery extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    DeliveryStatusCard(
-                      route: route,
-                      stop: stop,
-                      remaining: remaining,
-                    ),
+                    _LiveStatusCard(route: route, stop: stop),
                   ],
                 ),
               ),
@@ -114,6 +113,23 @@ class _ActiveDelivery extends ConsumerWidget {
         DeliveryActionsBar(stop: stop),
       ],
     );
+  }
+}
+
+/// Tarjeta de estado que sí observa la posición en vivo: es el único widget que
+/// se reconstruye con cada fix del GPS para recalcular lo que falta a la parada.
+/// Aislarla evita reconstruir el mapa padre, la hoja y la barra de acciones.
+class _LiveStatusCard extends ConsumerWidget {
+  const _LiveStatusCard({required this.route, required this.stop});
+
+  final DriverRoute route;
+  final DriverRouteStop stop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fix = ref.watch(deliveryDriverFixProvider).value;
+    final remaining = remainingToStop(route, stop, fix);
+    return DeliveryStatusCard(route: route, stop: stop, remaining: remaining);
   }
 }
 

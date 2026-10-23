@@ -5,6 +5,7 @@ import '../../../../core/layout/responsive_body.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/location/truck_tracking_service.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
@@ -36,8 +37,10 @@ class TrackingStatusBody extends ConsumerWidget {
                   children: [
                     Icon(
                       running ? Icons.gps_fixed : Icons.gps_not_fixed,
+                      // Rastreo activo = señal semántica (verde), no rojo de
+                      // marca; apagado = neutro.
                       color: running
-                          ? theme.colorScheme.primary
+                          ? AppColors.success
                           : theme.colorScheme.outline,
                     ),
                     const SizedBox(width: 8),

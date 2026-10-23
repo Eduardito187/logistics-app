@@ -48,7 +48,7 @@ void main() {
 
     expect(find.text('Registrando'), findsOneWidget);
     expect(_pillTone(tester), PillTone.info);
-    // Estado ocupado: el botón muestra "Activando..." y un spinner.
+    // Estado ocupado: el botón muestra "Activando..." y el loader de marca.
     expect(find.text('Activando...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });

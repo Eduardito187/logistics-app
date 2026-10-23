@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
+import '../../../core/layout/nav_clearance.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/orders_worklist_controller.dart';
@@ -57,7 +58,12 @@ class OrdersWorklistScreen extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    navScrollBottomPadding(context),
+                  ),
                   sliver: SliverAdaptiveCardRows(
                     itemCount: orders.length,
                     spacing: 0,

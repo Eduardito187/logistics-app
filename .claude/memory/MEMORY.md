@@ -13,4 +13,7 @@
 - [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
 - [Fase de optimización (RAM/pantallas)](perf-responsive-phase.md) — base común layout/fotos/avisos/tests de tamaños, R8+split-per-abi, trampas (Size.fromHeight en Row, EmptyState)
 - [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
-- [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login
+- [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
+- [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
+- [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
+- [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
