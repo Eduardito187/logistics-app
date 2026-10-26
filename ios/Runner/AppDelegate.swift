@@ -33,6 +33,23 @@ let kSyncTaskIdentifier = "bo.com.dismac.logisticsApp.sync"
       earliestBeginInSeconds: NSNumber(value: 15 * 60)
     )
 
+    // Memoria del teléfono para que Dart ajuste cachés (lib/core/performance).
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let channel = FlutterMethodChannel(
+        name: "bo.com.dismac/device_memory",
+        binaryMessenger: controller.binaryMessenger
+      )
+      channel.setMethodCallHandler { call, result in
+        guard call.method == "info" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        let totalMb = Int(ProcessInfo.processInfo.physicalMemory / (1024 * 1024))
+        // iPhone 6/6 Plus/SE 1ra gen: 1–2 GB. Se trata como gama baja ≤ 1,5 GB.
+        result(["totalMb": totalMb, "lowRam": totalMb <= 1536])
+      }
+    }
+
     // Notificaciones locales/push en primer plano (flutter_local_notifications,
     // firebase_messaging y flutter_foreground_task).
     UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate

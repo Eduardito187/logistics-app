@@ -9,6 +9,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/api/export.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
@@ -16,8 +17,10 @@ import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/section_card.dart';
 import '../data/datasources/signature_file_store.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
 import 'signature_pad_screen.dart';
+import 'widgets/evidence_photo_preview.dart';
 
 /// Marcador de `confirmation` cuando el cliente firma en pantalla (la imagen
 /// de la firma viaja aparte como evidencia por la cola de fotos).
@@ -48,6 +51,13 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   /// PNG de la firma del cliente (solo si confirmó firmando en pantalla).
   Uint8List? _signature;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // GPS caliente al entrar: al registrar, el fix ya está y no se espera.
+    ref.read(locationServiceProvider).prefetch();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,11 +109,9 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: Image.memory(
-                        _signature!,
+                      child: SignaturePreview(
                         key: const ValueKey('signature-preview'),
-                        fit: BoxFit.contain,
-                        semanticLabel: 'Firma del cliente',
+                        png: _signature!,
                       ),
                     ),
                   ] else if (_confirmation != null)
@@ -135,18 +143,8 @@ class _PodScreenState extends ConsumerState<PodScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_photo != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      // cacheWidth: se decodifica a lo que se muestra, no a la
-                      // resolución de la cámara (ahorra memoria).
-                      child: Image.file(
-                        File(_photo!.path),
-                        height: 180,
-                        fit: BoxFit.cover,
-                        cacheWidth: _previewCacheWidth,
-                      ),
-                    ),
+                  // Decodificada chica y liberada del caché al salir.
+                  if (_photo != null) EvidencePhotoPreview(path: _photo!.path),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _takePhoto,
@@ -213,7 +211,8 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   Future<void> _register() async {
     setState(() => _busy = true);
     try {
-      final fix = await currentFix(ref);
+      // El GPS se pide en paralelo con el encolado de la foto (no en serie).
+      final fixFuture = currentFix(ref);
       // La foto (y la firma, si la hay) se encolan aparte y se suben
       // idempotentemente (offline-first); el backend las liga al envío. El POD
       // no espera a la subida.
@@ -243,6 +242,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           // igual con el marcador FIRMA_DIGITAL.
         }
       }
+      final fix = await fixFuture;
       if (!mounted) return;
       final now = DateTime.now();
       final outcome = await ref
@@ -264,13 +264,16 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           );
       if (!mounted) return;
       showSubmitOutcome(context, outcome);
-      if (outcome != SubmitOutcome.failed) Navigator.of(context).pop();
+      if (outcome != SubmitOutcome.failed) {
+        // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
+        // entrega en curso pasa a la siguiente aunque no haya señal).
+        ref
+            .read(locallySettledStopsProvider.notifier)
+            .settle(widget.stop.id, DriverRouteStopStatus.completed);
+        Navigator.of(context).pop();
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 }
-
-/// Ancho de decodificación de la vista previa de la foto (px). La vista previa
-/// mide 180 dp de alto; 800 px alcanza con nitidez sin cargar la foto entera.
-const int _previewCacheWidth = 800;

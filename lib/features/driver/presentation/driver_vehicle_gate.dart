@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/location_permission_gate.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/widgets/brand_loader.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/driver_tracking_autostart.dart';
 import 'widgets/assignment_header.dart';
@@ -41,6 +42,12 @@ class DriverVehicleGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final crew = ref.watch(myCrewProvider);
+    if (crew.hasValue) {
+      // La ruta se pide en cuanto hay vehículo, EN PARALELO al chequeo del
+      // permiso de ubicación (que solo condiciona el GPS/mapa, no los datos):
+      // cuando el permiso responde, la ruta ya está llegando o en caché.
+      ref.listen(driverRouteProvider, (_, _) {});
+    }
     final bare = immersive && crew.hasValue;
     return Scaffold(
       appBar: bare ? null : AppBar(title: Text(title), actions: actions),
@@ -48,10 +55,7 @@ class DriverVehicleGate extends ConsumerWidget {
         skipLoadingOnReload: true,
         skipLoadingOnRefresh: true,
         loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(48),
-            child: CircularProgressIndicator(),
-          ),
+          child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
         ),
         error: (error, _) => NoAssignment(
           message: error is ApiException && error.isConnectionError

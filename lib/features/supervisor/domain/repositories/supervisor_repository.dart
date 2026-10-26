@@ -21,6 +21,9 @@ abstract interface class SupervisorRepository {
   /// Resumen diario de telemetría de un vehículo.
   Future<VehicleTelemetrySummary> getVehicleTelemetrySummary(String vehicleId);
 
+  /// Placa de cada camión de la flota, por id de vehículo.
+  Future<Map<String, String>> getVehiclePlates();
+
   /// Reconoce una alerta de telemetría (requiere red).
   Future<void> acknowledgeTelemetryAlert(String alertId);
 

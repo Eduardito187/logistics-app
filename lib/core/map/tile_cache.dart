@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'dart:ui' as ui;
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_cache/flutter_map_cache.dart';
 import 'package:http_cache_file_store/http_cache_file_store.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -40,6 +42,16 @@ const Duration kMapTileCacheMaxAge = Duration(days: 30);
 
 /// Cada cuántos tiles nuevos bajados de la red se programa una limpieza.
 const int _trimEveryNewTiles = 300;
+
+/// Conexiones simultáneas al servidor de tiles. Sin tope, `dart:io` abre una
+/// por tile pedido (decenas al hacer zoom): sockets, buffers y CPU que en un
+/// teléfono de 1 GB compiten con la cámara. 4 alcanza para llenar la pantalla
+/// rápido y respeta el espíritu de la tile usage policy de OSM.
+const int kMapTileMaxConnections = 4;
+
+/// Una conexión ociosa se cierra pasado este tiempo (libera el socket y sus
+/// buffers cuando el chofer deja de mover el mapa).
+const Duration kMapTileIdleTimeout = Duration(seconds: 15);
 
 /// Caché persistente en disco de los tiles del mapa (zonas sin señal).
 ///
@@ -133,10 +145,13 @@ class MapTileCache {
         receiveTimeout: const Duration(seconds: 20),
       ),
     );
-    final adapter = _httpClientAdapter;
-    if (adapter != null) {
-      dio.httpClientAdapter = adapter;
-    }
+    dio.httpClientAdapter =
+        _httpClientAdapter ??
+        IOHttpClientAdapter(
+          createHttpClient: () => HttpClient()
+            ..maxConnectionsPerHost = kMapTileMaxConnections
+            ..idleTimeout = kMapTileIdleTimeout,
+        );
     dio.interceptors.addAll([
       DioCacheInterceptor(
         options: CacheOptions(
@@ -393,7 +408,8 @@ class _DeferredCacheStore extends CacheStore {
 ///
 /// A diferencia de `CachedTileProvider` (flutter_map_cache), no crea un cliente
 /// ni un interceptor por mapa: todos los mapas usan el mismo. Al descartarse
-/// la capa no se cierra el cliente compartido.
+/// la capa no se cierra el cliente compartido. Cada tile se carga con
+/// [CachedTileImageProvider].
 ///
 /// Si la caché está deshabilitada ([MapTileCache.isDisabled]) delega en un
 /// `NetworkTileProvider` común (se crea solo en ese caso).
@@ -419,7 +435,7 @@ class CachedOsmTileProvider extends TileProvider {
       final network = _network ??= NetworkTileProvider(headers: headers);
       return network.getImage(coordinates, options);
     }
-    return CachedImageProvider(
+    return CachedTileImageProvider(
       dio: cache.dio,
       url: getTileUrl(coordinates, options),
       fallbackUrl: getTileFallbackUrl(coordinates, options),
@@ -434,5 +450,114 @@ class CachedOsmTileProvider extends TileProvider {
     _network?.dispose();
     _network = null;
     super.dispose();
+  }
+}
+
+/// Error compacto de un tile que no se pudo cargar (sin señal y sin copia en
+/// disco, o error HTTP).
+///
+/// flutter_map imprime cada error de tile con `debugPrint`: sin señal son
+/// decenas por minuto. Un `DioException` completo (opciones, cabeceras, causa)
+/// pesa varios KB de texto por tile; este es una línea.
+class TileLoadException implements Exception {
+  const TileLoadException(this.url, {this.statusCode});
+
+  final String url;
+
+  /// Código HTTP si el servidor respondió; `null` = sin red.
+  final int? statusCode;
+
+  @override
+  String toString() => statusCode == null
+      ? 'Tile sin señal: $url'
+      : 'Tile HTTP $statusCode: $url';
+}
+
+/// Imagen de un tile servida por el [Dio] compartido (caché en disco primero).
+///
+/// Reemplaza al `CachedImageProvider` de flutter_map_cache, afinado para gama
+/// baja:
+/// - No copia los bytes (`Uint8List.fromList`) si ya llegan como `Uint8List`.
+/// - No emite eventos de progreso por tile (ni deja abierto su stream).
+/// - Al descartarse el tile (`cancelLoading`, también tras cargar bien) corta
+///   la descarga en curso y saca la imagen de la `ImageCache` global: la clave
+///   es la instancia, así que nadie la vuelve a usar y solo ocuparía lugar
+///   (256 KB decodificados por tile) desplazando fotos y tiles visibles.
+/// - Los errores salen como [TileLoadException] (una línea, sin stack de Dio).
+class CachedTileImageProvider extends ImageProvider<CachedTileImageProvider> {
+  CachedTileImageProvider({
+    required this.dio,
+    required this.url,
+    required this.headers,
+    required Future<void> cancelLoading,
+    this.fallbackUrl,
+  }) {
+    cancelLoading.then((_) => _release(), onError: (Object _) => _release());
+  }
+
+  final Dio dio;
+  final String url;
+  final String? fallbackUrl;
+  final Map<String, String> headers;
+
+  final CancelToken _cancelToken = CancelToken();
+
+  void _release() {
+    if (!_cancelToken.isCancelled) {
+      _cancelToken.cancel('tile descartado');
+    }
+    try {
+      PaintingBinding.instance.imageCache.evict(this);
+    } catch (_) {
+      // Sin binding (tests de unidad): no hay caché de imágenes que limpiar.
+    }
+  }
+
+  @override
+  Future<CachedTileImageProvider> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture<CachedTileImageProvider>(this);
+
+  @override
+  ImageStreamCompleter loadImage(
+    CachedTileImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    return MultiFrameImageStreamCompleter(
+      codec: _decode(decode),
+      scale: 1,
+      debugLabel: url,
+    );
+  }
+
+  Future<ui.Codec> _decode(ImageDecoderCallback decode) async {
+    final bytes = await fetchBytes();
+    return decode(await ui.ImmutableBuffer.fromUint8List(bytes));
+  }
+
+  /// Bytes del tile (disco o red). Si la capa ya no lo necesita devuelve un
+  /// PNG transparente; si no hay ni red ni copia lanza [TileLoadException].
+  @visibleForTesting
+  Future<Uint8List> fetchBytes({bool useFallback = false}) async {
+    final target = useFallback ? fallbackUrl! : url;
+    try {
+      final response = await dio.get<List<int>>(
+        target,
+        cancelToken: _cancelToken,
+        options: Options(responseType: ResponseType.bytes, headers: headers),
+      );
+      final data = response.data;
+      if (data == null || data.isEmpty) {
+        throw TileLoadException(target, statusCode: response.statusCode);
+      }
+      return data is Uint8List ? data : Uint8List.fromList(data);
+    } on DioException catch (error) {
+      if (error.type == DioExceptionType.cancel) {
+        return TileProvider.transparentImage;
+      }
+      if (!useFallback && fallbackUrl != null) {
+        return fetchBytes(useFallback: true);
+      }
+      throw TileLoadException(target, statusCode: error.response?.statusCode);
+    }
   }
 }

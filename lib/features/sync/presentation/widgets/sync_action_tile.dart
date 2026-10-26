@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/offline/app_database.dart';
 import '../../../../core/offline/offline_queue.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/status_pill.dart';
 
 /// Fila de una acción de la cola offline: pendiente (con hora) o fallida (con
@@ -20,11 +21,12 @@ class SyncActionTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final failed = action.status == 'failed';
     final time = _timeFormat.format(action.occurredAt);
+    final theme = Theme.of(context);
     return Card(
       child: ListTile(
         leading: Icon(
           failed ? Icons.error : Icons.schedule,
-          color: failed ? Colors.red : Colors.blueGrey,
+          color: failed ? AppColors.danger : theme.colorScheme.onSurfaceVariant,
         ),
         title: Text(action.label ?? action.kind),
         subtitle: Text(

@@ -458,7 +458,7 @@ class FakeAuthRemoteDataSource extends AuthRemoteDataSource {
   final FakeBackend backend;
 
   @override
-  Future<AppLoginResponse> login(AppLoginRequest request) async {
+  Future<LoginRaw> login(AppLoginRequest request) async {
     final user = FakeBackend.users[request.email];
     if (user == null || request.password != FakeBackend.password) {
       throw const ApiException(
@@ -470,7 +470,8 @@ class FakeAuthRemoteDataSource extends AuthRemoteDataSource {
     backend
       ..loggedUser = user
       ..logins += 1;
-    return AppLoginResponse(
+    // La fake no simula 2FA: siempre devuelve la forma de éxito (sin reto).
+    final response = AppLoginResponse(
       token: 'token-${user.id}-${backend.logins}',
       tokenType: 'Bearer',
       expiresAt: null,
@@ -482,6 +483,7 @@ class FakeAuthRemoteDataSource extends AuthRemoteDataSource {
         lastSeenAt: null,
       ),
     );
+    return (success: response, challenge: null);
   }
 
   @override
@@ -541,7 +543,9 @@ class FakeStoreRepository implements StoreRepository {
   ];
 
   @override
-  Future<List<Shipment>> listShipments() async => [FakeBackend.storeShipment];
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) async => [
+    FakeBackend.storeShipment,
+  ];
 
   @override
   Future<NodeReceptionView?> getNodeReception({
@@ -589,7 +593,9 @@ class FakePickingRepository implements PickingRepository {
   final OfflineQueue queue;
 
   @override
-  Future<List<Shipment>> listShipments() async => [FakeBackend.pickingOrder];
+  Future<List<Shipment>> listShipments({ShipmentStatus? status}) async => [
+    FakeBackend.pickingOrder,
+  ];
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) async =>

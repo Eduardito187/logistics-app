@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
+import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/features/sync/presentation/sync_screen.dart';
 import 'package:logistics_app/features/sync/presentation/widgets/sync_action_tile.dart';
 
@@ -139,7 +140,9 @@ void main() {
     );
   });
 
-  testWidgets('mientras carga la cola: muestra el indicador', (tester) async {
+  testWidgets('mientras carga la cola: muestra el loader de marca', (
+    tester,
+  ) async {
     // Stream que nunca emite → estado de carga.
     await _pump(
       tester,
@@ -149,7 +152,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(BrandLoader), findsOneWidget);
   });
 
   testWidgets('error al leer la cola: muestra el estado de error', (

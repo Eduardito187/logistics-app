@@ -9,6 +9,7 @@ import 'scan_feedback.dart';
 import 'scan_frame.dart';
 
 export 'code_scanner.dart';
+export 'continuous_scanner.dart';
 export 'scan_feedback.dart';
 
 /// Pantalla de escaneo a pantalla completa (EAN o QR). Devuelve el primer
@@ -43,12 +44,29 @@ const Size kScannerCameraResolution = Size(1280, 720);
 /// traba un teléfono de 1 GB; 4 por segundo sigue sintiéndose instantáneo.
 const int kScannerDetectionTimeoutMs = 250;
 
+/// Formatos que se buscan cuando la pantalla no restringe ninguno: los que usa
+/// la operación (QR firmado de bultos, Code128 de etiquetas/andenes, EAN/UPC
+/// de productos). Con la lista vacía ML Kit / Vision prueban los ~13 formatos
+/// en cada cuadro: más CPU y más lecturas falsas.
+const List<BarcodeFormat> kDefaultScannerFormats = [
+  BarcodeFormat.qrCode,
+  BarcodeFormat.code128,
+  BarcodeFormat.ean13,
+  BarcodeFormat.ean8,
+  BarcodeFormat.upcA,
+];
+
 /// Controller del escáner afinado para gama baja (ver constantes arriba).
 /// Sin imagen de retorno (`returnImage: false`): no copia cada cuadro a Dart.
-@visibleForTesting
+///
+/// `DetectionSpeed.normal` + [kScannerDetectionTimeoutMs] (y no
+/// `noDuplicates`): `noDuplicates` analiza TODOS los cuadros y solo filtra los
+/// repetidos; el espaciado entre análisis es lo que ahorra CPU y temperatura.
+/// Lo comparten [ScannerScreen] (cierra con la primera lectura) y el escaneo
+/// continuo (`continuous_scanner.dart`, que filtra los repetidos a mano).
 MobileScannerController createScannerController(List<BarcodeFormat> formats) {
   return MobileScannerController(
-    formats: formats,
+    formats: formats.isEmpty ? kDefaultScannerFormats : formats,
     cameraResolution: kScannerCameraResolution,
     detectionSpeed: DetectionSpeed.normal,
     detectionTimeoutMs: kScannerDetectionTimeoutMs,

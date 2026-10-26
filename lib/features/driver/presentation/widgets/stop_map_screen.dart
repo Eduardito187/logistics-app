@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/map/osm_tile_layer.dart';
+import '../../../../core/theme/app_colors.dart';
 
 /// Mapa a pantalla completa centrado en la parada (navegación de campo sin
 /// depender de una app externa).
@@ -29,7 +30,11 @@ class StopMapScreen extends StatelessWidget {
                 point: point,
                 width: 48,
                 height: 48,
-                child: const Icon(Icons.place, color: Colors.red, size: 48),
+                child: const Icon(
+                  Icons.place,
+                  color: AppColors.brand,
+                  size: 48,
+                ),
               ),
             ],
           ),

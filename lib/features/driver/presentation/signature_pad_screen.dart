@@ -45,9 +45,23 @@ class _SignaturePadScreenState extends ConsumerState<SignaturePadScreen> {
   );
   bool _busy = false;
 
+  /// Vacío / con trazo. Los botones escuchan SOLO esto (cambia al primer trazo
+  /// y al borrar), no cada punto del dedo como el controlador de la firma.
+  final ValueNotifier<bool> _empty = ValueNotifier(true);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_syncEmpty);
+  }
+
+  void _syncEmpty() => _empty.value = _controller.isEmpty;
+
   @override
   void dispose() {
+    _controller.removeListener(_syncEmpty);
     _controller.dispose();
+    _empty.dispose();
     super.dispose();
   }
 
@@ -87,21 +101,24 @@ class _SignaturePadScreenState extends ConsumerState<SignaturePadScreen> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Signature(
-                      key: const ValueKey('signature-pad'),
-                      controller: _controller,
-                      backgroundColor: Colors.white,
+                  // Capa propia: cada punto del trazo repinta solo el pad, no
+                  // la pantalla entera (se nota en teléfonos de gama baja).
+                  child: RepaintBoundary(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Signature(
+                        key: const ValueKey('signature-pad'),
+                        controller: _controller,
+                        backgroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              ValueListenableBuilder(
-                valueListenable: _controller,
-                builder: (context, points, _) {
-                  final empty = points.isEmpty;
+              ValueListenableBuilder<bool>(
+                valueListenable: _empty,
+                builder: (context, empty, _) {
                   return Row(
                     children: [
                       Expanded(

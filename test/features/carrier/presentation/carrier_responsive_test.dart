@@ -16,6 +16,7 @@ import 'package:logistics_app/features/carrier/presentation/controllers/carrier_
 import '../../../support/button_finders.dart';
 import '../../../support/fake_code_scanner.dart';
 import '../../../support/screen_sizes.dart';
+import '../../store/fake_continuous_scanner.dart';
 import '../carrier_fixtures.dart';
 import '../carrier_scan_harness.dart';
 import '../carrier_test_harness.dart';
@@ -31,21 +32,21 @@ Future<void> _pumpWithCarrier(
   Widget home, {
   FakeCarrierRepository? repo,
 }) async {
-  final container = ProviderContainer(
-    overrides: [
-      carrierRepositoryProvider.overrideWithValue(
-        repo ?? FakeCarrierRepository(),
-      ),
-    ],
-  );
-  addTearDown(container.dispose);
-  container.read(selectedCarrierProvider.notifier).select(carrier());
+  // ProviderScope (no Uncontrolled): el contenedor se libera con el árbol y
+  // con él los timers de caché (`cacheFor`) de las listas.
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
+    ProviderScope(
+      overrides: [
+        carrierRepositoryProvider.overrideWithValue(
+          repo ?? FakeCarrierRepository(),
+        ),
+      ],
       child: MaterialApp(home: withTextScale(home)),
     ),
   );
+  ProviderScope.containerOf(
+    tester.element(find.byType(MaterialApp)),
+  ).read(selectedCarrierProvider.notifier).select(carrier());
   await tester.pumpAndSettle();
 }
 
@@ -55,6 +56,17 @@ void _expectBoundedWidth(WidgetTester tester, Finder finder, double max) {
 }
 
 void main() {
+  late TestLabelSigner signer;
+  late List<String> twoUnits;
+
+  setUpAll(() async {
+    signer = await TestLabelSigner.create();
+    twoUnits = [
+      await signer.qr(id: 'U-1', sku: 'SKU-A'),
+      await signer.qr(id: 'U-2', sku: 'SKU-B'),
+    ];
+  });
+
   testOnScreens('recoger: vacío y con bultos sin desbordes', (
     tester,
     screen,
@@ -63,18 +75,19 @@ void main() {
     await pumpCarrierScanScreen(
       tester,
       withTextScale(const CarrierPickupScreen()),
-      scanner: FakeCodeScanner([validLabelQr(), validLabelQr()]),
+      continuous: FakeContinuousScanner(twoUnits),
+      labelScanner: signer.scanner(),
       loadScan: loadScan,
     );
     expect(find.text('Sin bultos recogidos'), findsOneWidget);
 
-    for (var i = 0; i < 2; i++) {
-      await tester.tap(findButtonWithText<FilledButton>('Escanear bulto'));
-      await tester.pumpAndSettle();
-    }
+    // Escaneo continuo: dos bultos en una sola apertura de la cámara.
+    await tester.tap(findButtonWithText<FilledButton>('Escanear bulto'));
+    await tester.pumpAndSettle();
 
     expect(loadScan.requests, hasLength(2));
-    expect(find.text(vectorSku), findsNWidgets(2));
+    expect(find.text('SKU-A'), findsOneWidget);
+    expect(find.text('SKU-B'), findsOneWidget);
     _expectBoundedWidth(
       tester,
       findButtonWithText<FilledButton>('Escanear bulto'),
@@ -89,7 +102,8 @@ void main() {
     await pumpCarrierScanScreen(
       tester,
       withTextScale(const CarrierDeliverScreen()),
-      scanner: FakeCodeScanner([validLabelQr(), 'CONF-1']),
+      scanner: FakeCodeScanner(['CONF-1']),
+      continuous: FakeContinuousScanner([validLabelQr()]),
     );
     expect(find.text('Sin entregas registradas'), findsOneWidget);
 

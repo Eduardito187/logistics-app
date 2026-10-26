@@ -33,6 +33,9 @@ NodeReceptionView _$NodeReceptionViewFromJson(Map<String, dynamic> json) =>
       reconciledAt: json['reconciled_at'] == null
           ? null
           : DateTime.parse(json['reconciled_at'] as String),
+      units: (json['units'] as List<dynamic>?)
+          ?.map((e) => NodeReceptionUnit.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$NodeReceptionViewToJson(NodeReceptionView instance) =>
@@ -52,4 +55,5 @@ Map<String, dynamic> _$NodeReceptionViewToJson(NodeReceptionView instance) =>
       'complete': instance.complete,
       'opened_at': instance.openedAt.toIso8601String(),
       'reconciled_at': instance.reconciledAt?.toIso8601String(),
+      'units': instance.units,
     };

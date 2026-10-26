@@ -52,6 +52,7 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
   final TextEditingController _origin = TextEditingController();
   final TextEditingController _destination = TextEditingController();
   final TextEditingController _reason = TextEditingController();
+  final ScrollController _scroll = ScrollController();
   late final List<LineDraft> _lines;
   String? _error;
 
@@ -77,6 +78,7 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
     _origin.dispose();
     _destination.dispose();
     _reason.dispose();
+    _scroll.dispose();
     for (final line in _lines) {
       line.dispose();
     }
@@ -85,6 +87,16 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
 
   void _addLine() {
     setState(() => _lines.add(LineDraft()));
+    // Las líneas se arman a demanda: se lleva la vista a la línea nueva para
+    // que se vea (y se construya) sin tener que scrollear a mano.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _removeLine(int index) {
@@ -144,98 +156,117 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final error = _error;
+    // Líneas perezosas (una reimpresión precarga una línea por SKU, cada una
+    // con 4 campos): solo se arman las visibles. El botón de enviar queda
+    // fijo abajo, siempre a mano del pulgar.
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
         top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _origin,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Origen',
-                hintText: 'Nodo de origen',
-                prefixIcon: Icon(Icons.store),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _destination,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Destino',
-                hintText: 'Nodo de destino',
-                prefixIcon: Icon(Icons.place),
-              ),
-            ),
-            if (widget.requireReason) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reason,
-                decoration: const InputDecoration(
-                  labelText: 'Motivo de la reimpresión',
-                  hintText: 'Ej. etiqueta dañada',
-                  prefixIcon: Icon(Icons.edit_note),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Líneas (${_lines.length})',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(
+            child: CustomScrollView(
+              controller: _scroll,
+              shrinkWrap: true,
+              slivers: [
+                SliverList.list(
+                  children: [
+                    Text(
+                      widget.title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _origin,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Origen',
+                        hintText: 'Nodo de origen',
+                        prefixIcon: Icon(Icons.store),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _destination,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Destino',
+                        hintText: 'Nodo de destino',
+                        prefixIcon: Icon(Icons.place),
+                      ),
+                    ),
+                    if (widget.requireReason) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _reason,
+                        decoration: const InputDecoration(
+                          labelText: 'Motivo de la reimpresión',
+                          hintText: 'Ej. etiqueta dañada',
+                          prefixIcon: Icon(Icons.edit_note),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Líneas (${_lines.length})',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _addLine,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Agregar'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
-                TextButton.icon(
-                  onPressed: _addLine,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar'),
+                SliverList.builder(
+                  itemCount: _lines.length,
+                  itemBuilder: (context, index) {
+                    final draft = _lines[index];
+                    return Padding(
+                      // La clave sigue a la línea (no al índice) al quitar una.
+                      key: ObjectKey(draft),
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: LineEditor(
+                        draft: draft,
+                        index: index,
+                        canRemove: _lines.length > 1,
+                        onRemove: () => _removeLine(index),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            ...List.generate(
-              _lines.length,
-              (index) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: LineEditor(
-                  draft: _lines[index],
-                  index: index,
-                  canRemove: _lines.length > 1,
-                  onRemove: () => _removeLine(index),
-                ),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 4),
-              Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-            ],
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _submit,
-              icon: const Icon(Icons.check),
-              label: Text(widget.submitLabel),
-            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 4),
+            Text(error, style: TextStyle(color: theme.colorScheme.error)),
           ],
-        ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _submit,
+            icon: const Icon(Icons.check),
+            label: Text(widget.submitLabel),
+          ),
+        ],
       ),
     );
   }

@@ -56,9 +56,14 @@ class FakePickingRepository implements PickingRepository {
   ReprintLabelsRequest? lastReprintBody;
   PreparationScanRequest? lastScan;
 
+  /// Estado pedido en cada `listShipments` (filtro de servidor).
+  final List<ShipmentStatus?> listShipmentsStatuses = <ShipmentStatus?>[];
+
   @override
-  Future<List<Shipment>> listShipments() =>
-      (onListShipments ?? (() async => <Shipment>[]))();
+  Future<List<Shipment>> listShipments({ShipmentStatus? status}) {
+    listShipmentsStatuses.add(status);
+    return (onListShipments ?? (() async => <Shipment>[]))();
+  }
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) =>

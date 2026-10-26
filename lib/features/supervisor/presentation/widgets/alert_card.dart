@@ -10,6 +10,7 @@ import '../../../../core/widgets/status_pill.dart';
 import '../../domain/usecases/acknowledge_alert.dart';
 import '../controllers/supervisor_controllers.dart';
 import '../supervisor_labels.dart';
+import '../vehicle_label.dart';
 
 /// Tarjeta de una alerta de telemetría, con acción de reconocimiento.
 class AlertCard extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _AlertCardState extends ConsumerState<AlertCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Camión ${alert.vehicleId}'),
+          Text(vehicleLabel(ref, alert.vehicleId)),
           const SizedBox(height: 4),
           Text('Ocurrió: ${formatHour(alert.occurredAt)}'),
           if (detail != null) ...[const SizedBox(height: 4), Text(detail)],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/settlement.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
+import 'package:logistics_app/core/performance/cache_for.dart';
 import 'package:logistics_app/features/carrier/presentation/carrier_settlements_screen.dart';
 import 'package:logistics_app/features/carrier/presentation/controllers/carrier_controllers.dart';
 
@@ -68,6 +69,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(selectedCarrierProvider), isNull);
+      // La lista de transportistas queda en caché (`cacheFor`): se deja vencer
+      // su timer antes de terminar el test.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(CacheTtl.long);
     },
   );
 

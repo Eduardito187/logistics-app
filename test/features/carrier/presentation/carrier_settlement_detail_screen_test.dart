@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -198,5 +200,35 @@ void main() {
 
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  testWidgets('con la liquidación de la lista la muestra sin spinner', (
+    tester,
+  ) async {
+    final pending = Completer<Settlement>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          carrierRepositoryProvider.overrideWithValue(FakeCarrierRepository()),
+          carrierSettlementProvider(_id).overrideWith((ref) => pending.future),
+        ],
+        child: MaterialApp(
+          home: CarrierSettlementDetailScreen(
+            settlementId: _id,
+            initial: settlement(status: SettlementStatus.submitted),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // El detalle todavía no llegó, pero ya se ve la semilla de la lista.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Enviada'), findsOneWidget);
+
+    // Llega la versión fresca y la reemplaza.
+    pending.complete(settlement(status: SettlementStatus.approved));
+    await tester.pumpAndSettle();
+    expect(find.text('Aprobada'), findsOneWidget);
   });
 }

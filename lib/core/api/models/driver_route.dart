@@ -45,7 +45,7 @@ class DriverRoute {
   final DriverRouteStop? currentStop;
   final List<DriverRouteStop> stops;
 
-  /// Street-level route geometry from the published plan (planning), matched by vehicle+date. Null until the routing run computes it or if no plan matches.
+  /// Planned route geometry, matched by vehicle+date: the street-level geometry persisted with the plan (computed on the fly if the plan still lacks it); if there is no plan, a straight line through the route stops in sequence. Null only when fewer than two stops have coordinates.
   @JsonKey(name: 'route_geometry')
   final RouteGeometry? routeGeometry;
 

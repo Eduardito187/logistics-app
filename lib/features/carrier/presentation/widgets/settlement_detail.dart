@@ -4,6 +4,7 @@ import '../../../../core/api/models/settlement.dart';
 import '../../../../core/api/models/settlement_status.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/brand_loader.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import 'settlement_detail_row.dart';
@@ -97,11 +98,9 @@ class SettlementDetail extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (busy)
+            // Spinner de pantalla (no de botón): isotipo de marca con pulso.
             const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ),
+              child: Padding(padding: EdgeInsets.all(16), child: BrandLoader()),
             )
           else ...[
             if (canApprove)

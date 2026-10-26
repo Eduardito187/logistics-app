@@ -21,25 +21,17 @@ class LineEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
+      title: 'Línea ${index + 1}',
+      trailing: canRemove
+          ? IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Quitar línea',
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Línea ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (canRemove)
-                IconButton(
-                  onPressed: onRemove,
-                  icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Quitar línea',
-                ),
-            ],
-          ),
           TextField(
             controller: draft.sku,
             textCapitalization: TextCapitalization.characters,

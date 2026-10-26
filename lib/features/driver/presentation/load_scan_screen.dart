@@ -7,6 +7,7 @@ import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_pill.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/locally_loaded_units.dart';
 import 'driver_vehicle_gate.dart';
 import 'scan_mode.dart';
 import 'scan_units_screen.dart';
@@ -22,6 +23,7 @@ class LoadScanScreen extends ConsumerWidget {
       title: 'Carga del camión',
       builder: (context, vehicleId) {
         final deliveries = ref.watch(vehicleDeliveriesProvider);
+        final loaded = ref.watch(locallyLoadedUnitsProvider);
         return AsyncValueView<List<Delivery>>(
           value: deliveries,
           onRetry: () => ref.invalidate(vehicleDeliveriesProvider),
@@ -45,13 +47,15 @@ class LoadScanScreen extends ConsumerWidget {
                     ),
                     leading: const Icon(Icons.inventory_2, size: 32),
                     title: Text('Envío ${delivery.shipmentId}'),
-                    subtitle: Text('${delivery.scans.length} escaneo(s)'),
+                    subtitle: Text(
+                      '${effectiveScanCount(delivery, loaded[delivery.shipmentId])} escaneo(s)',
+                    ),
                     trailing: StatusPill(
                       _label(delivery.status),
                       tone: _tone(delivery.status),
                     ),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => ScanUnitsScreen(
                             mode: ScanMode.load,
@@ -60,6 +64,11 @@ class LoadScanScreen extends ConsumerWidget {
                           ),
                         ),
                       );
+                      // Al volver: conteos y estados del backend al día (la
+                      // lista anterior sigue visible mientras se refresca; lo
+                      // escaneado sin señal ya se suma desde la sesión).
+                      if (!context.mounted) return;
+                      ref.invalidate(vehicleDeliveriesProvider);
                     },
                   ),
                 );

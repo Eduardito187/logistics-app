@@ -48,10 +48,18 @@ class SyncMaintenance {
   /// [SyncRetryPolicy.failedRetention], sus archivos de foto y los archivos
   /// huérfanos. Nunca toca las pendientes. Devuelve filas/archivos borrados.
   Future<int> purgeStale({DateTime? now}) async {
-    final cutoff = (now ?? DateTime.now()).subtract(
-      SyncRetryPolicy.failedRetention,
-    );
-    return _purge(before: cutoff);
+    final at = now ?? DateTime.now();
+    var removed = 0;
+    // Posiciones GPS pendientes viejas: las únicas pendientes descartables.
+    try {
+      removed += await _db.purgeStaleTruckPositions(
+        before: at.subtract(SyncRetryPolicy.truckPositionRetention),
+      );
+    } on Object {
+      // Best-effort.
+    }
+    return removed +
+        await _purge(before: at.subtract(SyncRetryPolicy.failedRetention));
   }
 
   /// Limpieza al cerrar sesión: borra TODAS las filas `failed` (acciones y

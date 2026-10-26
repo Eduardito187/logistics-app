@@ -21,12 +21,11 @@ class LogisticsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final messengerKey = ref.watch(_messengerKeyProvider);
 
-    // Arranca el push (Firebase Cloud Messaging). `build()` del controlador es
-    // seguro: devuelve estado inactivo y el init corre protegido en segundo plano.
-    ref.watch(pushRegistrationProvider);
+    // El push (Firebase Cloud Messaging) lo arranca `main.dart` después del
+    // primer cuadro (no demora la apertura ni reconstruye MaterialApp).
 
     // Crashlytics: usuario seudónimo, rol y tienda al iniciar/cerrar sesión.
-    ref.watch(crashSessionBinderProvider);
+    ref.listen(crashSessionBinderProvider, (_, _) {});
 
     // Al tocar una notificación entrante, ir a la bandeja.
     ref.listen(pushTapProvider, (_, next) {
@@ -82,6 +81,9 @@ class LogisticsApp extends ConsumerWidget {
       theme: highContrast ? AppTheme.highContrast() : AppTheme.light(),
       darkTheme: highContrast ? AppTheme.highContrast() : AppTheme.dark(),
       themeMode: highContrast ? ThemeMode.light : ThemeMode.system,
+      // Cambiar de tema (alto contraste) es instantáneo: la animación de 200 ms
+      // interpolaba el tema completo reconstruyendo la app en cada cuadro.
+      themeAnimationDuration: Duration.zero,
       locale: const Locale('es', 'BO'),
       supportedLocales: _locales,
       localizationsDelegates: const [

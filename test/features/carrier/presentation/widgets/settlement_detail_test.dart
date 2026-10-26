@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/settlement_status.dart';
+import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/features/carrier/presentation/widgets/settlement_detail.dart';
 
 import '../../carrier_fixtures.dart';
@@ -78,7 +79,7 @@ void main() {
     tester,
   ) async {
     await _pump(tester, status: SettlementStatus.submitted, busy: true);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(BrandLoader), findsOneWidget);
     expect(findButtonWithText<FilledButton>('Aprobar'), findsNothing);
   });
 

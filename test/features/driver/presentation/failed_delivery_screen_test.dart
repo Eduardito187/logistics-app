@@ -57,6 +57,18 @@ void main() {
     expect(_registerButton(tester).onPressed, isNull);
   });
 
+  testWidgets('al entrar calienta el GPS sin esperarlo', (tester) async {
+    final location = FakeLocationService();
+    await pumpScoped(
+      tester,
+      child: FailedDeliveryScreen(stop: buildStop()),
+      overrides: [locationServiceProvider.overrideWithValue(location)],
+      tall: true,
+    );
+
+    expect(location.prefetchCount, 1);
+  });
+
   testWidgets('se puede elegir otro motivo', (tester) async {
     await pumpScoped(
       tester,

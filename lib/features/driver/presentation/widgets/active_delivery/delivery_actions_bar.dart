@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/api/export.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../controllers/driver_controllers.dart';
+import '../../controllers/locally_settled_stops.dart';
 import '../../failed_delivery_screen.dart';
 import '../../pod_screen.dart';
 import '../../scan_mode.dart';
@@ -20,6 +21,7 @@ Future<void> openDeliveryStep(
   await Navigator.of(
     context,
   ).push(MaterialPageRoute<void>(builder: (_) => screen));
+  if (!context.mounted) return;
   ref
     ..invalidate(driverRouteProvider)
     ..invalidate(deliveryStateProvider(stop.shipmentId));
@@ -67,7 +69,22 @@ class DeliveryActionsBar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: closed
                   ? FilledButton.icon(
-                      onPressed: () => ref.invalidate(driverRouteProvider),
+                      onPressed: () {
+                        // Si el cierre lo sabe el estado de la entrega pero la
+                        // ruta todavía no, se avanza ya (sin esperar a la red).
+                        if (status == DeliveryStatus.delivered ||
+                            status == DeliveryStatus.failed) {
+                          ref
+                              .read(locallySettledStopsProvider.notifier)
+                              .settle(
+                                stop.id,
+                                status == DeliveryStatus.failed
+                                    ? DriverRouteStopStatus.failed
+                                    : DriverRouteStopStatus.completed,
+                              );
+                        }
+                        ref.invalidate(driverRouteProvider);
+                      },
                       icon: const Icon(Icons.arrow_forward),
                       label: const Text('Siguiente entrega'),
                     )

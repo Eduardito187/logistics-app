@@ -116,25 +116,30 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
       return;
     }
     setState(() => _busy = true);
-    // El GPS no debe trabar el reporte: si no hay fix rápido, va sin ubicación.
-    final fix = await ref
-        .read(locationServiceProvider)
-        .current(timeout: const Duration(seconds: 4));
-    if (!mounted) return;
-    final outcome = await ref
-        .read(reportDeliveryIssueProvider)
-        .call(
-          shipmentId: widget.stop.shipmentId,
-          type: type,
-          note: _note.text,
-          lat: fix?.lat,
-          lng: fix?.lng,
-          occurredAt: DateTime.now(),
-          label: 'Inconveniente · parada ${widget.stop.sequence}',
-        );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    showSubmitOutcome(context, outcome);
-    if (outcome != SubmitOutcome.failed) Navigator.of(context).pop();
+    try {
+      // El GPS no debe trabar el reporte: si no hay fix rápido, va sin ubicación.
+      final fix = await ref
+          .read(locationServiceProvider)
+          .current(timeout: const Duration(seconds: 4));
+      if (!mounted) return;
+      final outcome = await ref
+          .read(reportDeliveryIssueProvider)
+          .call(
+            shipmentId: widget.stop.shipmentId,
+            type: type,
+            note: _note.text,
+            lat: fix?.lat,
+            lng: fix?.lng,
+            occurredAt: DateTime.now(),
+            label: 'Inconveniente · parada ${widget.stop.sequence}',
+          );
+      if (!mounted) return;
+      showSubmitOutcome(context, outcome);
+      if (outcome != SubmitOutcome.failed) Navigator.of(context).pop();
+    } finally {
+      // Garantiza liberar el botón aunque algo falle (coherente con las demás
+      // pantallas de envío); si no, el reporte quedaría trabado con el spinner.
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

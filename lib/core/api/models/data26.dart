@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'order_source.dart';
-import 'status8.dart';
+import 'status9.dart';
 
 part 'data26.g.dart';
 
@@ -22,7 +22,7 @@ class Data26 {
   final OrderSource source;
   @JsonKey(name: 'external_id')
   final String externalId;
-  final Status8 status;
+  final Status9 status;
 
   Map<String, Object?> toJson() => _$Data26ToJson(this);
 }

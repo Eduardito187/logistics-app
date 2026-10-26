@@ -194,4 +194,51 @@ void main() {
       expect(rows, hasLength(2));
     });
   });
+
+  group('gama baja (PRAGMAs y topes)', () {
+    test('las PRAGMAs de conexión se aplican sin error', () async {
+      final configured = AppDatabase(
+        NativeDatabase.memory(setup: AppDatabase.configureConnection),
+      );
+      addTearDown(configured.close);
+      final row = await configured
+          .customSelect('PRAGMA busy_timeout')
+          .getSingle();
+      expect(row.data.values.single, 5000);
+      final cache = await configured
+          .customSelect('PRAGMA cache_size')
+          .getSingle();
+      expect(cache.data.values.single, -1024);
+      final limit = await configured
+          .customSelect('PRAGMA journal_size_limit')
+          .getSingle();
+      expect(limit.data.values.single, 1048576);
+    });
+
+    test('pide WAL, journal acotado y caché de 1 MB', () {
+      expect(
+        AppDatabase.connectionPragmas,
+        contains('PRAGMA journal_mode = WAL;'),
+      );
+      expect(
+        AppDatabase.connectionPragmas.any((p) => p.contains('synchronous')),
+        isFalse,
+        reason: 'synchronous queda en FULL: un escaneo no se pierde',
+      );
+    });
+
+    test('watchPhotos respeta el tope de filas', () async {
+      for (var i = 0; i < 5; i++) {
+        await db.enqueuePhoto(
+          PendingPhotosCompanion.insert(
+            id: 'p$i',
+            shipmentId: 's',
+            filePath: '/tmp/p$i.jpg',
+          ),
+        );
+      }
+      expect(await db.watchPhotos(limit: 3).first, hasLength(3));
+      expect(await db.watchPhotos().first, hasLength(5));
+    });
+  });
 }

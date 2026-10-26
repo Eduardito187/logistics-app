@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/layout/breakpoints.dart';
@@ -8,12 +9,17 @@ import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../supervisor_labels.dart';
+import '../vehicle_label.dart';
 import 'detail_row.dart';
 import 'eta_section.dart';
 import 'stop_tile.dart';
 
 /// Cuerpo del detalle (solo lectura) de un plan: cabecera, métricas, ETA y la
 /// secuencia de paradas.
+///
+/// Es `StatelessWidget`: lo único que lee de Riverpod (la placa del camión) va
+/// en [_VehicleTitle], así que la carga de placas reconstruye solo ese texto y
+/// no vuelve a ordenar las paradas ni a armar todo el detalle.
 class PlanDetailBody extends StatelessWidget {
   const PlanDetailBody({super.key, required this.plan, required this.planId});
 
@@ -32,14 +38,7 @@ class PlanDetailBody extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Camión ${plan.vehicleId}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
+              Expanded(child: _VehicleTitle(vehicleId: plan.vehicleId)),
               StatusPill(
                 planStatusLabel(plan.status),
                 tone: planStatusTone(plan.status),
@@ -123,6 +122,24 @@ class PlanDetailBody extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// "Camión" + placa del encabezado; único widget del detalle que escucha las
+/// placas de la flota.
+class _VehicleTitle extends ConsumerWidget {
+  const _VehicleTitle({required this.vehicleId});
+
+  final String vehicleId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Text(
+      vehicleLabel(ref, vehicleId),
+      style: Theme.of(
+        context,
+      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
     );
   }
 }

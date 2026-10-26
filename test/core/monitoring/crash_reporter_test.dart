@@ -61,4 +61,9 @@ void main() {
       expect(container.read(crashReporterProvider), isA<NoopCrashReporter>());
     });
   });
+
+  test('sanitizeBreadcrumb acota entradas enormes', () {
+    final out = sanitizeBreadcrumb('nav.push /${'a' * 100000}');
+    expect(out.length, lessThanOrEqualTo(120));
+  });
 }

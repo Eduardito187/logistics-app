@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/printing/label_printer.dart';
 import '../../../core/printing/printer_exception.dart';
@@ -50,25 +51,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // En tablet las secciones no se estiran de borde a borde.
       body: ResponsiveBody(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            navScrollBottomPadding(context),
+          ),
           children: [
             const ProfileSection(),
             const SizedBox(height: 12),
-            PrinterSection(printing: _printing, onPrintTest: _printTest),
-            const SizedBox(height: 12),
+            // La impresora solo le sirve a quien imprime etiquetas.
+            if (session?.role.usesLabelPrinter ?? false) ...[
+              PrinterSection(printing: _printing, onPrintTest: _printTest),
+              const SizedBox(height: 12),
+            ],
             const FieldUseSection(),
             const SizedBox(height: 12),
             SessionSection(session: session),
             const SizedBox(height: 12),
             SectionCard(
               title: 'Cuenta y seguridad',
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.devices),
-                title: const Text('Mis dispositivos'),
-                subtitle: const Text('Sesiones activas y revocar acceso.'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/devices'),
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.shield_outlined),
+                    title: const Text('Verificación en dos pasos'),
+                    subtitle: const Text(
+                      'Un código extra de tu teléfono al ingresar.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/security'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.devices),
+                    title: const Text('Mis dispositivos'),
+                    subtitle: const Text('Sesiones activas y revocar acceso.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/devices'),
+                  ),
+                ],
               ),
             ),
           ],

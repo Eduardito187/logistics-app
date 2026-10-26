@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'node_reception_unit.dart';
 import 'node_reception_view_corridor.dart';
 import 'node_reception_view_status.dart';
 
@@ -28,6 +29,7 @@ class NodeReceptionView {
     required this.complete,
     required this.openedAt,
     this.reconciledAt,
+    this.units,
   });
 
   factory NodeReceptionView.fromJson(Map<String, Object?> json) =>
@@ -65,6 +67,9 @@ class NodeReceptionView {
   final DateTime openedAt;
   @JsonKey(name: 'reconciled_at')
   final DateTime? reconciledAt;
+
+  /// Producto de cada bulto de la recepción (esperados ∪ recibidos ∪ sobrantes); campos null si el id no es un bulto conocido
+  final List<NodeReceptionUnit>? units;
 
   Map<String, Object?> toJson() => _$NodeReceptionViewToJson(this);
 }

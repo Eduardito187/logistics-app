@@ -7,6 +7,7 @@ import '../../../core/layout/responsive_body.dart';
 
 import '../../../core/api/export.dart';
 import '../../../core/map/map_launcher.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import 'driver_common.dart';
@@ -122,7 +123,7 @@ class StopDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red.shade700,
+                foregroundColor: AppColors.danger,
               ),
               onPressed: () {
                 Navigator.of(context).push(

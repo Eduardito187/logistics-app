@@ -19,7 +19,10 @@ import 'vehicle_sheet.dart';
 /// - los marcadores se recalculan solo si cambió alguna posición: el clustering
 ///   compara la lista por identidad y, con una lista nueva en cada build,
 ///   reagrupaba todos los camiones en cada reconstrucción;
-/// - animaciones del clustering más cortas (menos frames por gesto).
+/// - animaciones del clustering más cortas (menos frames por gesto);
+/// - el mapa va en un [RepaintBoundary]: panear/zoom (y las animaciones del
+///   clustering) no repintan la barra superior ni el resto de la pantalla, y
+///   un cambio fuera del mapa (spinner, aviso) no repinta los tiles.
 class FleetMap extends StatefulWidget {
   const FleetMap({super.key, required this.vehicles});
 
@@ -63,22 +66,24 @@ class _FleetMapState extends State<FleetMap> {
 
   @override
   Widget build(BuildContext context) {
-    return FlutterMap(
-      options: _options,
-      children: [
-        const OsmTileLayer(),
-        MarkerClusterLayerWidget(
-          options: MarkerClusterLayerOptions(
-            maxClusterRadius: 48,
-            size: const Size(44, 44),
-            padding: const EdgeInsets.all(48),
-            markers: _markers,
-            animationsOptions: _clusterAnimations,
-            builder: (context, clusterMarkers) =>
-                _ClusterBadge(count: clusterMarkers.length),
+    return RepaintBoundary(
+      child: FlutterMap(
+        options: _options,
+        children: [
+          const OsmTileLayer(),
+          MarkerClusterLayerWidget(
+            options: MarkerClusterLayerOptions(
+              maxClusterRadius: 48,
+              size: const Size(44, 44),
+              padding: const EdgeInsets.all(48),
+              markers: _markers,
+              animationsOptions: _clusterAnimations,
+              builder: (context, clusterMarkers) =>
+                  _ClusterBadge(count: clusterMarkers.length),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

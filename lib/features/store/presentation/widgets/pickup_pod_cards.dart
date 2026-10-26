@@ -9,8 +9,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../../domain/entities/unit_product.dart';
 import '../controllers/store_controllers.dart';
-import '../short_unit_id.dart';
+import 'reception_units_card.dart';
+import 'sliver_section_card.dart';
 
 /// Ancho (px) al que se decodifica la vista previa de la foto: alcanza para la
 /// miniatura de 160 dp de alto y evita decodificar la foto entera (1600 px).
@@ -161,7 +163,12 @@ class PickupPhotoCard extends StatelessWidget {
   }
 }
 
-/// Paso 3: bultos del envío con su estado (entregado/pendiente).
+/// Paso 3: productos del envío (foto, nombre, código) con su estado
+/// (entregado/pendiente).
+///
+/// Es un SLIVER (va dentro de un `CustomScrollView`): las filas se construyen a
+/// demanda y solo se decodifican las fotos visibles, aunque el pedido traiga
+/// 100+ productos.
 class PickupUnitsCard extends ConsumerWidget {
   const PickupUnitsCard({
     super.key,
@@ -176,56 +183,56 @@ class PickupUnitsCard extends ConsumerWidget {
   /// IDs de bultos ya entregados en esta pantalla.
   final Set<String> delivered;
 
+  static const String _title = '3 · Entregar productos';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unitsAsync = ref.watch(shipmentUnitsProvider(shipmentId));
-    return SectionCard(
-      title: '3 · Entregar bultos',
-      child: AsyncValueView<List<UnitTracking>>(
-        value: unitsAsync,
-        onRetry: () => ref.invalidate(shipmentUnitsProvider(shipmentId)),
-        data: (units) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!hasConfirmation)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Primero captura la confirmación del cliente.',
-                    style: TextStyle(color: AppColors.warning),
-                  ),
-                ),
-              Text(
-                'Entregados ${delivered.length} de ${units.length} bulto(s).',
-                style: Theme.of(context).textTheme.bodyMedium,
+    final units = unitsAsync.hasError ? null : unitsAsync.value;
+    if (units == null) {
+      // Cargando o error: tarjeta común con el estado y "Reintentar".
+      return SliverToBoxAdapter(
+        child: SectionCard(
+          title: _title,
+          child: AsyncValueView<List<UnitTracking>>(
+            value: unitsAsync,
+            onRetry: () => ref.invalidate(shipmentUnitsProvider(shipmentId)),
+            data: (_) => const SizedBox.shrink(),
+          ),
+        ),
+      );
+    }
+    return SliverSectionCard(
+      title: _title,
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!hasConfirmation)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Primero captura la confirmación del cliente.',
+                style: TextStyle(color: AppColors.warning),
               ),
-              const SizedBox(height: 8),
-              for (final unit in units)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Bulto ${unit.label ?? shortUnitId(unit.unitId)}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (delivered.contains(unit.unitId))
-                        const StatusPill(
-                          'Entregado',
-                          tone: PillTone.success,
-                          icon: Icons.check_circle,
-                        )
-                      else
-                        const StatusPill('Pendiente', tone: PillTone.neutral),
-                    ],
-                  ),
-                ),
-            ],
+            ),
+          Text(
+            'Entregados ${delivered.length} de ${units.length} producto(s).',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+      sliver: SliverList.builder(
+        itemCount: units.length,
+        itemBuilder: (context, index) {
+          final unit = units[index];
+          return UnitProductRow(
+            key: ValueKey(unit.unitId),
+            unitId: unit.unitId,
+            product: trackingProduct(unit),
+            status: delivered.contains(unit.unitId)
+                ? UnitRowStatus.delivered
+                : UnitRowStatus.pending,
           );
         },
       ),

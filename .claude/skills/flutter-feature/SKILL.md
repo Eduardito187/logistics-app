@@ -1,28 +1,37 @@
 ---
 name: flutter-feature
-description: Build or change a feature in the Dismac logistics internal Flutter app (/dismac/logistics-app) — screens for a role (chofer, preparador, tienda, transportista, supervisor), offline scanning, label QR verification, Zebra printing, API client — and run/analyze/test/build the app from WSL (toolchain Android ya montado). Use it whenever the user asks to add a screen or flow ("agrega la pantalla de ruta del chofer", "implementa el escaneo de carga", "conecta el login"), to run/launch the app or set up the play button (dev/staging/production), or when a Flutter analyze/test/build/Gradle/emulator run fails ("el play se cierra", "falla la build", "no compila el APK").
+description: Build or change a feature in the Dismac logistics internal Flutter app (logistics-app, Windows, Flutter 3.32 / Dart 3.8) — screens for a role (chofer, preparador, tienda, transportista, supervisor), offline-invisible scanning, label QR verification, Zebra printing, photos/signature, maps, push FCM, API client regeneration — and run/analyze/test/build the app (Android and iOS). Use it whenever the user asks to add or change a screen or flow ("agrega la pantalla de…", "implementa el escaneo de…", "cambia el diseño de…"), to regenerate the API client after a backend change, to run/launch the app or the play button (dev/staging/production), or when a Flutter analyze/test/build/Gradle/emulator/iOS run fails ("el play se cierra", "falla la build", "no compila el APK", "Data4 isn't a type").
 ---
 
 # Feature en la app interna — logistics-app
 
 La app **solo consume el backend** (`/api/v1/app/*`); nunca integra servicios externos (SMS, SAP,
-Telegram, tiles) — eso es del backend/ops. Única excepción: el push se **recibe** con Firebase Cloud
-Messaging (`firebase_messaging`, credenciales `FIREBASE_*` en `config/*.json`); el **envío** es del backend. "Completo" para el dueño = **cubrir todos los
-endpoints `/app/*`** útiles, no un MVP. Antes de diseñar, leer `CLAUDE.md` y `docs/architecture.md`;
-la visión y los ADRs viven en el backend: `/dismac/logistics/docs/`.
+Telegram) — eso es del backend/ops. Excepciones del lado cliente: recibir push con **Firebase Cloud
+Messaging**, Crashlytics y tiles OSM. "Completo" para el dueño = cubrir los endpoints `/app/*` útiles y
+cerrar al 100%, no un MVP. Antes de diseñar: `CLAUDE.md`, `.claude/memory/*.md` (decisiones vigentes del
+dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pantallas, e2e, qa-dispositivo-real).
 
-## Herramientas (WSL)
+## Herramientas (Windows nativo)
 
-El SDK es Flutter stable en `~/sdk/flutter`. `/dismac/flutter` es de root y es pre-release: no usarlo.
-Correr siempre desde un script, porque las comillas de PowerShell → WSL rompen los `export`:
+- **Flutter del proyecto: 3.32.0 / Dart 3.8 en `C:\flutter`** (decisión del dueño: un solo Flutter en la PC;
+  NO subir el proyecto). Desde Bash: `/c/flutter/bin/flutter.bat`, `/c/flutter/bin/dart.bat`.
+- `C:\sdk\flutter` (3.47.6) existe SOLO para regenerar el cliente API (el `retrofit_generator` necesita Dart ≥3.9).
+- Android SDK `%LOCALAPPDATA%\Android\Sdk`, JDK 21 `C:\Users\ehhuallata\jdk21`. Gradle 8.12, AGP 8.7.3,
+  Kotlin 2.1.0, minSdk 24, compileSdk 36, NDK 27.0.12077973 (máximos de Flutter 3.32; no cambiar).
+- `.vscode/settings.json` → `C:/flutter` (barras `/`: con `\` simple el JSON queda inválido y VS Code lo ignora).
+- `android/local.properties` (ignorado): `flutter.sdk=C:/flutter`, `sdk.dir=C:/Users/ehhuallata/AppData/Local/Android/Sdk`.
+  Si aparece con rutas `/home/...` es un **VS Code abierto en modo WSL** sobre la carpeta (corre `pub get`
+  con el Flutter de WSL y pisa `.dart_tool`, `pubspec.lock` y `local.properties`): reescribirlo y correr
+  `C:\flutter\bin\flutter.bat pub get`; pedir al usuario cerrar esa ventana.
+- El backend vive en WSL: `\\wsl.localhost\Ubuntu-22.04\dismac\logistics` (puede tener cambios sin push;
+  GitHub puede ir atrasado). Grep pesado ahí: correr DENTRO de WSL con un `.sh` (`wsl.exe -d Ubuntu-22.04 -- bash /mnt/c/...sh`).
 
 ```bash
-#!/usr/bin/env bash
-export PATH="$HOME/sdk/flutter/bin:$PATH"
-cd /dismac/logistics-app
-dart format lib test
-flutter analyze
-flutter test
+/c/flutter/bin/dart.bat format lib test integration_test
+/c/flutter/bin/flutter.bat analyze
+/c/flutter/bin/flutter.bat test                    # ~1726 tests
+/c/flutter/bin/flutter.bat test integration_test -d flutter-tester   # e2e en host (6)
+make apk ENV=staging                               # release --split-per-abi (necesita android/key.properties)
 ```
 
 `flutter analyze`/`flutter test` corren en WSL sin más. **Correr/compilar la app también se puede en
@@ -33,6 +42,7 @@ pudiendo salir del CI (`logistics-app-debug-apk`) o Android Studio en Windows.
 **⚠️ Memoria — crítico:** las builds de Gradle colgaron WSL entero una vez. Reglas:
 - `android/gradle.properties` debe quedar con `-Xmx2G` (nunca varios GB) — heap grande satura la RAM.
 - **Una build a la vez.** No lanzar múltiples `flutter run`/`flutter build` en background: se apilan y cuelgan el equipo.
+- **No correr `pub get` mientras hay una build:** `integration_test` (dev-dep) se cuela en `GeneratedPluginRegistrant` y rompe la release.
 - `.wslconfig` limita WSL a 10 GB/6 GB swap (aplica tras `wsl --shutdown`).
 - Si se cuelga: `pkill -9 -f gradle; pkill -9 java; pkill -9 -f build_runner; pkill -9 dart`.
 
@@ -41,6 +51,17 @@ inyectados con `--dart-define-from-file`. VS Code debe usar el Flutter de WSL (`
 fija `dart.flutterSdkPath`), no `C:\flutter` (CRLF → exited 127). Para el emulador de Windows desde
 WSL: `adb start-server`, copiar `~/.android/adbkey*` desde `/mnt/c/Users/<user>/.android/`, arrancar el
 AVD con `emulator.exe`, luego `flutter run -d emulator-5554`.
+
+**Correr en teléfono físico por ADB INALÁMBRICO desde WSL** (sin cable; funciona, Honor Magic 5 Lite):
+`scripts/adb-wireless.sh` (connect/reconnect/mdns/pair) + tareas de VS Code; detalle en
+`docs/run-wireless.md`. Claves: copiar las llaves adb de Windows a `~/.android/` (no re-emparejar),
+`export ADB_MDNS_OPENSCREEN=1` para que mDNS reconecte solo, y para el backend `adb reverse tcp:8110
+tcp:8110` + `config/dev.json` con `API_BASE_URL=http://localhost:8110/api/v1` (el teléfono NO llega a la
+IP LAN de la PC por firewall). **Trampas:** los puertos de depuración inalámbrica ROTAN al dormir el
+teléfono (dir vieja → `Connection refused`, releer `IP:puerto`); si duerme a mitad de build, la
+instalación da `adb: device offline` aunque el APK sí se construyó (reconectar e instalar el APK ya hecho,
+no reconstruir); mDNS puede listar dispositivos AJENOS (verificar `model:`/`product:` en `adb devices -l`
+antes de instalar). Memoria completa: ver `.claude/memory/device-run-wireless-adb.md`.
 
 ## Portabilidad (mover el proyecto / Windows nativo)
 
@@ -60,116 +81,77 @@ proyecto a otra ruta u OS:
 ## Dónde va cada cosa
 
 ```
-lib/core/            # transversal: config (dart-define), auth (UserRole, sesión), router, theme, labels, network
-lib/features/<flujo>/{data,domain,presentation}/
-test/                # espejo de lib/; fixtures en test/fixtures/
+lib/core/            # transversal: config, auth, router, theme, layout, media, labels, network, offline,
+                     # background, push, monitoring, version, map, scanning, printing, widgets, api (generado)
+lib/features/<f>/{data,domain,presentation}/
+test/                # espejo de lib/; test/support/ = fakes y arneses compartidos
+integration_test/    # e2e de flujos críticos (app real + backend falso)
 ```
 
-Un flujo nuevo = **una carpeta disjunta** en `features/`. Cada feature expone en
-`presentation/<f>_routes.dart` dos listas que el **coordinador** cablea (no el agente de feature):
+Cada feature expone en `presentation/<f>_routes.dart`: `const List<RoleTask> <f>Tasks` (tarjetas del inicio,
+`roles:{UserRole.x}`, `accent:` la principal) y `final List<RouteBase> <f>Routes`. Se cablean en
+`lib/core/navigation/feature_tasks.dart` y `lib/core/router/app_router.dart`. Roles por `backendKey`:
+chofer, preparador, tienda, transportista, supervisor, admin.
 
-```dart
-const List<RoleTask> <f>Tasks = [ RoleTask(id:'…', label:'…', icon:Icons.…,
-    route:'/<f>/…', roles:{UserRole.driver /* u otros */}, accent:true) ];
-final List<RouteBase> <f>Routes = [ GoRoute(path:'/<f>/…', builder:(c,s)=> const XScreen()) ];
-```
+## Decisiones del dueño (no reintroducir lo contrario)
 
-- El coordinador agrega esas listas en `lib/core/navigation/feature_tasks.dart` (tarjetas del home por
-  rol) y `lib/core/router/app_router.dart`. Un agente de feature **no toca** `lib/core/**`, `app.dart`,
-  `main.dart`, `AndroidManifest.xml`, `app_router.dart`, `feature_tasks.dart` ni `pubspec.yaml`.
-- `RoleHomeScreen` arma el inicio desde `featureTasksProvider` filtrando por `RoleTask.roles` (el campo
-  legacy `UserRole.tasks` ya no alimenta el home).
-- Roles (`core/auth/user_role.dart`) mapean al backend por `backendKey`: chofer→driver, preparador→picker,
-  tienda→store, transportista→carrier, supervisor→supervisor, admin→admin (rol de oficina). El login real
-  usa `UserRole.firstOperational(user.roles)`.
+- **Offline invisible:** el usuario NUNCA ve "sin conexión", "pendiente" ni sincronización. Encolado = "Registrado." /
+  pastilla "Enviado". Única señal: "Sincronizando..." al volver la red. Errores de red: "No se pudo completar…".
+- **Notificaciones:** solo la campana del header del inicio. **Sin chat** en ningún flujo.
+- **Tienda fija** del usuario (`Session.storeNode`, `selectedStoreNodeProvider`), sin selector. "Recojo en tienda".
+- **Sesión persistente** (restore en `main`), como WhatsApp.
+- **Chofer:** "Entrega en curso" estilo app de delivery (mapa, tarjeta de estado, hoja con cliente/pedido, botones
+  del paso, Ayuda sin chat). **Foto del POD obligatoria**; firma digital del cliente en pantalla.
+- **1 GB de RAM y pantallas de 320 dp a tablets**: ver "Base común" y probar con `testOnScreens`.
+- **iOS sí** (se compila en Mac/CI; protección de archivos hasta el primer desbloqueo).
 
-## Cliente API generado (regla #5)
+## Base común (usar, no reinventar)
 
-No se escriben DTOs a mano. El cliente vive en `lib/core/api/` y se genera con `swagger_parser` desde
-`openapi/v1.yaml`. Uso:
-
-```dart
-final api = ref.read(logisticsApiProvider);          // core/network/dio_client.dart
-final res = await api.<module>.<operationId>(...);   // p.ej. api.execution.recordLoadScan(...)
-final data = res.data;                               // las respuestas envuelven el payload en .data
-// errores: try { … } on DioException catch(e){ throw ApiException.fromDio(e); }  // .message en español
-```
-
-**Regenerar** cuando el backend cambie el spec: `bash scripts/regen_api_client.sh` (o `make gen`): copia
-el spec → preprocesa a `openapi/v1.json` (expande anchors YAML + inyecta `parameters` de nivel path, que
-`swagger_parser` no traga) → `dart run swagger_parser` → `dart run build_runner build --delete-conflicting-outputs`.
-`lib/core/api/**` y `**/*.g.dart` están excluidos del analyzer; tras regenerar correr `dart format lib`.
-
-## Offline-first (concreto)
-
-Escrituras de terreno (escaneos, POD, fallidas) van por la cola Drift, nunca esperan a la red:
-
-```dart
-await ref.read(offlineQueueProvider).submit(
-  kind: 'recordLoadScan',                 // mapeado en core/offline/offline_dispatcher.dart
-  payload: ScanRequest(...).toJson(),     // NO pongas idempotency_key: lo agrega submit (ULID)
-  label: 'Carga · pedido X', occurredAt: DateTime.now());
-```
-
-El ULID es el `Idempotency-Key`; `ConnectivityNotifier` drena al recuperar señal. Para una acción nueva,
-agregá su `kind` al dispatcher; los path params (vehículo/envío) viajan en el payload con prefijo `@`
-(`'@vehicleId'`). Las **fotos** van por `photoUploadQueueProvider.enqueue(shipmentId, filePath, kind)`.
-Las acciones de oficina (listar, aprobar, publicar) van **directo** por `api.*`, no por la cola.
-
-**Semántica de resultado (no reintroducir falencias ya corregidas):**
-- `submit` devuelve `SubmitOutcome`: `sent` (OK), `queued` (quedó pendiente), `failed` (error de datos permanente).
-- **Transitorio = `queued`, no `failed`:** sin conexión, **429** (rate limit) y **5xx** NO se marcan `failed`
-  (se perdería la escritura de terreno) — quedan pendientes para reintento. Solo los 4xx de datos → `failed`.
-  El helper `_isTransient(ApiException)` concentra ese criterio.
-- El `kind` se valida **antes** de encolar (un kind desconocido lanza `StateError`, no deja fila envenenada).
-- `drain` atrapa `StateError` (kind obsoleto tras actualizar la app) y aísla esa fila sin frenar el resto.
-- `markFailed` incrementa `attempts` (base para backoff/tope).
-
-## Bloques reutilizables (core)
-
-- **Providers:** `logisticsApiProvider`, `offlineQueueProvider`, `photoUploadQueueProvider`,
-  `connectivityProvider`, `syncQueueProvider`, `locationServiceProvider` (`.current()`→`GpsFix?`, `.stream()`),
-  `labelScannerProvider` (`.scan(qr)`→`LabelScanResult(isValid)`, Ed25519 OFFLINE), `labelKeysProvider`
-  (`.refresh()`), `zebraPrinterProvider` (`.printZpl(zpl)`, lanza `PrinterException`), `pushRegistrationProvider`.
-- **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone: PillTone.x)`, `EmptyState`,
-  `SyncBadge` (`core/widgets/`). `AppColors` (`core/theme/app_colors.dart`). Botones ya 56px por tema.
-- **Escáner:** `await scanCode(context, title:'…', formats:[BarcodeFormat.qrCode])`→`String?`
-  (`core/scanning/`; importar `mobile_scanner` para `BarcodeFormat`).
-- **Mapas (sin Google, ADR 013):** `buildOsmTileLayer()` y `openExternalNavigation(lat,lng)` (`core/map/`);
-  `flutter_map` + `latlong2`, tiles de `AppConfig.mapTilesUrl`.
+- **API:** `ref.read(logisticsApiProvider)` SOLO en `data/datasources/`; presentación → use case/repositorio.
+  Respuestas en `.data`; errores `on DioException catch (e) { throw ApiException.fromDio(e); }`.
+- **Cola offline:** `ref.read(offlineQueueProvider).submit(kind:, payload:, label:, occurredAt:)` → `SubmitOutcome`.
+  El id es el `Idempotency-Key`; kinds en `core/offline/offline_dispatcher.dart`; path params como `'@shipmentId'`.
+  Fotos: `photoUploadQueueProvider`/`enqueueDeliveryPhotoProvider` (kind `pod`/`damage`). Feedback: `showSubmitOutcome`.
+- **Cámara/escáner (seams para tests):** `scanCode(context, …)` → delega en `codeScannerProvider`;
+  fotos con `ref.read(photoPickerProvider)(maxWidth: kEvidencePhotoMaxWidth, imageQuality: kEvidencePhotoQuality)`;
+  previews `Image.file(cacheWidth: 800)`. Feedback de escaneo: `scanFeedbackFor(context, success:)`.
+- **Layout:** `AppBreakpoints` (`columnsFor`, `maxContentWidth` 720, `maxFormWidth` 520), `ResponsiveBody`,
+  `SliverAdaptiveCardRows`/`AdaptiveCardRows` (`core/layout/`). Nada de grillas con `childAspectRatio` fijo.
+- **Avisos:** `showSuccessSnack`/`showInfoSnack`/`showErrorSnack` (2 s / error 4 s); con botón fijo al pie pasar
+  `bottomClearance: kBottomActionClearance`. SnackBar propio → `buildAppSnackBar`.
+- **Mapa:** `const OsmTileLayer()` (nunca `buildOsmTileLayer()` en un build frecuente), tiles en disco;
+  precarga `prefetchRouteTiles(puntos)`; `openExternalNavigation(lat,lng)` para navegar.
+- **Push/monitoreo/versión:** `pushRegistrationProvider`, `pushTokenProvider`, `crashReporterProvider.breadcrumb('x.y')`
+  (sin datos personales), `VersionGate` ya cableado en `app.dart`.
+- **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
+  `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`). Impresora: `labelPrinterProvider`.
 
 ## Reglas
 
-1. **UI en español** (la usan choferes y personal de tienda). Código en inglés, comentarios en español.
-2. **Campo, no oficina:** botones de 56 px de alto como mínimo, flujos de pocos toques, legible al sol. El tema
-   (`core/theme/app_theme.dart`) ya fija esos tamaños: no sobreescribirlos por pantalla.
-3. **Offline-first:** un escaneo nunca espera a la red. Se guarda local con ID idempotente (ULID) y se
-   sincroniza después. La base local (Drift) se agrega con el primer flujo que la necesite.
-4. **API generada:** el cliente sale de `/dismac/logistics/openapi/v1.yaml`. No escribir DTOs de la API a mano.
-5. **Etiquetas:** la verificación Ed25519 está en `lib/core/labels/`. El mensaje canónico debe coincidir
-   byte a byte con el backend. `test/fixtures/label_test_vector.json` es copia exacta del vector del
-   backend: si el backend lo regenera, se copia y `test/core/labels/` tiene que seguir pasando.
-6. **Estado:** Riverpod 3 con `Notifier`/`NotifierProvider` (no `StateProvider`, que es legacy).
-   Navegación con go_router.
-7. **Tests:** lógica de `domain/` con unit tests sin Flutter; pantallas de lista/detalle con widget tests
-   usando `ProviderScope(overrides:)` para stubear los providers de datos (sin Dio real). Pantallas con
-   cámara/BT/GPS/mapa: smoke mínimo o se omiten documentando por qué.
-8. **Lints activos:** prefer_single_quotes, require_trailing_commas, always_declare_return_types,
-   avoid_dynamic_calls, prefer_final_locals, unawaited_futures, strict-casts.
-9. **Clean Architecture + CQRS + SRP** (ver `docs/clean-architecture.md`): **una clase por archivo**
-   (excepción: `StatefulWidget` + su `_State` van juntos). El API **solo** se toca en `data/datasources/`
-   (y se expone vía use case / repositorio): **nunca** `ref.read(logisticsApiProvider)` en `presentation/`.
-   Sub-widgets privados reutilizables → archivo público en `presentation/widgets/`. Reutilizar los helpers
-   de core (`app_snack.dart`, `offline/submit_feedback.dart`, `commands/command_feedback.dart`) en vez de
-   duplicar SnackBars.
-10. **`copyWith` con nullables:** si un `copyWith` debe poder volver un campo a `null`, usar centinela
-    (`static const Object _unset = Object();` + `identical(x, _unset) ? this.x : x as T?`). El patrón
-    `x ?? this.x` NO puede limpiar a null (bug ya visto en push/tracking).
+1. UI en español; código en inglés; comentarios en español. Botones ≥ 48 dp (principales 56), pocos toques, legible al sol.
+2. Riverpod 3 (`Notifier`, `.value`), go_router, Clean Architecture + CQRS, **una clase por archivo**.
+3. Cliente API generado (regla #5): nunca DTOs a mano. Regenerar: `scripts/regen_api_client.ps1` (ver abajo).
+4. Etiquetas Ed25519 offline en `lib/core/labels/`; `test/fixtures/label_test_vector.json` = copia del backend.
+5. `copyWith` que deba volver a `null`: centinela `_unset` (no `x ?? this.x`).
+6. **Flutter 3.32:** no existen `RadioGroup` (usar `groupValue`/`onChanged` por tile) ni
+   `DropdownButtonFormField(initialValue:)` (usar `value:`). Formatear con el `dart` de 3.32 (el de 3.13 formatea distinto y rompe CI).
+7. Toda pantalla nueva: test de widget + `testOnScreens` (`test/support/screen_sizes.dart`, 4 tamaños, `withTextScale(1.3)`).
+8. Pedidos al backend: doc en `docs/backend-requests/AAAA-MM-DD-tema.md` + fila en su `README.md` (no hay sesión
+   del backend para mensajear); si hay una abierta (`ListAgents`), mandarle el doc.
+
+## Regenerar el cliente API
+
+`powershell -ExecutionPolicy Bypass -File scripts/regen_api_client.ps1 [-Spec <v1.yaml>] [-DryRun|-Out <dir>]`
+(o `scripts/regen_api_client.sh`). Genera en una copia temporal con `C:\sdk\flutter` y `tool/api_gen/`
+(pubspec Dart 3.13), preprocesa el spec con la Python de WSL (la de Windows no tiene PyYAML), parcha
+`MetaSealed?`, corre build_runner, formatea con 3.32 y copia solo `lib/core/api/`. **Avisa si cambió la
+numeración de tipos anónimos `DataN`**: renombrar las referencias de la app/tests y los imports `models/dataN.dart`
+comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
 ## Definición de terminado
 
-`dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde, con números
-reportados. Si cambia la UI, describir qué se probó en emulador o dispositivo (o decir que no se pudo).
+`dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde (+ e2e si tocaste un flujo crítico),
+con números. Si cambió Android/iOS: una build (`make apk`). Reportar qué no se pudo probar (hardware real).
 
 ## Gotchas ya vistos
 
@@ -191,3 +173,24 @@ reportados. Si cambia la UI, describir qué se probó en emulador o dispositivo 
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |
 | `flutter test`: `Failed to load dynamic library 'libsqlite3.so'` (tests Drift) | WSL/Linux solo trae `libsqlite3.so.0`, no el symlink sin versión | Ya resuelto: `test/flutter_test_config.dart` redirige la carga a `.so.0` (no borrarlo). No requiere root |
 | Widget test de pantalla con providers: `Tried to modify a provider while the widget tree was building` | El harness/override modifica un provider dentro de build/initState, o un widget llama `.notifier.metodo()` en `build` | Mover la mutación fuera del ciclo de vida (p. ej. a `onPressed`) o arreglar el override del harness de test |
+| APK no compila por CameraX 1.6.1 / AGP 8.9.1, o CocoaPods choca con `GoogleDataTransport` | `mobile_scanner` > 7.2.0 (7.2.1+ sube CameraX; en iOS vuelve a MLKit) | Fijar `mobile_scanner: 7.2.0` EXACTO (ni `^` ni rango). No subirlo sin subir Flutter/AGP. Commit 9fdce63 |
+| "Tu sesión expiró" apenas se inicia sesión y vuelve al login | El 401-logout global (`_AuthInterceptor.onError` en `dio_client.dart`) se disparaba con el 401 de `/app/auth/me` que pide el login (degradación segura) | `_isAuthEndpoint` excluye `/login`, `/token` **y** `/auth/me`. Si "sesión expiró" sale al ABRIR la app, es token viejo restaurado (otro tema) |
+| La app calienta/cuelga "en todas las páginas" en dispositivo real (no en emulador/tests) | `ConnectivityNotifier` drenaba las colas offline en CADA evento de conectividad | Drenar solo en el flanco offline→online (`if (online && !wasOnline)`). Patrón: nada caro en callbacks que se disparan seguido |
+| Listeners de FCM duplicados / "Could not decrypt key" en secure storage / botón girando para siempre | Re-suscripción sin cancelar; clave corrupta tras reinstalar; `on ApiException` deja pasar otros errores | `push_service.initialize()` cancela `_subs` antes de re-suscribir; `AndroidOptions(resetOnError: true)` en `token_store.dart`; atrapar `on Object` en controllers de submit. Ver `.claude/memory/perf-rebrand-stability-fixes.md` |
+| Splash animado no se reproduce (imagen fija) o la app re-decodifica el Lottie en cada navegación | El splash estaba sin cablear, o el gate en el `builder` de MaterialApp se recreaba | `BrandSplash` vía `BootSplashGate` one-shot creado en `runApp` (en `main.dart`, NO en el `builder`); guarda `_started` porque Lottie puede re-invocar `onLoaded` |
+| `The current Dart SDK version is 3.8.0 … requires ^3.13.5` | Se usó otra versión o un pubspec ajeno | El proyecto es `sdk: ^3.8.0`; usar `C:\flutter` |
+| Finder `widgetWithText(FilledButton, …)` no encuentra | En 3.32 `FilledButton.icon`/`OutlinedButton.icon` son subclases privadas | `findButtonWithText<FilledButton>()` / `findButton<T>()` (`test/support/button_finders.dart`) |
+| Layout roto con un botón del tema en un `Row` | El tema da `minimumSize: Size.fromHeight(56)` (ancho mínimo infinito) | `Expanded` o `minimumSize: Size(48, 56)` |
+| "LayoutBuilder does not support returning intrinsic dimensions" | Scroll/LayoutBuilder dentro de `EmptyState` usado en `SliverFillRemaining(hasScrollBody:false)` | No tocar `EmptyState`; resolver el scroll en la pantalla |
+| Test pasa en Android y falla el fallback | En flutter_test `defaultTargetPlatform` es **Android** | `debugDefaultTargetPlatformOverride` en setUp/tearDown |
+| `signOut` cuelga / segundo logout ignorado en test | Secure storage sin mock responde fuera del reloj falso | `FlutterSecureStorage.setMockInitialValues({})` en setUp |
+| `LocaleDataException` en test | Falta inicializar fechas en español | `setUpAll(() => initializeDateFormatting('es'))` |
+| Overflow solo en teléfono chico / lista no construye el ítem | ListView perezoso en 800x600 o letra 1.3x | `tall: true` / `testOnScreens` y arreglar con `Expanded`/`Wrap`/ellipsis |
+| `pumpAndSettle timed out` | Spinner infinito | `pump()` + `pump(Duration)` |
+| "Tried to override a provider twice" | El arnés (`gateBase`) ya hace override | Override de un provider más específico (p. ej. `deliveryDriverFixProvider`) |
+| Zoom infinito / NaN en el mapa | `CameraFit.coordinates` con puntos iguales | `maxZoom: 18` |
+| `workmanager_apple` no compila (`foregroundServiceConfig`) | platform_interface 0.9.4 vs apple 0.9.4 | `dependency_overrides`: platform_interface 0.9.3, android 0.9.2 (ya en pubspec) |
+| Release no llega a `http://10.0.2.2` | `networkSecurityConfig` bloquea cleartext en release | Probar release con staging/production |
+| Script con `'\\n'`/rutas `C:\...` sale roto | La herramienta Bash colapsa `\\` en heredocs (`\f` → form feed) | Scripts/JSON con barras `/` o escribirlos con la herramienta Write |
+| PowerShell muestra "logÃ­stica" | `.ps1` en UTF-8 sin BOM lo lee como Windows-1252 | `.ps1` en ASCII; textos en archivos UTF-8 |
+| Muchos `ClientException … tile.openstreetmap.org` en tests | La capa de tiles intenta red en test | Ruido esperado; no falla el test |

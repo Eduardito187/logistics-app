@@ -17,10 +17,25 @@ class FleetDataSource {
   /// es chofer o no tiene tripulación armada para esa fecha; se normaliza a
   /// [ApiException] con status 404 (incluido el caso `data` nulo en un 200).
   Future<MyCrew> getMyCrew(DateTime date) async {
-    final api = _ref.read(logisticsApiProvider);
+    // El backend espera la fecha en `Y-m-d`; el cliente generado la serializa
+    // como datetime ISO (`toIso8601String`) y el backend responde 422. Hasta
+    // regenerar el cliente con el tipo correcto, se llama con Dio directo
+    // reusando el modelo generado para el parseo (no se escribe DTO a mano).
+    final dio = _ref.read(dioProvider);
+    final ymd =
+        '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
     try {
-      final response = await api.fleet.fleetGetMyCrew(date: date);
-      final crew = response.data;
+      final res = await dio.get<Map<String, Object?>>(
+        '/app/fleet/my-crew',
+        queryParameters: {'date': ymd},
+      );
+      final data = res.data;
+      if (data == null) {
+        throw const ApiException(status: 404, title: 'Sin asignación');
+      }
+      final crew = GetAppFleetMyCrewResponse.fromJson(data).data;
       if (crew == null) {
         throw const ApiException(status: 404, title: 'Sin asignación');
       }

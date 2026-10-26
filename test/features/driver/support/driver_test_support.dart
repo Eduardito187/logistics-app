@@ -205,6 +205,12 @@ class FakeLocationService extends LocationService {
     Duration timeout = const Duration(seconds: 6),
   }) async => fix;
 
+  /// Veces que una pantalla pidió calentar el GPS ([prefetch]).
+  int prefetchCount = 0;
+
+  @override
+  void prefetch() => prefetchCount++;
+
   @override
   Stream<GpsFix> stream({int distanceFilterMeters = 20}) =>
       const Stream.empty();
@@ -390,7 +396,7 @@ List<Object> gateBase({
     driverRouteProvider.overrideWith((ref) async => route ?? buildEmptyRoute()),
     // Sin precarga real de tiles (red/disco) en los tests.
     routeTilePrefetcherProvider.overrideWithValue(
-      prefetcher ?? (points) async {},
+      prefetcher ?? (points, {routeKey}) async {},
     ),
   ];
 }

@@ -41,7 +41,8 @@ abstract final class AppTheme {
     const ink = AppColors.hcInk;
     const white = Colors.white;
     const border = BorderSide(color: ink, width: highContrastBorder);
-    final base = _build(Brightness.light);
+    // Reusa el tema claro ya armado (no recalcula la paleta tonal).
+    final base = _light;
 
     // Sin grises claros ni tintes: todas las superficies son blancas y todo
     // lo que va encima es negro o un semántico oscuro.
@@ -164,16 +165,35 @@ abstract final class AppTheme {
     );
   }
 
+  static const PageTransitionsTheme _pageTransitions = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    },
+  );
+
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brand,
-      brightness: brightness,
-      // En oscuro el rojo pleno vibra; se usa un rojo claro legible como primario.
-      primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
-      secondary: AppColors.accent,
-      error: AppColors.danger,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.brand,
+          brightness: brightness,
+          // En oscuro el rojo pleno vibra; se usa un rojo claro legible como primario.
+          primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
+          secondary: AppColors.accent,
+          error: AppColors.danger,
+        ).copyWith(
+          // El seed rojo tiñe de rosa los roles neutros que M3 deriva (íconos
+          // funcionales, bordes, divisores, texto secundario). Se fijan a gris
+          // real: el rojo queda para marca y acción, no para la "tinta" de la UI.
+          onSurfaceVariant: isDark
+              ? const Color(0xFFC9C9C9)
+              : const Color(0xFF4A4A4A),
+          outline: isDark ? const Color(0xFF8E8E8E) : const Color(0xFF787878),
+          outlineVariant: isDark
+              ? const Color(0xFF3A3A3A)
+              : const Color(0xFFD9D9D9),
+        );
 
     // ThemeData.textTheme solo trae colores y pesos; los tamaños viven en la
     // geometría (typography.englishLike) que Flutter combina recién en
@@ -201,6 +221,17 @@ abstract final class AppTheme {
       // InkRipple en vez de InkSparkle (default M3 en Android): el sparkle usa
       // un shader que en GPUs de gama baja traba el primer toque.
       splashFactory: InkRipple.splashFactory,
+      // Íconos funcionales (acciones de AppBar, list tiles, íconos de tarjeta)
+      // en tinta neutra, nunca rojo: el rojo es marca/acción, no decoración de
+      // íconos. Botones y pastillas fijan su propio color y no se ven afectados.
+      iconTheme: IconThemeData(
+        color: isDark ? Colors.white : AppColors.nightBg,
+      ),
+      // Transiciones baratas: la default de Android (Zoom) captura la pantalla
+      // en una textura y en Skia compila shaders la primera vez (tirón al abrir
+      // cada pantalla en gama baja). FadeUpwards es un fundido + desplazamiento
+      // corto sin captura; en iOS se mantiene el deslizado nativo.
+      pageTransitionsTheme: _pageTransitions,
       textTheme: sizedText.apply(fontSizeFactor: 1.1),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -256,7 +287,11 @@ abstract final class AppTheme {
           minimumSize: const Size(minTouchTarget, minTouchTarget),
         ),
       ),
-      listTileTheme: const ListTileThemeData(minTileHeight: 56),
+      listTileTheme: ListTileThemeData(
+        minTileHeight: 56,
+        // Íconos de lista en tinta neutra (no el rojo tonal que M3 derivaría).
+        iconColor: isDark ? Colors.white : AppColors.nightBg,
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(primaryButtonHeight),

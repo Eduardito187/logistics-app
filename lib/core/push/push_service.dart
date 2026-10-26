@@ -93,6 +93,15 @@ class PushService {
       FirebaseMessaging.onBackgroundMessage(pushBackgroundHandler);
     }
 
+    // Idempotente: si initialize() se vuelve a llamar (p. ej. un reintento
+    // desde "Activar notificaciones" tras un fallo parcial del init anterior),
+    // se cancelan las suscripciones previas antes de recrearlas para no apilar
+    // listeners duplicados de FCM (cada mensaje se mostraría/navegaría N veces).
+    for (final sub in _subs) {
+      unawaited(sub.cancel());
+    }
+    _subs.clear();
+
     _subs
       ..add(_messaging.onRegistered.listen(onToken))
       ..add(_messaging.onUnregistered.listen((_) => onUnregistered?.call()))
@@ -221,10 +230,14 @@ class PushService {
   }
 
   @visibleForTesting
-  Future<void> dispose() async {
-    for (final sub in _subs) {
+  Future<void> dispose() => cancelSubscriptions();
+
+  /// Cancela los listeners de FCM registrados por [initialize].
+  Future<void> cancelSubscriptions() async {
+    final subs = List.of(_subs);
+    _subs.clear();
+    for (final sub in subs) {
       await sub.cancel();
     }
-    _subs.clear();
   }
 }

@@ -64,7 +64,13 @@ Future<void> initBackgroundSync() async {
       BackgroundSyncTasks.periodic,
       BackgroundSyncTasks.periodic,
       frequency: BackgroundSyncTasks.frequency,
-      constraints: Constraints(networkType: NetworkType.connected),
+      // La periódica es la red de seguridad: con batería baja espera (Android
+      // la corre apenas se cargue). La única que se programa al encolar sin
+      // red NO lleva esta restricción: lo recién escaneado sube igual.
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+        requiresBatteryNotLow: true,
+      ),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       backoffPolicy: BackoffPolicy.exponential,
       backoffPolicyDelay: const Duration(minutes: 1),

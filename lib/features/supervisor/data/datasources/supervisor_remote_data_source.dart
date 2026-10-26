@@ -13,6 +13,7 @@ import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/stops2.dart';
 import '../../../../core/api/models/strategy.dart';
+import '../../../../core/api/models/vehicle.dart';
 import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
 import '../../../../core/network/api_exception.dart';
@@ -56,6 +57,25 @@ class SupervisorRemoteDataSource {
     }
   }
 
+  /// Placa de cada camión de la flota, por id de vehículo. Los planes, la
+  /// telemetría y las alertas solo traen el id (UUID); la placa es lo que el
+  /// supervisor reconoce. Camiones sin placa no entran al mapa.
+  Future<Map<String, String>> getVehiclePlates() async {
+    try {
+      final response = await _ref
+          .read(logisticsApiProvider)
+          .fleet
+          .fleetListVehicles();
+      return {
+        for (final v in response.data ?? const <Vehicle>[])
+          if (v.plate != null && v.plate!.trim().isNotEmpty)
+            v.id: v.plate!.trim(),
+      };
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// Resumen diario de telemetría de un vehículo.
   Future<VehicleTelemetrySummary> getVehicleTelemetrySummary(
     String vehicleId,
@@ -88,12 +108,20 @@ class SupervisorRemoteDataSource {
   // --- Envíos (lectura) -----------------------------------------------------
 
   /// Lista de envíos (para el agregado del tablero).
+  ///
+  /// SIN paginar (`page`/`per_page` en null): el cliente generado manda por
+  /// defecto la página 1 de 50 y el tablero contaba como mucho 50 envíos (las
+  /// métricas quedaban mal en cuanto la operación pasaba de 50). Sin parámetros
+  /// de paginación el backend devuelve la colección completa en 1 request.
+  /// No hay filtro de servidor útil: el tablero necesita todos los estados y el
+  /// endpoint acepta uno solo. Lo ideal es un endpoint agregado
+  /// (`GET /app/dashboard?date=`), pedido al backend.
   Future<List<Shipment>> listShipments() async {
     try {
       final response = await _ref
           .read(logisticsApiProvider)
           .shipments
-          .listShipments();
+          .listShipments(page: null, perPage: null);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

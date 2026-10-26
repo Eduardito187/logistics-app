@@ -8,6 +8,7 @@ import '../auth/token_store.dart';
 import '../network/auth_headers.dart';
 import '../offline/sync_maintenance.dart';
 import 'sync_scheduler.dart';
+import 'ui_alive.dart';
 
 // Lógica de sincronización fuera de la UI, SIN depender de `workmanager` (así
 // se testea sin el plugin). El pegamento con el plugin está en
@@ -22,7 +23,13 @@ import 'sync_scheduler.dart';
 /// Nunca lanza.
 Future<bool> runBackgroundSync({
   ProviderContainer Function()? createContainer,
+  bool Function()? isUiInForeground,
 }) async {
+  // Con la app abierta y en primer plano, la propia UI ya drena la cola (al
+  // escanear y al volver la red): levantar un segundo motor Flutter acá
+  // costaría 20–40 MB y CPU en un teléfono de 1 GB para repetir lo mismo.
+  // Se reporta "pendiente" para que el sistema lo reintente más tarde.
+  if ((isUiInForeground ?? isUiAliveInForeground)()) return true;
   final container = (createContainer ?? ProviderContainer.new)();
   try {
     final store = container.read(tokenStoreProvider);

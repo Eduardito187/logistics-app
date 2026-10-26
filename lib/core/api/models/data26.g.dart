@@ -9,7 +9,7 @@ part of 'data26.dart';
 Data26 _$Data26FromJson(Map<String, dynamic> json) => Data26(
   source: OrderSource.fromJson(json['source'] as String),
   externalId: json['external_id'] as String,
-  status: Status8.fromJson(json['status'] as String),
+  status: Status9.fromJson(json['status'] as String),
 );
 
 Map<String, dynamic> _$Data26ToJson(Data26 instance) => <String, dynamic>{

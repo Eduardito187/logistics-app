@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
+import '../../../core/widgets/brand_loader.dart';
 
 /// Utilidades compartidas para las escrituras con red del feature de ajustes:
 /// ejecuta la acción mostrando un indicador de carga, convierte el error en un
@@ -25,7 +26,7 @@ Future<bool> runSettingsAction(
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(child: BrandLoader()),
     ),
   );
   try {

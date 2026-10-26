@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'signed_label.dart';
 import 'verification_result.dart';
@@ -59,17 +60,48 @@ class LabelVerifier {
   final Map<int, SimplePublicKey> _publicKeys;
   final Ed25519 _algorithm = Ed25519();
 
+  /// Resultados ya calculados por (clave, mensaje, firma). El escaneo continuo
+  /// relee la misma etiqueta varias veces (cámara apoyada sobre el bulto) y la
+  /// verificación Ed25519 en Dart puro cuesta milisegundos en el isolate de UI;
+  /// el resultado es determinista, así que se reusa. Tope chico (LRU simple).
+  final Map<String, VerificationResult> _cache = <String, VerificationResult>{};
+
+  /// Entradas máximas de [_cache] (~ una descarga grande de bultos).
+  static const int cacheSize = 256;
+
   Future<VerificationResult> verify(SignedLabel label) async {
     final publicKey = _publicKeys[label.payload.keyId];
     if (publicKey == null) {
       return VerificationResult.unknownKey;
     }
 
+    final message = label.payload.canonical();
+    final cacheKey =
+        '${label.payload.keyId}|${base64.encode(label.signature)}|$message';
+    final cached = _cache.remove(cacheKey);
+    if (cached != null) {
+      _cache[cacheKey] = cached; // vuelve al final (más reciente)
+      return cached;
+    }
+
     final ok = await _algorithm.verify(
-      utf8.encode(label.payload.canonical()),
+      utf8.encode(message),
       signature: Signature(label.signature, publicKey: publicKey),
     );
 
-    return ok ? VerificationResult.valid : VerificationResult.invalidSignature;
+    final result = ok
+        ? VerificationResult.valid
+        : VerificationResult.invalidSignature;
+    if (_cache.length >= cacheSize) _cache.remove(_cache.keys.first);
+    _cache[cacheKey] = result;
+    return result;
   }
 }
+
+/// Vacía la caché de resultados de [verifier] (tests y benchmark).
+@visibleForTesting
+void clearLabelVerifierCache(LabelVerifier verifier) => verifier._cache.clear();
+
+/// Entradas en la caché de resultados de [verifier] (tests).
+@visibleForTesting
+int labelVerifierCacheLength(LabelVerifier verifier) => verifier._cache.length;
