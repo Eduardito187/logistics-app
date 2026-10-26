@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,15 +7,33 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+import '../../../core/location/location_service.dart';
+import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
-import '../../../core/offline/photo_upload_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/section_card.dart';
+import '../data/datasources/signature_file_store.dart';
+import '../domain/usecases/enqueue_delivery_photo.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
+import 'signature_pad_screen.dart';
+import 'widgets/evidence_photo_preview.dart';
 
-/// Prueba de entrega (POD): bulto + confirmación del cliente + foto + GPS.
-/// El registro es offline-first; la foto se sube cuando hay red.
+/// Marcador de `confirmation` cuando el cliente firma en pantalla (la imagen
+/// de la firma viaja aparte como evidencia por la cola de fotos).
+const String kDigitalSignatureConfirmation = 'FIRMA_DIGITAL';
+
+/// `kind` con que se sube la firma a `/app/deliveries/photos`. El contrato hoy
+/// solo acepta `pod` y `damage`; se usa `pod` (lo más cercano) hasta que el
+/// backend agregue `signature` (docs/backend-requests/2026-10-16-firma-cliente.md).
+const String kSignatureEvidenceKind = 'pod';
+
+/// Prueba de entrega (POD): bulto + confirmación del cliente (QR o firma en
+/// pantalla) + foto obligatoria + GPS. El registro es offline-first; la foto y
+/// la firma se suben aparte, por la cola de fotos.
 class PodScreen extends ConsumerStatefulWidget {
   const PodScreen({super.key, required this.stop});
 
@@ -28,94 +47,123 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   String? _unitId;
   String? _confirmation;
   XFile? _photo;
+
+  /// PNG de la firma del cliente (solo si confirmó firmando en pantalla).
+  Uint8List? _signature;
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    // GPS caliente al entrar: al registrar, el fix ya está y no se espera.
+    ref.read(locationServiceProvider).prefetch();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ready = _unitId != null && _confirmation != null;
+    // La foto de la entrega es obligatoria (evidencia ante reclamos).
+    final ready = _unitId != null && _confirmation != null && _photo != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Prueba de entrega')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: '1. Bulto entregado',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_unitId != null)
-                  Text('Bulto: $_unitId')
-                else
-                  const Text('Escanea el bulto a entregar.'),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _scanUnit,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: Text(
-                    _unitId == null ? 'Escanear bulto' : 'Reescanear',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '2. Confirmación del cliente',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_confirmation != null)
-                  Text('Confirmación: $_confirmation')
-                else
-                  const Text('Escanea el QR del cliente o registra firma.'),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _scanConfirmation,
-                  icon: const Icon(Icons.qr_code),
-                  label: const Text('Escanear QR del cliente'),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => setState(() => _confirmation = 'FIRMA_PAPEL'),
-                  icon: const Icon(Icons.draw),
-                  label: const Text('Firma en papel (sin QR)'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '3. Foto de entrega',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_photo != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(_photo!.path),
-                      height: 180,
-                      fit: BoxFit.cover,
+      body: ResponsiveBody(
+        maxWidth: AppBreakpoints.maxFormWidth,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SectionCard(
+              title: '1. Bulto entregado',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_unitId != null)
+                    Text('Bulto: $_unitId')
+                  else
+                    const Text('Escanea el bulto a entregar.'),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _scanUnit,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: Text(
+                      _unitId == null ? 'Escanear bulto' : 'Reescanear',
                     ),
                   ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _takePhoto,
-                  icon: const Icon(Icons.camera_alt),
-                  label: Text(_photo == null ? 'Tomar foto' : 'Volver a tomar'),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: ready && !_busy ? _register : null,
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Registrar entrega'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            SectionCard(
+              title: '2. Confirmación del cliente',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_signature != null) ...[
+                    const Text('Firmado por el cliente.'),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: SignaturePreview(
+                        key: const ValueKey('signature-preview'),
+                        png: _signature!,
+                      ),
+                    ),
+                  ] else if (_confirmation != null)
+                    Text('Confirmación: $_confirmation')
+                  else
+                    const Text('Escanea el QR del cliente o pedile que firme.'),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _scanConfirmation,
+                    icon: const Icon(Icons.qr_code),
+                    label: const Text('Escanear QR del cliente'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _sign,
+                    icon: const Icon(Icons.draw),
+                    label: Text(
+                      _signature == null
+                          ? 'Firma del cliente'
+                          : 'Volver a firmar',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: '3. Foto de entrega (obligatoria)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Decodificada chica y liberada del caché al salir.
+                  if (_photo != null) EvidencePhotoPreview(path: _photo!.path),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _takePhoto,
+                    icon: const Icon(Icons.camera_alt),
+                    label: Text(
+                      _photo == null ? 'Tomar foto' : 'Volver a tomar',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: ready && !_busy ? _register : null,
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Registrar entrega'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -132,30 +180,69 @@ class _PodScreenState extends ConsumerState<PodScreen> {
       helper: 'Apunta al QR de confirmación del cliente',
       formats: const [BarcodeFormat.qrCode],
     );
-    if (code != null && mounted) setState(() => _confirmation = code);
+    if (code != null && mounted) {
+      setState(() {
+        _confirmation = code;
+        _signature = null; // el QR reemplaza a una firma previa
+      });
+    }
+  }
+
+  Future<void> _sign() async {
+    final png = await captureCustomerSignature(context);
+    if (png != null && mounted) {
+      setState(() {
+        _signature = png;
+        _confirmation = kDigitalSignatureConfirmation;
+      });
+    }
   }
 
   Future<void> _takePhoto() async {
-    final photo = await ImagePicker().pickImage(source: ImageSource.camera);
+    // Foto reducida (ancho y calidad acotados): en teléfonos de 1 GB una foto
+    // de 12 MP a resolución completa ocupa ~48 MB al decodificarse.
+    final photo = await ref.read(photoPickerProvider)(
+      maxWidth: kEvidencePhotoMaxWidth,
+      imageQuality: kEvidencePhotoQuality,
+    );
     if (photo != null && mounted) setState(() => _photo = photo);
   }
 
   Future<void> _register() async {
     setState(() => _busy = true);
     try {
-      final fix = await currentFix(ref);
-      // La foto se encola aparte y se sube idempotentemente (offline-first); el
-      // backend la liga al envío. El POD no espera a la subida.
+      // El GPS se pide en paralelo con el encolado de la foto (no en serie).
+      final fixFuture = currentFix(ref);
+      // La foto (y la firma, si la hay) se encolan aparte y se suben
+      // idempotentemente (offline-first); el backend las liga al envío. El POD
+      // no espera a la subida.
+      final enqueue = ref.read(enqueueDeliveryPhotoProvider);
       final photo = _photo;
       if (photo != null) {
-        await ref
-            .read(photoUploadQueueProvider)
-            .enqueue(
-              shipmentId: widget.stop.shipmentId,
-              filePath: photo.path,
-              kind: 'pod',
-            );
+        await enqueue(
+          shipmentId: widget.stop.shipmentId,
+          filePath: photo.path,
+          kind: 'pod',
+        );
       }
+      final signature = _signature;
+      if (signature != null) {
+        final store = ref.read(signatureFileStoreProvider);
+        try {
+          final path = await store.save(signature);
+          await enqueue(
+            shipmentId: widget.stop.shipmentId,
+            filePath: path,
+            kind: kSignatureEvidenceKind,
+          );
+          // La cola ya copió el archivo a su directorio persistente.
+          await store.discard(path);
+        } on FileSystemException {
+          // Sin disco para la imagen no se frena la entrega: el POD viaja
+          // igual con el marcador FIRMA_DIGITAL.
+        }
+      }
+      final fix = await fixFuture;
       if (!mounted) return;
       final now = DateTime.now();
       final outcome = await ref
@@ -177,7 +264,14 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           );
       if (!mounted) return;
       showSubmitOutcome(context, outcome);
-      if (outcome != SubmitOutcome.failed) Navigator.of(context).pop();
+      if (outcome != SubmitOutcome.failed) {
+        // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
+        // entrega en curso pasa a la siguiente aunque no haya señal).
+        ref
+            .read(locallySettledStopsProvider.notifier)
+            .settle(widget.stop.id, DriverRouteStopStatus.completed);
+        Navigator.of(context).pop();
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -19,7 +19,11 @@ Future<void> _pump(
     ProviderScope(
       overrides: [storeShipmentsProvider.overrideWith((ref) => load())],
       child: MaterialApp(
-        home: Scaffold(body: ShipmentsSection(node: storeNode())),
+        home: Scaffold(
+          body: CustomScrollView(
+            slivers: [ShipmentsSection(node: storeNode())],
+          ),
+        ),
       ),
     ),
   );

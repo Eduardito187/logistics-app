@@ -6,13 +6,36 @@ import 'location_gate_status.dart';
 import 'location_required_view.dart';
 import 'location_service.dart';
 
+/// Resultado del permiso de ubicación "siempre" verificado en esta sesión:
+/// `null` = todavía no se verificó, `true` = concedido, `false` = denegado.
+///
+/// NO es autoDispose a propósito: una vez concedido, las pantallas siguientes
+/// del chofer no vuelven a preguntar a la plataforma ni muestran el spinner
+/// (antes cada navegación sumaba 3 llamadas de plataforma y demoraba la ruta).
+class BackgroundLocationPermissionNotifier extends Notifier<bool?> {
+  @override
+  bool? build() => null;
+
+  // ignore: use_setters_to_change_properties
+  void set(bool granted) => state = granted;
+}
+
+/// Caché de sesión del permiso de ubicación "siempre" (ver
+/// [BackgroundLocationPermissionNotifier]).
+final backgroundLocationPermissionProvider =
+    NotifierProvider<BackgroundLocationPermissionNotifier, bool?>(
+      BackgroundLocationPermissionNotifier.new,
+    );
+
 /// Gate que exige el permiso de ubicación "Permitir siempre" (segundo plano)
 /// antes de dejar operar el camión. El rastreo GPS es obligatorio: sin este
 /// permiso no hay forma de saltear el flujo ni de trabajar sin ubicación.
 ///
-/// Mientras verifica muestra un spinner; si el permiso está concedido muestra
-/// [child]; si falta, bloquea con una pantalla clara que abre los ajustes del
-/// sistema ([ph.openAppSettings]) y permite reintentar al volver.
+/// Si en esta sesión el permiso ya se verificó concedido
+/// ([backgroundLocationPermissionProvider]) muestra [child] al instante, sin
+/// spinner. Si no, verifica (spinner); si falta, bloquea con una pantalla clara
+/// que abre los ajustes del sistema ([ph.openAppSettings]) y re-verifica al
+/// volver (AppLifecycle `resumed`) o con "Reintentar".
 class LocationPermissionGate extends ConsumerStatefulWidget {
   const LocationPermissionGate({super.key, required this.child});
 
@@ -31,7 +54,11 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _check();
+    if (ref.read(backgroundLocationPermissionProvider) == true) {
+      _status = LocationGateStatus.granted;
+    } else {
+      _check();
+    }
   }
 
   @override
@@ -43,7 +70,7 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Al volver de los ajustes del sistema, re-verificar el permiso sin que el
-    // chofer tenga que tocar "Reintentar".
+    // chofer tenga que tocar "Reintentar". Concedido no se re-chequea.
     if (state == AppLifecycleState.resumed &&
         _status == LocationGateStatus.denied) {
       _check();
@@ -51,11 +78,14 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
   }
 
   Future<void> _check() async {
-    setState(() => _status = LocationGateStatus.checking);
+    if (mounted && _status != LocationGateStatus.checking) {
+      setState(() => _status = LocationGateStatus.checking);
+    }
     final granted = await ref
         .read(locationServiceProvider)
         .ensureBackgroundPermission();
     if (!mounted) return;
+    ref.read(backgroundLocationPermissionProvider.notifier).set(granted);
     setState(
       () => _status = granted
           ? LocationGateStatus.granted

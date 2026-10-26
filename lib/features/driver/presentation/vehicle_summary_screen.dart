@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/section_card.dart';
@@ -20,20 +22,22 @@ class VehicleSummaryScreen extends ConsumerWidget {
       title: 'Resumen del vehículo',
       builder: (context, vehicleId) {
         final cost = ref.watch(vehicleCostSummaryProvider);
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectionCard(
-              title: 'Costos (últimos 30 días)',
-              child: AsyncValueView<VehicleCostSummary>(
-                value: cost,
-                onRetry: () => ref.invalidate(vehicleCostSummaryProvider),
-                data: CostGrid.new,
+        return ResponsiveBody(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SectionCard(
+                title: 'Costos (últimos 30 días)',
+                child: AsyncValueView<VehicleCostSummary>(
+                  value: cost,
+                  onRetry: () => ref.invalidate(vehicleCostSummaryProvider),
+                  data: CostGrid.new,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const UtilizationCard(),
-          ],
+              const SizedBox(height: 16),
+              const UtilizationCard(),
+            ],
+          ),
         );
       },
     );

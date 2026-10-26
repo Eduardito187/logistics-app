@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/location_permission_gate.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/widgets/brand_loader.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/driver_tracking_autostart.dart';
 import 'widgets/assignment_header.dart';
@@ -26,25 +27,35 @@ class DriverVehicleGate extends ConsumerWidget {
     required this.title,
     required this.builder,
     this.actions,
+    this.immersive = false,
   });
 
   final String title;
   final Widget Function(BuildContext context, String vehicleId) builder;
   final List<Widget>? actions;
 
+  /// Pantalla a pantalla completa (p. ej. entrega en curso sobre el mapa): sin
+  /// AppBar ni cabecera de asignación cuando hay datos. Los estados de carga,
+  /// error y permiso siguen mostrando la AppBar para poder volver.
+  final bool immersive;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final crew = ref.watch(myCrewProvider);
+    if (crew.hasValue) {
+      // La ruta se pide en cuanto hay vehículo, EN PARALELO al chequeo del
+      // permiso de ubicación (que solo condiciona el GPS/mapa, no los datos):
+      // cuando el permiso responde, la ruta ya está llegando o en caché.
+      ref.listen(driverRouteProvider, (_, _) {});
+    }
+    final bare = immersive && crew.hasValue;
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
+      appBar: bare ? null : AppBar(title: Text(title), actions: actions),
       body: crew.when(
         skipLoadingOnReload: true,
         skipLoadingOnRefresh: true,
         loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(48),
-            child: CircularProgressIndicator(),
-          ),
+          child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
         ),
         error: (error, _) => NoAssignment(
           message: error is ApiException && error.isConnectionError
@@ -54,13 +65,15 @@ class DriverVehicleGate extends ConsumerWidget {
         ),
         data: (myCrew) => LocationPermissionGate(
           child: DriverTrackingAutostart(
-            child: Column(
-              children: [
-                AssignmentHeader(crew: myCrew),
-                const Divider(height: 1),
-                Expanded(child: builder(context, myCrew.vehicle.id)),
-              ],
-            ),
+            child: immersive
+                ? builder(context, myCrew.vehicle.id)
+                : Column(
+                    children: [
+                      AssignmentHeader(crew: myCrew),
+                      const Divider(height: 1),
+                      Expanded(child: builder(context, myCrew.vehicle.id)),
+                    ],
+                  ),
           ),
         ),
       ),

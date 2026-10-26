@@ -5,6 +5,7 @@ import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/preparation_scan_request.dart';
 import '../../../../core/api/models/reprint_labels_request.dart';
 import '../../../../core/api/models/shipment.dart';
+import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/offline/offline_queue.dart';
 import '../../domain/repositories/picking_repository.dart';
 import '../datasources/picking_remote_data_source.dart';
@@ -19,7 +20,8 @@ class PickingRepositoryImpl implements PickingRepository {
   final OfflineQueue _queue;
 
   @override
-  Future<List<Shipment>> listShipments() => _remote.listShipments();
+  Future<List<Shipment>> listShipments({ShipmentStatus? status}) =>
+      _remote.listShipments(status: status);
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) =>

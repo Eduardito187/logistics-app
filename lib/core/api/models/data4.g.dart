@@ -8,16 +8,12 @@ part of 'data4.dart';
 
 Data4 _$Data4FromJson(Map<String, dynamic> json) => Data4(
   status: json['status'] as String?,
-  vehicleId: json['vehicle_id'] as String?,
-  driverId: json['driver_id'] as String?,
-  performedOn: json['performed_on'] == null
-      ? null
-      : DateTime.parse(json['performed_on'] as String),
+  helperId: json['helper_id'] as String?,
+  active: json['active'] as bool?,
 );
 
 Map<String, dynamic> _$Data4ToJson(Data4 instance) => <String, dynamic>{
   'status': instance.status,
-  'vehicle_id': instance.vehicleId,
-  'driver_id': instance.driverId,
-  'performed_on': instance.performedOn?.toIso8601String(),
+  'helper_id': instance.helperId,
+  'active': instance.active,
 };

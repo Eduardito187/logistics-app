@@ -26,6 +26,7 @@ class _ShipmentsClient implements ShipmentsClient {
     int? perPage = 50,
     ShipmentStatus? status,
     OrderSource? source,
+    String? destinationNodeId,
     String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
@@ -34,6 +35,7 @@ class _ShipmentsClient implements ShipmentsClient {
       r'per_page': perPage,
       r'status': status?.toJson(),
       r'source': source?.toJson(),
+      r'destination_node_id': destinationNodeId,
       r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);

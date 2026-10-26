@@ -41,8 +41,8 @@ void main() {
         messageType: MessageType.enRoute,
         status: NotificationStatus.queued,
         currentChannel: Channel.telegram,
-        channels: const [Channel.pushNtfy, Channel.email],
-        attempts: const {'PUSH_NTFY': 2},
+        channels: const [Channel.fcm, Channel.email],
+        attempts: const {'FCM': 2},
       ),
     );
 
@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Telegram'), findsOneWidget); // canal actual
     // Cascada: push con 2 intentos, email con 0 (ausente en el mapa → 0).
     expect(find.text('Cascada de canales'), findsOneWidget);
-    expect(find.text('Push (ntfy)'), findsOneWidget);
+    expect(find.text('Push (Firebase)'), findsOneWidget);
     expect(find.text('2 intento(s)'), findsOneWidget);
     expect(find.text('Correo'), findsOneWidget);
     expect(find.text('0 intento(s)'), findsOneWidget);

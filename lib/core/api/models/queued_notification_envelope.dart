@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data24.dart';
+import 'data25.dart';
 
 part 'queued_notification_envelope.g.dart';
 
@@ -15,7 +15,7 @@ class QueuedNotificationEnvelope {
   factory QueuedNotificationEnvelope.fromJson(Map<String, Object?> json) =>
       _$QueuedNotificationEnvelopeFromJson(json);
 
-  final Data24 data;
+  final Data25 data;
 
   Map<String, Object?> toJson() => _$QueuedNotificationEnvelopeToJson(this);
 }

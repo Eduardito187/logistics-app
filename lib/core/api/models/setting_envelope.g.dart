@@ -8,7 +8,7 @@ part of 'setting_envelope.dart';
 
 SettingEnvelope _$SettingEnvelopeFromJson(Map<String, dynamic> json) =>
     SettingEnvelope(
-      data: Data27.fromJson(json['data'] as Map<String, dynamic>),
+      data: Data28.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$SettingEnvelopeToJson(SettingEnvelope instance) =>

@@ -2,7 +2,7 @@
 
 ## Qué es
 
-La app interna de la plataforma logística. Una sola app; la vista depende del rol con el que se inicia
+DisTrack, la app interna de la plataforma logística. Una sola app; la vista depende del rol con el que se inicia
 sesión. Se distribuye por Managed Google Play (app privada), no en la tienda pública.
 
 | Rol | Qué hace en la app |

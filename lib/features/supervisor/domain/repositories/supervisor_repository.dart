@@ -1,6 +1,6 @@
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data6.dart';
+import '../../../../core/api/models/data7.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
@@ -21,6 +21,9 @@ abstract interface class SupervisorRepository {
   /// Resumen diario de telemetría de un vehículo.
   Future<VehicleTelemetrySummary> getVehicleTelemetrySummary(String vehicleId);
 
+  /// Placa de cada camión de la flota, por id de vehículo.
+  Future<Map<String, String>> getVehiclePlates();
+
   /// Reconoce una alerta de telemetría (requiere red).
   Future<void> acknowledgeTelemetryAlert(String alertId);
 
@@ -34,7 +37,7 @@ abstract interface class SupervisorRepository {
   Future<Plan> getPlan(String planId);
 
   /// ETA por parada de un plan.
-  Future<Data6> getPlanEta(String planId);
+  Future<Data7> getPlanEta(String planId);
 
   /// Estado y resultado de la corrida automática del día (y modo).
   Future<AutoPlanRun> getDailyPlanRun({

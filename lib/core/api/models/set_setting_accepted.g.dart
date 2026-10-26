@@ -8,7 +8,7 @@ part of 'set_setting_accepted.dart';
 
 SetSettingAccepted _$SetSettingAcceptedFromJson(Map<String, dynamic> json) =>
     SetSettingAccepted(
-      data: Data26.fromJson(json['data'] as Map<String, dynamic>),
+      data: Data27.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$SetSettingAcceptedToJson(SetSettingAccepted instance) =>

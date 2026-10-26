@@ -12,7 +12,8 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   final NotificationsRemoteDataSource _remote;
 
   @override
-  Future<List<NotificationView>> list() => _remote.listNotifications();
+  Future<List<NotificationView>> list({int? limit}) =>
+      _remote.listNotifications(limit: limit);
 
   @override
   Future<NotificationView> get(String id) => _remote.getNotification(id);

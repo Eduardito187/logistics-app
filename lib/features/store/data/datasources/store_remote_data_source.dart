@@ -41,12 +41,16 @@ class StoreRemoteDataSource {
   }
 
   /// Envíos visibles para recepción / entrega en mostrador.
-  Future<List<Shipment>> listShipments() async {
+  ///
+  /// Con [destinationNodeId] el filtro va en el servidor
+  /// (`destination_node_id`): la tienda solo baja los envíos que llegan a su
+  /// nodo (antes bajaba los primeros 50 de TODAS las tiendas).
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) async {
     try {
       final response = await _ref
           .read(logisticsApiProvider)
           .shipments
-          .listShipments();
+          .listShipments(destinationNodeId: destinationNodeId);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

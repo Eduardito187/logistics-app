@@ -4,13 +4,11 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-/// Delivery channel; the cascade walks them in cost order (all open-source transports).
+/// Delivery channel; the cascade walks them in cost order (FCM push, then Telegram, Email, SMS).
 @JsonEnum()
 enum Channel {
-  @JsonValue('PUSH_NTFY')
-  pushNtfy('PUSH_NTFY'),
-  @JsonValue('WEB_PUSH')
-  webPush('WEB_PUSH'),
+  @JsonValue('FCM')
+  fcm('FCM'),
   @JsonValue('TELEGRAM')
   telegram('TELEGRAM'),
   @JsonValue('EMAIL')

@@ -6,8 +6,8 @@ import '../../../../core/push/push_status.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 
-/// Indicador del estado de push (UnifiedPush/ntfy) con el botón para activar
-/// las notificaciones. Muestra distribuidor y endpoint cuando hay registro.
+/// Indicador del estado de push (Firebase Cloud Messaging) con el botón para
+/// activar las notificaciones.
 class PushStatusCard extends ConsumerWidget {
   const PushStatusCard({super.key});
 
@@ -19,26 +19,25 @@ class PushStatusCard extends ConsumerWidget {
 
     return SectionCard(
       title: 'Notificaciones push',
-      trailing: StatusPill(push.state.label, tone: push.state.tone),
+      // Flexible + scaleDown: con letra grande en teléfono chico el estado
+      // ("No disponible") no le quita todo el ancho al título ni desborda.
+      trailing: Flexible(
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: StatusPill(push.state.label, tone: push.state.tone),
+          ),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (push.distributor != null) ...[
+          if (push.isRegistered) ...[
             const SizedBox(height: 4),
             Text(
-              'Distribuidor: ${push.distributor}',
+              'Recibirás avisos de la operación en este teléfono.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-          ],
-          if (push.endpoint != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Endpoint: ${push.endpoint}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
               ),
             ),
@@ -52,7 +51,9 @@ class PushStatusCard extends ConsumerWidget {
               ),
             ),
           ],
-          if (!push.isRegistered) ...[
+          // Sin credenciales de Firebase no hay nada que activar.
+          if (!push.isRegistered &&
+              push.state != PushRegistrationState.unavailable) ...[
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: isBusy
@@ -83,9 +84,8 @@ extension _PushRegistrationStateLabel on PushRegistrationState {
     PushRegistrationState.idle => 'Inactivo',
     PushRegistrationState.registering => 'Registrando',
     PushRegistrationState.registered => 'Activo',
-    PushRegistrationState.unavailable => 'Sin distribuidor',
+    PushRegistrationState.unavailable => 'No disponible',
     PushRegistrationState.failed => 'Error',
-    PushRegistrationState.unregistered => 'Dado de baja',
   };
 
   PillTone get tone => switch (this) {
@@ -94,6 +94,5 @@ extension _PushRegistrationStateLabel on PushRegistrationState {
     PushRegistrationState.registered => PillTone.success,
     PushRegistrationState.unavailable => PillTone.warning,
     PushRegistrationState.failed => PillTone.danger,
-    PushRegistrationState.unregistered => PillTone.neutral,
   };
 }

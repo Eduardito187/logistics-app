@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/button_spinner.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
+import '../../../../support/button_finders.dart';
 
 // Tarjeta de progreso del armado: contadores preparadas/pendientes, el carril
 // asignado y las acciones a nivel pedido.
@@ -18,6 +19,7 @@ Future<_Taps> _pump(
   required int total,
   String? lane,
   bool busy = false,
+  bool reprinting = false,
 }) async {
   final taps = _Taps();
   await tester.pumpWidget(
@@ -29,6 +31,7 @@ Future<_Taps> _pump(
             total: total,
             lane: lane,
             busy: busy,
+            reprinting: reprinting,
             onAssign: () => taps.assign++,
             onPrintAll: () => taps.printAll++,
             onReprintBatch: () => taps.reprint++,
@@ -101,10 +104,10 @@ void main() {
     expect(find.byType(ButtonSpinner), findsOneWidget);
 
     final printBtn = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Imprimir todas las etiquetas'),
+      findButtonWithText<OutlinedButton>('Imprimir todas las etiquetas'),
     );
     final reprintBtn = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Reimprimir lote'),
+      findButtonWithText<OutlinedButton>('Reimprimir lote'),
     );
     expect(printBtn.onPressed, isNull);
     expect(reprintBtn.onPressed, isNull);
@@ -114,4 +117,35 @@ void main() {
     await tester.pump();
     expect(taps.assign, 1);
   });
+
+  testWidgets(
+    'reprinting: el spinner va en "Reimprimir lote", no en imprimir',
+    (tester) async {
+      await _pump(
+        tester,
+        prepared: 0,
+        total: 3,
+        lane: null,
+        busy: true,
+        reprinting: true,
+      );
+
+      expect(
+        find.descendant(
+          of: findButtonWithText<OutlinedButton>('Reimprimir lote'),
+          matching: find.byType(ButtonSpinner),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: findButtonWithText<OutlinedButton>(
+            'Imprimir todas las etiquetas',
+          ),
+          matching: find.byType(ButtonSpinner),
+        ),
+        findsNothing,
+      );
+    },
+  );
 }

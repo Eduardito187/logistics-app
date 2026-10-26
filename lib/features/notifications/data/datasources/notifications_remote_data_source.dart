@@ -14,11 +14,14 @@ class NotificationsRemoteDataSource {
 
   final Ref _ref;
 
-  /// GET `/app/notifications`. Lista global de notificaciones de la operación.
-  Future<List<NotificationView>> listNotifications() async {
+  /// GET `/app/notifications`. Lista global de notificaciones de la operación,
+  /// las [limit] más recientes (`null` = default del backend, 100).
+  Future<List<NotificationView>> listNotifications({int? limit}) async {
     try {
       final api = _ref.read(logisticsApiProvider);
-      final response = await api.notifications.appListNotifications();
+      final response = limit == null
+          ? await api.notifications.appListNotifications()
+          : await api.notifications.appListNotifications(limit: limit);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

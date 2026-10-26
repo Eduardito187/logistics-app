@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -63,6 +64,12 @@ class _FakeApi extends LogisticsApi {
   final ExecutionClient _execution;
   @override
   ExecutionClient get execution => _execution;
+}
+
+/// Conectividad conocida "sin red" (sin tocar el plugin).
+class _OfflineConnectivity extends ConnectivityNotifier {
+  @override
+  Future<bool> build() async => false;
 }
 
 // --- Fábricas de errores ---------------------------------------------------
@@ -259,6 +266,163 @@ void main() {
           .catchError((_) => SubmitOutcome.failed);
       expect(await rows(), isEmpty);
     });
+  });
+
+  group('submit — nunca espera a la red (kSubmitWaitBudget)', () {
+    test('el presupuesto por defecto es 1,5 s', () {
+      expect(kSubmitWaitBudget, const Duration(milliseconds: 1500));
+    });
+
+    test(
+      'POST lento: devuelve queued al vencer el presupuesto y el MISMO intento termina la fila',
+      () async {
+        final release = Completer<void>();
+        build(_FakeExecution(const [], onCall: () => release.future));
+        setOfflineQueueSubmitWaitBudget(
+          queue,
+          const Duration(milliseconds: 50),
+        );
+
+        final watch = Stopwatch()..start();
+        final outcome = await submitScan(key: 'SLOW');
+        watch.stop();
+
+        expect(outcome, SubmitOutcome.queued);
+        expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
+        expect((await rows()).single.status, 'pending');
+        expect(offlineQueueIsInFlight(queue, 'SLOW'), isTrue);
+
+        release.complete();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        // El envío en segundo plano subió y borró la fila; un solo POST.
+        expect(await rows(), isEmpty);
+        expect(exec.calls, 1);
+        expect(offlineQueueIsInFlight(queue, 'SLOW'), isFalse);
+      },
+    );
+
+    test('drain durante el envío en vuelo no reenvía la fila', () async {
+      final release = Completer<void>();
+      build(_FakeExecution(const [], onCall: () => release.future));
+      setOfflineQueueSubmitWaitBudget(queue, const Duration(milliseconds: 20));
+
+      expect(await submitScan(key: 'K1'), SubmitOutcome.queued);
+      await queue.drain();
+      await queue.drain();
+      expect(exec.calls, 1);
+
+      release.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(exec.calls, 1);
+      expect(await rows(), isEmpty);
+    });
+
+    test('drain sí envía las otras filas pendientes', () async {
+      final release = Completer<void>();
+      var first = true;
+      build(
+        _FakeExecution(
+          const [],
+          onCall: () {
+            if (first) {
+              first = false;
+              return release.future;
+            }
+            return Future<void>.value();
+          },
+        ),
+      );
+      // Fila vieja pendiente (de antes, sin red).
+      await db.enqueue(
+        OutboxActionsCompanion.insert(
+          id: 'A-OLD',
+          kind: 'recordLoadScan',
+          payload: jsonEncode({..._scanPayload(), 'idempotency_key': 'A-OLD'}),
+          occurredAt: DateTime(2026, 10, 15),
+        ),
+      );
+      setOfflineQueueSubmitWaitBudget(queue, const Duration(milliseconds: 20));
+
+      expect(await submitScan(key: 'Z-NEW'), SubmitOutcome.queued);
+      await queue.drain();
+      // Se subió la vieja; la nueva sigue en vuelo, sin reenviarse.
+      expect((await rows()).map((r) => r.id), ['Z-NEW']);
+      expect(exec.calls, 2);
+
+      release.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(await rows(), isEmpty);
+      expect(exec.calls, 2);
+    });
+
+    test(
+      'reenvío de la misma key mientras está en vuelo: sin 2.º POST',
+      () async {
+        final release = Completer<void>();
+        build(_FakeExecution(const [], onCall: () => release.future));
+        setOfflineQueueSubmitWaitBudget(
+          queue,
+          const Duration(milliseconds: 20),
+        );
+
+        expect(await submitScan(key: 'DUP'), SubmitOutcome.queued);
+        expect(await submitScan(key: 'DUP'), SubmitOutcome.queued);
+        release.complete();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(exec.calls, 1);
+      },
+    );
+
+    test(
+      'rechazo (4xx) después del presupuesto: la fila queda failed',
+      () async {
+        final release = Completer<void>();
+        build(_FakeExecution([_httpError(422)], onCall: () => release.future));
+        setOfflineQueueSubmitWaitBudget(
+          queue,
+          const Duration(milliseconds: 20),
+        );
+
+        expect(await submitScan(key: 'BAD'), SubmitOutcome.queued);
+        release.complete();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect((await rows()).single.status, 'failed');
+      },
+    );
+
+    test(
+      'presupuesto cero: queued al instante y sube en segundo plano',
+      () async {
+        build(_FakeExecution(const []));
+        setOfflineQueueSubmitWaitBudget(queue, Duration.zero);
+
+        expect(await submitScan(key: 'Z'), SubmitOutcome.queued);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(await rows(), isEmpty);
+        expect(exec.calls, 1);
+      },
+    );
+
+    test(
+      'sin red conocida: queued al instante, sin intentar el POST',
+      () async {
+        exec = _FakeExecution(const []);
+        container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            logisticsApiProvider.overrideWithValue(_FakeApi(exec)),
+            connectivityProvider.overrideWith(_OfflineConnectivity.new),
+          ],
+        );
+        queue = container.read(offlineQueueProvider);
+        expect(await container.read(connectivityProvider.future), isFalse);
+
+        expect(await submitScan(key: 'OFF'), SubmitOutcome.queued);
+        expect(exec.calls, 0);
+        expect((await rows()).single.status, 'pending');
+        expect(offlineQueueIsInFlight(queue, 'OFF'), isFalse);
+      },
+    );
   });
 
   group('drain', () {

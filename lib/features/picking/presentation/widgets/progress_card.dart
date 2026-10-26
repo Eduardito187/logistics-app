@@ -14,6 +14,7 @@ class ProgressCard extends StatelessWidget {
     required this.total,
     required this.lane,
     required this.busy,
+    this.reprinting = false,
     required this.onAssign,
     required this.onPrintAll,
     required this.onReprintBatch,
@@ -22,7 +23,13 @@ class ProgressCard extends StatelessWidget {
   final int prepared;
   final int total;
   final String? lane;
+
+  /// Hay una operación a nivel pedido en curso: deshabilita las acciones.
   final bool busy;
+
+  /// La operación en curso es "Reimprimir lote": el spinner va en ese botón y
+  /// no en "Imprimir todas".
+  final bool reprinting;
   final VoidCallback onAssign;
   final VoidCallback onPrintAll;
   final VoidCallback onReprintBatch;
@@ -58,41 +65,85 @@ class ProgressCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(
-                Icons.alt_route,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  lane == null || lane!.isEmpty
-                      ? 'Carril / vehículo sin asignar'
-                      : 'Carril / vehículo: $lane',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              TextButton(
-                onPressed: onAssign,
-                child: Text(lane == null ? 'Asignar' : 'Cambiar'),
-              ),
-            ],
-          ),
+          _LaneRow(lane: lane, onAssign: onAssign),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : onPrintAll,
-            icon: busy ? const ButtonSpinner() : const Icon(Icons.print),
+            icon: busy && !reprinting
+                ? const ButtonSpinner()
+                : const Icon(Icons.print),
             label: const Text('Imprimir todas las etiquetas'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : onReprintBatch,
-            icon: const Icon(Icons.restart_alt),
+            icon: reprinting
+                ? const ButtonSpinner()
+                : const Icon(Icons.restart_alt),
             label: const Text('Reimprimir lote'),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Carril/vehículo asignado con su acción. En un teléfono chico con letra
+/// grande el botón baja debajo del texto: al lado, le dejaba ~50 dp al texto y
+/// la tarjeta crecía cientos de dp (una palabra por línea).
+class _LaneRow extends StatelessWidget {
+  const _LaneRow({required this.lane, required this.onAssign});
+
+  final String? lane;
+  final VoidCallback onAssign;
+
+  /// Ancho de contenido por debajo del cual el botón va en su propia línea.
+  static const double _stackBelow = 400;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lane = this.lane;
+    final text = Text(
+      lane == null || lane.isEmpty
+          ? 'Carril / vehículo sin asignar'
+          : 'Carril / vehículo: $lane',
+      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+    );
+    final button = TextButton(
+      onPressed: onAssign,
+      child: Text(lane == null ? 'Asignar' : 'Cambiar'),
+    );
+    final icon = Icon(
+      Icons.alt_route,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= _stackBelow) {
+          return Row(
+            children: [
+              icon,
+              const SizedBox(width: 12),
+              Expanded(child: text),
+              button,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                icon,
+                const SizedBox(width: 12),
+                Expanded(child: text),
+              ],
+            ),
+            Align(alignment: AlignmentDirectional.centerEnd, child: button),
+          ],
+        );
+      },
     );
   }
 }

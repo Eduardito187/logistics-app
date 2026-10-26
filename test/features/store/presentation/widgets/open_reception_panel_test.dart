@@ -8,6 +8,7 @@ import 'package:logistics_app/features/store/presentation/controllers/store_cont
 import 'package:logistics_app/features/store/presentation/widgets/open_reception_panel.dart';
 
 import '../../store_fixtures.dart';
+import '../../../../support/button_finders.dart';
 
 // Panel para abrir una recepción: lista los bultos esperados, pide el nodo de
 // origen (excluyendo el destino) y llama a onOpen con origen + ids esperados.
@@ -54,7 +55,7 @@ void main() {
     );
 
     expect(
-      find.textContaining('Este envío tiene 2 bulto(s) esperado(s)'),
+      find.textContaining('Este envío tiene 2 producto(s) esperado(s)'),
       findsOneWidget,
     );
     expect(find.text('Nodo de origen'), findsOneWidget);
@@ -71,7 +72,7 @@ void main() {
     );
 
     final before = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Abrir recepción'),
+      findButtonWithText<FilledButton>('Abrir recepción'),
     );
     expect(before.onPressed, isNull);
   });
@@ -95,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('CD Santa Cruz · CD-SCZ').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Abrir recepción'));
+      await tester.tap(findButtonWithText<FilledButton>('Abrir recepción'));
       await tester.pumpAndSettle();
 
       expect(gotOrigin?.id, 'node-cd');

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -57,29 +58,24 @@ class LabelScanner {
     return LabelScanResult(label: label, verification: result);
   }
 
-  /// Igual que [scan], pero además —si hay cliente API— reporta/consulta la
-  /// etiqueta al backend como best-effort y adjunta su resultado en
-  /// [LabelScanResult.backendVerification].
+  /// Igual que [scan], pero además —si hay cliente API— dispara el reporte de
+  /// la etiqueta al backend (`POST /app/labels/verify`) SIN esperarlo.
   ///
-  /// OFFLINE-FIRST: la verificación offline se calcula primero y es la que manda.
-  /// Si no hay red o el backend falla, se ignora y el escaneo igual devuelve el
-  /// resultado offline (con `backendVerification == null`).
+  /// OFFLINE-FIRST (regla 4): devuelve al instante el resultado offline, que es
+  /// el que decide; ningún llamador usa el veredicto del backend, así que el
+  /// escaneo no paga ese viaje de red (con señal floja podía colgar segundos).
+  /// Los errores del reporte se tragan. [LabelScanResult.backendVerification]
+  /// queda `null`; quien necesite el veredicto usa [verifyWithBackend].
   Future<LabelScanResult> scanAndReport(String qrContent) async {
     final offline = await scan(qrContent);
-    final api = _api;
-    if (api == null) return offline;
-
-    LabelVerification? backend;
-    try {
-      backend = await verifyWithBackend(offline.label);
-    } on ApiException {
-      // Sin red o error del backend: el escaneo offline ya decidió; se ignora.
+    if (_api != null) {
+      unawaited(
+        verifyWithBackend(
+          offline.label,
+        ).then<void>((_) {}, onError: (Object _) {}),
+      );
     }
-    return LabelScanResult(
-      label: offline.label,
-      verification: offline.verification,
-      backendVerification: backend,
-    );
+    return offline;
   }
 
   /// Reporta/consulta una etiqueta ya parseada al backend y devuelve su

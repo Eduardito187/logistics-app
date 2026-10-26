@@ -1,6 +1,6 @@
 import 'package:logistics_app/core/api/models/alert.dart';
 import 'package:logistics_app/core/api/models/auto_plan_run.dart';
-import 'package:logistics_app/core/api/models/data6.dart';
+import 'package:logistics_app/core/api/models/data7.dart';
 import 'package:logistics_app/core/api/models/generate_daily_plan_request_strategy.dart';
 import 'package:logistics_app/core/api/models/plan.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
@@ -21,6 +21,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   // Flota en vivo.
   List<VehicleLive> fleet = const [];
   Object? fleetError;
+  int fleetCalls = 0;
 
   // Alertas de telemetría.
   List<Alert> alerts = const [];
@@ -38,6 +39,12 @@ class FakeSupervisorRepository implements SupervisorRepository {
   Object? shipmentsError;
   Object? plansError;
   DateTime? lastPlansDate;
+  int shipmentsCalls = 0;
+  int plansCalls = 0;
+
+  /// Si se setea, las lecturas del tablero esperan a este completer (para
+  /// probar que salen en paralelo: las tres quedan en vuelo a la vez).
+  Future<void>? dashboardGate;
 
   // Resumen de telemetría por vehículo.
   VehicleTelemetrySummary? vehicleSummaryValue;
@@ -46,11 +53,17 @@ class FakeSupervisorRepository implements SupervisorRepository {
   // Detalle de plan y ETA.
   Plan? planValue;
   Object? planError;
-  Data6? planEtaValue;
+  Data7? planEtaValue;
   Object? planEtaError;
+  int planCalls = 0;
+  int planEtaCalls = 0;
+
+  /// Si se setea, `getPlan` espera a este future (detalle "cargando").
+  Future<void>? planGate;
 
   @override
   Future<List<VehicleLive>> getLiveFleetPositions() async {
+    fleetCalls++;
     if (fleetError != null) throw fleetError!;
     return fleet;
   }
@@ -59,6 +72,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   Future<List<Alert>> listTelemetryAlerts({bool? acknowledged}) async {
     listAlertsCalls++;
     lastAlertsAcknowledgedArg = acknowledged;
+    await dashboardGate;
     if (alertsError != null) throw alertsError!;
     return alerts;
   }
@@ -71,6 +85,17 @@ class FakeSupervisorRepository implements SupervisorRepository {
     return vehicleSummaryValue!;
   }
 
+  // Placas de la flota por id de vehículo.
+  Map<String, String> plates = const {};
+
+  int platesCalls = 0;
+
+  @override
+  Future<Map<String, String>> getVehiclePlates() async {
+    platesCalls++;
+    return plates;
+  }
+
   @override
   Future<void> acknowledgeTelemetryAlert(String alertId) async {
     if (acknowledgeError != null) throw acknowledgeError!;
@@ -79,25 +104,32 @@ class FakeSupervisorRepository implements SupervisorRepository {
 
   @override
   Future<List<Shipment>> listShipments() async {
+    shipmentsCalls++;
+    await dashboardGate;
     if (shipmentsError != null) throw shipmentsError!;
     return shipments;
   }
 
   @override
   Future<List<Plan>> listPlansByDate(DateTime date) async {
+    plansCalls++;
     lastPlansDate = date;
+    await dashboardGate;
     if (plansError != null) throw plansError!;
     return plansByDate;
   }
 
   @override
   Future<Plan> getPlan(String planId) async {
+    planCalls++;
+    await planGate;
     if (planError != null) throw planError!;
     return planValue!;
   }
 
   @override
-  Future<Data6> getPlanEta(String planId) async {
+  Future<Data7> getPlanEta(String planId) async {
+    planEtaCalls++;
     if (planEtaError != null) throw planEtaError!;
     return planEtaValue!;
   }

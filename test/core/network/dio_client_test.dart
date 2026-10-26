@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/session.dart';
@@ -221,6 +222,48 @@ void main() {
 
       expect(session(), isNotNull);
       expect(expiredMsg(), isNull);
+    });
+  });
+
+  group('reuso de conexiones (HttpClient del API)', () {
+    test('idleTimeout 90 s y 6 conexiones por host', () {
+      final adapter = createApiHttpClientAdapter();
+      final client = adapter.createHttpClient!();
+      addTearDown(() => client.close(force: true));
+      expect(client.idleTimeout, const Duration(seconds: 90));
+      expect(client.maxConnectionsPerHost, 6);
+      expect(kApiIdleTimeout, const Duration(seconds: 90));
+      expect(kApiMaxConnectionsPerHost, 6);
+    });
+
+    test('dioProvider usa ese adaptador por defecto', () {
+      final fresh = ProviderContainer(
+        overrides: [
+          secureStorageProvider.overrideWithValue(FakeSecureStorage()),
+          logisticsApiProvider.overrideWithValue(
+            FakeLogisticsApi(FakeAuthClient()),
+          ),
+        ],
+      );
+      addTearDown(fresh.dispose);
+      final adapter = fresh.read(dioProvider).httpClientAdapter;
+      expect(adapter, isA<IOHttpClientAdapter>());
+      final client = (adapter as IOHttpClientAdapter).createHttpClient!();
+      addTearDown(() => client.close(force: true));
+      expect(client.idleTimeout, kApiIdleTimeout);
+    });
+  });
+
+  group('truncateLogLine (log HTTP en debug)', () {
+    test('líneas cortas quedan igual', () {
+      expect(truncateLogLine('GET /app/routes'), 'GET /app/routes');
+    });
+
+    test('un body grande se recorta al tope', () {
+      final line = 'x' * 5000;
+      final out = truncateLogLine(line);
+      expect(out.length, lessThan(kHttpLogMaxChars + 40));
+      expect(out, endsWith('(+${5000 - kHttpLogMaxChars} caracteres)'));
     });
   });
 }

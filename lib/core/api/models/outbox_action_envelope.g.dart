@@ -9,7 +9,7 @@ part of 'outbox_action_envelope.dart';
 OutboxActionEnvelope _$OutboxActionEnvelopeFromJson(
   Map<String, dynamic> json,
 ) => OutboxActionEnvelope(
-  data: Data23.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data24.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$OutboxActionEnvelopeToJson(

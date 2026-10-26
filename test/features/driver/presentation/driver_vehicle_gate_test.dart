@@ -6,6 +6,7 @@ import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
+import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/features/driver/presentation/driver_vehicle_gate.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/assignment_header.dart';
@@ -37,7 +38,7 @@ void main() {
       child: _gate(),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(BrandLoader), findsOneWidget);
     expect(find.byType(AssignmentHeader), findsNothing);
   });
 
@@ -99,7 +100,7 @@ void main() {
 
     expect(find.byType(NoAssignment), findsOneWidget);
     expect(
-      find.text('Sin conexión. Se guardó y se reintentará al recuperar señal.'),
+      find.text('No se pudo completar. Intentá de nuevo en un momento.'),
       findsOneWidget,
     );
   });

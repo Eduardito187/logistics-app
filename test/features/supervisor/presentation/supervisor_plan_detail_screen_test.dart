@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:logistics_app/features/supervisor/presentation/supervisor_plan_d
 
 import '../support/fake_supervisor_repository.dart';
 import '../support/supervisor_fixtures.dart';
+import '../../../support/button_finders.dart';
 
 // SupervisorPlanDetailScreen: detalle SOLO lectura de un plan. Cabecera, métricas
 // (paradas + ETA final), sección de ETA por parada y secuencia de paradas. No
@@ -106,7 +109,7 @@ void main() {
         );
       }
       // No hay botones de acción primaria (FilledButton) en el detalle.
-      expect(find.byType(FilledButton), findsNothing);
+      expect(findButton<FilledButton>(), findsNothing);
     },
   );
 
@@ -165,4 +168,38 @@ void main() {
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.text('Reintentar'), findsWidgets);
   });
+
+  testWidgets(
+    'con el plan de la lista se ve al instante y el ETA sale en paralelo',
+    (tester) async {
+      final gate = Completer<void>();
+      final repo = FakeSupervisorRepository()
+        ..planGate = gate.future
+        ..planValue = plan(id: 'p1', vehicleId: 'CAM-7', stops: const [])
+        ..planEtaValue = planEtaData(planId: 'p1');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supervisorRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp(
+            home: SupervisorPlanDetailScreen(
+              planId: 'p1',
+              initial: plan(id: 'p1', vehicleId: 'CAM-L', stops: const []),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // El detalle fresco sigue en vuelo, pero se ve el plan de la lista (sin
+      // spinner de pantalla completa) y el ETA ya se pidió: no espera al plan.
+      expect(find.text('Camión CAM-L'), findsOneWidget);
+      expect(repo.planCalls, 1);
+      expect(repo.planEtaCalls, 1);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Camión CAM-7'), findsOneWidget); // dato fresco
+    },
+  );
 }

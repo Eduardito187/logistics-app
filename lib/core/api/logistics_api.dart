@@ -24,6 +24,12 @@ import 'clients/promise_client.dart';
 import 'clients/access_client.dart';
 import 'clients/telemetry_client.dart';
 import 'clients/auth_client.dart';
+import 'clients/sellers_client.dart';
+import 'clients/inbound_client.dart';
+import 'clients/inventory_client.dart';
+import 'clients/settlement_client.dart';
+import 'clients/returns_client.dart';
+import 'clients/seller_portal_client.dart';
 
 /// Dismac Logistics API `v1.0.0`.
 ///
@@ -66,6 +72,12 @@ class LogisticsApi {
   AccessClient? _access;
   TelemetryClient? _telemetry;
   AuthClient? _auth;
+  SellersClient? _sellers;
+  InboundClient? _inbound;
+  InventoryClient? _inventory;
+  SettlementClient? _settlement;
+  ReturnsClient? _returns;
+  SellerPortalClient? _sellerPortal;
 
   SystemClient get system => _system ??= SystemClient(_dio, baseUrl: _baseUrl);
 
@@ -120,4 +132,22 @@ class LogisticsApi {
       _telemetry ??= TelemetryClient(_dio, baseUrl: _baseUrl);
 
   AuthClient get auth => _auth ??= AuthClient(_dio, baseUrl: _baseUrl);
+
+  SellersClient get sellers =>
+      _sellers ??= SellersClient(_dio, baseUrl: _baseUrl);
+
+  InboundClient get inbound =>
+      _inbound ??= InboundClient(_dio, baseUrl: _baseUrl);
+
+  InventoryClient get inventory =>
+      _inventory ??= InventoryClient(_dio, baseUrl: _baseUrl);
+
+  SettlementClient get settlement =>
+      _settlement ??= SettlementClient(_dio, baseUrl: _baseUrl);
+
+  ReturnsClient get returns =>
+      _returns ??= ReturnsClient(_dio, baseUrl: _baseUrl);
+
+  SellerPortalClient get sellerPortal =>
+      _sellerPortal ??= SellerPortalClient(_dio, baseUrl: _baseUrl);
 }

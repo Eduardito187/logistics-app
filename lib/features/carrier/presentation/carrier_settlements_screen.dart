@@ -12,12 +12,16 @@ class CarrierSettlementsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(selectedCarrierProvider);
+    // Solo importa si hay transportista elegido: no se reconstruye la AppBar
+    // por otros cambios del objeto.
+    final hasCarrier = ref.watch(
+      selectedCarrierProvider.select((carrier) => carrier != null),
+    );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis liquidaciones'),
         actions: [
-          if (selected != null) ...[
+          if (hasCarrier) ...[
             IconButton(
               tooltip: 'Ver tarifas',
               icon: const Icon(Icons.price_change_outlined),

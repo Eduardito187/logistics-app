@@ -8,10 +8,16 @@ part of 'data15.dart';
 
 Data15 _$Data15FromJson(Map<String, dynamic> json) => Data15(
   status: json['status'] as String?,
-  licenseNumber: json['license_number'] as String?,
+  ownerType: json['owner_type'] == null
+      ? null
+      : DocumentOwnerType.fromJson(json['owner_type'] as String),
+  ownerId: json['owner_id'] as String?,
+  documentType: json['document_type'] as String?,
 );
 
 Map<String, dynamic> _$Data15ToJson(Data15 instance) => <String, dynamic>{
   'status': instance.status,
-  'license_number': instance.licenseNumber,
+  'owner_type': instance.ownerType,
+  'owner_id': instance.ownerId,
+  'document_type': instance.documentType,
 };

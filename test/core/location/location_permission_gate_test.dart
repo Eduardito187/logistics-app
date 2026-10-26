@@ -121,6 +121,72 @@ void main() {
     expect(fake.calls, callsAfterGrant);
   });
 
+  testWidgets(
+    'concedido se cachea en la sesión: otra pantalla no re-chequea ni muestra spinner',
+    (tester) async {
+      final fake = _FakeLocationService()..result = true;
+      final container = ProviderContainer(
+        overrides: [locationServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
+
+      Widget gate(String text) => UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          // Key distinta = pantalla nueva (State nuevo, initState de nuevo).
+          home: Scaffold(
+            body: LocationPermissionGate(
+              key: ValueKey(text),
+              child: Text(text),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(gate('PANTALLA 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('PANTALLA 1'), findsOneWidget);
+      expect(fake.calls, 1);
+      expect(container.read(backgroundLocationPermissionProvider), isTrue);
+
+      // Navegar a otra pantalla con el gate: el primer frame ya es el
+      // contenido (sin spinner) y no se llama a la plataforma.
+      await tester.pumpWidget(gate('PANTALLA 2'));
+      expect(find.text('PANTALLA 2'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(fake.calls, 1);
+    },
+  );
+
+  testWidgets('denegado no se cachea como concedido: se vuelve a verificar', (
+    tester,
+  ) async {
+    final fake = _FakeLocationService()..result = false;
+    final container = ProviderContainer(
+      overrides: [locationServiceProvider.overrideWithValue(fake)],
+    );
+    addTearDown(container.dispose);
+
+    Widget gate(Key key) => UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        home: Scaffold(
+          body: LocationPermissionGate(key: key, child: const Text('OK')),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(gate(const ValueKey(1)));
+    await tester.pumpAndSettle();
+    expect(container.read(backgroundLocationPermissionProvider), isFalse);
+
+    fake.result = true;
+    await tester.pumpWidget(gate(const ValueKey(2)));
+    await tester.pumpAndSettle();
+    expect(fake.calls, 2);
+    expect(find.text('OK'), findsOneWidget);
+  });
+
   testWidgets('"Reintentar" vuelve a verificar el permiso', (tester) async {
     final fake = _FakeLocationService()..result = false;
     await _pumpGate(tester, fake);

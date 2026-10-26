@@ -21,7 +21,9 @@ void main() {
   test('ids y rutas esperados', () {
     final routesById = {for (final t in driverTasks) t.id: t.route};
     expect(routesById, {
+      'driver-active-delivery': '/driver/delivery',
       'driver-route': '/driver/route',
+      'driver-my-day': '/driver/my-day',
       'driver-checklist': '/driver/checklist',
       'driver-load': '/driver/load',
       'driver-gps': '/driver/gps',
@@ -33,9 +35,14 @@ void main() {
     });
   });
 
-  test('"Mi ruta de hoy" es la acción principal (accent)', () {
+  test('"Entrega en curso" es la acción principal (accent)', () {
+    final active = driverTasks.firstWhere(
+      (t) => t.id == 'driver-active-delivery',
+    );
+    expect(active.accent, isTrue);
+    expect(driverTasks.first.id, 'driver-active-delivery');
     final route = driverTasks.firstWhere((t) => t.id == 'driver-route');
-    expect(route.accent, isTrue);
+    expect(route.accent, isFalse);
   });
 
   test('cada tarjeta tiene su GoRoute registrada', () {

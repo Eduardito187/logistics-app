@@ -82,6 +82,9 @@ UnitTracking unit({
   String unitId = 'unit-1',
   String shipmentId = 'ship-1',
   String? label,
+  String? sku,
+  String? productName,
+  String? productImageUrl,
 }) => UnitTracking(
   id: 'tracking-$unitId',
   unitId: unitId,
@@ -90,6 +93,9 @@ UnitTracking unit({
   lastLocationId: null,
   lastSeenAt: null,
   label: label,
+  sku: sku,
+  productName: productName,
+  productImageUrl: productImageUrl,
 );
 
 /// Vista de una recepción en un nodo.

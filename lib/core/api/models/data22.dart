@@ -8,13 +8,11 @@ part 'data22.g.dart';
 
 @JsonSerializable()
 class Data22 {
-  const Data22({required this.notificationId, required this.status});
+  const Data22({required this.accepted});
 
   factory Data22.fromJson(Map<String, Object?> json) => _$Data22FromJson(json);
 
-  @JsonKey(name: 'notification_id')
-  final String notificationId;
-  final String status;
+  final bool accepted;
 
   Map<String, Object?> toJson() => _$Data22ToJson(this);
 }

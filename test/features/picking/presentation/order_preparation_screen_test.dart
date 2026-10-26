@@ -14,6 +14,7 @@ import 'package:logistics_app/features/picking/presentation/widgets/progress_car
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
 import '../picking_test_harness.dart';
+import '../../../support/button_finders.dart';
 
 // Pantalla de armado de un pedido. Se override el repositorio (lecturas y
 // escrituras), la impresora y la ubicación con dobles sin HW. El escaneo de EAN
@@ -42,8 +43,9 @@ Future<FakeLabelPrinter> _pump(
         labelPrinterProvider.overrideWithValue(fakePrinter),
         locationServiceProvider.overrideWithValue(FakeLocationService()),
         if (seedState != null)
-          preparationControllerProvider(orderNumber)
-              .overrideWith(() => _SeededPrep(seedState)),
+          preparationControllerProvider(
+            orderNumber,
+          ).overrideWith(() => _SeededPrep(seedState)),
       ],
       child: MaterialApp(
         home: OrderPreparationScreen(orderNumber: orderNumber),
@@ -59,7 +61,7 @@ Future<void> _submitSheet(WidgetTester tester) async {
   // acota al FilledButton de envío dentro del sheet.
   final submit = find.descendant(
     of: find.byType(LabelBatchSheet),
-    matching: find.widgetWithText(FilledButton, 'Emitir etiquetas'),
+    matching: findButtonWithText<FilledButton>('Emitir etiquetas'),
   );
   await tester.ensureVisible(submit);
   await tester.tap(submit);
@@ -83,7 +85,7 @@ void main() {
     expect(find.text('Pedido EXT-1'), findsOneWidget); // AppBar
     expect(find.text('Sin etiquetas vigentes'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, 'Emitir etiquetas'),
+      findButtonWithText<FilledButton>('Emitir etiquetas'),
       findsOneWidget,
     );
   });
@@ -152,7 +154,7 @@ void main() {
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
     await tester.pumpAndSettle();
 
     await tester.enterText(_sheetFields().at(0), 'LPZ'); // origen
@@ -176,7 +178,7 @@ void main() {
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
     await tester.pumpAndSettle();
     await tester.enterText(_sheetFields().at(0), 'LPZ');
     await tester.enterText(_sheetFields().at(1), 'SCZ');
@@ -196,7 +198,7 @@ void main() {
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
     await tester.pumpAndSettle();
     await tester.enterText(_sheetFields().at(0), 'LPZ');
     await tester.enterText(_sheetFields().at(1), 'SCZ');
@@ -283,7 +285,7 @@ void main() {
     await tester.enterText(_sheetFields().at(2), 'dañada'); // motivo
     final reprintSubmit = find.descendant(
       of: find.byType(LabelBatchSheet),
-      matching: find.widgetWithText(FilledButton, 'Reimprimir'),
+      matching: findButtonWithText<FilledButton>('Reimprimir'),
     );
     await tester.ensureVisible(reprintSubmit);
     await tester.tap(reprintSubmit);
@@ -319,9 +321,13 @@ void main() {
 
     final btn = find.text('Reimprimir etiqueta');
     await tester.ensureVisible(btn);
+    // ensureVisible solo mueve el scroll: hace falta un frame para que el
+    // botón quede en su nueva posición antes de tocarlo.
+    await tester.pump();
     await tester.tap(btn);
     await tester.pumpAndSettle();
 
     expect(printer.printed, ['ZPL_L1']);
+    expect(find.text('Etiqueta reenviada a la impresora.'), findsOneWidget);
   });
 }

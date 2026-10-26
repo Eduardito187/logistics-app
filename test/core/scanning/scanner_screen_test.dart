@@ -1,15 +1,13 @@
-// Se mockea mobile_scanner a través de su PlatformInterface. Los tipos
-// StartOptions y MobileScannerViewAttributes no se reexportan desde el paquete
-// público, así que se importan desde src/ solo para el mock de test.
-// ignore_for_file: implementation_imports, depend_on_referenced_packages
+// Se mockea mobile_scanner a través de su PlatformInterface. En 7.x los tipos
+// StartOptions y MobileScannerViewAttributes se reexportan desde el paquete
+// público, así que alcanza con el import principal (ya no se usa src/).
+// ignore_for_file: depend_on_referenced_packages
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:mobile_scanner/src/mobile_scanner_view_attributes.dart';
-import 'package:mobile_scanner/src/objects/start_options.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 // ScannerScreen envuelve MobileScanner: lee el PRIMER código no vacío y lo

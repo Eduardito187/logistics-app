@@ -3,90 +3,168 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/brand/distrack_app_bar_logo.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
+import '../../../core/layout/nav_clearance.dart';
+import '../../../core/navigation/app_nav.dart';
 import '../../../core/navigation/feature_tasks.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/widgets/sync_badge.dart';
-import 'widgets/profile_header.dart';
-import 'widgets/task_card.dart';
+import '../../../core/navigation/role_task.dart';
+import '../../../core/widgets/empty_state.dart';
+import 'home_prefetch.dart';
+import 'widgets/big_action_tile.dart';
+import 'widgets/greeting_header.dart';
+import 'widgets/hero_task_card.dart';
+import 'widgets/home_section_title.dart';
 
-/// Inicio según el rol de la sesión. Muestra el perfil del usuario y las
-/// tarjetas de acción que cada feature aporta para ese rol.
-class RoleHomeScreen extends ConsumerWidget {
+/// Inicio del rol: un panel glanceable. Header FIJO (logo + salir) que queda
+/// pegado arriba al hacer scroll; debajo, saludo, tarjeta héroe de la acción
+/// principal y accesos rápidos grandes. El menú completo vive en "Tareas".
+///
+/// Diseñado para choferes mayores: pocos elementos, todo grande, un camino
+/// obvio. El contenido pasa por debajo del footer flotante (padding inferior).
+///
+/// Al montarse precarga en segundo plano los datos de la primera pantalla del
+/// rol ([HomePrefetcher]): sin spinner ni espera; el primer toque abre al
+/// instante.
+class RoleHomeScreen extends ConsumerStatefulWidget {
   const RoleHomeScreen({super.key});
 
+  /// Cuántos accesos rápidos mostrar bajo el héroe (el resto, en Tareas).
+  static const int _quickCount = 4;
+
+  /// Ancho máximo del contenido; centra en tablets anchas.
+  static const double _maxWidth = 900;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionProvider);
+  ConsumerState<RoleHomeScreen> createState() => _RoleHomeScreenState();
+}
+
+class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Después del primer frame: el inicio se pinta primero y la precarga no
+    // modifica providers mientras se construye el árbol.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final role = ref.read(sessionProvider)?.role;
+      if (role != null) ref.read(homePrefetcherProvider)(ref, role);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final Session? session = ref.watch(sessionProvider);
     if (session == null) {
       return const SizedBox.shrink();
     }
     final role = session.role;
-    final abilities = session.abilities;
-    final tasks = ref.watch(featureTasksProvider).where((t) {
-      if (!t.visibleFor(role)) {
-        return false;
-      }
-      final required = t.requiredAbility;
-      // Regla de seguridad: si la tarjeta no pide permiso, o si todavía no
-      // sabemos qué puede el usuario (abilities vacías: login sin `/me`, red o
-      // permiso caído), NO ocultamos por ability — caemos a filtro solo-rol
-      // para no dejar el inicio vacío. El gating por permiso solo se aplica
-      // cuando hay abilities cargadas.
-      if (required == null || abilities.isEmpty) {
-        return true;
-      }
-      return session.can(required);
-    }).toList();
+    final roleTasks = visibleTasksFor(
+      session,
+      ref.watch(featureTasksProvider),
+    ).where((t) => t.id != 'settings').toList();
+
+    final RoleTask? hero = centerActionFor(role, roleTasks);
+    final quick = roleTasks
+        .where((t) => t.id != hero?.id)
+        .take(RoleHomeScreen._quickCount)
+        .toList();
+    final isEmpty = hero == null && quick.isEmpty;
+
+    final width = MediaQuery.sizeOf(context).width;
+    final sidePadding = width > RoleHomeScreen._maxWidth + 32
+        ? (width - RoleHomeScreen._maxWidth) / 2
+        : 16.0;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
+          // Header FIJO: logo a la izquierda, salir a la derecha. Queda pegado
+          // arriba al hacer scroll (pinned) con una sombra sutil al desplazar.
           SliverAppBar(
             pinned: true,
-            expandedHeight: 150,
+            automaticallyImplyLeading: false,
+            titleSpacing: sidePadding,
+            scrolledUnderElevation: 3,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            title: const DisTrackAppBarLogo(height: 24),
             actions: [
-              const SyncBadge(),
-              IconButton(
-                tooltip: 'Sincronización',
-                icon: const Icon(Icons.sync_alt),
-                onPressed: () => context.push(AppRoutes.sync),
-              ),
               IconButton(
                 tooltip: 'Cerrar sesión',
                 icon: const Icon(Icons.logout),
                 onPressed: () => ref.read(sessionProvider.notifier).signOut(),
               ),
+              SizedBox(width: sidePadding - 4),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
-              title: Text(role.label),
-              background: ProfileHeader(
-                name: session.userName,
-                role: role.label,
-                icon: role.icon,
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 0),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GreetingHeader(
+                    name: session.userName,
+                    roleLabel: role.label,
+                    roleIcon: role.icon,
+                  ),
+                  const SizedBox(height: 20),
+                  if (hero != null) ...[
+                    HeroTaskCard(
+                      title: hero.label,
+                      subtitle: hero.subtitle,
+                      icon: hero.icon,
+                      statusLabel: 'Acción principal',
+                      // Es la pestaña central: cambiá a ella en vez de redirigir.
+                      onTap: () => ref.read(homeTabProvider.notifier).set(2),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                  if (quick.isNotEmpty) ...[
+                    HomeSectionTitle(
+                      title: 'Accesos rápidos',
+                      actionLabel: 'Ver todo',
+                      onAction: () => ref.read(homeTabProvider.notifier).set(1),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ),
             ),
           ),
-          if (tasks.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
+          if (isEmpty)
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(
-                  child: Text(
-                    'No hay flujos disponibles para este rol todavía.',
-                    textAlign: TextAlign.center,
-                  ),
+                padding: EdgeInsets.only(top: 24),
+                child: EmptyState(
+                  icon: Icons.inbox_outlined,
+                  title: 'Todo en orden',
+                  message: 'No hay flujos disponibles para este rol todavía.',
                 ),
               ),
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList.separated(
-                itemCount: tasks.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => TaskCard(task: tasks[i]),
+              padding: EdgeInsets.fromLTRB(
+                sidePadding,
+                0,
+                sidePadding,
+                navScrollBottomPadding(context),
+              ),
+              sliver: SliverAdaptiveCardRows(
+                itemCount: quick.length,
+                maxColumns: 2,
+                itemBuilder: (context, i) {
+                  final task = quick[i];
+                  return BigActionTile(
+                    label: task.label,
+                    subtitle: task.subtitle,
+                    icon: task.icon,
+                    accent: task.accent,
+                    onTap: () => context.push(task.route),
+                  );
+                },
               ),
             ),
         ],

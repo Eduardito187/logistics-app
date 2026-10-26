@@ -8,7 +8,7 @@ metadata:
   modified: 2026-10-15T06:42:01.834Z
 ---
 
-El dueño corrigió con énfasis: el ÚNICO trabajo de `logistics-app` es **consumir la API `/app/*` del backend**. La app **nunca** conecta SMS, Telegram, SAP, Magento, ntfy/VAPID, tiles, etc. — eso es responsabilidad del backend y de su despliegue.
+El dueño corrigió con énfasis: el ÚNICO trabajo de `logistics-app` es **consumir la API `/app/*` del backend**. La app **nunca** conecta SMS, Telegram, SAP, Magento, tiles, etc. — eso es responsabilidad del backend y de su despliegue.
 
 **Why:** listar "credenciales de servicios externos / deploy / datos de Fase 0 / hardware" como si fueran faltantes de la app es un error de encuadre que lo frustra. Esos son desbloqueos del backend/ops, no de la app.
 

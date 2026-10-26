@@ -5,6 +5,7 @@ import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/session_section.dart';
+import '../../../../support/button_finders.dart';
 
 // Sección de sesión: renovar token (/app/auth/refresh) y cerrar sesión. Se
 // override sessionProvider con un notifier falso para no tocar la red ni el
@@ -70,7 +71,7 @@ void main() {
     await _pump(tester, session: _session(), fake: _FakeSession());
 
     final button = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Renovar sesión'),
+      findButtonWithText<OutlinedButton>('Renovar sesión'),
     );
     expect(button.onPressed, isNull);
   });

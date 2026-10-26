@@ -11,18 +11,15 @@ import 'package:logistics_app/core/theme/app_colors.dart';
 void main() {
   group('submitOutcomeMessage', () {
     test('enviado', () {
-      expect(submitOutcomeMessage(SubmitOutcome.sent), 'Registrado y enviado.');
+      expect(submitOutcomeMessage(SubmitOutcome.sent), 'Registrado.');
     });
     test('en cola (sin red)', () {
-      expect(
-        submitOutcomeMessage(SubmitOutcome.queued),
-        'Guardado sin conexión. Se enviará al recuperar señal.',
-      );
+      expect(submitOutcomeMessage(SubmitOutcome.queued), 'Registrado.');
     });
     test('error', () {
       expect(
         submitOutcomeMessage(SubmitOutcome.failed),
-        'No se pudo registrar. Revísalo en Sincronización.',
+        'No se pudo registrar. Intentá de nuevo.',
       );
     });
   });
@@ -30,7 +27,7 @@ void main() {
   group('submitOutcomeColor', () {
     test('colores semánticos por desenlace', () {
       expect(submitOutcomeColor(SubmitOutcome.sent), AppColors.success);
-      expect(submitOutcomeColor(SubmitOutcome.queued), AppColors.warning);
+      expect(submitOutcomeColor(SubmitOutcome.queued), AppColors.success);
       expect(submitOutcomeColor(SubmitOutcome.failed), AppColors.danger);
     });
   });
@@ -54,9 +51,6 @@ void main() {
     await tester.tap(find.text('x'));
     await tester.pump();
 
-    expect(
-      find.text('Guardado sin conexión. Se enviará al recuperar señal.'),
-      findsOneWidget,
-    );
+    expect(find.text('Registrado.'), findsOneWidget);
   });
 }

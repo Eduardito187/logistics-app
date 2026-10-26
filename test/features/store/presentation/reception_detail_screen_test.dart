@@ -14,6 +14,7 @@ import 'package:logistics_app/features/store/presentation/widgets/open_reception
 
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
+import '../../../support/button_finders.dart';
 
 // Detalle de recepción: abrir recepción (null), progreso (recibidos/faltan/
 // sobrantes), pastilla "conciliada" y las dos escrituras con red (abrir y
@@ -63,7 +64,7 @@ void main() {
       expect(find.byType(OpenReceptionPanel), findsOneWidget);
       expect(
         find.text(
-          'Este envío tiene 2 bulto(s) esperado(s). '
+          'Este envío tiene 2 producto(s) esperado(s). '
           'Indica el nodo de origen para abrir la recepción.',
         ),
         findsOneWidget,
@@ -89,9 +90,17 @@ void main() {
     expect(find.text('Recibidos'), findsOneWidget);
     expect(find.text('Faltan'), findsOneWidget);
     // Acciones disponibles mientras la recepción está abierta.
-    expect(find.widgetWithText(FilledButton, 'Escanear bulto'), findsOneWidget);
     expect(
-      find.widgetWithText(OutlinedButton, 'Conciliar y cerrar'),
+      findButtonWithText<FilledButton>('Escanear producto'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
       findsOneWidget,
     );
   });
@@ -127,9 +136,12 @@ void main() {
       );
 
       expect(find.text('Recepción conciliada'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Escanear bulto'), findsNothing);
       expect(
-        find.widgetWithText(OutlinedButton, 'Conciliar y cerrar'),
+        findButtonWithText<FilledButton>('Escanear producto'),
+        findsNothing,
+      );
+      expect(
+        findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
         findsNothing,
       );
     },
@@ -146,7 +158,7 @@ void main() {
     await tester.tap(find.text('CD Santa Cruz · CD-SCZ').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Abrir recepción'));
+    await tester.tap(findButtonWithText<FilledButton>('Abrir recepción'));
     await tester.pumpAndSettle();
 
     expect(repo.openCalls, 1);
@@ -171,7 +183,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('CD Santa Cruz · CD-SCZ').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Abrir recepción'));
+    await tester.tap(findButtonWithText<FilledButton>('Abrir recepción'));
     await tester.pumpAndSettle();
 
     expect(find.text('La recepción ya existe.'), findsOneWidget);
@@ -186,17 +198,21 @@ void main() {
         reception: reception(status: NodeReceptionViewStatus.open),
       );
 
-      final reconcileButton = find.widgetWithText(
-        OutlinedButton,
+      final reconcileButton = findButtonWithText<OutlinedButton>(
         'Conciliar y cerrar',
       );
-      await tester.ensureVisible(reconcileButton);
+      // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+      await tester.scrollUntilVisible(
+        reconcileButton,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(reconcileButton);
       await tester.pumpAndSettle();
       expect(find.text('Conciliar recepción'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Conciliar'));
+      await tester.tap(findButtonWithText<FilledButton>('Conciliar'));
       await tester.pumpAndSettle();
 
       expect(repo.reconcileCalls, 1);
@@ -213,15 +229,19 @@ void main() {
       reception: reception(status: NodeReceptionViewStatus.open),
     );
 
-    final reconcileButton = find.widgetWithText(
-      OutlinedButton,
+    final reconcileButton = findButtonWithText<OutlinedButton>(
       'Conciliar y cerrar',
     );
-    await tester.ensureVisible(reconcileButton);
+    // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+    await tester.scrollUntilVisible(
+      reconcileButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(reconcileButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
+    await tester.tap(findButtonWithText<TextButton>('Cancelar'));
     await tester.pumpAndSettle();
 
     expect(repo.reconcileCalls, 0);
@@ -245,15 +265,19 @@ void main() {
       repo: repo,
     );
 
-    final reconcileButton = find.widgetWithText(
-      OutlinedButton,
+    final reconcileButton = findButtonWithText<OutlinedButton>(
       'Conciliar y cerrar',
     );
-    await tester.ensureVisible(reconcileButton);
+    // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+    await tester.scrollUntilVisible(
+      reconcileButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(reconcileButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Conciliar'));
+    await tester.tap(findButtonWithText<FilledButton>('Conciliar'));
     await tester.pumpAndSettle();
 
     expect(find.text('No se pudo conciliar.'), findsOneWidget);

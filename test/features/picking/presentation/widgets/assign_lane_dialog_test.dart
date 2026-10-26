@@ -72,7 +72,7 @@ void main() {
     expect(box[0], 'ABC-999');
   });
 
-  testWidgets('"Guardar" con el campo vacío devuelve cadena vacía', (
+  testWidgets('"Guardar" con el campo vacío devuelve null (como "Cancelar")', (
     tester,
   ) async {
     final box = <Object?>[#pending];
@@ -81,13 +81,24 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
-    // FALENCIA DETECTADA: AssignLaneDialog.build (assign_lane_dialog.dart:74)
-    // "Guardar" hace pop(_controller.text) sin validar ni recortar: con el
-    // campo vacío devuelve '' (no null como "Cancelar"). Hoy la pantalla lo
-    // compensa recortando/ignorando vacío, pero el diálogo debería devolver
-    // null o bloquear Guardar cuando no hay valor. Se verifica el comportamiento
-    // ACTUAL para dejar constancia.
-    expect(box[0], '');
+    expect(box[0], isNull);
+  });
+
+  testWidgets('"Guardar" recorta espacios y solo-espacios equivale a vacío', (
+    tester,
+  ) async {
+    final box = <Object?>[#pending];
+    await _open(tester, box);
+    await tester.enterText(find.byType(TextField), '  ABC-1  ');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(box[0], 'ABC-1');
+
+    await _open(tester, box);
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(box[0], isNull);
   });
 
   testWidgets('precarga el valor inicial recibido', (tester) async {

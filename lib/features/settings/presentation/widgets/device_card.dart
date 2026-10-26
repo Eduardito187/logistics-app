@@ -35,7 +35,7 @@ class DeviceCard extends StatelessWidget {
                 'ios' => Icons.phone_iphone,
                 'web' => Icons.computer,
                 _ => Icons.devices,
-              }, color: theme.colorScheme.primary),
+              }, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -56,16 +56,28 @@ class DeviceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isCurrent)
-                const StatusPill(
-                  'Este dispositivo',
-                  tone: PillTone.info,
-                  icon: Icons.check_circle_outline,
-                )
-              else if (device.revoked)
-                const StatusPill('Revocado', tone: PillTone.danger),
             ],
           ),
+          // La marca va debajo del nombre (no al costado): en teléfonos chicos
+          // con letra grande el chip dejaba al nombre casi sin ancho.
+          if (isCurrent || device.revoked) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              // scaleDown: `StatusPill` no parte su texto; si no entra (letra
+              // grande en teléfono chico) se achica en vez de desbordar.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: isCurrent
+                    ? const StatusPill(
+                        'Este dispositivo',
+                        tone: PillTone.info,
+                        icon: Icons.check_circle_outline,
+                      )
+                    : const StatusPill('Revocado', tone: PillTone.danger),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -84,7 +96,8 @@ class DeviceCard extends StatelessWidget {
             device.uuid,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
-              fontFamily: 'monospace',
+              // Valor tipo código (uuid): IBM Plex Mono según el brand kit.
+              fontFamily: 'IBMPlexMono',
             ),
           ),
           if (onRevoke != null) ...[

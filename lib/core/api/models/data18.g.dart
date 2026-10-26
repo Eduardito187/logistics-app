@@ -7,8 +7,9 @@ part of 'data18.dart';
 // **************************************************************************
 
 Data18 _$Data18FromJson(Map<String, dynamic> json) =>
-    Data18(code: json['code'] as String);
+    Data18(status: json['status'] as String?, plate: json['plate'] as String?);
 
 Map<String, dynamic> _$Data18ToJson(Data18 instance) => <String, dynamic>{
-  'code': instance.code,
+  'status': instance.status,
+  'plate': instance.plate,
 };

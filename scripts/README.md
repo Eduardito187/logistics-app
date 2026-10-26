@@ -1,34 +1,38 @@
 # scripts/
 
-Automatizaciones del app interna de logistica. Todas asumen el Flutter de WSL en
-`~/sdk/flutter` (ver `CLAUDE.md`).
+Automatizaciones del app interna de logistica. Los `.ps1` son para Windows (Flutter 3.32 en
+`C:\flutter`); los `.sh` corren en Git Bash, Linux o WSL (ver `CLAUDE.md`).
 
-## Regenerar el cliente del API (`regen_api_client.sh`)
+## Regenerar el cliente del API (`regen_api_client.ps1` / `.sh`)
 
-Regla #5: los DTOs del API no se escriben a mano, se generan desde el contrato
-OpenAPI del backend.
+Regla #5: los DTOs del API no se escriben a mano. Guia completa (por que cada paso, trampa de
+renumeracion `DataN`, problemas conocidos): **`docs/cliente-api.md`**.
 
-```bash
-# Spec por defecto: /dismac/logistics/openapi/v1.yaml
-bash scripts/regen_api_client.sh
-
-# O apuntando a otro spec:
-bash scripts/regen_api_client.sh /ruta/a/v1.yaml
+```powershell
+.\scripts\regen_api_client.ps1 -DryRun   # genera aparte y muestra el diff (no toca el proyecto)
+.\scripts\regen_api_client.ps1           # aplica: lib/core/api/ + openapi/v1.{yaml,json}
 ```
 
-Pasos que reproduce (idempotente):
+```bash
+bash scripts/regen_api_client.sh --dry-run          # Git Bash (Windows), Linux o WSL
+bash scripts/regen_api_client.sh --spec /ruta/v1.yaml
+```
 
-1. Copia `v1.yaml` del backend a `openapi/v1.yaml`.
-2. Preprocesa a `openapi/v1.json` con `preprocess_openapi.py` (expande anchors YAML
-   e inyecta los `parameters` de nivel path en cada operacion; swagger_parser no los
-   soporta).
-3. `dart run swagger_parser` (config en `swagger_parser.yaml`).
-4. `dart run build_runner build --delete-conflicting-outputs`.
+Genera en una carpeta temporal con el pubspec minimo de `tool/api_gen/` y el Dart 3.13 de
+`C:\sdk\flutter` (retrofit_generator no corre en el Dart 3.8 del proyecto), formatea con
+`C:\flutter` y avisa si se renumeraron los tipos anonimos `DataN`.
 
-El cliente generado vive en `lib/core/api/` (excluido del analyzer).
-
-> El preprocesado se puede correr suelto:
+> El preprocesado se puede correr suelto (necesita PyYAML; en Windows usar la Python de WSL):
 > `python3 -I scripts/preprocess_openapi.py openapi/v1.yaml openapi/v1.json`
+
+## Revisar credenciales de `config/*.json` (`check-config.ps1`)
+
+```powershell
+.\scripts\check-config.ps1 [-Env production] [-AllowEmptyDev]
+```
+
+Lista que claves faltan, estan vacias o tienen formato invalido en cada entorno **sin imprimir
+valores**. Sale con 1 si falta alguna requerida. De donde sale cada valor: `docs/firebase-setup.md`.
 
 ## Sincronizar el vector de etiquetas (`sync_label_vector.sh`)
 
@@ -48,14 +52,14 @@ Despues de un cambio, corre `flutter test` para validar la verificacion Ed25519.
 
 ## Makefile (raiz del repo)
 
-Atajos que usan el Flutter de WSL:
+Atajos (en Linux/WSL usan el Flutter del PATH):
 
 | Target         | Que hace                                                     |
 | -------------- | ------------------------------------------------------------ |
 | `make format`  | `dart format lib test`                                       |
 | `make analyze` | `flutter analyze`                                            |
 | `make test`    | `flutter test`                                               |
-| `make gen`     | corre `scripts/regen_api_client.sh`                          |
+| `make gen`     | corre `scripts/regen_api_client.sh` (aplica al proyecto)     |
 | `make ci`      | format check (`--set-exit-if-changed`) + analyze + test      |
 
 `make ci` reproduce localmente lo que corre el workflow `.github/workflows/ci.yml`.

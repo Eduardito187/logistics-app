@@ -9,7 +9,7 @@ part of 'post_app_sap_stock_transfers_response.dart';
 PostAppSapStockTransfersResponse _$PostAppSapStockTransfersResponseFromJson(
   Map<String, dynamic> json,
 ) => PostAppSapStockTransfersResponse(
-  data: Data7.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data8.fromJson(json['data'] as Map<String, dynamic>),
   meta: Meta3.fromJson(json['meta'] as Map<String, dynamic>),
 );
 

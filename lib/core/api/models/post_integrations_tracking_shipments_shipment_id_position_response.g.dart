@@ -10,7 +10,7 @@ PostIntegrationsTrackingShipmentsShipmentIdPositionResponse
 _$PostIntegrationsTrackingShipmentsShipmentIdPositionResponseFromJson(
   Map<String, dynamic> json,
 ) => PostIntegrationsTrackingShipmentsShipmentIdPositionResponse(
-  data: Data20.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data21.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic>

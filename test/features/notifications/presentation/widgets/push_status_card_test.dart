@@ -48,50 +48,51 @@ void main() {
 
     expect(find.text('Registrando'), findsOneWidget);
     expect(_pillTone(tester), PillTone.info);
-    // Estado ocupado: el botón muestra "Activando..." y un spinner.
+    // Estado ocupado: el botón muestra "Activando..." y el loader de marca.
     expect(find.text('Activando...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets(
-    'registered con endpoint: "Activo", oculta botón y muestra datos',
-    (tester) async {
-      await _pump(
-        tester,
-        const PushStatus(
-          state: PushRegistrationState.registered,
-          endpoint: 'https://ntfy.sh/abc123',
-          distributor: 'io.heckel.ntfy',
-        ),
-      );
+  testWidgets('registered con token: "Activo", oculta botón y confirma', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const PushStatus(
+        state: PushRegistrationState.registered,
+        token: 'fcm-token-abc',
+      ),
+    );
 
-      expect(find.text('Activo'), findsOneWidget);
-      expect(_pillTone(tester), PillTone.success);
-      // Registrado: ya no se ofrece activar.
-      expect(find.text('Activar notificaciones'), findsNothing);
-      expect(find.text('Distribuidor: io.heckel.ntfy'), findsOneWidget);
-      expect(find.text('Endpoint: https://ntfy.sh/abc123'), findsOneWidget);
-    },
-  );
+    expect(find.text('Activo'), findsOneWidget);
+    expect(_pillTone(tester), PillTone.success);
+    // Registrado: ya no se ofrece activar y el token no se muestra.
+    expect(find.text('Activar notificaciones'), findsNothing);
+    expect(
+      find.text('Recibirás avisos de la operación en este teléfono.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('fcm-token-abc'), findsNothing);
+  });
 
-  testWidgets('unavailable: "Sin distribuidor", mensaje y botón visible', (
+  testWidgets('unavailable (sin credenciales): "No disponible", sin botón', (
     tester,
   ) async {
     await _pump(
       tester,
       const PushStatus(
         state: PushRegistrationState.unavailable,
-        message: 'No hay una app de notificaciones instalada.',
+        message: 'Las notificaciones push todavía no están configuradas.',
       ),
     );
 
-    expect(find.text('Sin distribuidor'), findsOneWidget);
+    expect(find.text('No disponible'), findsOneWidget);
     expect(_pillTone(tester), PillTone.warning);
     expect(
-      find.text('No hay una app de notificaciones instalada.'),
+      find.text('Las notificaciones push todavía no están configuradas.'),
       findsOneWidget,
     );
-    expect(find.text('Activar notificaciones'), findsOneWidget);
+    expect(find.text('Activar notificaciones'), findsNothing);
   });
 
   testWidgets('failed: "Error", mensaje y botón para reintentar', (
@@ -101,13 +102,13 @@ void main() {
       tester,
       const PushStatus(
         state: PushRegistrationState.failed,
-        message: 'El distribuidor rechazó el registro.',
+        message: 'Permiso de notificaciones denegado.',
       ),
     );
 
     expect(find.text('Error'), findsOneWidget);
     expect(_pillTone(tester), PillTone.danger);
-    expect(find.text('El distribuidor rechazó el registro.'), findsOneWidget);
+    expect(find.text('Permiso de notificaciones denegado.'), findsOneWidget);
     expect(find.text('Activar notificaciones'), findsOneWidget);
   });
 

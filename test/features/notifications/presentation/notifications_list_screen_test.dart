@@ -6,6 +6,7 @@ import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/push/push_status.dart';
 import 'package:logistics_app/features/notifications/data/repositories/notifications_repository_impl.dart';
+import 'package:logistics_app/features/notifications/presentation/controllers/notifications_controller.dart';
 import 'package:logistics_app/features/notifications/presentation/notifications_list_screen.dart';
 import 'package:logistics_app/features/notifications/presentation/widgets/notification_tile.dart';
 import 'package:logistics_app/features/notifications/presentation/widgets/push_status_card.dart';
@@ -75,5 +76,34 @@ void main() {
 
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  testWidgets('página llena: "Ver más" pide la siguiente página', (
+    tester,
+  ) async {
+    final repo = FakeNotificationsRepository()
+      ..items = [
+        for (var i = 0; i < notificationsPageSize; i++)
+          notificationView(id: 'n$i'),
+      ];
+    await _pump(tester, repo);
+    expect(repo.requestedLimits, [notificationsPageSize]);
+
+    final more = find.text('Ver más notificaciones');
+    await tester.scrollUntilVisible(more, 300);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+
+    expect(repo.requestedLimits.last, notificationsPageSize * 2);
+    // Con menos de una página completa ya no hay "Ver más".
+    expect(find.text('Ver más notificaciones'), findsNothing);
+  });
+
+  testWidgets('página incompleta: sin "Ver más"', (tester) async {
+    final repo = FakeNotificationsRepository()
+      ..items = [notificationView(id: 'n1')];
+    await _pump(tester, repo);
+
+    expect(find.text('Ver más notificaciones'), findsNothing);
   });
 }

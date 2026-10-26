@@ -7,6 +7,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../controllers/supervisor_controllers.dart';
 import '../supervisor_labels.dart';
+import '../vehicle_label.dart';
 
 /// Hoja inferior con el detalle de un camión y su resumen de telemetría del día.
 class VehicleSheet extends ConsumerWidget {
@@ -40,7 +41,7 @@ class VehicleSheet extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Camión ${vehicle.vehicleId}',
+                  vehicleLabel(ref, vehicle.vehicleId),
                   style: Theme.of(context).textTheme.titleLarge,
                   overflow: TextOverflow.ellipsis,
                 ),

@@ -32,10 +32,17 @@
     <!-- Notificaciones (Android 13+): push y servicio en primer plano. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Seguridad: sin backup (cola offline, tokens y fotos no salen del equipo) y
+         solo HTTPS en release (network_security_config; debug/profile permiten
+         http a 10.0.2.2/localhost). Ver docs/release.md. -->
     <application
-        android:label="Dismac Logística"
+        android:label="DisTrack"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -64,6 +71,15 @@
             android:foregroundServiceType="location"
             android:exported="false" />
 
+        <!-- Render con Skia (OpenGL) en Android en vez de Impeller. Los teléfonos
+             de 1 GB (Android Go, GPUs Mali/PowerVR de gama baja) tienen drivers
+             Vulkan inestables y con Impeller usan más memoria de GPU; Skia es el
+             camino maduro ahí. Flutter 3.32 todavía lo soporta en Android. En
+             iOS no aplica (iOS solo tiene Impeller). Para probar Impeller:
+             value="true". Ver docs/rendimiento-y-pantallas.md. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -79,6 +95,17 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Llamar al cliente desde la entrega en curso (marcador). -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <!-- "Navegar": sin esto, desde Android 11 canLaunchUrl(geo:) da falso y
+             siempre se abría el navegador en vez de la app de mapas. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="geo"/>
         </intent>
     </queries>
 </manifest>

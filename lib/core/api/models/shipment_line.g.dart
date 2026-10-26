@@ -11,6 +11,9 @@ ShipmentLine _$ShipmentLineFromJson(Map<String, dynamic> json) => ShipmentLine(
   sku: json['sku'] as String,
   productName: json['product_name'] as String,
   quantity: (json['quantity'] as num).toInt(),
+  imageUrl: json['image_url'] as String?,
+  price: (json['price'] as num?)?.toDouble(),
+  currency: json['currency'] as String?,
 );
 
 Map<String, dynamic> _$ShipmentLineToJson(ShipmentLine instance) =>
@@ -19,4 +22,7 @@ Map<String, dynamic> _$ShipmentLineToJson(ShipmentLine instance) =>
       'sku': instance.sku,
       'product_name': instance.productName,
       'quantity': instance.quantity,
+      'image_url': instance.imageUrl,
+      'price': instance.price,
+      'currency': instance.currency,
     };

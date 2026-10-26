@@ -2,13 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "logistics-app · USB (dev)",
+      "name": "logistics-app · dev base",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
-      "flutterMode": "debug",
-      "deviceId": "android",
-      "preLaunchTask": "adb: iniciar servidor de Windows (USB)",
+      "flutterMode": "profile",
       "toolArgs": ["--dart-define-from-file=config/dev.json"]
     },
     {
@@ -17,6 +15,10 @@
       "type": "dart",
       "program": "lib/main.dart",
       "flutterMode": "debug",
+      "preLaunchTask": "🔌 Backend: puente adb reverse (8110)",
+      "//": "deviceId fijo al puerto estable 5555 (NO al fantasma mDNS que VS Code recuerda). Si cambiás de WiFi, actualizá la IP o corré scripts/adb-wireless.sh stable.",
+      "deviceId": "192.168.1.4:5555",
+      "env": { "ADB_MDNS_OPENSCREEN": "0" },
       "toolArgs": ["--dart-define-from-file=config/dev.json"]
     },
     {

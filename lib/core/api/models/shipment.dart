@@ -29,6 +29,7 @@ class Shipment {
     this.addressReference,
     this.lat,
     this.lng,
+    this.destinationNodeId,
   });
 
   factory Shipment.fromJson(Map<String, Object?> json) =>
@@ -59,6 +60,10 @@ class Shipment {
   @JsonKey(name: 'address_confidence_level')
   final AddressConfidenceLevel addressConfidenceLevel;
   final ShipmentStatus status;
+
+  /// UUID del nodo destino del envío (network_nodes). Null mientras el ingest/SAP no lo pueble.
+  @JsonKey(name: 'destination_node_id')
+  final String? destinationNodeId;
   final List<ShipmentLine> lines;
 
   Map<String, Object?> toJson() => _$ShipmentToJson(this);

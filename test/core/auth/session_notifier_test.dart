@@ -73,13 +73,20 @@ void main() {
       expect(session()!.abilities, isEmpty);
     });
 
-    test('con token vacío: la sesión lo guarda pero la cabecera queda vacía', () async {
-      await notifier().signIn(token: '', userName: 'x', role: UserRole.driver);
-      expect(session()!.token, '');
-      // setToken('') -> bearerToken '' (no null): el interceptor lo trata como
-      // ausente, pero el modelo de cabeceras guarda la cadena vacía.
-      expect(headers().bearerToken, '');
-    });
+    test(
+      'con token vacío: la sesión lo guarda pero la cabecera queda vacía',
+      () async {
+        await notifier().signIn(
+          token: '',
+          userName: 'x',
+          role: UserRole.driver,
+        );
+        expect(session()!.token, '');
+        // setToken('') -> bearerToken '' (no null): el interceptor lo trata como
+        // ausente, pero el modelo de cabeceras guarda la cadena vacía.
+        expect(headers().bearerToken, '');
+      },
+    );
   });
 
   group('setAbilities', () {
@@ -242,6 +249,24 @@ void main() {
       expect(headers().bearerToken, isNull);
     });
 
+    test(
+      'la sesión se cierra al instante, sin esperar la revocación en red',
+      () async {
+        await notifier().signIn(
+          token: 'tok',
+          userName: 'ana',
+          role: UserRole.driver,
+        );
+
+        final closing = notifier().signOut();
+        // Sin dejar correr la red: el usuario ya está sin sesión (al login).
+        expect(session(), isNull);
+        await closing;
+        expect(authClient.logoutCalls, 1);
+        expect(headers().bearerToken, isNull);
+      },
+    );
+
     test('si clearToken del almacén falla, el cierre no se traba', () async {
       await notifier().signIn(
         token: 'tok',
@@ -284,31 +309,34 @@ void main() {
       expect(session(), isNull);
     });
 
-    test('idempotencia: múltiples 401 seguidos no reinician cierre ni avisan de más', () async {
-      await notifier().signIn(
-        token: 'tok',
-        userName: 'ana',
-        role: UserRole.driver,
-      );
+    test(
+      'idempotencia: múltiples 401 seguidos no reinician cierre ni avisan de más',
+      () async {
+        await notifier().signIn(
+          token: 'tok',
+          userName: 'ana',
+          role: UserRole.driver,
+        );
 
-      // Llegan tres 401 "en paralelo" antes de que el cierre termine.
-      notifier()
-        ..handleUnauthorized()
-        ..handleUnauthorized()
-        ..handleUnauthorized();
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+        // Llegan tres 401 "en paralelo" antes de que el cierre termine.
+        notifier()
+          ..handleUnauthorized()
+          ..handleUnauthorized()
+          ..handleUnauthorized();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      expect(session(), isNull);
-      // FALENCIA DETECTADA: el guard `if (state == null)` de
-      // handleUnauthorized no protege contra 401 concurrentes. signOut() hace
-      // `await appLogout()` ANTES de poner state = null, así que los 401 que
-      // llegan mientras el logout está en vuelo ven state != null y vuelven a
-      // entrar: se llama appLogout varias veces (revocaciones redundantes) y
-      // el aviso se vuelve a setear. El comportamiento CORRECTO (prometido en
-      // los comentarios de session_notifier.dart:120-122 y dio_client.dart:46)
-      // es una sola revocación. Ver sección de falencias del reporte.
-      expect(authClient.logoutCalls, 1);
-    });
+        expect(session(), isNull);
+        // FALENCIA DETECTADA: el guard `if (state == null)` de
+        // handleUnauthorized no protege contra 401 concurrentes. signOut() hace
+        // `await appLogout()` ANTES de poner state = null, así que los 401 que
+        // llegan mientras el logout está en vuelo ven state != null y vuelven a
+        // entrar: se llama appLogout varias veces (revocaciones redundantes) y
+        // el aviso se vuelve a setear. El comportamiento CORRECTO (prometido en
+        // los comentarios de session_notifier.dart:120-122 y dio_client.dart:46)
+        // es una sola revocación. Ver sección de falencias del reporte.
+        expect(authClient.logoutCalls, 1);
+      },
+    );
 
     test('tras cerrar sesión, un 401 posterior es no-op', () async {
       await notifier().signIn(
