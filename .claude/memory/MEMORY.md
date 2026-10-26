@@ -20,3 +20,5 @@
 - [Perfil del usuario](user-profile.md) — dueño de la plataforma Dismac, español informal, decide producto, PC Windows con RAM justa
 - [Usuarios de prueba y escenario del día](dev-test-users-scenario.md) — cuentas por rol con password123, TodayScenarioSeeder (SCZ, 904U10), cómo re-correrlo
 - [Forma de trabajar](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, decidir y explicitar, pedidos al backend por doc, reportar con números
+- [Push desde WSL](git-push-from-wsl.md) — WSL sin credenciales GitHub; pushear con el git.exe de Windows apuntando al repo WSL por ruta UNC (wslpath -w)
+- [Consolidación Windows→WSL](windows-wsl-consolidation.md) — oct 2026: merge-unión de las 2 copias en WSL (8b4c04a), checkout de Windows borrado, trabajar solo en /dismac/logistics-app
