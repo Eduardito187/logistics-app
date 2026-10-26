@@ -80,6 +80,18 @@ void main() {
     expect(_registerButton(tester).onPressed, isNull);
   });
 
+  testWidgets('al entrar calienta el GPS sin esperarlo', (tester) async {
+    final location = FakeLocationService();
+    await pumpScoped(
+      tester,
+      child: PodScreen(stop: buildStop()),
+      overrides: [locationServiceProvider.overrideWithValue(location)],
+      tall: true,
+    );
+
+    expect(location.prefetchCount, 1);
+  });
+
   testWidgets('ya no ofrece la firma en papel: ofrece la firma en pantalla', (
     tester,
   ) async {

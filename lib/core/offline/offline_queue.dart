@@ -12,6 +12,7 @@ import '../background/sync_scheduler.dart';
 import '../network/api_exception.dart';
 import '../network/dio_client.dart';
 import 'app_database.dart';
+import 'connectivity_notifier.dart';
 import 'failure_reporter.dart';
 import 'offline_dispatcher.dart';
 import 'submit_outcome.dart';
@@ -33,11 +34,18 @@ typedef OfflineActionHandler =
       Map<String, Object?> payload,
     );
 
+/// Espera máxima de [OfflineQueue.submit] por la red antes de devolver
+/// [SubmitOutcome.queued] (regla 4: un escaneo nunca espera a la red). Con
+/// buena señal el POST vuelve antes y la UI muestra "enviado"; con señal floja
+/// el envío sigue en segundo plano y la UI ya quedó libre.
+const Duration kSubmitWaitBudget = Duration(milliseconds: 1500);
+
 /// Servicio offline-first. Todas las escrituras de terreno pasan por acá.
 ///
-/// `submit` intenta la llamada de inmediato; si no hay red, encola con el mismo
-/// `id`/`Idempotency-Key` para reintentar al recuperar señal. Nunca bloquea al
-/// usuario esperando al servidor.
+/// `submit` persiste primero y después intenta la llamada, esperándola a lo
+/// sumo [kSubmitWaitBudget]; si no hay red (o tarda), la fila queda con el
+/// mismo `id`/`Idempotency-Key` para reintentar al recuperar señal. Nunca
+/// bloquea al usuario esperando al servidor.
 class OfflineQueue {
   OfflineQueue(this._ref, this._db);
 
@@ -66,20 +74,80 @@ class OfflineQueue {
     final when = occurredAt ?? DateTime.now();
     final payloadWithKey = {...payload, 'idempotency_key': id};
 
-    // Siempre se persiste primero: si la app muere tras el POST, el reintento
-    // es idempotente y no duplica.
-    await _db.enqueue(
-      OutboxActionsCompanion.insert(
-        id: id,
-        kind: kind,
-        payload: jsonEncode(payloadWithKey),
-        occurredAt: when,
-        label: Value(label),
-      ),
-    );
+    // Misma fila ya en vuelo (mismo Idempotency-Key reenviado): no se manda dos
+    // veces en paralelo; el intento en curso la marca al terminar.
+    if (_inFlight.contains(id)) return SubmitOutcome.queued;
 
+    // Se marca en vuelo ANTES de insertar: así un `drain()` que lea la cola
+    // justo después del insert no reenvía esta fila en paralelo.
+    _inFlight.add(id);
     try {
-      await _run(id, kind, payloadWithKey);
+      // Siempre se persiste primero: si la app muere tras el POST, el
+      // reintento es idempotente y no duplica.
+      await _db.enqueue(
+        OutboxActionsCompanion.insert(
+          id: id,
+          kind: kind,
+          payload: jsonEncode(payloadWithKey),
+          occurredAt: when,
+          label: Value(label),
+        ),
+      );
+    } catch (_) {
+      _inFlight.remove(id);
+      rethrow;
+    }
+
+    // Sin red conocida: ni se intenta. La fila queda pendiente y la
+    // reconexión (ConnectivityNotifier) o la tarea de fondo la suben.
+    if (_knownOffline) {
+      _inFlight.remove(id);
+      unawaited(_scheduler.scheduleOneOff());
+      return SubmitOutcome.queued;
+    }
+
+    // Regla 4: el escaneo nunca espera a la red. Se intenta el envío ya, pero
+    // se espera a lo sumo [kSubmitWaitBudget]: con buena señal vuelve `sent`
+    // (o `failed` si el backend lo rechaza enseguida); si no, `queued` y el
+    // MISMO intento sigue en segundo plano y marca la fila al terminar.
+    final send = _sendNow(
+      id: id,
+      kind: kind,
+      payload: payloadWithKey,
+      occurredAt: when,
+    ).whenComplete(() => _inFlight.remove(id));
+    final budget = _submitWaitBudget;
+    if (budget <= Duration.zero) {
+      unawaited(send.then<void>((_) {}, onError: (Object _) {}));
+      return SubmitOutcome.queued;
+    }
+    return send.timeout(budget, onTimeout: () => SubmitOutcome.queued);
+  }
+
+  /// Ids con un envío en curso (el inmediato de [submit] o el del drenado).
+  /// [drain] los saltea para no reenviar la misma fila en paralelo.
+  final Set<String> _inFlight = <String>{};
+
+  /// Espera máxima de [submit] por la red (ver [kSubmitWaitBudget]).
+  Duration _submitWaitBudget = kSubmitWaitBudget;
+
+  /// `true` solo si el estado de conectividad ya se conoce y es "sin red". No
+  /// crea el provider si nadie lo levantó (la app lo escucha en `app.dart`).
+  bool get _knownOffline {
+    if (!_ref.exists(connectivityProvider)) return false;
+    return _ref.read(connectivityProvider).value == false;
+  }
+
+  /// Envío inmediato de una fila recién encolada. No lanza [ApiException]: la
+  /// traduce a [SubmitOutcome] y deja la fila en el estado que corresponde.
+  Future<SubmitOutcome> _sendNow({
+    required String id,
+    required String kind,
+    required Map<String, Object?> payload,
+    required DateTime occurredAt,
+  }) async {
+    try {
+      await _run(id, kind, payload);
       await _db.markSynced(id);
       return SubmitOutcome.sent;
     } on ApiException catch (e) {
@@ -100,7 +168,7 @@ class OfflineQueue {
       await _report(
         id: id,
         kind: kind,
-        occurredAt: when,
+        occurredAt: occurredAt,
         attempts: await _db.actionAttempts(id),
         reason: OutboxFailureReason.rejected,
         error: e,
@@ -194,8 +262,16 @@ class OfflineQueue {
     while (true) {
       // Cada fila del lote se borra (enviada), pasa a `failed` o corta el
       // drenado (transitorio), así que el siguiente lote siempre avanza.
-      final batch = await _db.pendingActions(limit: _drainBatchSize);
+      // Las filas con un envío inmediato en curso se excluyen: ese intento las
+      // marca al terminar (sin duplicar el POST).
+      final batch = await _db.pendingActions(
+        limit: _drainBatchSize,
+        excludeIds: Set.of(_inFlight),
+      );
       for (final action in batch) {
+        // Pudo entrar en vuelo (reenvío con la misma key) después de leer el
+        // lote: lo termina ese intento.
+        if (!_inFlight.add(action.id)) continue;
         try {
           final payload = jsonDecode(action.payload) as Map<String, Object?>;
           await _run(action.id, action.kind, payload);
@@ -236,6 +312,8 @@ class OfflineQueue {
           // Payload corrupto: reintentarlo no lo arregla; se aísla la fila.
           await _db.markFailed(action.id, 'Payload inválido: ${e.message}');
           await _reportRow(action, OutboxFailureReason.invalidPayload);
+        } finally {
+          _inFlight.remove(action.id);
         }
       }
       if (batch.length < _drainBatchSize) return;
@@ -304,6 +382,17 @@ final offlineQueueProvider = Provider<OfflineQueue>((ref) {
 @visibleForTesting
 bool offlineQueueHasScheduledRetry(OfflineQueue queue) =>
     queue._retryTimer?.isActive ?? false;
+
+/// Cambia la espera máxima de [OfflineQueue.submit] (tests). Función libre por
+/// la misma razón que [offlineQueueHasScheduledRetry].
+@visibleForTesting
+void setOfflineQueueSubmitWaitBudget(OfflineQueue queue, Duration budget) =>
+    queue._submitWaitBudget = budget;
+
+/// `true` si la fila [id] tiene un envío en curso (tests).
+@visibleForTesting
+bool offlineQueueIsInFlight(OfflineQueue queue, String id) =>
+    queue._inFlight.contains(id);
 
 /// Simula la destrucción del provider (cancela el reintento programado).
 @visibleForTesting

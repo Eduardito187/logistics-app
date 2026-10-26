@@ -8,6 +8,7 @@ import 'package:logistics_app/core/navigation/role_task.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/connectivity_notifier.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
+import 'package:logistics_app/features/home/presentation/home_prefetch.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/profile_header.dart';
 import 'package:logistics_app/features/home/presentation/widgets/task_card.dart';
@@ -47,9 +48,24 @@ const _pickerTask = RoleTask(
   roles: {UserRole.picker},
 );
 
-ProviderContainer _session(UserRole role, {List<String>? abilities}) {
+/// Precarga falsa: registra con qué rol se llamó y no toca la red.
+class _RecordingPrefetch extends HomePrefetcher {
+  final List<UserRole> calls = [];
+
+  @override
+  void call(WidgetRef ref, UserRole role) => calls.add(role);
+}
+
+ProviderContainer _session(
+  UserRole role, {
+  List<String>? abilities,
+  _RecordingPrefetch? prefetch,
+}) {
   final container = ProviderContainer(
     overrides: [
+      homePrefetcherProvider.overrideWithValue(
+        prefetch ?? _RecordingPrefetch(),
+      ),
       featureTasksProvider.overrideWithValue(const [
         _needsAbility,
         _noAbility,
@@ -170,5 +186,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(sessionProvider), isNull);
+  });
+
+  testWidgets('al entrar precarga una sola vez con el rol de la sesión', (
+    tester,
+  ) async {
+    final prefetch = _RecordingPrefetch();
+    final container = _session(UserRole.store, prefetch: prefetch);
+    await _pump(tester, container);
+    // Rebuilds del inicio (scroll, cambios de sesión) no repiten la precarga.
+    await tester.pump();
+
+    expect(prefetch.calls, [UserRole.store]);
+    // Sin spinner nuevo: el inicio se pinta igual que siempre.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

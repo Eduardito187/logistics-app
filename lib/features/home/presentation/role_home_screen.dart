@@ -6,6 +6,7 @@ import '../../../core/layout/breakpoints.dart';
 import '../../../core/navigation/feature_tasks.dart';
 import '../../../core/navigation/role_task.dart';
 import '../../../core/widgets/notifications_button.dart';
+import 'home_prefetch.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/task_card.dart';
 
@@ -19,11 +20,32 @@ const double _gap = 12;
 /// Inicio según el rol de la sesión. Muestra el perfil del usuario y las
 /// tarjetas de acción que cada feature aporta para ese rol: una columna en
 /// teléfono y grilla de 2–3 columnas en tablet.
-class RoleHomeScreen extends ConsumerWidget {
+///
+/// Al montarse precarga en segundo plano los datos de la primera pantalla del
+/// rol ([HomePrefetcher]): sin spinner ni espera; el primer toque abre al
+/// instante.
+class RoleHomeScreen extends ConsumerStatefulWidget {
   const RoleHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoleHomeScreen> createState() => _RoleHomeScreenState();
+}
+
+class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Después del primer frame: el inicio se pinta primero y la precarga no
+    // modifica providers mientras se construye el árbol.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final role = ref.read(sessionProvider)?.role;
+      if (role != null) ref.read(homePrefetcherProvider)(ref, role);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
     if (session == null) {
       return const SizedBox.shrink();

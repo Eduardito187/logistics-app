@@ -4,6 +4,30 @@ Objetivo: que la app ande fluida en teléfonos de **1 GB de RAM** (Android Go / 
 bien desde un teléfono chico (320 dp de ancho) hasta una tablet en horizontal. Este documento junta
 las decisiones y cómo verificarlas.
 
+## Velocidad percibida (fase 3, 2026-10-20)
+
+Medido: el backend de dev tarda ~200 ms por request (piso de entorno: debug, sin caché de config/rutas,
+Docker/WSL) y el modo debug en el emulador es 3–10x más lento que release. Para juzgar la sensación,
+`flutter run --release` (o `--profile` para medir). Lo que sí era lento en la app, y se corrigió:
+
+| Problema | Arreglo | Dónde |
+|---|---|---|
+| Cada escaneo esperaba el POST (y antes un `labels/verify` inútil): hasta 45 s sin señal | `submit` espera ≤1,5 s y sigue en segundo plano; sin red conocida → al instante; `verify` sin esperar | `core/offline/offline_queue.dart`, `core/labels/label_scanner.dart` |
+| GPS bloqueaba hasta 6 s por escaneo | `current()` ≤1,5 s (fix en vivo ≤2 min → última conocida ≤5 min/200 m → lectura con tope); `prefetch()` al abrir la cámara | `core/location/location_service.dart` |
+| Abrir la cámara por cada bulto | `scanContinuous`: cámara abierta, aviso por código, "Terminar" | `core/scanning/continuous_scanner.dart` |
+| Spinner y request en cada navegación | `ref.cacheFor(CacheTtl.short/long)` (60 s / 10 min) en providers de pantalla | `core/performance/cache_for.dart` + features |
+| Riverpod reintentaba 10 veces (~38 s) cualquier error | `appProviderRetry`: solo red/5xx/429, máx. 3 | `core/network/riverpod_retry.dart`, `main.dart` |
+| Rastreo GPS se reiniciaba en cada refresco de la ruta | `.value` en vez de `.asData?.value`; sin reinicio si el envío no cambió | `features/driver/.../driver_tracking_autostart.dart` |
+| Cadena tripulación → permiso → ruta | ruta pedida en paralelo al permiso; permiso concedido cacheado en la sesión; precarga por rol desde el inicio | `driver_vehicle_gate.dart`, `location_permission_gate.dart`, `features/home/presentation/home_prefetch.dart` |
+| Parada no avanzaba sin señal | `locallySettledStopsProvider` (optimismo, se reconcilia con el backend) | `features/driver/.../locally_settled_stops.dart` |
+| Recepción re-bajada en cada escaneo | estado local + refresco con debounce 5 s | `features/store/.../reception_detail_screen.dart` |
+| Tienda veía envíos ajenos / tablero con tope 50 | filtro `destination_node_id` en servidor; tablero sin paginar y en paralelo | store, supervisor |
+| Arranque: 5 esperas en serie | almacén seguro leído de UNA vez en paralelo con Firebase; WorkManager, drenado y push después del primer cuadro | `main.dart`, `core/auth/token_store.dart` |
+| WorkManager duplicaba el drenado con la app abierta (20–40 MB) | se salta si la UI está en primer plano (`UiAliveBeacon`) | `core/background/` |
+| Cerrar sesión tardaba hasta 7 s | sesión fuera al instante; revocación y drenado después | `core/auth/session_notifier.dart` |
+| Transición Zoom (captura + shaders) | `FadeUpwards` en Android, deslizado en iOS; sin animación de tema | `core/theme/app_theme.dart`, `app.dart` |
+| Conexiones TLS rehechas tras cada pausa | keep-alive 90 s, 6 por host | `core/network/dio_client.dart` |
+
 ## Presupuesto de memoria
 
 En un teléfono de 1 GB el sistema deja ~250–350 MB para la app en primer plano. Lo que más consume,
@@ -11,7 +35,26 @@ en orden: cámara (escáner), tiles del mapa, imágenes decodificadas, base loca
 
 | Área | Decisión | Dónde | Impacto esperado |
 |---|---|---|---|
-| Caché de imágenes | 40 MB / 80 imágenes (default 100 MB / 1000) | `lib/main.dart` | −60 MB de techo |
+| Caché de imágenes | según la RAM del equipo: 24 MB/50 (≤1,5 GB o Android Go), 40 MB/80 (≤3 GB o desconocido), 64 MB/120 (más) — default de Flutter 100 MB/1000 | `lib/core/performance/device_memory.dart`, `lib/main.dart` | −76 MB de techo en 1 GB |
+| Presión de memoria | ante `onTrimMemory`/`didReceiveMemoryWarning` se vacía la caché de imágenes; en gama baja también al pasar a segundo plano | `lib/core/performance/memory_pressure.dart` | menos chance de que el SO mate la app (y el GPS) |
+| Render Android | Skia (`EnableImpeller=false`); iOS usa Impeller (único motor) | `android/app/src/main/AndroidManifest.xml` | drivers Vulkan de gama baja inestables y más memoria de GPU con Impeller |
+| Arranque | memoria del equipo, formatos y Crashlytics en paralelo | `lib/main.dart` | apertura más rápida en gama baja |
+| Mapa de flota | refresco cada 30 s que se pausa en segundo plano o con la pantalla tapada; nunca dos pedidos a la vez; `RepaintBoundary` | `lib/features/supervisor/presentation/supervisor_fleet_screen.dart` | cero red/CPU con la pantalla oculta |
+| Tiles del mapa | un cliente HTTP con 4 conexiones máx. (ociosas se cierran a 15 s); `CachedTileImageProvider` corta la descarga y saca de la `ImageCache` el tile descartado; error de una línea (`TileLoadException`); disco 120 MB / 30 días | `lib/core/map/tile_cache.dart` | sin tiles muertos ocupando caché; menos sockets |
+| Precarga de ruta | tope 300 tiles por zoom (600 total) | `lib/core/map/tile_prefetch.dart` | el zoom alto no se come la precarga |
+| Base local | WAL, `journal_size_limit` 1 MB, `cache_size` 1 MB, `temp_store=FILE`; `synchronous=FULL` a propósito (no perder escaneos); fotos drenadas por lotes de 25; `watchPhotos` tope 200 | `lib/core/offline/` | RAM de SQLite acotada |
+| GPS | precisión alta solo con ruta activa; iOS `automotiveNavigation` sin pausa automática; `current()` reusa la última posición (≤30 s, ≤50 m) | `lib/core/location/` | no prende el GPS en cada escaneo |
+| Fotos | máx. 1600 en el lado mayor (vertical 1200x1600), sin metadatos completos | `lib/core/media/photo_picker.dart` | ~44 % menos píxeles por foto |
+| Escáner | formatos por defecto: QR, Code128, EAN13/8, UPC-A | `lib/core/scanning/scanner_screen.dart` | menos CPU por cuadro |
+| Fondo | sincronización periódica con `requiresBatteryNotLow` (la única por falta de red, sin restricción) | `lib/core/background/background_sync.dart` | batería |
+| Retención GPS | posiciones del camión pendientes > 7 días se descartan (solo `ingestTruckPosition`; escaneos, entregas y fotos nunca) | `lib/core/offline/sync_maintenance.dart` | la cola no crece sin fin con días sin señal |
+| Mapas del chofer | trazo simplificado (Douglas-Peucker 5 m) y memoizado por ruta; capas fijas reusadas (flutter_map no reproyecta en cada fix); `RepaintBoundary` | `lib/features/driver/presentation/widgets/` | por fix de GPS: O(1) en vez de O(puntos) |
+| Entrega en curso | el GPS solo reconstruye el mapa y la tarjeta de estado; productos en lista perezosa (168x168) | `active_delivery_screen.dart`, `delivery_sheet.dart` | la hoja con fotos no se rehace en cada fix |
+| Evidencia | foto a 800 px y firma a 312 px de alto en la vista previa; se sacan de la caché al salir | `evidence_photo_preview.dart` | ~2 MB menos retenidos por foto |
+| Tienda | recepción y recojo en slivers perezosos (`SliverSectionCard` + `SliverList.builder`); fila de producto con miniatura decodificada al tamaño real | `lib/features/store/presentation/` | 300 productos con foto arman <40 filas |
+| Estado local de escaneo | topes: 20 envíos recibidos localmente, 500 ubicaciones en estante, 200 registros de sesión del transportista; se limpian al conciliar | `lib/features/{store,carrier}/` | memoria acotada en turnos largos |
+| Picking | `orderLabelsProvider` autoDispose (ZPL de varios KB por etiqueta); hoja de reimpresión perezosa | `lib/features/picking/` | no se acumulan etiquetas de todo el turno |
+| Notificaciones | 30 por página ("Ver más" de a 30), tope de 150 en memoria | `lib/features/notifications/` | carga inicial ~3x más chica |
 | Mapa | sin retina, `keepBuffer` 1, `panBuffer` 0, `maxNativeZoom` 18, sin fundido | `lib/core/map/osm_tile_layer.dart` | ~½ de tiles vivos al panear; 4x menos que retina |
 | Mapa | `OsmTileLayer` (const) crea la capa una sola vez | idem | no deja clientes HTTP sin cerrar al reconstruir |
 | Escáner | 1280x720, análisis cada 250 ms, `returnImage: false` | `lib/core/scanning/scanner_screen.dart` | ~4 análisis/seg en vez de ~30; sin copiar cuadros a Dart |
@@ -23,6 +66,14 @@ en orden: cámara (escáner), tiles del mapa, imágenes decodificadas, base loca
 | GPS | intervalo mínimo 10 s (Android) + filtro 20 m; 1 posición encolada cada ≥10 s | `lib/core/location/` | ~360 POST/h en vez de ~3000 a 60 km/h; menos batería |
 | Tema | `ThemeData` armado una sola vez; `InkRipple` en vez de `InkSparkle` | `lib/core/theme/app_theme.dart` | sin recalcular la paleta; sin shader en el primer toque |
 | Spinners | `RepaintBoundary` alrededor del indicador (`LoadingView`) | `lib/core/widgets/async_value_view.dart` | la animación no repinta toda la pantalla |
+
+### Memoria del equipo
+
+`MainActivity.kt` (Android: `ActivityManager.getMemoryInfo` + `isLowRamDevice`) y `AppDelegate.swift`
+(iOS: `ProcessInfo.physicalMemory`) exponen el canal `bo.com.dismac/device_memory` (`info` →
+`{totalMb, lowRam}`). `DeviceMemory.load()` nunca falla (equipo desconocido = gama media) y queda en
+`deviceMemoryProvider` para que cualquier pantalla pueda ahorrar más en gama baja
+(`ref.watch(deviceMemoryProvider).isLowEnd`).
 
 ### `largeHeap`: no se pide
 

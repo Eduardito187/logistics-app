@@ -11,17 +11,25 @@ class FakeNotificationsRepository implements NotificationsRepository {
   NotificationView? detail;
   Object? detailError;
 
+  /// Cuántas veces se pidió el detalle por id (`GET /notifications/{id}`).
+  int getCalls = 0;
+
   final List<String> suppressedIds = [];
   Object? suppressError;
 
+  /// Límites pedidos en cada `list` (para probar la paginación).
+  final List<int?> requestedLimits = [];
+
   @override
-  Future<List<NotificationView>> list() async {
+  Future<List<NotificationView>> list({int? limit}) async {
+    requestedLimits.add(limit);
     if (listError != null) throw listError!;
     return items;
   }
 
   @override
   Future<NotificationView> get(String id) async {
+    getCalls++;
     if (detailError != null) throw detailError!;
     return detail!;
   }

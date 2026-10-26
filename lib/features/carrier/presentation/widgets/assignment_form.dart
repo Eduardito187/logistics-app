@@ -22,6 +22,11 @@ class AssignmentForm extends ConsumerStatefulWidget {
   ConsumerState<AssignmentForm> createState() => _AssignmentFormState();
 }
 
+/// Solo dígitos y separador decimal. Se crea una vez (no un RegExp por build).
+final TextInputFormatter _volumeFormatter = FilteringTextInputFormatter.allow(
+  RegExp(r'[0-9.,]'),
+);
+
 class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   final TextEditingController _from = TextEditingController();
   final TextEditingController _to = TextEditingController();
@@ -112,9 +117,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                  ],
+                  inputFormatters: [_volumeFormatter],
                   decoration: const InputDecoration(
                     labelText: 'Volumen (m³)',
                     hintText: 'Ej. 12.5',

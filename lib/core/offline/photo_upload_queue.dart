@@ -87,50 +87,56 @@ class PhotoUploadQueue {
     _draining = true;
     try {
       // Solo se leen metadatos y rutas: la foto se sube en streaming desde
-      // disco (multipart), nunca se carga entera en memoria.
-      final pending = await _db.pendingPhotoRows();
-      for (final photo in pending) {
-        final file = File(photo.filePath);
-        if (!file.existsSync()) {
-          // El archivo ya no está: no hay nada que subir, se descarta la fila.
-          await _db.deletePhoto(photo.id);
-          continue;
-        }
-        try {
-          await _upload(photo, file);
-          await _db.deletePhoto(photo.id);
-          await _safeDelete(file);
-        } on ApiException catch (e) {
-          final attempts = photo.attempts + 1;
-          if (SyncRetryPolicy.isTransient(e)) {
-            if (!SyncRetryPolicy.countsAsAttempt(e)) {
-              // Sin red o 401: se corta el drenado, se reintenta luego.
-              break;
-            }
-            if (attempts < SyncRetryPolicy.maxServerAttempts) {
-              // 429/5xx: suma el intento y corta (el servidor está mal).
-              await _db.markPhotoTransientFailure(
-                photo.id,
-                e.message,
-                attempts,
-              );
-              break;
-            }
-            await _fail(
-              photo,
-              e,
-              attempts,
-              OutboxFailureReason.retriesExhausted,
-            );
-            continue;
-          }
-          // Error de datos (4xx): no sirve reintentar, se marca fallida.
-          await _fail(photo, e, attempts, OutboxFailureReason.rejected);
-        }
+      // disco (multipart), nunca se carga entera en memoria. Por lotes de
+      // [_drainBatchSize]: cada fila del lote se borra, pasa a `failed` o corta
+      // el drenado, así que el siguiente lote siempre avanza.
+      while (true) {
+        final batch = await _db.pendingPhotoRows(limit: _drainBatchSize);
+        if (!await _drainBatch(batch)) return;
+        if (batch.length < _drainBatchSize) return;
       }
     } finally {
       _draining = false;
     }
+  }
+
+  /// Fotos leídas por lote al drenar.
+  static const int _drainBatchSize = 25;
+
+  /// Sube un lote. Devuelve `false` si hay que cortar el drenado (sin red,
+  /// 401 o 429/5xx).
+  Future<bool> _drainBatch(List<PendingPhoto> batch) async {
+    for (final photo in batch) {
+      final file = File(photo.filePath);
+      if (!file.existsSync()) {
+        // El archivo ya no está: no hay nada que subir, se descarta la fila.
+        await _db.deletePhoto(photo.id);
+        continue;
+      }
+      try {
+        await _upload(photo, file);
+        await _db.deletePhoto(photo.id);
+        await _safeDelete(file);
+      } on ApiException catch (e) {
+        final attempts = photo.attempts + 1;
+        if (SyncRetryPolicy.isTransient(e)) {
+          if (!SyncRetryPolicy.countsAsAttempt(e)) {
+            // Sin red o 401: se corta el drenado, se reintenta luego.
+            return false;
+          }
+          if (attempts < SyncRetryPolicy.maxServerAttempts) {
+            // 429/5xx: suma el intento y corta (el servidor está mal).
+            await _db.markPhotoTransientFailure(photo.id, e.message, attempts);
+            return false;
+          }
+          await _fail(photo, e, attempts, OutboxFailureReason.retriesExhausted);
+          continue;
+        }
+        // Error de datos (4xx): no sirve reintentar, se marca fallida.
+        await _fail(photo, e, attempts, OutboxFailureReason.rejected);
+      }
+    }
+    return true;
   }
 
   Future<void> _fail(

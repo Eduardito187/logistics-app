@@ -107,4 +107,64 @@ void main() {
       expect(formatRemainingTime(const Duration(minutes: 65)), '1 h 05 min');
     });
   });
+
+  group('simplifyPolyline', () {
+    test('con menos de 3 puntos devuelve la misma lista', () {
+      const two = [_a, _b];
+      expect(identical(simplifyPolyline(two), two), isTrue);
+    });
+
+    test(
+      'quita los puntos intermedios de una recta y conserva las esquinas',
+      () {
+        final dense = [
+          for (var i = 0; i <= 100; i++) LatLng(-17.790, -63.190 + i * 0.0001),
+          for (var i = 1; i <= 100; i++) LatLng(-17.790 + i * 0.0001, -63.180),
+        ];
+        final simple = simplifyPolyline(dense);
+        expect(simple, hasLength(3));
+        expect(simple.first, dense.first);
+        expect(simple[1].longitude, closeTo(-63.180, 1e-9));
+        expect(simple.last, dense.last);
+      },
+    );
+
+    test(
+      'un zigzag menor a la tolerancia se aplana; uno mayor se conserva',
+      () {
+        // ~1 m de desvío (0.00001°) vs ~55 m (0.0005°).
+        const small = [
+          LatLng(-17.790, -63.190),
+          LatLng(-17.78999, -63.189),
+          LatLng(-17.790, -63.188),
+        ];
+        const big = [
+          LatLng(-17.790, -63.190),
+          LatLng(-17.7895, -63.189),
+          LatLng(-17.790, -63.188),
+        ];
+        expect(simplifyPolyline(small), hasLength(2));
+        expect(simplifyPolyline(big), hasLength(3));
+      },
+    );
+
+    test('la distancia sobre el trazo simplificado es la real', () {
+      final dense = [
+        for (var i = 0; i <= 100; i++) LatLng(-17.790, -63.190 + i * 0.0001),
+        for (var i = 1; i <= 100; i++) LatLng(-17.790 + i * 0.0001, -63.180),
+      ];
+      const from = LatLng(-17.790, -63.188);
+      const corner = LatLng(-17.790, -63.180);
+      final exact = _distance(from, corner) + _distance(corner, _c);
+      final simple = estimateRemaining(
+        from: from,
+        to: _c,
+        geometry: simplifyPolyline(dense),
+      );
+      expect(simple.alongRoute, isTrue);
+      // `Distance` redondea cada tramo al metro: con 200 tramos el trazo
+      // denso acumula error; el simplificado (2 tramos) queda casi exacto.
+      expect(simple.meters, closeTo(exact, 2));
+    });
+  });
 }

@@ -21,6 +21,7 @@ class NotificationsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(notificationsListProvider);
+    final limit = ref.watch(notificationsLimitProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Notificaciones')),
@@ -51,7 +52,24 @@ class NotificationsListScreen extends ConsumerWidget {
                             ),
                           ),
                         ]
-                      : [_NotificationsSliver(items: value)],
+                      : [
+                          _NotificationsSliver(items: value),
+                          // El endpoint no tiene cursor: si llegó una página
+                          // llena puede haber más; "Ver más" sube el límite.
+                          if (value.length >= limit)
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              sliver: SliverToBoxAdapter(
+                                child: _MoreFooter(
+                                  canShowMore: limit < notificationsMaxLimit,
+                                  loading: notifications.isLoading,
+                                  onShowMore: () => ref
+                                      .read(notificationsLimitProvider.notifier)
+                                      .showMore(),
+                                ),
+                              ),
+                            ),
+                        ],
                 // Cargando o error: vista estándar, centrada en el resto.
                 _ => [
                   SliverFillRemaining(
@@ -72,6 +90,42 @@ class NotificationsListScreen extends ConsumerWidget {
   }
 }
 
+/// Pie de la bandeja: botón grande "Ver más" o, al llegar al tope en memoria,
+/// un aviso de que solo se muestran las más recientes.
+class _MoreFooter extends StatelessWidget {
+  const _MoreFooter({
+    required this.canShowMore,
+    required this.loading,
+    required this.onShowMore,
+  });
+
+  final bool canShowMore;
+  final bool loading;
+  final VoidCallback onShowMore;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!canShowMore) {
+      return Text(
+        'Se muestran las $notificationsMaxLimit más recientes.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Theme.of(context).colorScheme.outline),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: loading ? null : onShowMore,
+      icon: loading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.expand_more),
+      label: const Text('Ver más notificaciones'),
+    );
+  }
+}
+
 /// Lista perezosa de notificaciones (solo construye las filas visibles).
 class _NotificationsSliver extends StatelessWidget {
   const _NotificationsSliver({required this.items});
@@ -85,8 +139,10 @@ class _NotificationsSliver extends StatelessWidget {
       sliver: SliverList.separated(
         itemCount: items.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) =>
-            NotificationTile(notification: items[index]),
+        itemBuilder: (context, index) => NotificationTile(
+          key: ValueKey(items[index].id),
+          notification: items[index],
+        ),
       ),
     );
   }

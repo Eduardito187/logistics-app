@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,12 +5,15 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/api/export.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/photo_upload_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/widgets/section_card.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
+import 'widgets/evidence_photo_preview.dart';
 
 /// Entrega fallida: bulto + motivo tipado + foto opcional + GPS, registro
 /// offline-first.
@@ -31,6 +32,13 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
   FailureReason _reason = FailureReason.customerAbsent;
   XFile? _photo;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // GPS caliente al entrar: al registrar, el fix ya está y no se espera.
+    ref.read(locationServiceProvider).prefetch();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,18 +96,8 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_photo != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      // cacheWidth: se decodifica a lo que se muestra, no a la
-                      // resolución de la cámara (ahorra memoria).
-                      child: Image.file(
-                        File(_photo!.path),
-                        height: 180,
-                        fit: BoxFit.cover,
-                        cacheWidth: _previewCacheWidth,
-                      ),
-                    ),
+                  // Decodificada chica y liberada del caché al salir.
+                  if (_photo != null) EvidencePhotoPreview(path: _photo!.path),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _takePhoto,
@@ -144,7 +142,8 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
   Future<void> _register() async {
     setState(() => _busy = true);
     try {
-      final fix = await currentFix(ref);
+      // El GPS se pide en paralelo con el encolado de la foto (no en serie).
+      final fixFuture = currentFix(ref);
       // La foto de daños se encola aparte y se sube idempotentemente; el
       // registro de la falla no espera a la red.
       final photo = _photo;
@@ -157,6 +156,7 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
               kind: 'damage',
             );
       }
+      final fix = await fixFuture;
       if (!mounted) return;
       final now = DateTime.now();
       final outcome = await ref
@@ -176,7 +176,14 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
           );
       if (!mounted) return;
       showSubmitOutcome(context, outcome);
-      if (outcome != SubmitOutcome.failed) Navigator.of(context).pop();
+      if (outcome != SubmitOutcome.failed) {
+        // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
+        // entrega en curso pasa a la siguiente aunque no haya señal).
+        ref
+            .read(locallySettledStopsProvider.notifier)
+            .settle(widget.stop.id, DriverRouteStopStatus.failed);
+        Navigator.of(context).pop();
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -191,7 +198,3 @@ String _reasonLabel(FailureReason reason) => switch (reason) {
   FailureReason.other => 'Otro motivo',
   _ => 'Motivo',
 };
-
-/// Ancho de decodificación de la vista previa de la foto (px). La vista previa
-/// mide 180 dp de alto; 800 px alcanza con nitidez sin cargar la foto entera.
-const int _previewCacheWidth = 800;

@@ -55,7 +55,7 @@ void main() {
     );
 
     expect(
-      find.textContaining('Este envío tiene 2 bulto(s) esperado(s)'),
+      find.textContaining('Este envío tiene 2 producto(s) esperado(s)'),
       findsOneWidget,
     );
     expect(find.text('Nodo de origen'), findsOneWidget);

@@ -166,8 +166,8 @@ void main() {
       ],
     );
 
-    _expectContentWidth(tester, screen, find.byType(ListView));
-    final scan = findButtonWithText<FilledButton>('Escanear bulto');
+    _expectContentWidth(tester, screen, find.byType(CustomScrollView));
+    final scan = findButtonWithText<FilledButton>('Escanear producto');
     expect(scan, findsOneWidget);
     _expectOnScreen(tester, screen, scan);
 
@@ -217,7 +217,7 @@ void main() {
     );
     expect(findButtonWithText<FilledButton>('Abrir recepción'), findsOneWidget);
     // Sin recepción abierta no hay botón de escaneo al pie.
-    expect(findButtonWithText<FilledButton>('Escanear bulto'), findsNothing);
+    expect(findButtonWithText<FilledButton>('Escanear producto'), findsNothing);
   });
 
   testOnScreens('POD de recojo: datos, pasos y botón de entrega fijo', (
@@ -234,9 +234,9 @@ void main() {
     ]);
 
     expect(find.text(_longName), findsOneWidget);
-    _expectContentWidth(tester, screen, find.byType(ListView));
+    _expectContentWidth(tester, screen, find.byType(CustomScrollView));
     final deliver = findButtonWithText<FilledButton>(
-      'Escanear y entregar bulto',
+      'Escanear y entregar producto',
     );
     _expectOnScreen(tester, screen, deliver);
 

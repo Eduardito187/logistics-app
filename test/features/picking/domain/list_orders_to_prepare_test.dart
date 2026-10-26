@@ -33,10 +33,34 @@ void main() {
 
       final result = await ListOrdersToPrepare(repo).call();
 
-      expect(result.map((s) => s.externalId), ['A', 'B']);
+      // Primero lo planificado (ya tiene ruta), después lo recibido.
+      expect(result.map((s) => s.externalId), ['B', 'A']);
     });
 
-    test('preserva el orden de llegada de los pedidos vigentes', () async {
+    test('filtra en el servidor: un pedido por estado, en paralelo', () async {
+      final repo = FakePickingRepository();
+
+      await ListOrdersToPrepare(repo).call();
+
+      expect(repo.listShipmentsStatuses, [
+        ShipmentStatus.planned,
+        ShipmentStatus.received,
+      ]);
+    });
+
+    test('no duplica un pedido que llega en dos consultas', () async {
+      final repo = FakePickingRepository(
+        onListShipments: () async => [
+          buildShipment(externalId: 'A', status: ShipmentStatus.received),
+        ],
+      );
+
+      final result = await ListOrdersToPrepare(repo).call();
+
+      expect(result.map((s) => s.externalId), ['A']);
+    });
+
+    test('dentro de cada estado preserva el orden del servidor', () async {
       final repo = FakePickingRepository(
         onListShipments: () async => [
           buildShipment(
@@ -48,12 +72,20 @@ void main() {
             externalId: 'received-1',
             status: ShipmentStatus.received,
           ),
+          buildShipment(
+            externalId: 'planned-2',
+            status: ShipmentStatus.planned,
+          ),
         ],
       );
 
       final result = await ListOrdersToPrepare(repo).call();
 
-      expect(result.map((s) => s.externalId), ['planned-1', 'received-1']);
+      expect(result.map((s) => s.externalId), [
+        'planned-1',
+        'planned-2',
+        'received-1',
+      ]);
     });
 
     test('lista vacía del backend devuelve lista vacía', () async {

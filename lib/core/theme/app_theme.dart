@@ -41,7 +41,8 @@ abstract final class AppTheme {
     const ink = AppColors.hcInk;
     const white = Colors.white;
     const border = BorderSide(color: ink, width: highContrastBorder);
-    final base = _build(Brightness.light);
+    // Reusa el tema claro ya armado (no recalcula la paleta tonal).
+    final base = _light;
 
     // Sin grises claros ni tintes: todas las superficies son blancas y todo
     // lo que va encima es negro o un semántico oscuro.
@@ -148,6 +149,13 @@ abstract final class AppTheme {
     );
   }
 
+  static const PageTransitionsTheme _pageTransitions = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    },
+  );
+
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
@@ -176,6 +184,11 @@ abstract final class AppTheme {
       // InkRipple en vez de InkSparkle (default M3 en Android): el sparkle usa
       // un shader que en GPUs de gama baja traba el primer toque.
       splashFactory: InkRipple.splashFactory,
+      // Transiciones baratas: la default de Android (Zoom) captura la pantalla
+      // en una textura y en Skia compila shaders la primera vez (tirón al abrir
+      // cada pantalla en gama baja). FadeUpwards es un fundido + desplazamiento
+      // corto sin captura; en iOS se mantiene el deslizado nativo.
+      pageTransitionsTheme: _pageTransitions,
       textTheme: sizedText.apply(fontSizeFactor: 1.1),
       appBarTheme: AppBarTheme(
         centerTitle: false,

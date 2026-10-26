@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +10,7 @@ import '../auth/session.dart';
 import '../config/app_config.dart';
 import 'app_version_interceptor.dart';
 import 'auth_headers.dart';
+import 'date_query_interceptor.dart';
 
 /// Interceptor que agrega el Bearer por usuario+dispositivo y el `X-Device-Id`
 /// a cada request de la puerta `/app/*`, leyendo las cabeceras vigentes en
@@ -67,7 +71,13 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
+  // Conexiones TLS reusadas: el `idleTimeout` por defecto (15 s) cerraba el
+  // socket entre escaneos y el próximo request pagaba TCP+TLS de nuevo.
+  dio.httpClientAdapter = createApiHttpClientAdapter();
+
   dio.interceptors.add(_AuthInterceptor(ref));
+  // Fechas de calendario del query como `Y-m-d` (el cliente generado manda ISO).
+  dio.interceptors.add(const DateQueryInterceptor());
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
   dio.interceptors.add(AppVersionInterceptor(ref));
 
@@ -78,13 +88,39 @@ final dioProvider = Provider<Dio>((ref) {
         responseBody: false,
         requestHeader: false,
         responseHeader: false,
-        logPrint: (o) => debugPrint('$o'),
+        logPrint: (o) => debugPrint(truncateLogLine('$o')),
       ),
     );
   }
 
   return dio;
 });
+
+/// Tiempo que una conexión ociosa al API queda abierta para reusarse.
+const Duration kApiIdleTimeout = Duration(seconds: 90);
+
+/// Conexiones simultáneas por host al API (GPS + escaneos + pantallas).
+const int kApiMaxConnectionsPerHost = 6;
+
+/// Adaptador HTTP del API: mantiene vivas las conexiones [kApiIdleTimeout] y
+/// limita a [kApiMaxConnectionsPerHost] por host.
+@visibleForTesting
+IOHttpClientAdapter createApiHttpClientAdapter() => IOHttpClientAdapter(
+  createHttpClient: () => HttpClient()
+    ..idleTimeout = kApiIdleTimeout
+    ..maxConnectionsPerHost = kApiMaxConnectionsPerHost,
+);
+
+/// Largo máximo de una línea del log HTTP (solo debug).
+const int kHttpLogMaxChars = 600;
+
+/// Recorta una línea del log HTTP: un body grande (lote de escaneos, ruta con
+/// muchas paradas) no se imprime entero ni se copia en memoria al log.
+@visibleForTesting
+String truncateLogLine(String line, {int max = kHttpLogMaxChars}) {
+  if (line.length <= max) return line;
+  return '${line.substring(0, max)}… (+${line.length - max} caracteres)';
+}
 
 /// Cliente generado del API, con la raíz de la puerta `/app/*` ya resuelta por baseUrl.
 final logisticsApiProvider = Provider<LogisticsApi>(

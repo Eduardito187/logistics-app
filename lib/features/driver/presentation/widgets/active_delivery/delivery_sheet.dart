@@ -6,8 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/api/export.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
+import '../../../domain/entities/street_address.dart';
 import '../../controllers/driver_controllers.dart';
 import 'delivery_contact.dart';
+
+/// `true` si a la parada le falta teléfono, dirección o productos y hay que
+/// completarla con el detalle del envío (`GET /shipments/{id}`).
+bool stopNeedsShipmentDetail(DriverRouteStop stop) =>
+    (stop.customerPhone?.isEmpty ?? true) ||
+    (stop.address?.isEmpty ?? true) ||
+    stop.items.isEmpty;
 
 /// Hoja deslizable sobre el mapa con los datos de la entrega (cliente,
 /// teléfono, dirección, referencia del pedido) y el pedido (productos con SKU y
@@ -48,7 +56,7 @@ class DeliverySheet extends StatelessWidget {
                 slivers: [
                   const SliverToBoxAdapter(child: _Grabber()),
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                     sliver: SliverList.list(
                       children: [
                         Text(
@@ -60,9 +68,12 @@ class DeliverySheet extends StatelessWidget {
                         const SizedBox(height: 8),
                         _DeliveryDetails(stop: stop),
                         const SizedBox(height: 20),
-                        _OrderSection(stop: stop),
                       ],
                     ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: _OrderSection(stop: stop),
                   ),
                 ],
               ),
@@ -103,11 +114,15 @@ class _DeliveryDetails extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // La parada ya trae teléfono e indicaciones; el detalle del envío es el
-    // respaldo (rutas cacheadas de una versión anterior del backend).
-    final shipment = ref.watch(shipmentDetailProvider(stop.shipmentId)).value;
+    // respaldo (rutas cacheadas de una versión anterior del backend) y SOLO se
+    // pide si a la parada le falta algo: sin request extra por parada.
+    final shipment = stopNeedsShipmentDetail(stop)
+        ? ref.watch(shipmentDetailProvider(stop.shipmentId)).value
+        : null;
     final name = stop.customerName ?? shipment?.customerName ?? 'Cliente';
     final phone = stop.customerPhone ?? shipment?.customerPhone;
-    final address = stop.address ?? shipment?.addressText;
+    final rawAddress = stop.address ?? shipment?.addressText;
+    final address = rawAddress == null ? null : streetAddress(rawAddress);
     final reference = stop.orderReference ?? shipment?.externalId;
     final note = stop.addressReference ?? shipment?.addressReference;
 
@@ -141,6 +156,8 @@ class _DeliveryDetails extends ConsumerWidget {
             leading: const Icon(Icons.location_on_outlined, size: 28),
             label: 'Entregar en',
             value: note == null || note.isEmpty ? address : '$address\n$note',
+            // La dirección es lo más largo de la hoja: letra más chica.
+            dense: true,
             action: stop.lat != null && stop.lng != null
                 ? _RowAction(
                     label: 'Navegar',
@@ -155,12 +172,10 @@ class _DeliveryDetails extends ConsumerWidget {
     );
   }
 
+  static final RegExp _spaces = RegExp(r'\s+');
+
   static String _initials(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((p) => p.isNotEmpty)
-        .take(2);
+    final parts = name.trim().split(_spaces).where((p) => p.isNotEmpty).take(2);
     final initials = parts.map((p) => p[0].toUpperCase()).join();
     return initials.isEmpty ? '?' : initials;
   }
@@ -184,12 +199,16 @@ class _DetailRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.action,
+    this.dense = false,
   });
 
   final Widget leading;
   final String label;
   final String value;
   final _RowAction? action;
+
+  /// Texto del valor más chico (filas largas como la dirección).
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -214,9 +233,11 @@ class _DetailRow extends StatelessWidget {
                 ),
                 Text(
                   value,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style:
+                      (dense
+                              ? theme.textTheme.bodyMedium
+                              : theme.textTheme.titleMedium)
+                          ?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -235,6 +256,10 @@ class _DetailRow extends StatelessWidget {
 
 /// Productos del pedido: foto, nombre, SKU y cantidad. Salen de la parada
 /// (`items`); si vienen vacíos, del detalle del envío.
+///
+/// Es un sliver: los productos van en una lista perezosa (`SliverList.builder`)
+/// y solo se construyen (y se descargan sus fotos) los que entran en pantalla,
+/// aunque el pedido traiga decenas de líneas.
 class _OrderSection extends ConsumerWidget {
   const _OrderSection({required this.stop});
 
@@ -270,51 +295,67 @@ class _OrderSection extends ConsumerWidget {
               .toList(growable: false);
     final units = items.fold<int>(0, (sum, i) => sum + i.quantity);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    final Widget body;
+    if (items.isEmpty && detail != null && detail.isLoading) {
+      body = const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    } else if (items.isEmpty && detail != null && detail.hasError) {
+      body = SliverToBoxAdapter(
+        child: Row(
           children: [
-            Expanded(
-              child: Text(
-                'Pedido',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+            const Expanded(
+              child: Text('No se pudo cargar el detalle del pedido.'),
             ),
-            if (items.isNotEmpty)
-              Text(
-                units == 1 ? '1 producto' : '$units productos',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
-              ),
+            TextButton(
+              onPressed: () =>
+                  ref.invalidate(shipmentDetailProvider(stop.shipmentId)),
+              child: const Text('Reintentar'),
+            ),
           ],
         ),
-        const SizedBox(height: 8),
-        if (items.isEmpty && detail != null && detail.isLoading)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (items.isEmpty && detail != null && detail.hasError)
-          Row(
-            children: [
-              const Expanded(
-                child: Text('No se pudo cargar el detalle del pedido.'),
-              ),
-              TextButton(
-                onPressed: () =>
-                    ref.invalidate(shipmentDetailProvider(stop.shipmentId)),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          )
-        else if (items.isEmpty)
-          const Text('El pedido no tiene productos detallados.')
-        else
-          for (final item in items) ProductTile(item: item),
+      );
+    } else if (items.isEmpty) {
+      body = const SliverToBoxAdapter(
+        child: Text('El pedido no tiene productos detallados.'),
+      );
+    } else {
+      body = SliverList.builder(
+        itemCount: items.length,
+        itemBuilder: (context, i) => ProductTile(item: items[i]),
+      );
+    }
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Pedido',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (items.isNotEmpty)
+                  Text(
+                    units == 1 ? '1 producto' : '$units productos',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        body,
       ],
     );
   }
@@ -368,11 +409,16 @@ class ProductTile extends StatelessWidget {
             ),
             child: url == null || url.isEmpty
                 ? placeholder
-                : Image.network(
-                    url,
+                // `fit`: se decodifica dentro de cache x cache SIN deformar
+                // (con ancho y alto fijos una foto 4:3 quedaba aplastada).
+                : Image(
+                    image: ResizeImage(
+                      NetworkImage(url),
+                      width: cache,
+                      height: cache,
+                      policy: ResizeImagePolicy.fit,
+                    ),
                     fit: BoxFit.cover,
-                    cacheWidth: cache,
-                    cacheHeight: cache,
                     semanticLabel: item.name,
                     errorBuilder: (_, _, _) => placeholder,
                   ),
@@ -391,7 +437,7 @@ class ProductTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'SKU ${item.sku}',
+                  item.sku,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

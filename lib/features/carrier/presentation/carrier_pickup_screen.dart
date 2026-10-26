@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/scan_request.dart';
-import '../../../core/location/location_service.dart';
 import '../../../core/offline/submit_feedback.dart';
+import '../../../core/offline/submit_outcome.dart';
+import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_snack.dart';
 import '../domain/usecases/record_load_scan.dart';
 import 'widgets/carrier_scan_record.dart';
 import 'widgets/carrier_scan_session_view.dart';
@@ -25,35 +26,69 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
   final List<CarrierScanRecord> _records = [];
   bool _busy = false;
 
+  /// Bultos ya recogidos (no rechazados) en esta pantalla: un segundo escaneo
+  /// del mismo no encola otro registro.
+  final Set<String> _picked = <String>{};
+
+  /// Escaneo CONTINUO: la cámara queda abierta y cada bulto se registra al
+  /// leerlo, con aviso verde/rojo sobre la cámara.
   Future<void> _scan() async {
     if (_busy) return;
     setState(() => _busy = true);
+    // El GPS se calienta junto con la cámara: el registro no lo espera aparte.
+    warmUpCarrierLocation(ref);
+    var count = 0;
     try {
-      final label = await scanAndVerifyLabel(
+      await scanContinuous(
         context,
-        ref,
         title: 'Recoger carga',
-        helper: 'Apunta al QR de la etiqueta del bulto',
+        helper: 'Apunta al QR de la etiqueta de cada bulto',
+        formats: const [BarcodeFormat.qrCode],
+        onCode: (qr) async {
+          final feedback = await _pickupCode(qr);
+          if (feedback.ok) count++;
+          return feedback;
+        },
       );
-      if (label == null || !mounted) return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted || count == 0) return;
+    showCarrierBatchSummary(
+      context,
+      count == 1 ? '1 bulto recogido.' : '$count bultos recogidos.',
+    );
+  }
 
-      final gps = await ref.read(locationServiceProvider).current();
-      final now = DateTime.now();
-      final outcome = await ref.read(recordLoadScanProvider)(
-        request: ScanRequest(
-          shipmentId: label.shipmentId,
-          unitId: label.unitId,
-          lat: gps?.lat ?? 0,
-          lng: gps?.lng ?? 0,
-          occurredAt: now,
-        ),
-        label: 'Recojo · ${label.sku}',
-      );
+  Future<ScanFeedback> _pickupCode(String qr) async {
+    final check = await verifyLabelQr(ref, qr);
+    final label = check.label;
+    if (label == null) {
+      return ScanFeedback.error(check.error ?? 'Etiqueta inválida');
+    }
+    if (_picked.contains(label.unitId)) {
+      return const ScanFeedback.error('Ya recogido');
+    }
+    _picked.add(label.unitId);
 
-      if (!mounted) return;
+    final gps = await prefetchCarrierFix(ref);
+    final now = DateTime.now();
+    final outcome = await ref.read(recordLoadScanProvider)(
+      request: ScanRequest(
+        shipmentId: label.shipmentId,
+        unitId: label.unitId,
+        lat: gps?.lat ?? 0,
+        lng: gps?.lng ?? 0,
+        occurredAt: now,
+      ),
+      label: 'Recojo · ${label.sku}',
+    );
+    if (outcome == SubmitOutcome.failed) _picked.remove(label.unitId);
+    if (mounted) {
       setState(() {
-        _records.insert(
-          0,
+        // Acotada a kMaxSessionRecords: el escaneo ya quedó en la cola.
+        addSessionRecord(
+          _records,
           CarrierScanRecord(
             unitId: label.unitId,
             title: label.sku,
@@ -62,15 +97,11 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
           ),
         );
       });
-      // El aviso flota encima del botón del pie: no tapa el próximo escaneo.
-      showSubmitOutcome(
-        context,
-        outcome,
-        bottomClearance: kBottomActionClearance,
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
+    if (outcome == SubmitOutcome.failed) {
+      return ScanFeedback.error(submitOutcomeMessage(outcome));
+    }
+    return ScanFeedback.ok('Bulto recogido · ${label.sku}');
   }
 
   @override

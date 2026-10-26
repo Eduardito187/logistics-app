@@ -140,8 +140,11 @@ class _MyDayBody extends StatelessWidget {
   }
 }
 
+/// Formato de hora creado una vez (no en cada build).
+final DateFormat _hourFormat = DateFormat.Hm('es');
+
 String _hour(DateTime? at) =>
-    at == null ? '—' : DateFormat.Hm('es').format(at.toLocal());
+    at == null ? '—' : _hourFormat.format(at.toLocal());
 
 /// "18 min", "1 h 05 min" o "—" sin datos suficientes.
 String formatAveragePerStop(Duration? d) {

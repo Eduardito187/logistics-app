@@ -44,4 +44,46 @@ void main() {
     container.read(plansDateProvider.notifier).select(DateTime(2025, 12, 31));
     expect(container.read(plansDateProvider), DateTime(2025, 12, 31));
   });
+
+  group('paso de la medianoche con la app abierta', () {
+    late DateTime now;
+    late ProviderContainer container;
+
+    setUp(() {
+      now = DateTime(2026, 10, 20, 23, 50);
+      container = ProviderContainer(
+        overrides: [plansClockProvider.overrideWithValue(() => now)],
+      );
+      addTearDown(container.dispose);
+    });
+
+    test('siguiendo a hoy, pasa al día nuevo', () {
+      expect(container.read(plansDateProvider), DateTime(2026, 10, 20));
+
+      now = DateTime(2026, 10, 21, 0, 5);
+      container.read(plansDateProvider.notifier).rollOverIfNewDay();
+
+      expect(container.read(plansDateProvider), DateTime(2026, 10, 21));
+    });
+
+    test('si el supervisor eligió otro día, se respeta', () {
+      container.read(plansDateProvider.notifier).select(DateTime(2026, 10, 1));
+
+      now = DateTime(2026, 10, 21, 0, 5);
+      container.read(plansDateProvider.notifier).rollOverIfNewDay();
+
+      expect(container.read(plansDateProvider), DateTime(2026, 10, 1));
+    });
+
+    test('elegir hoy a mano vuelve a seguir a hoy', () {
+      final notifier = container.read(plansDateProvider.notifier)
+        ..select(DateTime(2026, 10, 1))
+        ..select(DateTime(2026, 10, 20, 9));
+
+      now = DateTime(2026, 10, 21, 0, 5);
+      notifier.rollOverIfNewDay();
+
+      expect(container.read(plansDateProvider), DateTime(2026, 10, 21));
+    });
+  });
 }

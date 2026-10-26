@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
+import 'package:logistics_app/features/home/presentation/home_prefetch.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/profile_header.dart';
 import 'package:logistics_app/features/home/presentation/widgets/task_card.dart';
@@ -19,7 +20,10 @@ Future<void> _pump(
   UserRole role, {
   double textScale = 1.0,
 }) async {
-  final container = ProviderContainer();
+  // Sin precarga: acá solo se mide el layout (y no se toca la red).
+  final container = ProviderContainer(
+    overrides: [homePrefetcherProvider.overrideWithValue(const _NoPrefetch())],
+  );
   addTearDown(container.dispose);
   container.read(sessionProvider.notifier).devSignIn(role);
   await tester.pumpWidget(
@@ -33,6 +37,13 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+class _NoPrefetch extends HomePrefetcher {
+  const _NoPrefetch();
+
+  @override
+  void call(WidgetRef ref, UserRole role) {}
 }
 
 /// Columnas reales: cuántas tarjetas comparten la fila de la primera.

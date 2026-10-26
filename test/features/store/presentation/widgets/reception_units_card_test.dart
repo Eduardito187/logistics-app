@@ -20,10 +20,15 @@ Future<ProviderContainer> _pump(
       container: container,
       child: MaterialApp(
         home: Scaffold(
-          body: ReceptionUnitsCard(
-            expected: expected,
-            received: received,
-            surplus: surplus,
+          // Es un sliver: va dentro de un CustomScrollView.
+          body: CustomScrollView(
+            slivers: [
+              ReceptionUnitsCard(
+                expected: expected,
+                received: received,
+                surplus: surplus,
+              ),
+            ],
           ),
         ),
       ),
@@ -47,7 +52,7 @@ void main() {
     expect(find.text('Pendiente'), findsOneWidget);
     expect(find.text('Sobrante'), findsOneWidget);
     // Un bulto por fila (2 esperados + 1 sobrante).
-    expect(find.textContaining('Bulto '), findsNWidgets(3));
+    expect(find.textContaining('Producto '), findsNWidgets(3));
   });
 
   testWidgets('muestra la ubicación en estante capturada para el bulto', (
@@ -66,5 +71,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Estante: Pasillo 3 · B2'), findsOneWidget);
+  });
+
+  testWidgets('con cientos de productos solo arma las filas visibles', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      expected: [for (var i = 0; i < 300; i++) 'unit-$i'],
+      received: const {},
+      surplus: const {},
+    );
+
+    final built = find.byType(UnitProductRow).evaluate().length;
+    expect(built, greaterThan(0));
+    expect(built, lessThan(40));
   });
 }

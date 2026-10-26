@@ -39,8 +39,11 @@ class SessionNotifier extends Notifier<Session?> {
     final String? token;
     final Map<String, Object?>? snapshot;
     try {
-      token = await _store.readToken();
-      snapshot = await _store.readSessionSnapshot();
+      // En paralelo (salen de memoria si el almacén ya se precargó).
+      (token, snapshot) = await (
+        _store.readToken(),
+        _store.readSessionSnapshot(),
+      ).wait;
     } on Object {
       // Almacén ilegible (p. ej. tras restaurar un backup): se pide login.
       return false;
@@ -185,11 +188,34 @@ class SessionNotifier extends Notifier<Session?> {
       return;
     }
     _closing = true;
+    final bool hadToken;
     try {
-      // Si hay sesión real, se revoca el token en el servidor (best-effort, con
-      // un tope corto para no trabar el cierre si no hay red). El Bearer sigue
-      // puesto hasta limpiar las cabeceras abajo.
-      if (state?.token != null) {
+      hadToken = state?.token != null;
+      // Primero lo que ve el usuario: sin sesión → el router lleva al login AL
+      // INSTANTE (antes esperaba hasta 3 s de drenado + 4 s de revocación).
+      // El Bearer sigue en las cabeceras para el trabajo de abajo.
+      state = null;
+      try {
+        await (_store.clearToken(), _store.clearSessionSnapshot()).wait;
+      } on Object {
+        // Se ignora: la sesión en memoria ya se cerró.
+      }
+    } finally {
+      // El guard cubre solo el cierre local. Si alguien vuelve a entrar
+      // mientras sigue el trabajo de fondo de abajo, su sesión nueva tiene que
+      // poder cerrarse normalmente.
+      _closing = false;
+    }
+    await _afterSignOut(hadToken: hadToken);
+  }
+
+  /// Trabajo de fondo del cierre (el usuario ya está en el login). Nunca toca
+  /// una sesión nueva que haya entrado mientras tanto.
+  Future<void> _afterSignOut({required bool hadToken}) async {
+    try {
+      // Si había sesión real, se revoca el token en el servidor (best-effort,
+      // con tope corto) mientras el usuario ya está en el login.
+      if (hadToken) {
         // Política de la cola offline al cerrar sesión:
         // 1. Con el token todavía vigente se intenta subir lo pendiente (tope
         //    corto: nunca traba el cierre). Tras revocar ya no se puede.
@@ -200,32 +226,28 @@ class SessionNotifier extends Notifier<Session?> {
         // 3. Más abajo se limpian los datos que ya no sirven (fallidas ya
         //    reportadas, fotos huérfanas).
         await syncMaintenanceIfOpen(ref)?.drainBeforeSignOut();
-        try {
-          await ref
-              .read(logisticsApiProvider)
-              .auth
-              .appLogout()
-              .timeout(const Duration(seconds: 4));
-        } on Object {
-          // Sin red o error: se cierra igual localmente.
+        // Si mientras tanto entró otra sesión, las cabeceras ya llevan SU
+        // token: revocar ahora la cerraría a ella. El token viejo vence solo.
+        if (state == null) {
+          try {
+            await ref
+                .read(logisticsApiProvider)
+                .auth
+                .appLogout()
+                .timeout(const Duration(seconds: 4));
+          } on Object {
+            // Sin red o error: se cierra igual localmente.
+          }
         }
       }
-      // El estado local se limpia de forma síncrona: el cierre de sesión nunca
-      // debe quedar atrapado por una falla del almacén seguro o de la red.
-      _headers.setToken(null);
-      state = null;
-      try {
-        await _store.clearToken();
-        await _store.clearSessionSnapshot();
-      } on Exception {
-        // Se ignora: el token en memoria ya se borró arriba.
-      }
+      // Si mientras tanto entró otra sesión, su token no se toca.
+      if (state == null) _headers.setToken(null);
       // Datos locales que no son cola pendiente: acciones/fotos `failed` (ya
       // reportadas al FailureReporter) con sus archivos y fotos huérfanas.
       // Best-effort: `clearAfterSignOut` nunca lanza.
       await syncMaintenanceIfOpen(ref)?.clearAfterSignOut();
-    } finally {
-      _closing = false;
+    } on Object {
+      // Best-effort: el cierre local ya ocurrió.
     }
   }
 

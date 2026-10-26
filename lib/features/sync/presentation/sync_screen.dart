@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/offline/offline_queue.dart';
+import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/offline/sync_queue_provider.dart';
@@ -33,7 +34,9 @@ class SyncScreen extends ConsumerWidget {
         ],
       ),
       body: queue.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        // LoadingView: spinner dentro de un RepaintBoundary (no repinta la
+        // barra superior 60 veces por segundo).
+        loading: () => const LoadingView(),
         error: (e, _) => EmptyState(
           icon: Icons.error_outline,
           title: 'No se pudo leer la cola',
@@ -62,8 +65,10 @@ class SyncScreen extends ConsumerWidget {
                   sliver: SliverList.separated(
                     itemCount: actions.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) =>
-                        SyncActionTile(action: actions[i]),
+                    itemBuilder: (context, i) => SyncActionTile(
+                      key: ValueKey(actions[i].id),
+                      action: actions[i],
+                    ),
                   ),
                 ),
               ],

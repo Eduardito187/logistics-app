@@ -23,7 +23,7 @@ Future<void> _pump(
   WidgetTester tester, {
   List<UnitTracking> units = const [],
 }) async {
-  // Superficie alta: el ListView es perezoso y la lista de bultos queda debajo
+  // Superficie alta: la lista es perezosa y la lista de bultos queda debajo
   // del pie fijo en 800x600.
   tester.view.physicalSize = const Size(1200, 3600);
   tester.view.devicePixelRatio = 1;
@@ -60,7 +60,7 @@ void main() {
       findsOneWidget,
     );
     final button = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar producto'),
     );
     expect(button.onPressed, isNull);
   });
@@ -81,27 +81,37 @@ void main() {
       findsNothing,
     );
     final button = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar producto'),
     );
     expect(button.onPressed, isNotNull);
   });
 
-  testWidgets('lista los bultos con el contador de entregados', (tester) async {
+  testWidgets('lista los productos con el contador de entregados', (
+    tester,
+  ) async {
     await _pump(
       tester,
       units: [
-        unit(unitId: 'unit-1', label: 'A1'),
+        unit(
+          unitId: 'unit-1',
+          label: 'A1',
+          sku: 'TV-55',
+          productName: 'Televisor 55"',
+        ),
         unit(unitId: 'unit-2'),
       ],
     );
 
-    expect(find.text('Entregados 0 de 2 bulto(s).'), findsOneWidget);
-    expect(find.text('Bulto A1'), findsOneWidget); // usa el label humano
+    expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
+    // Foto, nombre y código del producto; sin dato, el id abreviado.
+    expect(find.text('Televisor 55"'), findsOneWidget);
+    expect(find.text('TV-55'), findsOneWidget);
+    expect(find.textContaining('Producto '), findsOneWidget);
     expect(find.text('Pendiente'), findsNWidgets(2));
   });
 
   testWidgets('sin bultos muestra 0 de 0', (tester) async {
     await _pump(tester);
-    expect(find.text('Entregados 0 de 0 bulto(s).'), findsOneWidget);
+    expect(find.text('Entregados 0 de 0 producto(s).'), findsOneWidget);
   });
 }

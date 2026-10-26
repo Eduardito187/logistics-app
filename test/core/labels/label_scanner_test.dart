@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -168,28 +169,49 @@ void main() {
       expect(result.backendVerification, isNull);
     });
 
-    test('con cliente API, adjunta el contrahecheo del backend', () async {
-      final execution = _FakeExecutionClient(
-        (_) async =>
-            _verifyResponse(valid: true, result: LabelVerificationResult.valid),
-      );
+    test(
+      'con cliente API, dispara el reporte al backend sin esperarlo',
+      () async {
+        final execution = _FakeExecutionClient(
+          (_) async => _verifyResponse(
+            valid: true,
+            result: LabelVerificationResult.valid,
+          ),
+        );
+        final scanner = LabelScanner(
+          _vectorVerifier(),
+          api: _FakeApi(execution),
+        );
+
+        final result = await scanner.scanAndReport(
+          _vector()['qr_content'] as String,
+        );
+
+        expect(result.isValid, isTrue);
+        // No se espera el veredicto: queda null (decide el offline).
+        expect(result.backendVerification, isNull);
+        expect(execution.calls, 1);
+        // El cuerpo reportado es el canónico exacto y el keyId del QR.
+        expect(execution.lastBody!.payload, _vector()['canonical']);
+        expect(execution.lastBody!.keyId, _vector()['key_id']);
+      },
+    );
+
+    test('no espera a la red: backend colgado no traba el escaneo', () async {
+      final never = Completer<PostAppLabelsVerifyResponse>();
+      final execution = _FakeExecutionClient((_) => never.future);
       final scanner = LabelScanner(_vectorVerifier(), api: _FakeApi(execution));
 
-      final result = await scanner.scanAndReport(
-        _vector()['qr_content'] as String,
-      );
+      final result = await scanner
+          .scanAndReport(_vector()['qr_content'] as String)
+          .timeout(const Duration(seconds: 1));
 
       expect(result.isValid, isTrue);
-      expect(result.backendVerification, isNotNull);
-      expect(result.backendVerification!.valid, isTrue);
       expect(execution.calls, 1);
-      // El cuerpo reportado es el canónico exacto y el keyId del QR.
-      expect(execution.lastBody!.payload, _vector()['canonical']);
-      expect(execution.lastBody!.keyId, _vector()['key_id']);
     });
 
     test(
-      'offline manda: offline valid + backend invalid no cambia isValid',
+      'offline manda: backend invalid no cambia isValid ni se espera',
       () async {
         final execution = _FakeExecutionClient(
           (_) async => _verifyResponse(
@@ -208,11 +230,7 @@ void main() {
 
         // La decisión en terreno es la offline (valid); el backend solo informa.
         expect(result.isValid, isTrue);
-        expect(result.backendVerification!.valid, isFalse);
-        expect(
-          result.backendVerification!.result,
-          LabelVerificationResult.invalidSignature,
-        );
+        expect(result.backendDisagrees, isFalse);
       },
     );
 

@@ -54,8 +54,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             const ProfileSection(),
             const SizedBox(height: 12),
-            PrinterSection(printing: _printing, onPrintTest: _printTest),
-            const SizedBox(height: 12),
+            // La impresora solo le sirve a quien imprime etiquetas.
+            if (session?.role.usesLabelPrinter ?? false) ...[
+              PrinterSection(printing: _printing, onPrintTest: _printTest),
+              const SizedBox(height: 12),
+            ],
             const FieldUseSection(),
             const SizedBox(height: 12),
             SessionSection(session: session),

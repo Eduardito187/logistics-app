@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/map/osm_tile_layer.dart';
 import 'package:logistics_app/core/map/tile_cache.dart';
@@ -203,4 +206,107 @@ void main() {
       expect(identical(a.cache, MapTileCache.instance), isTrue);
     });
   });
+
+  group('CachedTileImageProvider (gama baja)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    MapTileCache noDiskCache(FakeTileAdapter adapter) => MapTileCache(
+      resolveDirectory: () async => null,
+      httpClientAdapter: adapter,
+    );
+
+    CachedTileImageProvider providerFor(
+      MapTileCache cache,
+      Completer<void> cancel, {
+      String? fallbackUrl,
+    }) => CachedTileImageProvider(
+      dio: cache.dio,
+      url: url,
+      fallbackUrl: fallbackUrl,
+      headers: MapTileCache.headers,
+      cancelLoading: cancel.future,
+    );
+
+    test('devuelve los bytes del tile', () async {
+      final provider = providerFor(
+        noDiskCache(FakeTileAdapter()),
+        Completer<void>(),
+      );
+      final bytes = await provider.fetchBytes();
+      expect(bytes, hasLength(64));
+    });
+
+    test(
+      'sin señal: error compacto de una línea (no un DioException)',
+      () async {
+        final provider = providerFor(
+          noDiskCache(FakeTileAdapter(fail: true)),
+          Completer<void>(),
+        );
+        await expectLater(
+          provider.fetchBytes(),
+          throwsA(
+            isA<TileLoadException>()
+                .having((e) => e.statusCode, 'statusCode', isNull)
+                .having(
+                  (e) => e.toString(),
+                  'toString',
+                  'Tile sin señal: $url',
+                ),
+          ),
+        );
+      },
+    );
+
+    test('sin señal: prueba la URL de respaldo una sola vez', () async {
+      final adapter = FakeTileAdapter(fail: true);
+      final provider = providerFor(
+        noDiskCache(adapter),
+        Completer<void>(),
+        fallbackUrl: 'https://b.tile.example/13/1/1.png',
+      );
+      await expectLater(
+        provider.fetchBytes(),
+        throwsA(isA<TileLoadException>()),
+      );
+      expect(adapter.requests, hasLength(2));
+    });
+
+    test(
+      'tile descartado: corta la descarga y devuelve transparente',
+      () async {
+        final adapter = FakeTileAdapter(
+          delay: const Duration(milliseconds: 50),
+        );
+        final cancel = Completer<void>();
+        final provider = providerFor(noDiskCache(adapter), cancel);
+        final pending = provider.fetchBytes();
+        cancel.complete();
+        expect(await pending, TileProvider.transparentImage);
+      },
+    );
+
+    test('al descartarse sale de la ImageCache global', () async {
+      final cancel = Completer<void>();
+      final provider = providerFor(noDiskCache(FakeTileAdapter()), cancel);
+      final imageCache = PaintingBinding.instance.imageCache;
+      imageCache.putIfAbsent(provider, () => _NeverCompleter());
+      expect(imageCache.containsKey(provider), isTrue);
+
+      cancel.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(imageCache.containsKey(provider), isFalse);
+    });
+
+    test('cliente de tiles con conexiones acotadas', () {
+      expect(kMapTileMaxConnections, inInclusiveRange(2, 6));
+      expect(
+        kMapTileIdleTimeout,
+        lessThanOrEqualTo(const Duration(seconds: 30)),
+      );
+    });
+  });
 }
+
+/// Completer de imagen que nunca termina (solo ocupa un lugar en la caché).
+class _NeverCompleter extends ImageStreamCompleter {}

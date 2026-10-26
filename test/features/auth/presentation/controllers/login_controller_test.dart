@@ -37,6 +37,9 @@ ProviderContainer _containerWith(_FakeAuthRepository repo) {
     overrides: [signInProvider.overrideWithValue(SignIn(repo))],
   );
   addTearDown(container.dispose);
+  // El provider es autoDispose: como en la pantalla, alguien lo escucha
+  // mientras dura el formulario.
+  container.listen(loginControllerProvider, (_, _) {});
   return container;
 }
 

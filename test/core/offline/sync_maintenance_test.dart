@@ -49,19 +49,23 @@ void main() {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
-  Future<void> action(String id, String status, DateTime createdAt) =>
-      db.enqueue(
-        OutboxActionsCompanion.insert(
-          id: id,
-          kind: 'recordLoadScan',
-          payload:
-              '{"shipment_id":"s1","unit_id":"u1","lat":0,"lng":0,'
-              '"occurred_at":"2026-10-15T12:00:00.000Z"}',
-          occurredAt: createdAt,
-          status: Value(status),
-          createdAt: Value(createdAt),
-        ),
-      );
+  Future<void> action(
+    String id,
+    String status,
+    DateTime createdAt, {
+    String kind = 'recordLoadScan',
+  }) => db.enqueue(
+    OutboxActionsCompanion.insert(
+      id: id,
+      kind: kind,
+      payload:
+          '{"shipment_id":"s1","unit_id":"u1","lat":0,"lng":0,'
+          '"occurred_at":"2026-10-15T12:00:00.000Z"}',
+      occurredAt: createdAt,
+      status: Value(status),
+      createdAt: Value(createdAt),
+    ),
+  );
 
   Future<File> photo(String id, String status, DateTime createdAt) async {
     final file = File(p.join(tmp.path, '$id.jpg'))..writeAsBytesSync([1]);
@@ -105,6 +109,18 @@ void main() {
     );
     expect(await photoIds(), ['P-old-pending']);
     expect(oldPhoto.existsSync(), isFalse);
+  });
+
+  test('purgeStale descarta posiciones GPS pendientes > 7 días; ninguna otra '
+      'pendiente', () async {
+    await action('G-old', 'pending', old, kind: 'ingestTruckPosition');
+    await action('G-new', 'pending', recent, kind: 'ingestTruckPosition');
+    await action('S-old', 'pending', old); // escaneo: nunca se descarta
+    build([]);
+
+    await maintenance.purgeStale(now: now);
+
+    expect(await actionIds(), unorderedEquals(['G-new', 'S-old']));
   });
 
   test('clearAfterSignOut borra TODAS las failed y huérfanos; conserva la '

@@ -125,7 +125,30 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
       state = state.copyWith(shipmentId: shipmentId);
       return true;
     }
+    // Arranque en curso (permisos, servicio): una segunda llamada antes de que
+    // termine NO abre otro stream de GPS; se suma al arranque y re-apunta.
+    final starting = _starting;
+    if (starting != null) {
+      _pendingShipmentId = shipmentId;
+      return starting;
+    }
+    final run = _start(shipmentId);
+    _starting = run;
+    try {
+      return await run;
+    } finally {
+      _starting = null;
+    }
+  }
 
+  /// Arranque en curso; las llamadas concurrentes a [start] se suman.
+  Future<bool>? _starting;
+
+  /// Envío pedido por una llamada concurrente durante el arranque.
+  String? _pendingShipmentId;
+
+  Future<bool> _start(String shipmentId) async {
+    _pendingShipmentId = null;
     final location = ref.read(locationServiceProvider);
     if (!await location.ensureBackgroundPermission()) return false;
 
@@ -146,12 +169,16 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     );
     if (result is ServiceRequestFailure) return false;
 
-    _shipmentId = shipmentId;
+    final current = _pendingShipmentId ?? shipmentId;
+    _pendingShipmentId = null;
+    _shipmentId = current;
     _lastEnqueuedAt = null;
+    // Nunca dos suscripciones al GPS a la vez.
+    await _sub?.cancel();
     _sub = location.stream().listen(_onFix);
     state = TruckTrackingState(
       active: true,
-      shipmentId: shipmentId,
+      shipmentId: current,
       sent: 0,
       lastFix: null,
     );

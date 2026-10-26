@@ -64,7 +64,7 @@ void main() {
       expect(find.byType(OpenReceptionPanel), findsOneWidget);
       expect(
         find.text(
-          'Este envío tiene 2 bulto(s) esperado(s). '
+          'Este envío tiene 2 producto(s) esperado(s). '
           'Indica el nodo de origen para abrir la recepción.',
         ),
         findsOneWidget,
@@ -90,7 +90,15 @@ void main() {
     expect(find.text('Recibidos'), findsOneWidget);
     expect(find.text('Faltan'), findsOneWidget);
     // Acciones disponibles mientras la recepción está abierta.
-    expect(findButtonWithText<FilledButton>('Escanear bulto'), findsOneWidget);
+    expect(
+      findButtonWithText<FilledButton>('Escanear producto'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
       findsOneWidget,
@@ -128,7 +136,10 @@ void main() {
       );
 
       expect(find.text('Recepción conciliada'), findsOneWidget);
-      expect(findButtonWithText<FilledButton>('Escanear bulto'), findsNothing);
+      expect(
+        findButtonWithText<FilledButton>('Escanear producto'),
+        findsNothing,
+      );
       expect(
         findButtonWithText<OutlinedButton>('Conciliar y cerrar'),
         findsNothing,
@@ -190,7 +201,12 @@ void main() {
       final reconcileButton = findButtonWithText<OutlinedButton>(
         'Conciliar y cerrar',
       );
-      await tester.ensureVisible(reconcileButton);
+      // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+      await tester.scrollUntilVisible(
+        reconcileButton,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(reconcileButton);
       await tester.pumpAndSettle();
@@ -216,7 +232,12 @@ void main() {
     final reconcileButton = findButtonWithText<OutlinedButton>(
       'Conciliar y cerrar',
     );
-    await tester.ensureVisible(reconcileButton);
+    // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+    await tester.scrollUntilVisible(
+      reconcileButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(reconcileButton);
     await tester.pumpAndSettle();
@@ -247,7 +268,12 @@ void main() {
     final reconcileButton = findButtonWithText<OutlinedButton>(
       'Conciliar y cerrar',
     );
-    await tester.ensureVisible(reconcileButton);
+    // La lista es perezosa: las filas de producto (con foto) empujan el botón.
+    await tester.scrollUntilVisible(
+      reconcileButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(reconcileButton);
     await tester.pumpAndSettle();

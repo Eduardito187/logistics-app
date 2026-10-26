@@ -36,4 +36,22 @@ void main() {
     expect(result.shipmentId, 'DM-260012345');
     expect(result.sku, 'LG-GT32WPP');
   });
+
+  test('addSessionRecord pone lo último arriba y acota la sesión', () {
+    final records = <CarrierScanRecord>[];
+    for (var i = 0; i <= kMaxSessionRecords + 5; i++) {
+      addSessionRecord(
+        records,
+        CarrierScanRecord(
+          unitId: 'unit-$i',
+          title: 'SKU',
+          outcome: SubmitOutcome.sent,
+          at: DateTime(2026),
+        ),
+      );
+    }
+    expect(records, hasLength(kMaxSessionRecords));
+    expect(records.first.unitId, 'unit-${kMaxSessionRecords + 5}');
+    expect(records.last.unitId, 'unit-6');
+  });
 }

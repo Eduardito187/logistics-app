@@ -19,9 +19,16 @@ import 'widgets/settlement_detail.dart';
 /// proceso" (no un estado ya aplicado) y se invalida detalle + lista para que
 /// reflejen el estado real cuando el backend termine de procesarla.
 class CarrierSettlementDetailScreen extends ConsumerStatefulWidget {
-  const CarrierSettlementDetailScreen({super.key, required this.settlementId});
+  const CarrierSettlementDetailScreen({
+    super.key,
+    required this.settlementId,
+    this.initial,
+  });
 
   final String settlementId;
+
+  /// Liquidación de la lista (semilla): se muestra mientras llega el detalle.
+  final Settlement? initial;
 
   @override
   ConsumerState<CarrierSettlementDetailScreen> createState() =>
@@ -103,9 +110,13 @@ class _CarrierSettlementDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final settlement = ref.watch(
-      carrierSettlementProvider(widget.settlementId),
-    );
+    final fetched = ref.watch(carrierSettlementProvider(widget.settlementId));
+    final seed = widget.initial;
+    // Primera carga con semilla de la lista: se muestra ya, sin spinner. Un
+    // error sí se muestra (con reintento) aunque haya semilla.
+    final settlement = fetched.isLoading && !fetched.hasValue && seed != null
+        ? AsyncValue<Settlement>.data(seed)
+        : fetched;
     return Scaffold(
       appBar: AppBar(title: const Text('Liquidación')),
       body: AsyncValueView<Settlement>(

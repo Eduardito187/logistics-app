@@ -541,7 +541,9 @@ class FakeStoreRepository implements StoreRepository {
   ];
 
   @override
-  Future<List<Shipment>> listShipments() async => [FakeBackend.storeShipment];
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) async => [
+    FakeBackend.storeShipment,
+  ];
 
   @override
   Future<NodeReceptionView?> getNodeReception({
@@ -589,7 +591,9 @@ class FakePickingRepository implements PickingRepository {
   final OfflineQueue queue;
 
   @override
-  Future<List<Shipment>> listShipments() async => [FakeBackend.pickingOrder];
+  Future<List<Shipment>> listShipments({ShipmentStatus? status}) async => [
+    FakeBackend.pickingOrder,
+  ];
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) async =>

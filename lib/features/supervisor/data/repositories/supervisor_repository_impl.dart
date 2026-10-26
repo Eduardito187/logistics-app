@@ -34,6 +34,9 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
   ) => _remote.getVehicleTelemetrySummary(vehicleId);
 
   @override
+  Future<Map<String, String>> getVehiclePlates() => _remote.getVehiclePlates();
+
+  @override
   Future<void> acknowledgeTelemetryAlert(String alertId) =>
       _remote.acknowledgeTelemetryAlert(alertId);
 

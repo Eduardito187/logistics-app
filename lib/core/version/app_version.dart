@@ -11,14 +11,18 @@ class AppVersion implements Comparable<AppVersion> {
   final int minor;
   final int patch;
 
+  // Compiladas una sola vez: se parsea la versión mínima de cada respuesta.
+  static final RegExp _suffix = RegExp('[+-]');
+  static final RegExp _semver = RegExp(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?$');
+
   /// Parsea `1`, `1.2`, `1.2.3`, `v1.2.3`, `1.2.3+45`, `1.2.3-rc.1`.
   /// `null` si el texto no es una versión válida (se ignora sin bloquear).
   static AppVersion? tryParse(String? raw) {
     if (raw == null) return null;
     var text = raw.trim();
     if (text.startsWith('v') || text.startsWith('V')) text = text.substring(1);
-    text = text.split(RegExp('[+-]')).first;
-    final match = RegExp(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?$').firstMatch(text);
+    text = text.split(_suffix).first;
+    final match = _semver.firstMatch(text);
     if (match == null) return null;
     return AppVersion(
       int.parse(match.group(1)!),

@@ -8,7 +8,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/api/models/shipment.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/media/photo_picker.dart';
-import '../../../core/network/api_exception.dart';
+import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
@@ -66,28 +66,40 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
       body: ResponsiveBody(
         child: Column(
           children: [
+            // Slivers: la lista de productos (paso 3) es perezosa; con 100+
+            // productos con foto solo se arman las filas visibles.
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  PickupCustomerCard(shipment: _shipment),
-                  const SizedBox(height: 16),
-                  PickupConfirmationCard(
-                    controller: _confirmationController,
-                    onChanged: _onConfirmationChanged,
-                    onScan: _scanConfirmation,
-                  ),
-                  const SizedBox(height: 16),
-                  PickupPhotoCard(
-                    photo: _photoFile,
-                    busy: _busy,
-                    onTakePhoto: _takePhoto,
-                  ),
-                  const SizedBox(height: 16),
-                  PickupUnitsCard(
-                    shipmentId: _shipment.id,
-                    hasConfirmation: _hasConfirmation,
-                    delivered: _delivered,
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        SliverList.list(
+                          children: [
+                            PickupCustomerCard(shipment: _shipment),
+                            const SizedBox(height: 16),
+                            PickupConfirmationCard(
+                              controller: _confirmationController,
+                              onChanged: _onConfirmationChanged,
+                              onScan: _scanConfirmation,
+                            ),
+                            const SizedBox(height: 16),
+                            PickupPhotoCard(
+                              photo: _photoFile,
+                              busy: _busy,
+                              onTakePhoto: _takePhoto,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                        PickupUnitsCard(
+                          shipmentId: _shipment.id,
+                          hasConfirmation: _hasConfirmation,
+                          delivered: _delivered,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -100,7 +112,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                     ? null
                     : _scanAndDeliver,
                 icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Escanear y entregar bulto'),
+                label: const Text('Escanear y entregar producto'),
               ),
             ),
           ],
@@ -164,73 +176,80 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     );
   }
 
+  /// Escaneo CONTINUO (tras la confirmación del cliente): la cámara queda
+  /// abierta y cada producto se entrega al leerlo, con aviso sobre la cámara.
   Future<void> _scanAndDeliver() async {
-    final qr = await scanCode(
-      context,
-      title: 'Escanear bulto',
-      helper: 'Apunta al QR de la etiqueta del bulto.',
-      formats: const [BarcodeFormat.qrCode],
-    );
-    if (qr == null || !mounted) return;
-
-    final scan = await resolveUnitScan(ref, qr);
-    if (!mounted) return;
-    if (scan.verified == false) {
-      // Validación de etiqueta en el cliente: la mostramos en rojo con el helper
-      // compartido (envuelta como ApiException para reutilizar `showErrorSnack`).
-      // Distingue firma inválida de clave desconocida (igual que transportista).
-      showErrorSnack(
+    // El GPS se calienta junto con la cámara: el POD no lo espera aparte.
+    warmUpLocation(ref);
+    final before = _delivered.length;
+    setState(() => _busy = true);
+    try {
+      await scanContinuous(
         context,
-        ApiException(
-          status: 400,
-          title: 'Etiqueta inválida',
-          detail: unitScanErrorMessage(scan),
-        ),
-        bottomClearance: kBottomActionClearance,
+        title: 'Escanear producto',
+        helper: 'Apunta al QR de la etiqueta del producto.',
+        formats: const [BarcodeFormat.qrCode],
+        onCode: _deliverCode,
       );
-      return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    final delivered = _delivered.length - before;
+    if (delivered <= 0) return;
+    showSuccessSnack(
+      context,
+      delivered == 1
+          ? '1 producto entregado.'
+          : '$delivered productos entregados.',
+      bottomClearance: kBottomActionClearance,
+    );
+  }
+
+  /// Procesa un código de la ráfaga de entrega.
+  Future<ScanFeedback> _deliverCode(String qr) async {
+    final scan = await resolveUnitScan(ref, qr);
+    if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
+    // Validación de etiqueta en el cliente (offline): firma inválida o clave
+    // desconocida, igual que transportista.
+    if (scan.verified == false) {
+      return ScanFeedback.error(unitScanShortError(scan));
     }
 
     // Solo bultos de este envío y una sola vez: si no, se entregaría al cliente
     // algo ajeno o se encolaría un POD duplicado.
     final units = ref.read(shipmentUnitsProvider(_shipment.id)).value;
-    if (units != null && !units.any((u) => u.unitId == scan.unitId)) {
-      showErrorSnack(
-        context,
-        'Ese bulto no pertenece a este pedido.',
-        bottomClearance: kBottomActionClearance,
-      );
-      return;
+    final unitId = scan.unitId;
+    if (units != null && !units.any((u) => u.unitId == unitId)) {
+      return const ScanFeedback.error('No es de este pedido');
     }
-    if (_delivered.contains(scan.unitId)) {
-      showInfoSnack(
-        context,
-        'Ese bulto ya fue entregado.',
-        bottomClearance: kBottomActionClearance,
-      );
-      return;
+    if (_delivered.contains(unitId)) {
+      return const ScanFeedback.error('Ya entregado');
     }
 
-    setState(() => _busy = true);
-    try {
-      final outcome = await ref
-          .read(recordPodProvider)
-          .call(
-            shipmentId: _shipment.id,
-            unitId: scan.unitId,
-            confirmation: _confirmationController.text.trim(),
-            customerName: _shipment.customerName,
-            photoPath: _photoPath,
-          );
-      if (!mounted) return;
-      setState(() => _delivered.add(scan.unitId));
-      showSubmitOutcome(
-        context,
-        outcome,
-        bottomClearance: kBottomActionClearance,
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    // Feedback inmediato: el bulto se marca entregado apenas se lee; el POD
+    // se guarda local y sube por la cola.
+    setState(() => _delivered.add(unitId));
+    final outcome = await ref
+        .read(recordPodProvider)
+        .call(
+          shipmentId: _shipment.id,
+          unitId: unitId,
+          confirmation: _confirmationController.text.trim(),
+          customerName: _shipment.customerName,
+          photoPath: _photoPath,
+          location: prefetchFix(ref),
+        );
+    if (outcome == SubmitOutcome.failed) {
+      // Rechazado por el backend: no queda como entregado.
+      if (mounted) setState(() => _delivered.remove(unitId));
+      return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
+    final total = units?.length;
+    return ScanFeedback.ok(
+      total == null
+          ? 'Producto entregado'
+          : 'Producto entregado (${_delivered.length}/$total)',
+    );
   }
 }
