@@ -10,6 +10,7 @@ import '../../../core/navigation/app_nav.dart';
 import '../../../core/navigation/feature_tasks.dart';
 import '../../../core/navigation/role_task.dart';
 import '../../../core/widgets/empty_state.dart';
+import 'home_prefetch.dart';
 import 'widgets/big_action_tile.dart';
 import 'widgets/greeting_header.dart';
 import 'widgets/hero_task_card.dart';
@@ -21,7 +22,11 @@ import 'widgets/home_section_title.dart';
 ///
 /// Diseñado para choferes mayores: pocos elementos, todo grande, un camino
 /// obvio. El contenido pasa por debajo del footer flotante (padding inferior).
-class RoleHomeScreen extends ConsumerWidget {
+///
+/// Al montarse precarga en segundo plano los datos de la primera pantalla del
+/// rol ([HomePrefetcher]): sin spinner ni espera; el primer toque abre al
+/// instante.
+class RoleHomeScreen extends ConsumerStatefulWidget {
   const RoleHomeScreen({super.key});
 
   /// Cuántos accesos rápidos mostrar bajo el héroe (el resto, en Tareas).
@@ -31,7 +36,24 @@ class RoleHomeScreen extends ConsumerWidget {
   static const double _maxWidth = 900;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoleHomeScreen> createState() => _RoleHomeScreenState();
+}
+
+class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Después del primer frame: el inicio se pinta primero y la precarga no
+    // modifica providers mientras se construye el árbol.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final role = ref.read(sessionProvider)?.role;
+      if (role != null) ref.read(homePrefetcherProvider)(ref, role);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final Session? session = ref.watch(sessionProvider);
     if (session == null) {
@@ -45,13 +67,13 @@ class RoleHomeScreen extends ConsumerWidget {
     final RoleTask? hero = centerActionFor(role, roleTasks);
     final quick = roleTasks
         .where((t) => t.id != hero?.id)
-        .take(_quickCount)
+        .take(RoleHomeScreen._quickCount)
         .toList();
     final isEmpty = hero == null && quick.isEmpty;
 
     final width = MediaQuery.sizeOf(context).width;
-    final sidePadding = width > _maxWidth + 32
-        ? (width - _maxWidth) / 2
+    final sidePadding = width > RoleHomeScreen._maxWidth + 32
+        ? (width - RoleHomeScreen._maxWidth) / 2
         : 16.0;
 
     return Scaffold(

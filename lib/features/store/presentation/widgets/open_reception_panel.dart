@@ -49,7 +49,8 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Este envío tiene ${expectedIds.length} bulto(s) esperado(s). '
+                'Este envío tiene ${expectedIds.length} producto(s) '
+                'esperado(s). '
                 'Indica el nodo de origen para abrir la recepción.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),

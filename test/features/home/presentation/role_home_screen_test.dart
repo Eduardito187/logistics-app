@@ -9,6 +9,8 @@ import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/big_action_tile.dart';
 import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
 
+import '../../../support/no_home_prefetch.dart';
+
 // Inicio por rol (rediseño): panel glanceable con saludo (rol + nombre), la
 // acción principal y accesos rápidos, filtrados por rol y por ability. Se
 // override la sesión (devSignIn + setAbilities) y las tareas; no toca Drift ni
@@ -41,6 +43,7 @@ const _pickerTask = RoleTask(
 ProviderContainer _session(UserRole role, {List<String>? abilities}) {
   final container = ProviderContainer(
     overrides: [
+      noHomePrefetchOverride,
       featureTasksProvider.overrideWithValue(const [
         _needsAbility,
         _noAbility,

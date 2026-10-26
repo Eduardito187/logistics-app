@@ -64,6 +64,11 @@ enum UserRole {
   /// Flujos que este rol tendrá en la app (Fase 1). Se muestran en su pantalla de inicio.
   final List<String> tasks;
 
+  /// ¿Este rol usa la impresora Zebra de etiquetas? Solo el preparador (imprime
+  /// al escanear) y el supervisor (reimpresiones); al resto no se le muestra.
+  bool get usesLabelPrinter =>
+      this == UserRole.picker || this == UserRole.supervisor;
+
   /// Mapea una clave de rol del backend al rol de la app, o `null` si no es un
   /// rol operativo de terreno (p. ej. `admin`).
   static UserRole? fromBackendKey(String key) {

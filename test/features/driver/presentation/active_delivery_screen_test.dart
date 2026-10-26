@@ -180,7 +180,7 @@ void main() {
     expect(find.text('Pedido'), findsOneWidget);
     expect(find.text('3 productos'), findsOneWidget);
     expect(find.text('Televisor 55" 4K'), findsOneWidget);
-    expect(find.text('SKU SKU-TV55'), findsOneWidget);
+    expect(find.text('SKU-TV55'), findsOneWidget);
     expect(find.text('x2'), findsOneWidget);
   });
 
@@ -312,7 +312,7 @@ void main() {
       expect(find.text('+591 70000001'), findsNothing);
       expect(find.text('Calle 3\nCasa celeste'), findsOneWidget);
       expect(find.text('Lavadora 9 kg'), findsOneWidget);
-      expect(find.text('SKU SKU-A'), findsOneWidget);
+      expect(find.text('SKU-A'), findsOneWidget);
       // La foto se pide decodificada chica (memoria en teléfonos de 1 GB).
       final image = tester.widget<Image>(find.byType(Image).last);
       expect(image.image, isA<ResizeImage>());
@@ -410,6 +410,46 @@ void main() {
       expect(find.text('Faltan 1,5 km · 4 min'), findsOneWidget);
     });
 
+    testWidgets(
+      'GPS imposible (emulador en California) se ignora: sin "Faltan" ni '
+      '"Fuera de ruta" y el mapa encuadra la ruta del día',
+      (tester) async {
+        await _pump(
+          tester,
+          overrides: _overrides(
+            route: withGeometry(),
+            fix: const GpsFix(lat: 37.42, lng: -122.08),
+          ),
+        );
+
+        expect(find.textContaining('Faltan'), findsNothing);
+        expect(find.text('Fuera de ruta'), findsNothing);
+        expect(find.byTooltip('Seguir camión'), findsNothing);
+        final controller = MapController.maybeOf(
+          tester.element(find.byType(MarkerLayer).first),
+        )!;
+        expect(controller.camera.center.latitude, closeTo(-17.785, 0.05));
+        expect(controller.camera.zoom, greaterThan(10));
+      },
+    );
+
+    testWidgets('los botones + y − cambian el zoom', (tester) async {
+      await _pump(tester, overrides: _overrides(route: withGeometry()));
+      final controller = MapController.maybeOf(
+        tester.element(find.byType(MarkerLayer).first),
+      )!;
+      final before = controller.camera.zoom;
+
+      await tester.tap(find.byTooltip('Acercar'));
+      await tester.pumpAndSettle();
+      expect(controller.camera.zoom, closeTo(before + 1, 1e-6));
+
+      await tester.tap(find.byTooltip('Alejar'));
+      await tester.tap(find.byTooltip('Alejar'));
+      await tester.pumpAndSettle();
+      expect(controller.camera.zoom, closeTo(before - 1, 1e-6));
+    });
+
     testWidgets('a más de 150 m del trazo avisa "Fuera de ruta"', (
       tester,
     ) async {
@@ -441,7 +481,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byTooltip('Dejar de seguir'), findsOneWidget);
       final controller = MapController.maybeOf(
-        tester.element(find.byType(MarkerLayer)),
+        tester.element(find.byType(MarkerLayer).first),
       )!;
       expect(controller.camera.center.latitude, closeTo(-17.785, 1e-6));
       expect(controller.camera.zoom, greaterThanOrEqualTo(17));
@@ -456,23 +496,34 @@ void main() {
       expect(find.byTooltip('Seguir camión'), findsOneWidget);
     });
 
-    testWidgets('al abrir precarga los tiles de las paradas y el trazo', (
-      tester,
-    ) async {
-      final requested = <List<LatLng>>[];
-      await _pump(
-        tester,
-        overrides: _overrides(
-          route: withGeometry(),
-          prefetcher: (points) async => requested.add(points),
-        ),
-      );
+    testWidgets(
+      'tras abrir precarga (diferida) los tiles de las paradas y el trazo',
+      (tester) async {
+        final requested = <List<LatLng>>[];
+        final keys = <String?>[];
+        await _pump(
+          tester,
+          overrides: _overrides(
+            route: withGeometry(),
+            prefetcher: (points, {routeKey}) async {
+              requested.add(points);
+              keys.add(routeKey);
+            },
+          ),
+        );
 
-      expect(requested, hasLength(1));
-      // 1 parada + 3 puntos del trazo.
-      expect(requested.single, hasLength(4));
-      expect(requested.single.first, const LatLng(-17.78, -63.18));
-      expect(routePrefetchPoints(withGeometry()), requested.single);
-    });
+        // Diferida: no compite con la transición ni con los tiles visibles.
+        expect(requested, isEmpty);
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(requested, hasLength(1));
+        // 1 parada + 3 puntos del trazo.
+        expect(requested.single, hasLength(4));
+        expect(requested.single.first, const LatLng(-17.78, -63.18));
+        expect(routePrefetchPoints(withGeometry()), requested.single);
+        // Clave estable (id de la ruta): el core la precarga una sola vez.
+        expect(keys, [withGeometry().id]);
+      },
+    );
   });
 }

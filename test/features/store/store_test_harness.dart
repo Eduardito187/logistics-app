@@ -43,9 +43,14 @@ class FakeStoreRepository implements StoreRepository {
   @override
   Future<List<Node>> listNodes() => (onListNodes ?? (() async => <Node>[]))();
 
+  /// Nodo destino pedido en cada `listShipments` (filtro de servidor).
+  final List<String?> listShipmentsNodeIds = <String?>[];
+
   @override
-  Future<List<Shipment>> listShipments() =>
-      (onListShipments ?? (() async => <Shipment>[]))();
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) {
+    listShipmentsNodeIds.add(destinationNodeId);
+    return (onListShipments ?? (() async => <Shipment>[]))();
+  }
 
   @override
   Future<NodeReceptionView?> getNodeReception({

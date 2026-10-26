@@ -39,7 +39,7 @@ void main() {
 
     final orders = await container.read(ordersToPrepareProvider.future);
 
-    expect(orders.map((s) => s.externalId), ['A', 'C']);
+    expect(orders.map((s) => s.externalId), ['C', 'A']);
   });
 
   test('sin pedidos vigentes entrega lista vacía', () async {

@@ -19,6 +19,11 @@ class UnitTracking {
     required this.lastLocationId,
     required this.lastSeenAt,
     required this.label,
+    this.sku,
+    this.productName,
+    this.productImageUrl,
+    this.pieceIndex,
+    this.pieceTotal,
   });
 
   factory UnitTracking.fromJson(Map<String, Object?> json) =>
@@ -39,6 +44,19 @@ class UnitTracking {
 
   /// Etiqueta humana del bulto ("N/M")
   final String? label;
+
+  /// SKU del producto que contiene el bulto (null si no se resuelve)
+  final String? sku;
+  @JsonKey(name: 'product_name')
+  final String? productName;
+  @JsonKey(name: 'product_image_url')
+  final String? productImageUrl;
+
+  /// Pieza N de un producto fraccionado en varias cajas
+  @JsonKey(name: 'piece_index')
+  final int? pieceIndex;
+  @JsonKey(name: 'piece_total')
+  final int? pieceTotal;
 
   Map<String, Object?> toJson() => _$UnitTrackingToJson(this);
 }

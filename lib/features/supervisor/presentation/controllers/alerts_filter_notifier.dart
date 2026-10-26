@@ -8,6 +8,8 @@ class AlertsFilterNotifier extends Notifier<bool> {
   void setUnacknowledgedOnly({required bool value}) => state = value;
 }
 
+/// Sin autoDispose a propósito: es un solo `bool` y conserva el filtro elegido
+/// al volver a la pantalla de alertas durante la sesión.
 final alertsFilterProvider = NotifierProvider<AlertsFilterNotifier, bool>(
   AlertsFilterNotifier.new,
 );

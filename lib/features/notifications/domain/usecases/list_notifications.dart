@@ -11,7 +11,8 @@ class ListNotifications {
 
   final NotificationsRepository _repo;
 
-  Future<List<NotificationView>> call() => _repo.list();
+  /// [limit]: cuántas de las más recientes traer (`null` = default backend).
+  Future<List<NotificationView>> call({int? limit}) => _repo.list(limit: limit);
 }
 
 final listNotificationsProvider = Provider<ListNotifications>(

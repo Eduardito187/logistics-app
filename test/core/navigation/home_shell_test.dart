@@ -10,6 +10,8 @@ import 'package:logistics_app/core/widgets/floating_pill_nav_bar.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
 
+import '../../support/no_home_prefetch.dart';
+
 // Regresiones del shell inferior (5 pestañas, la central incluida). El bug que
 // teníamos: la barra se estiraba a TODA la pantalla (un `Center` expandía en
 // vertical) y el cuerpo quedaba en 0 → todo negro. Se fija con
@@ -54,6 +56,7 @@ Widget _shell({required int index, ValueChanged<int>? onTap}) {
 ProviderContainer _container() {
   final container = ProviderContainer(
     overrides: [
+      noHomePrefetchOverride,
       featureTasksProvider.overrideWithValue(const [_driverTask]),
     ],
   );

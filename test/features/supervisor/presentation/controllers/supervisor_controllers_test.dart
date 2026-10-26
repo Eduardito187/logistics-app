@@ -115,4 +115,37 @@ void main() {
     final value = await container.read(vehicleSummaryProvider('CAM-1').future);
     expect(value.vehicleId, 'CAM-1');
   });
+
+  test(
+    'el tablero reusa los planes de "Rutas en curso" (un solo request)',
+    () async {
+      final repo = FakeSupervisorRepository();
+      final container = _container(repo);
+      container
+        ..listen(plansProvider, (_, _) {})
+        ..listen(dashboardMetricsProvider, (_, _) {});
+
+      await container.read(plansProvider.future);
+      await container.read(dashboardMetricsProvider.future);
+
+      expect(repo.plansCalls, 1);
+    },
+  );
+
+  test(
+    'volver a la lista de planes dentro del plazo no repite el GET',
+    () async {
+      final repo = FakeSupervisorRepository();
+      final container = _container(repo);
+
+      final sub = container.listen(plansProvider, (_, _) {});
+      await container.read(plansProvider.future);
+      sub.close();
+      await Future<void>.delayed(Duration.zero);
+
+      container.listen(plansProvider, (_, _) {});
+      await container.read(plansProvider.future);
+      expect(repo.plansCalls, 1);
+    },
+  );
 }

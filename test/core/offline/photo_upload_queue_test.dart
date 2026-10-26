@@ -224,4 +224,38 @@ void main() {
     expect(File(r.filePath).existsSync(), isTrue);
     expect(scheduler.oneOffs, 1);
   });
+
+  group('drenado por lotes (1 GB de RAM)', () {
+    test('más fotos que un lote: se suben todas, de a lotes', () async {
+      for (var i = 0; i < 60; i++) {
+        await seed('P${i.toString().padLeft(3, '0')}');
+      }
+      build([]);
+      await queue.drain();
+      expect(exec.photoCalls, 60);
+      expect(await rows(), isEmpty);
+    });
+
+    test('rechazos (4xx) no traban el lote siguiente', () async {
+      for (var i = 0; i < 30; i++) {
+        await seed('R${i.toString().padLeft(3, '0')}');
+      }
+      build([for (var i = 0; i < 30; i++) httpError(422)]);
+      await queue.drain();
+      final all = await rows();
+      expect(all, hasLength(30));
+      expect(all.every((r) => r.status == 'failed'), isTrue);
+    });
+
+    test('sin red en el segundo lote: corta y deja el resto pending', () async {
+      for (var i = 0; i < 30; i++) {
+        await seed('N${i.toString().padLeft(3, '0')}');
+      }
+      build([for (var i = 0; i < 25; i++) null, connectionError()]);
+      await queue.drain();
+      final left = await rows();
+      expect(left, hasLength(5));
+      expect(left.every((r) => r.status == 'pending'), isTrue);
+    });
+  });
 }

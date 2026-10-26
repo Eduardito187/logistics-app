@@ -54,6 +54,7 @@ class _FakeLabelPrinter implements LabelPrinter {
 Future<_FakeLabelPrinter> _pump(
   WidgetTester tester, {
   PrinterException? printError,
+  UserRole role = UserRole.picker,
 }) async {
   final printer = _FakeLabelPrinter(printError: printError);
   final container = ProviderContainer(
@@ -68,7 +69,7 @@ Future<_FakeLabelPrinter> _pump(
   );
   addTearDown(container.dispose);
   // Sesión de dev (sin token): la sección de sesión se dibuja igual.
-  container.read(sessionProvider.notifier).devSignIn(UserRole.driver);
+  container.read(sessionProvider.notifier).devSignIn(role);
 
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -100,6 +101,23 @@ void main() {
     // Offline invisible: Ajustes no expone la sincronización.
     expect(find.text('Estado de sincronización'), findsNothing);
   });
+
+  for (final role in UserRole.values) {
+    testWidgets('impresora visible solo para preparador y supervisor '
+        '(${role.name})', (tester) async {
+      tester.view.physicalSize = const Size(1200, 3600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await _pump(tester, role: role);
+
+      final expected = role == UserRole.picker || role == UserRole.supervisor;
+      expect(
+        find.byType(PrinterSection),
+        expected ? findsOneWidget : findsNothing,
+      );
+      expect(find.byType(SessionSection), findsOneWidget);
+    });
+  }
 
   testWidgets('imprimir prueba envía el ZPL fijo y avisa del éxito', (
     tester,

@@ -71,6 +71,15 @@
             android:foregroundServiceType="location"
             android:exported="false" />
 
+        <!-- Render con Skia (OpenGL) en Android en vez de Impeller. Los teléfonos
+             de 1 GB (Android Go, GPUs Mali/PowerVR de gama baja) tienen drivers
+             Vulkan inestables y con Impeller usan más memoria de GPU; Skia es el
+             camino maduro ahí. Flutter 3.32 todavía lo soporta en Android. En
+             iOS no aplica (iOS solo tiene Impeller). Para probar Impeller:
+             value="true". Ver docs/rendimiento-y-pantallas.md. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

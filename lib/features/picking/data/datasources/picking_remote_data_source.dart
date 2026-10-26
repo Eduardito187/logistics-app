@@ -6,6 +6,7 @@ import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/reprint_labels_request.dart';
 import '../../../../core/api/models/shipment.dart';
+import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 
@@ -19,12 +20,12 @@ class PickingRemoteDataSource {
   final LogisticsApi _api;
 
   /// GET `/app/shipments`: pedidos recibidos (worklist del preparador/andén).
-  /// Trae la colección completa sin filtro de estado; el criterio de "por
-  /// preparar/cargar" se aplica en el caso de uso (el endpoint sólo admite un
-  /// único estado por consulta).
-  Future<List<Shipment>> listShipments() async {
+  /// Con [status] el filtro va en el servidor (`status`); el endpoint admite
+  /// un único estado por consulta, así que el caso de uso pide cada estado
+  /// "por preparar/cargar" en paralelo.
+  Future<List<Shipment>> listShipments({ShipmentStatus? status}) async {
     try {
-      final response = await _api.shipments.listShipments();
+      final response = await _api.shipments.listShipments(status: status);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

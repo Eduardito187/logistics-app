@@ -65,6 +65,11 @@ class _FakePushService implements PushService {
   Future<void> unsubscribeFromTopic(String topic) async =>
       topicCalls.add('-$topic');
 
+  int cancelCalls = 0;
+
+  @override
+  Future<void> cancelSubscriptions() async => cancelCalls++;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -344,5 +349,19 @@ void main() {
         expect(service.topicCalls, ['+role_chofer', '-role_chofer']);
       },
     );
+  });
+
+  test('al destruir el provider suelta los listeners de FCM', () async {
+    final container = ProviderContainer(
+      overrides: [
+        pushServiceProvider.overrideWithValue(service),
+        pushConfiguredProvider.overrideWithValue(true),
+        offlineQueueProvider.overrideWithValue(_FakeQueue()),
+      ],
+    );
+    container.read(pushRegistrationProvider);
+    await Future<void>.delayed(Duration.zero);
+    container.dispose();
+    expect(service.cancelCalls, 1);
   });
 }

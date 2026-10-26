@@ -85,8 +85,11 @@ class SignedLabel {
     return Fraction(value[0] as int, value[1] as int);
   }
 
+  /// Compilada una sola vez (se usa en cada escaneo).
+  static final RegExp _base64UrlChars = RegExp(r'^[A-Za-z0-9_-]+$');
+
   static List<int> _base64UrlDecode(String text) {
-    if (!RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(text)) {
+    if (!_base64UrlChars.hasMatch(text)) {
       throw LabelFormatException('la firma no está en base64url');
     }
     try {

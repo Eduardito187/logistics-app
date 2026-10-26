@@ -9,6 +9,10 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/fleet_ops_controllers.dart';
 
+// Formatos creados una vez (no en cada build).
+final DateFormat _dateFormat = DateFormat('d MMM, HH:mm', 'es');
+final NumberFormat _numberFormat = NumberFormat.decimalPattern('es');
+
 /// Lecturas de odómetro recientes del vehículo.
 class RecentReadings extends ConsumerWidget {
   const RecentReadings({super.key});
@@ -29,8 +33,6 @@ class RecentReadings extends ConsumerWidget {
               message: 'Las lecturas que registres aparecerán aquí.',
             );
           }
-          final dateFormat = DateFormat('d MMM, HH:mm', 'es');
-          final numberFormat = NumberFormat.decimalPattern('es');
           return Column(
             children: [
               for (final reading in items.take(10))
@@ -38,10 +40,10 @@ class RecentReadings extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.speed, color: AppColors.info),
                   title: Text(
-                    '${numberFormat.format(reading.km)} km',
+                    '${_numberFormat.format(reading.km)} km',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  subtitle: Text(dateFormat.format(reading.readAt.toLocal())),
+                  subtitle: Text(_dateFormat.format(reading.readAt.toLocal())),
                 ),
             ],
           );

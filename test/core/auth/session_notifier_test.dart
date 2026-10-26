@@ -249,6 +249,24 @@ void main() {
       expect(headers().bearerToken, isNull);
     });
 
+    test(
+      'la sesión se cierra al instante, sin esperar la revocación en red',
+      () async {
+        await notifier().signIn(
+          token: 'tok',
+          userName: 'ana',
+          role: UserRole.driver,
+        );
+
+        final closing = notifier().signOut();
+        // Sin dejar correr la red: el usuario ya está sin sesión (al login).
+        expect(session(), isNull);
+        await closing;
+        expect(authClient.logoutCalls, 1);
+        expect(headers().bearerToken, isNull);
+      },
+    );
+
     test('si clearToken del almacén falla, el cierre no se traba', () async {
       await notifier().signIn(
         token: 'tok',

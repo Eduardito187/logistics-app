@@ -15,16 +15,23 @@ class HighContrastNotifier extends Notifier<bool> {
   static const storageKey = 'pref_high_contrast';
 
   bool _changedByUser = false;
+  Future<void>? _loading;
 
   @override
   bool build() {
-    unawaited(_load());
+    _loading = _load();
+    unawaited(_loading);
     return false;
   }
 
+  /// Espera la lectura del valor guardado (la usa `main.dart`, en paralelo
+  /// con el resto del arranque, para que el primer cuadro ya salga con el
+  /// tema correcto y no cambie de golpe al abrir).
+  Future<void> ensureLoaded() => _loading ?? Future<void>.value();
+
   Future<void> _load() async {
     try {
-      final raw = await ref.read(secureStorageProvider).read(key: storageKey);
+      final raw = await ref.read(tokenStoreProvider).readPref(storageKey);
       if (!ref.mounted || _changedByUser || raw == null) return;
       state = raw == 'true';
     } on Object {

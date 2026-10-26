@@ -61,4 +61,16 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  group('formatos', () {
+    test('sin formatos pedidos busca solo los de la operación', () {
+      final controller = createScannerController(const []);
+      addTearDown(controller.dispose);
+      expect(controller.formats, kDefaultScannerFormats);
+      expect(kDefaultScannerFormats, contains(BarcodeFormat.qrCode));
+      expect(kDefaultScannerFormats, contains(BarcodeFormat.code128));
+      expect(kDefaultScannerFormats, contains(BarcodeFormat.ean13));
+      expect(kDefaultScannerFormats.length, lessThan(8));
+    });
+  });
 }

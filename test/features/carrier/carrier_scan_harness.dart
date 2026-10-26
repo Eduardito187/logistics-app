@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/proof_of_delivery_request.dart';
 import 'package:logistics_app/core/api/models/scan_request.dart';
+import 'package:logistics_app/core/labels/label_payload.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
@@ -15,6 +17,7 @@ import 'package:logistics_app/features/carrier/domain/usecases/record_load_scan.
 import 'package:logistics_app/features/carrier/domain/usecases/record_proof_of_delivery.dart';
 
 import '../../support/fake_code_scanner.dart';
+import '../store/fake_continuous_scanner.dart';
 import 'carrier_test_harness.dart';
 
 // Dobles para los flujos escaneo -> submit del transportista: etiqueta firmada
@@ -54,6 +57,68 @@ LabelScanner unknownKeyLabelScanner() {
   return LabelScanner(
     LabelVerifier({99: base64.decode(vector['public_key_base64'] as String)}),
   );
+}
+
+/// Firma etiquetas de prueba con una clave Ed25519 propia: el vector del
+/// backend trae un solo bulto y el escaneo continuo necesita varios distintos.
+/// Crear en `setUpAll` (fuera del reloj falso de testWidgets).
+class TestLabelSigner {
+  TestLabelSigner._(this._keyPair, this._publicKey);
+
+  static const int keyId = 7;
+
+  final SimpleKeyPair _keyPair;
+  final List<int> _publicKey;
+
+  static Future<TestLabelSigner> create() async {
+    final keyPair = await Ed25519().newKeyPair();
+    final publicKey = await keyPair.extractPublicKey();
+    return TestLabelSigner._(keyPair, publicKey.bytes);
+  }
+
+  /// Scanner que verifica las etiquetas de este firmante.
+  LabelScanner scanner() => LabelScanner(LabelVerifier({keyId: _publicKey}));
+
+  /// Contenido del QR firmado de un bulto.
+  Future<String> qr({
+    required String id,
+    String order = 'DM-1',
+    String sku = 'SKU-1',
+  }) async {
+    final payload = LabelPayload(
+      version: LabelPayload.currentVersion,
+      type: LabelType.package,
+      keyId: keyId,
+      id: id,
+      orderNumber: order,
+      lineNumber: 1,
+      sku: sku,
+      unit: Fraction(1, 1),
+      piece: Fraction(1, 1),
+      origin: 'CD-SCZ',
+      destination: 'C',
+      issuedAt: 1759312800,
+    );
+    final signature = await Ed25519().sign(
+      utf8.encode(payload.canonical()),
+      keyPair: _keyPair,
+    );
+    return jsonEncode({
+      'v': payload.version,
+      't': 'PKG',
+      'k': keyId,
+      'id': id,
+      'o': order,
+      'ln': 1,
+      'sku': sku,
+      'u': [1, 1],
+      'pc': [1, 1],
+      'org': 'CD-SCZ',
+      'dst': 'C',
+      'ts': 1759312800,
+      's': base64Url.encode(signature.bytes).replaceAll('=', ''),
+    });
+  }
 }
 
 /// GPS fijo que no toca geolocator.
@@ -106,11 +171,13 @@ class FakeRecordProofOfDelivery implements RecordProofOfDelivery {
   }
 }
 
-/// Monta [screen] con el escáner falso y los dobles de verificación/GPS/cola.
+/// Monta [screen] con los escáneres falsos (un código: confirmación del
+/// cliente; continuo: bultos) y los dobles de verificación/GPS/cola.
 Future<void> pumpCarrierScanScreen(
   WidgetTester tester,
   Widget screen, {
-  required FakeCodeScanner scanner,
+  FakeCodeScanner? scanner,
+  FakeContinuousScanner? continuous,
   LabelScanner? labelScanner,
   FakeRecordLoadScan? loadScan,
   FakeRecordProofOfDelivery? proofOfDelivery,
@@ -120,7 +187,12 @@ Future<void> pumpCarrierScanScreen(
     ProviderScope(
       overrides: [
         ...syncBadgeOverrides(),
-        codeScannerProvider.overrideWithValue(scanner.call),
+        codeScannerProvider.overrideWithValue(
+          (scanner ?? FakeCodeScanner(const [])).call,
+        ),
+        continuousScannerProvider.overrideWithValue(
+          (continuous ?? FakeContinuousScanner(const [])).call,
+        ),
         labelScannerProvider.overrideWithValue(
           labelScanner ?? vectorLabelScanner(),
         ),

@@ -92,21 +92,32 @@ class NoopCrashReporter implements CrashReporter {
 /// Normaliza una miga de pan para que nunca lleve datos personales ni textos
 /// libres: solo `[a-z0-9_.:/-]` y espacio, máximo 120 caracteres. Los segmentos que
 /// parecen identificadores (números largos, ULID/UUID) se reemplazan por `:id`.
+///
+/// Se llama en cada navegación: las expresiones regulares se compilan una sola
+/// vez y la entrada se acota antes de procesarla (un texto enorme no genera
+/// copias enormes para quedarse con 120 caracteres).
 String sanitizeBreadcrumb(String event) {
-  final lower = event.trim().toLowerCase();
+  var lower = event.trim().toLowerCase();
+  if (lower.length > _breadcrumbInputMax) {
+    lower = lower.substring(0, _breadcrumbInputMax);
+  }
   final segments = lower.split('/').map((segment) {
-    if (RegExp(r'^[0-9]{3,}$').hasMatch(segment) ||
-        RegExp(r'^[0-9a-z]{26}$').hasMatch(segment) ||
-        RegExp(r'^[0-9a-f-]{32,36}$').hasMatch(segment)) {
+    if (_longNumber.hasMatch(segment) ||
+        _ulid.hasMatch(segment) ||
+        _uuid.hasMatch(segment)) {
       return ':id';
     }
     return segment;
   });
-  final cleaned = segments
-      .join('/')
-      .replaceAll(RegExp(r'[^a-z0-9_.:/\- ]'), '_');
+  final cleaned = segments.join('/').replaceAll(_disallowed, '_');
   return cleaned.length > 120 ? cleaned.substring(0, 120) : cleaned;
 }
+
+const int _breadcrumbInputMax = 512;
+final RegExp _longNumber = RegExp(r'^[0-9]{3,}$');
+final RegExp _ulid = RegExp(r'^[0-9a-z]{26}$');
+final RegExp _uuid = RegExp(r'^[0-9a-f-]{32,36}$');
+final RegExp _disallowed = RegExp(r'[^a-z0-9_.:/\- ]');
 
 /// Reporter activo. Por defecto inerte; `main.dart` lo sobreescribe con el
 /// que devuelve `initCrashReporting()`.

@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +10,7 @@ import '../auth/session.dart';
 import '../config/app_config.dart';
 import 'app_version_interceptor.dart';
 import 'auth_headers.dart';
+import 'date_query_interceptor.dart';
 
 /// Interceptor que agrega el Bearer por usuario+dispositivo y el `X-Device-Id`
 /// a cada request de la puerta `/app/*`, leyendo las cabeceras vigentes en
@@ -64,37 +68,6 @@ class _AuthInterceptor extends Interceptor {
       path.contains('/auth/me');
 }
 
-/// El cliente generado serializa los `DateTime` de query como datetime ISO
-/// (`2026-10-20T00:00:00.000`), pero el backend valida los FILTROS DE FECHA como
-/// `Y-m-d` y responde 422 ("The date field must match the format Y-m-d"). Este
-/// interceptor recorta a la parte de fecha cualquier query cuyo nombre contenga
-/// `date` (date, assembly_date, from_date, ...). Afecta a varios endpoints
-/// (my-crew, supervisor/plans, etc.) → se arregla en un solo lugar.
-class _DateQueryInterceptor extends Interceptor {
-  static final _isoDateTime = RegExp(r'^\d{4}-\d{2}-\d{2}T');
-
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final params = options.queryParameters;
-    if (params.isNotEmpty) {
-      final fixed = <String, dynamic>{};
-      var changed = false;
-      params.forEach((key, value) {
-        if (value is String &&
-            key.toLowerCase().contains('date') &&
-            _isoDateTime.hasMatch(value)) {
-          fixed[key] = value.substring(0, 10); // Y-m-d
-          changed = true;
-        } else {
-          fixed[key] = value;
-        }
-      });
-      if (changed) options.queryParameters = fixed;
-    }
-    handler.next(options);
-  }
-}
-
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
@@ -106,10 +79,13 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
-  // Filtros de fecha: Y-m-d (ver arriba). Antes del resto para que el log y la
-  // request salgan ya corregidos.
-  dio.interceptors.add(_DateQueryInterceptor());
+  // Conexiones TLS reusadas: el `idleTimeout` por defecto (15 s) cerraba el
+  // socket entre escaneos y el próximo request pagaba TCP+TLS de nuevo.
+  dio.httpClientAdapter = createApiHttpClientAdapter();
+
   dio.interceptors.add(_AuthInterceptor(ref));
+  // Fechas de calendario del query como `Y-m-d` (el cliente generado manda ISO).
+  dio.interceptors.add(const DateQueryInterceptor());
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
   dio.interceptors.add(AppVersionInterceptor(ref));
 
@@ -120,13 +96,39 @@ final dioProvider = Provider<Dio>((ref) {
         responseBody: false,
         requestHeader: false,
         responseHeader: false,
-        logPrint: (o) => debugPrint('$o'),
+        logPrint: (o) => debugPrint(truncateLogLine('$o')),
       ),
     );
   }
 
   return dio;
 });
+
+/// Tiempo que una conexión ociosa al API queda abierta para reusarse.
+const Duration kApiIdleTimeout = Duration(seconds: 90);
+
+/// Conexiones simultáneas por host al API (GPS + escaneos + pantallas).
+const int kApiMaxConnectionsPerHost = 6;
+
+/// Adaptador HTTP del API: mantiene vivas las conexiones [kApiIdleTimeout] y
+/// limita a [kApiMaxConnectionsPerHost] por host.
+@visibleForTesting
+IOHttpClientAdapter createApiHttpClientAdapter() => IOHttpClientAdapter(
+  createHttpClient: () => HttpClient()
+    ..idleTimeout = kApiIdleTimeout
+    ..maxConnectionsPerHost = kApiMaxConnectionsPerHost,
+);
+
+/// Largo máximo de una línea del log HTTP (solo debug).
+const int kHttpLogMaxChars = 600;
+
+/// Recorta una línea del log HTTP: un body grande (lote de escaneos, ruta con
+/// muchas paradas) no se imprime entero ni se copia en memoria al log.
+@visibleForTesting
+String truncateLogLine(String line, {int max = kHttpLogMaxChars}) {
+  if (line.length <= max) return line;
+  return '${line.substring(0, max)}… (+${line.length - max} caracteres)';
+}
 
 /// Cliente generado del API, con la raíz de la puerta `/app/*` ya resuelta por baseUrl.
 final logisticsApiProvider = Provider<LogisticsApi>(

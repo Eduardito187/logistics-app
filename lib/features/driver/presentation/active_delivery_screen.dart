@@ -6,6 +6,7 @@ import '../../../core/api/export.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
 import 'widgets/active_delivery/delivery_actions_bar.dart';
 import 'widgets/active_delivery/delivery_help_sheet.dart';
@@ -13,6 +14,8 @@ import 'widgets/active_delivery/delivery_map.dart';
 import 'widgets/active_delivery/delivery_sheet.dart';
 import 'widgets/active_delivery/delivery_status_card.dart';
 import 'widgets/active_delivery/map_round_button.dart';
+
+export 'controllers/locally_settled_stops.dart' show currentStopOf;
 
 /// Entrega en curso: el mapa ocupa la pantalla; arriba el estado (parada N de
 /// M, hora estimada, progreso), abajo una hoja deslizable con los datos de la
@@ -29,11 +32,14 @@ class ActiveDeliveryScreen extends ConsumerWidget {
       immersive: true,
       builder: (context, vehicleId) {
         final route = ref.watch(driverRouteProvider);
+        // Lo resuelto en este teléfono (POD/fallida encolados sin señal) hace
+        // avanzar la entrega sin esperar a que el backend se entere.
+        final settled = ref.watch(locallySettledStopsProvider);
         return AsyncValueView<DriverRoute>(
           value: route,
           onRetry: () => ref.invalidate(driverRouteProvider),
           data: (data) {
-            final stop = currentStopOf(data);
+            final stop = currentStopOf(data, settled);
             if (stop == null) return _RouteFinished(route: data);
             return _ActiveDelivery(route: data, stop: stop);
           },
@@ -41,19 +47,6 @@ class ActiveDeliveryScreen extends ConsumerWidget {
       },
     );
   }
-}
-
-/// Parada en curso: la que marca el backend o, si no la marca, la primera
-/// pendiente en orden. `null` cuando ya no quedan paradas por atender.
-DriverRouteStop? currentStopOf(DriverRoute route) {
-  final current = route.currentStop;
-  if (current != null) return current;
-  final pending =
-      route.stops
-          .where((s) => s.status == DriverRouteStopStatus.pending)
-          .toList(growable: false)
-        ..sort((a, b) => a.sequence.compareTo(b.sequence));
-  return pending.isEmpty ? null : pending.first;
 }
 
 class _ActiveDelivery extends ConsumerWidget {
@@ -64,6 +57,9 @@ class _ActiveDelivery extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Esta pantalla NO mira el GPS: solo el mapa (camión) y la tarjeta de
+    // estado (lo que falta) se reconstruyen con cada fix; la hoja, los botones
+    // y el pie quedan quietos.
     final topInset = MediaQuery.paddingOf(context).top;
     // Importante: este árbol NO observa la posición en vivo. El fix del GPS
     // llega cada segundo y sólo debe reconstruir la tarjeta de estado (y el
@@ -102,7 +98,9 @@ class _ActiveDelivery extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    _LiveStatusCard(route: route, stop: stop),
+                    RepaintBoundary(
+                      child: _LiveStatusCard(route: route, stop: stop),
+                    ),
                   ],
                 ),
               ),

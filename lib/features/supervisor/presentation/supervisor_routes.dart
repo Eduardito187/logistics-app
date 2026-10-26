@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/models/plan.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/navigation/role_task.dart';
 import 'supervisor_alerts_screen.dart';
@@ -60,10 +61,16 @@ final List<RouteBase> supervisorRoutes = [
     path: '/supervisor/alerts',
     builder: (context, state) => const SupervisorAlertsScreen(),
   ),
-  // Detalle (solo lectura) de un plan de ruta por id.
+  // Detalle (solo lectura) de un plan de ruta por id. `extra` (opcional) es
+  // el plan de la lista: el detalle lo muestra al instante sin spinner.
   GoRoute(
     path: '/supervisor/plans/:planId',
-    builder: (context, state) =>
-        SupervisorPlanDetailScreen(planId: state.pathParameters['planId']!),
+    builder: (context, state) {
+      final extra = state.extra;
+      return SupervisorPlanDetailScreen(
+        planId: state.pathParameters['planId']!,
+        initial: extra is Plan ? extra : null,
+      );
+    },
   ),
 ];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/location/gps_fix.dart';
 import 'package:logistics_app/core/media/photo_picker.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
@@ -12,8 +13,8 @@ import 'package:logistics_app/features/store/presentation/controllers/store_cont
 import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart';
 
 import '../../../support/button_finders.dart';
-import '../../../support/fake_code_scanner.dart';
 import '../../../support/fake_photo_picker.dart';
+import '../fake_continuous_scanner.dart';
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
 
@@ -53,6 +54,7 @@ class _FakeRecordPod extends RecordPod {
     required String confirmation,
     required String customerName,
     String? photoPath,
+    Future<GpsFix?>? location,
   }) async {
     photoPaths.add(photoPath);
     return SubmitOutcome.sent;
@@ -63,19 +65,22 @@ class _Harness {
   final enqueued = <Map<String, String>>[];
   final podPhotoPaths = <String?>[];
   late FakePhotoPicker camera;
+  late FakeContinuousScanner scanner;
 }
 
 Future<_Harness> _pump(
   WidgetTester tester, {
   List<String?> photos = const [],
-  List<String?> codes = const [],
+  List<String> codes = const [],
   bool enqueueFails = false,
 }) async {
   tester.view.physicalSize = const Size(1200, 3600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  final h = _Harness()..camera = FakePhotoPicker(photos);
+  final h = _Harness()
+    ..camera = FakePhotoPicker(photos)
+    ..scanner = FakeContinuousScanner(codes);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -90,7 +95,7 @@ Future<_Harness> _pump(
         recordPodProvider.overrideWith(
           (ref) => _FakeRecordPod(ref, h.podPhotoPaths),
         ),
-        codeScannerProvider.overrideWithValue(FakeCodeScanner(codes).call),
+        continuousScannerProvider.overrideWithValue(h.scanner.call),
         labelScannerProvider.overrideWithValue(LabelScanner(null)),
       ],
       child: MaterialApp(home: PickupPodScreen(shipment: _shipment)),
@@ -112,7 +117,7 @@ Future<void> _deliver(WidgetTester tester) async {
   );
   await tester.pumpAndSettle();
   await tester.tap(
-    findButtonWithText<FilledButton>('Escanear y entregar bulto'),
+    findButtonWithText<FilledButton>('Escanear y entregar producto'),
   );
   await tester.pumpAndSettle();
 }
@@ -207,18 +212,15 @@ void main() {
     );
   });
 
-  testWidgets('el aviso de bulto ajeno también flota encima del botón', (
+  testWidgets('bulto ajeno: aviso rojo sobre la cámara y sin resumen', (
     tester,
   ) async {
-    await _pump(tester, codes: ['unit-de-otro']);
+    final h = await _pump(tester, codes: ['unit-de-otro']);
 
     await _deliver(tester);
 
-    expect(find.text('Ese bulto no pertenece a este pedido.'), findsOneWidget);
-    final snack = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(
-      snack.margin,
-      const EdgeInsets.fromLTRB(16, 0, 16, kBottomActionClearance),
-    );
+    expect(h.scanner.messages, ['No es de este pedido']);
+    expect(h.podPhotoPaths, isEmpty);
+    expect(find.byType(SnackBar), findsNothing);
   });
 }

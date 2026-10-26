@@ -11,6 +11,9 @@ import '../controllers/fleet_ops_controllers.dart';
 import '../driver_common.dart';
 import '../fleet_ops_common.dart';
 
+/// Formato de fecha creado una vez (no en cada build).
+final DateFormat _dateFormat = DateFormat('d MMM, HH:mm', 'es');
+
 /// Cargas de combustible recientes del vehículo.
 class RecentRefuels extends ConsumerWidget {
   const RecentRefuels({super.key});
@@ -31,7 +34,6 @@ class RecentRefuels extends ConsumerWidget {
               message: 'Las cargas que registres aparecerán aquí.',
             );
           }
-          final dateFormat = DateFormat('d MMM, HH:mm', 'es');
           return Column(
             children: [
               for (final refuel in items.take(10))
@@ -48,7 +50,7 @@ class RecentRefuels extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     '${fuelTypeLabel(refuel.fuelType)} · '
-                    '${dateFormat.format(refuel.refueledAt.toLocal())}'
+                    '${_dateFormat.format(refuel.refueledAt.toLocal())}'
                     '${refuel.odometerKm != null ? ' · ${refuel.odometerKm} km' : ''}',
                   ),
                 ),

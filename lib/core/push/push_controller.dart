@@ -49,6 +49,15 @@ class PushController extends Notifier<PushStatus> {
   PushStatus build() {
     _service = ref.read(pushServiceProvider);
     ref.onDispose(_taps.close);
+    // Suelta los listeners de FCM si el provider se destruye (cierre del
+    // contenedor): no quedan suscripciones vivas apuntando a este notifier.
+    ref.onDispose(() {
+      try {
+        unawaited(_service.cancelSubscriptions().catchError((Object _) {}));
+      } on Object {
+        // Best-effort: el cierre del contenedor nunca debe fallar por el push.
+      }
+    });
     if (!ref.read(pushConfiguredProvider)) return _notConfigured;
     // Topics por rol/tienda: se ajustan al iniciar y cerrar sesión.
     ref.listen<Session?>(sessionProvider, (_, next) {

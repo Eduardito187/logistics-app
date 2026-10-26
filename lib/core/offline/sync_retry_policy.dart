@@ -24,6 +24,11 @@ abstract final class SyncRetryPolicy {
   /// Las filas `failed` (ya reportadas) se purgan pasado este plazo.
   static const Duration failedRetention = Duration(days: 7);
 
+  /// Posiciones GPS del camión aún pendientes: pasado este plazo se descartan
+  /// (con días sin señal se acumulan ~360/h y ya no sirven para seguimiento).
+  /// Solo aplica a `ingestTruckPosition`; ninguna otra pendiente se descarta.
+  static const Duration truckPositionRetention = Duration(days: 7);
+
   /// Primer escalón del backoff y techo.
   static const Duration backoffBase = Duration(seconds: 5);
   static const Duration backoffMax = Duration(minutes: 10);

@@ -65,8 +65,10 @@ class SyncScreen extends ConsumerWidget {
                   sliver: SliverList.separated(
                     itemCount: actions.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) =>
-                        SyncActionTile(action: actions[i]),
+                    itemBuilder: (context, i) => SyncActionTile(
+                      key: ValueKey(actions[i].id),
+                      action: actions[i],
+                    ),
                   ),
                 ),
               ],

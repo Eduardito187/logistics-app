@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:latlong2/latlong.dart';
 
@@ -148,6 +149,73 @@ RemainingEstimate estimateRemaining({
     alongRoute: true,
     offRoute: false,
   );
+}
+
+/// Tolerancia (m) con que se simplifica el trazo por calles: a escala de calle
+/// no se nota y una ruta de 1000+ puntos baja a unos pocos cientos.
+const double kRouteSimplifyToleranceMeters = 5;
+
+/// Simplifica [points] con Douglas-Peucker: quita los puntos que se apartan
+/// menos de [toleranceMeters] de la recta entre sus vecinos conservados.
+/// Conserva siempre el primero y el último. Con menos de 3 puntos (o
+/// tolerancia ≤ 0) devuelve la misma lista.
+///
+/// Se proyecta a un plano local equirectangular (preciso a escala de ciudad) y
+/// se recorre con una pila (sin recursión: no desborda con trazos largos). Es
+/// O(n log n) típico; se llama una sola vez por ruta (ver `route_points.dart`).
+List<LatLng> simplifyPolyline(
+  List<LatLng> points, {
+  double toleranceMeters = kRouteSimplifyToleranceMeters,
+}) {
+  final n = points.length;
+  if (n < 3 || toleranceMeters <= 0) return points;
+  const metersPerDegLat = 110574.0;
+  final metersPerDegLng = 111320.0 * math.cos(points.first.latitudeInRad);
+  final xs = Float64List(n);
+  final ys = Float64List(n);
+  for (var i = 0; i < n; i++) {
+    xs[i] = points[i].longitude * metersPerDegLng;
+    ys[i] = points[i].latitude * metersPerDegLat;
+  }
+  final keep = List<bool>.filled(n, false);
+  keep[0] = true;
+  keep[n - 1] = true;
+  final tolerance2 = toleranceMeters * toleranceMeters;
+  final stack = <int>[0, n - 1];
+  while (stack.isNotEmpty) {
+    final last = stack.removeLast();
+    final first = stack.removeLast();
+    final ax = xs[first], ay = ys[first];
+    final dx = xs[last] - ax, dy = ys[last] - ay;
+    final len2 = dx * dx + dy * dy;
+    var maxDist2 = 0.0;
+    var index = -1;
+    for (var i = first + 1; i < last; i++) {
+      var px = xs[i] - ax, py = ys[i] - ay;
+      if (len2 > 0) {
+        final t = ((px * dx + py * dy) / len2).clamp(0.0, 1.0);
+        px -= t * dx;
+        py -= t * dy;
+      }
+      final d2 = px * px + py * py;
+      if (d2 > maxDist2) {
+        maxDist2 = d2;
+        index = i;
+      }
+    }
+    if (index != -1 && maxDist2 > tolerance2) {
+      keep[index] = true;
+      stack
+        ..add(first)
+        ..add(index)
+        ..add(index)
+        ..add(last);
+    }
+  }
+  return [
+    for (var i = 0; i < n; i++)
+      if (keep[i]) points[i],
+  ];
 }
 
 /// "350 m" o "4,2 km" (separador decimal en español).

@@ -68,7 +68,12 @@ class SettlementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      onTap: () => context.push('/carrier/settlements/${settlement.id}'),
+      // La liquidación de la lista viaja como semilla: el detalle la muestra
+      // al instante mientras trae la versión fresca.
+      onTap: () => context.push(
+        '/carrier/settlements/${settlement.id}',
+        extra: settlement,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

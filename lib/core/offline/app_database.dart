@@ -29,13 +29,38 @@ class AppDatabase extends _$AppDatabase {
             ),
       );
 
-  /// La tarea de fondo (WorkManager) abre su propia conexión al mismo archivo
-  /// mientras la app puede estar abierta: con `busy_timeout` SQLite espera el
-  /// lock unos segundos en vez de fallar con "database is locked".
-  /// Top-level/estática: se envía al isolate donde se abre la conexión.
-  static void _configureConnection(CommonDatabase db) {
-    db.execute('PRAGMA busy_timeout = 5000;');
+  /// PRAGMAs de cada conexión, pensados para gama baja (1 GB de RAM):
+  ///
+  /// - `busy_timeout`: la tarea de fondo (WorkManager) abre su propia conexión
+  ///   al mismo archivo mientras la app puede estar abierta; SQLite espera el
+  ///   lock unos segundos en vez de fallar con "database is locked".
+  /// - `journal_mode = WAL`: el que escribe (escaneo, GPS) no bloquea al que
+  ///   lee (pantalla de sync, drenado), y cada commit escribe menos en disco.
+  ///   `synchronous` queda en el default (FULL): un escaneo confirmado no se
+  ///   pierde ni con un corte de batería.
+  /// - `journal_size_limit` 1 MB: el archivo `-wal` se recorta tras cada
+  ///   checkpoint en vez de quedar del tamaño del pico (días sin señal).
+  /// - `cache_size` -1024 = 1 MB de páginas por conexión (default 2 MB): la
+  ///   base es chica y las consultas calientes van por índice.
+  /// - `temp_store = FILE`: ordenamientos temporales a disco, no a RAM.
+  static const List<String> connectionPragmas = [
+    'PRAGMA busy_timeout = 5000;',
+    'PRAGMA journal_mode = WAL;',
+    'PRAGMA journal_size_limit = 1048576;',
+    'PRAGMA cache_size = -1024;',
+    'PRAGMA temp_store = FILE;',
+  ];
+
+  /// Aplica [connectionPragmas] a una conexión recién abierta.
+  /// Estática: se envía al isolate donde se abre la conexión.
+  static void configureConnection(CommonDatabase db) {
+    for (final pragma in connectionPragmas) {
+      db.execute(pragma);
+    }
   }
+
+  static void _configureConnection(CommonDatabase db) =>
+      configureConnection(db);
 
   @override
   int get schemaVersion => 3;
@@ -83,10 +108,17 @@ class AppDatabase extends _$AppDatabase {
 
   /// Acciones pendientes en orden de creación (ULID). [limit] permite drenar
   /// por lotes sin cargar toda la cola (con sus payloads) en memoria.
-  Future<List<OutboxAction>> pendingActions({int? limit}) {
+  Future<List<OutboxAction>> pendingActions({
+    int? limit,
+    Set<String> excludeIds = const {},
+  }) {
     final query = select(outboxActions)
-      ..where((t) => t.status.equals('pending'))
-      ..orderBy([(t) => OrderingTerm.asc(t.id)]);
+      ..where((t) => t.status.equals('pending'));
+    // Filas con un envío en curso (OfflineQueue): no se reenvían en paralelo.
+    if (excludeIds.isNotEmpty) {
+      query.where((t) => t.id.isNotIn(excludeIds));
+    }
+    query.orderBy([(t) => OrderingTerm.asc(t.id)]);
     if (limit != null) query.limit(limit);
     return query.get();
   }
@@ -202,6 +234,21 @@ class AppDatabase extends _$AppDatabase {
     return query.go();
   }
 
+  /// Descarta las posiciones GPS del camión (`ingestTruckPosition`) que siguen
+  /// pendientes desde antes de [before]. Son las únicas acciones descartables:
+  /// con días sin señal se acumulan ~360 por hora y una posición vieja ya no
+  /// sirve para seguir el camión. Escaneos, entregas y fotos NUNCA se tocan.
+  Future<int> purgeStaleTruckPositions({required DateTime before}) {
+    final query = delete(outboxActions)
+      ..where(
+        (t) =>
+            t.kind.equals('ingestTruckPosition') &
+            t.status.equals('pending') &
+            t.createdAt.isSmallerThanValue(before),
+      );
+    return query.go();
+  }
+
   // --- Cola de fotos de evidencia (POD / daños) ---
 
   /// Cantidad de fotos pendientes con `COUNT(*)`.
@@ -264,10 +311,13 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Stream<List<PendingPhoto>> watchPhotos() {
-    return (select(
-      pendingPhotos,
-    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
+  /// Fotos de la cola para la UI de sincronización, más reciente primero.
+  /// Solo metadatos (la imagen queda en disco) y como mucho [limit] filas.
+  Stream<List<PendingPhoto>> watchPhotos({int limit = queueWatchLimit}) {
+    return (select(pendingPhotos)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .watch();
   }
 
   Future<void> deletePhoto(String id) =>

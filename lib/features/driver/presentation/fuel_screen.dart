@@ -102,9 +102,7 @@ class _FuelScreenState extends ConsumerState<FuelScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                      ],
+                      inputFormatters: [_decimalInput],
                       decoration: const InputDecoration(
                         labelText: 'Litros',
                         suffixText: 'L',
@@ -116,9 +114,7 @@ class _FuelScreenState extends ConsumerState<FuelScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                      ],
+                      inputFormatters: [_decimalInput],
                       decoration: const InputDecoration(
                         labelText: 'Precio por litro',
                         prefixText: '$_currency ',
@@ -222,3 +218,8 @@ class _FuelScreenState extends ConsumerState<FuelScreen> {
     }
   }
 }
+
+/// Solo dígitos y punto decimal (creado una vez, no en cada build).
+final TextInputFormatter _decimalInput = FilteringTextInputFormatter.allow(
+  RegExp(r'[0-9.]'),
+);

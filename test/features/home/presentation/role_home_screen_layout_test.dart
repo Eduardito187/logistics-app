@@ -9,6 +9,7 @@ import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/big_action_tile.dart';
 import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
 
+import '../../../support/no_home_prefetch.dart';
 import '../../../support/screen_sizes.dart';
 
 // Layout del inicio (panel) y de Tareas (grilla) en teléfono chico, teléfono y
@@ -22,7 +23,7 @@ Future<void> _pump(
   UserRole role, {
   double textScale = 1.0,
 }) async {
-  final container = ProviderContainer();
+  final container = ProviderContainer(overrides: [noHomePrefetchOverride]);
   addTearDown(container.dispose);
   container.read(sessionProvider.notifier).devSignIn(role);
   await tester.pumpWidget(

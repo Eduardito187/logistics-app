@@ -25,8 +25,13 @@ class _FakeLocationService extends LocationService {
   @override
   Future<bool> ensureBackgroundPermission() async => background;
 
+  int streamCalls = 0;
+
   @override
-  Stream<GpsFix> stream({int distanceFilterMeters = 20}) => fixes.stream;
+  Stream<GpsFix> stream({int distanceFilterMeters = 20}) {
+    streamCalls++;
+    return fixes.stream;
+  }
 }
 
 class _FakeForegroundTask extends FlutterForegroundTaskPlatform
@@ -274,4 +279,24 @@ void main() {
     expect(_platform.stops, 1);
     expect(container.read(truckTrackingProvider).active, isFalse);
   });
+
+  test(
+    'dos start a la vez: un solo servicio y un solo stream de GPS',
+    () async {
+      final location = _FakeLocationService();
+      final container = _container(location);
+      final notifier = container.read(truckTrackingProvider.notifier);
+
+      final results = await Future.wait([
+        notifier.start(shipmentId: 'A'),
+        notifier.start(shipmentId: 'B'),
+      ]);
+
+      expect(results, [isTrue, isTrue]);
+      expect(_platform.starts, 1);
+      expect(location.streamCalls, 1);
+      // Gana el último envío pedido.
+      expect(container.read(truckTrackingProvider).shipmentId, 'B');
+    },
+  );
 }
