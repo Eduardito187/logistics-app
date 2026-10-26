@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/auth/session.dart';
+import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
@@ -29,21 +31,21 @@ ProviderContainer _container(FakeStoreRepository repo) {
 }
 
 void main() {
-  group('SelectedStoreNodeNotifier', () {
-    test('arranca en null y guarda el nodo elegido', () {
+  group('selectedStoreNodeProvider (tienda fija del usuario)', () {
+    test('sin sesión no hay tienda', () {
       final container = _container(FakeStoreRepository());
+      expect(container.read(selectedStoreNodeProvider), isNull);
+    });
+
+    test('es la tienda asignada en la sesión (/me), sin selector', () {
+      final container = _container(FakeStoreRepository());
+      final session = container.read(sessionProvider.notifier)
+        ..devSignIn(UserRole.store);
       expect(container.read(selectedStoreNodeProvider), isNull);
 
       final node = storeNode();
-      container.read(selectedStoreNodeProvider.notifier).select(node);
+      session.applyProfile(abilities: const [], storeNode: node);
       expect(container.read(selectedStoreNodeProvider), same(node));
-    });
-
-    test('select(null) limpia la elección', () {
-      final container = _container(FakeStoreRepository());
-      container.read(selectedStoreNodeProvider.notifier).select(storeNode());
-      container.read(selectedStoreNodeProvider.notifier).select(null);
-      expect(container.read(selectedStoreNodeProvider), isNull);
     });
   });
 
@@ -78,6 +80,28 @@ void main() {
       final second = container.read(locallyReceivedProvider);
       expect(identical(first, second), isFalse);
     });
+
+    test('clear olvida el envío conciliado', () {
+      final container = _container(FakeStoreRepository());
+      final notifier = container.read(locallyReceivedProvider.notifier)
+        ..add('ship-1', 'unit-1')
+        ..add('ship-2', 'unit-2');
+      notifier.clear('ship-1');
+      expect(container.read(locallyReceivedProvider).keys, ['ship-2']);
+    });
+
+    test('recuerda a lo sumo maxShipments envíos (descarta el más viejo)', () {
+      final container = _container(FakeStoreRepository());
+      final notifier = container.read(locallyReceivedProvider.notifier);
+      const max = LocallyReceivedNotifier.maxShipments;
+      for (var i = 0; i <= max; i++) {
+        notifier.add('ship-$i', 'unit-$i');
+      }
+      final state = container.read(locallyReceivedProvider);
+      expect(state, hasLength(max));
+      expect(state.containsKey('ship-0'), isFalse);
+      expect(state.containsKey('ship-$max'), isTrue);
+    });
   });
 
   group('ShelfLocationsNotifier', () {
@@ -96,6 +120,18 @@ void main() {
         container.read(shelfLocationsProvider)['unit-1'],
         'Pasillo 4 · C1',
       );
+    });
+
+    test('recuerda a lo sumo maxEntries ubicaciones', () {
+      final container = _container(FakeStoreRepository());
+      final notifier = container.read(shelfLocationsProvider.notifier);
+      const max = ShelfLocationsNotifier.maxEntries;
+      for (var i = 0; i <= max; i++) {
+        notifier.setLocation('unit-$i', 'P$i');
+      }
+      final state = container.read(shelfLocationsProvider);
+      expect(state, hasLength(max));
+      expect(state.containsKey('unit-0'), isFalse);
     });
   });
 
@@ -138,6 +174,99 @@ void main() {
       expect(await container.read(storeShipmentsProvider.future), hasLength(1));
     });
 
+    test(
+      'pide al servidor solo los envíos de la tienda de la sesión',
+      () async {
+        final repo = FakeStoreRepository();
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            storeRepositoryProvider.overrideWithValue(repo),
+            selectedStoreNodeProvider.overrideWithValue(
+              storeNode(id: 'mi-nodo'),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(storeShipmentsProvider.future);
+
+        expect(repo.listShipmentsNodeIds, ['mi-nodo']);
+      },
+    );
+
+    test('Recepción y Recojo comparten la lista: un solo GET', () async {
+      final repo = FakeStoreRepository();
+      final container = _container(repo);
+
+      final a = container.listen(storeShipmentsProvider, (_, _) {});
+      final b = container.listen(storeShipmentsProvider, (_, _) {});
+      await container.read(storeShipmentsProvider.future);
+      a.close();
+      b.close();
+      // Volver a la pantalla dentro del plazo de caché: sin otro GET.
+      await Future<void>.delayed(Duration.zero);
+      await container.read(storeShipmentsProvider.future);
+
+      expect(repo.listShipmentsNodeIds, hasLength(1));
+    });
+  });
+
+  group('caché de listas (cacheFor)', () {
+    testWidgets('envíos: vuelve sin GET dentro de 60 s y re-pide después', (
+      tester,
+    ) async {
+      final repo = FakeStoreRepository();
+      // Se libera al final del cuerpo: los timers de caché no quedan vivos.
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [storeRepositoryProvider.overrideWithValue(repo)],
+      );
+
+      final sub = container.listen(storeShipmentsProvider, (_, _) {});
+      await tester.pump();
+      sub.close();
+      await tester.pump(const Duration(seconds: 59));
+      container.listen(storeShipmentsProvider, (_, _) {}).close();
+      await tester.pump();
+      expect(repo.listShipmentsNodeIds, hasLength(1));
+
+      await tester.pump(const Duration(seconds: 61));
+      container.listen(storeShipmentsProvider, (_, _) {});
+      await tester.pump();
+      expect(repo.listShipmentsNodeIds, hasLength(2));
+      container.dispose();
+    });
+
+    testWidgets('nodos: caché larga (10 min)', (tester) async {
+      var calls = 0;
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          storeRepositoryProvider.overrideWithValue(
+            FakeStoreRepository(
+              onListNodes: () async {
+                calls++;
+                return <Node>[];
+              },
+            ),
+          ),
+        ],
+      );
+
+      container.listen(storeNodesProvider, (_, _) {}).close();
+      await tester.pump(const Duration(minutes: 9));
+      container.listen(storeNodesProvider, (_, _) {}).close();
+      await tester.pump();
+      expect(calls, 1);
+
+      await tester.pump(const Duration(minutes: 11));
+      container.listen(storeNodesProvider, (_, _) {});
+      await tester.pump();
+      expect(calls, 2);
+      container.dispose();
+    });
+
     test('propaga el error de API', () async {
       final container = _container(
         FakeStoreRepository(
@@ -161,8 +290,10 @@ void main() {
         ),
       );
       final view = await container.read(
-        nodeReceptionProvider((shipmentId: 'ship-1', nodeId: 'node-store'))
-            .future,
+        nodeReceptionProvider((
+          shipmentId: 'ship-1',
+          nodeId: 'node-store',
+        )).future,
       );
       expect(view, isA<NodeReceptionView>());
       expect(view!.destinationNodeId, 'node-store');
@@ -173,8 +304,10 @@ void main() {
         FakeStoreRepository(onGetNodeReception: (_, _) async => null),
       );
       final view = await container.read(
-        nodeReceptionProvider((shipmentId: 'ship-1', nodeId: 'node-store'))
-            .future,
+        nodeReceptionProvider((
+          shipmentId: 'ship-1',
+          nodeId: 'node-store',
+        )).future,
       );
       expect(view, isNull);
     });

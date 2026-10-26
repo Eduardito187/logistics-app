@@ -4,7 +4,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/scanning/scanner_screen.dart';
 
 /// Diálogo para asignar/cambiar el carril o vehículo de carga. Devuelve el valor
-/// ingresado (o null si se cancela) mediante `Navigator.pop`.
+/// ingresado sin espacios (o null si se cancela o se guarda vacío) mediante
+/// `Navigator.pop`.
 class AssignLaneDialog extends StatefulWidget {
   const AssignLaneDialog({super.key, this.initial});
 
@@ -39,6 +40,11 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
     _controller.text = code;
   }
 
+  void _save() {
+    final value = _controller.text.trim();
+    Navigator.of(context).pop(value.isEmpty ? null : value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -55,7 +61,7 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
               hintText: 'Ej. Carril 3 / ABC-123',
               prefixIcon: Icon(Icons.alt_route),
             ),
-            onSubmitted: (v) => Navigator.of(context).pop(v),
+            onSubmitted: (_) => _save(),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -70,10 +76,7 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Guardar'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Guardar')),
       ],
     );
   }

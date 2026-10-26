@@ -7,12 +7,11 @@ import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart
 
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
+import '../../../support/button_finders.dart';
 
-// Prueba de entrega en mostrador (POD). El escaneo real necesita cámara, así que
-// se cubre el gating por confirmación del cliente y la lista de bultos.
-// FALENCIA DETECTADA: los caminos de escaneo/entrega (_scanAndDeliver, mensaje
-// "Etiqueta inválida: la firma no se verificó.") no son testeables en widget
-// test porque `scanCode` abre la pantalla de cámara. Ver sección de falencias.
+// Prueba de entrega en mostrador (POD): gating por confirmación del cliente y la
+// lista de bultos. Los flujos escaneo -> entrega (con `FakeCodeScanner`) están
+// en pickup_pod_scan_test.dart.
 
 final _shipment = shipment(
   customerName: 'Ana Pérez',
@@ -24,6 +23,11 @@ Future<void> _pump(
   WidgetTester tester, {
   List<UnitTracking> units = const [],
 }) async {
+  // Superficie alta: la lista es perezosa y la lista de bultos queda debajo
+  // del pie fijo en 800x600.
+  tester.view.physicalSize = const Size(1200, 3600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -56,7 +60,7 @@ void main() {
       findsOneWidget,
     );
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar producto'),
     );
     expect(button.onPressed, isNull);
   });
@@ -77,27 +81,37 @@ void main() {
       findsNothing,
     );
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Escanear y entregar bulto'),
+      findButtonWithText<FilledButton>('Escanear y entregar producto'),
     );
     expect(button.onPressed, isNotNull);
   });
 
-  testWidgets('lista los bultos con el contador de entregados', (tester) async {
+  testWidgets('lista los productos con el contador de entregados', (
+    tester,
+  ) async {
     await _pump(
       tester,
       units: [
-        unit(unitId: 'unit-1', label: 'A1'),
+        unit(
+          unitId: 'unit-1',
+          label: 'A1',
+          sku: 'TV-55',
+          productName: 'Televisor 55"',
+        ),
         unit(unitId: 'unit-2'),
       ],
     );
 
-    expect(find.text('Entregados 0 de 2 bulto(s).'), findsOneWidget);
-    expect(find.text('Bulto A1'), findsOneWidget); // usa el label humano
+    expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
+    // Foto, nombre y código del producto; sin dato, el id abreviado.
+    expect(find.text('Televisor 55"'), findsOneWidget);
+    expect(find.text('TV-55'), findsOneWidget);
+    expect(find.textContaining('Producto '), findsOneWidget);
     expect(find.text('Pendiente'), findsNWidgets(2));
   });
 
   testWidgets('sin bultos muestra 0 de 0', (tester) async {
     await _pump(tester);
-    expect(find.text('Entregados 0 de 0 bulto(s).'), findsOneWidget);
+    expect(find.text('Entregados 0 de 0 producto(s).'), findsOneWidget);
   });
 }

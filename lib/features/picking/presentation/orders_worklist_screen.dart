@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
+import '../../../core/layout/adaptive_card_rows.dart';
+import '../../../core/layout/nav_clearance.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/sync_badge.dart';
 import 'controllers/orders_worklist_controller.dart';
 import 'widgets/order_card.dart';
 
@@ -27,7 +28,6 @@ class OrdersWorklistScreen extends ConsumerWidget {
             icon: const Icon(Icons.keyboard),
             onPressed: () => context.push('/picking/prepare'),
           ),
-          SyncBadge(onTap: () => context.push('/sync')),
           const SizedBox(width: 8),
         ],
       ),
@@ -39,6 +39,7 @@ class OrdersWorklistScreen extends ConsumerWidget {
           data: (orders) {
             if (orders.isEmpty) {
               return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 96),
                   EmptyState(
@@ -51,11 +52,26 @@ class OrdersWorklistScreen extends ConsumerWidget {
                 ],
               );
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) =>
-                  OrderCard(shipment: orders[index]),
+            // Perezosa y en columnas: 1 en teléfono, 2–3 en tablet. OrderCard
+            // ya trae su margen inferior, por eso las filas van sin separador.
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    navScrollBottomPadding(context),
+                  ),
+                  sliver: SliverAdaptiveCardRows(
+                    itemCount: orders.length,
+                    spacing: 0,
+                    itemBuilder: (context, index) =>
+                        OrderCard(shipment: orders[index]),
+                  ),
+                ),
+              ],
             );
           },
         ),

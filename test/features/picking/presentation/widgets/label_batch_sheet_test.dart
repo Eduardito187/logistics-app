@@ -4,6 +4,7 @@ import 'package:logistics_app/core/api/models/emit_label_line.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_result.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/line_editor.dart';
+import '../../../../support/button_finders.dart';
 
 // Formulario (bottom sheet) de emisión/reimpresión de etiquetas. Valida origen,
 // destino, motivo (si se exige) y las líneas; devuelve un LabelBatchResult.
@@ -18,7 +19,7 @@ Finder _sheetFields() => find.descendant(
 Future<void> _tapSubmit(WidgetTester tester) async {
   final submit = find.descendant(
     of: find.byType(LabelBatchSheet),
-    matching: find.widgetWithText(FilledButton, 'Emitir'),
+    matching: findButtonWithText<FilledButton>('Emitir'),
   );
   await tester.ensureVisible(submit);
   await tester.tap(submit);
@@ -152,6 +153,10 @@ void main() {
   testWidgets('precarga las líneas iniciales y permite agregar/quitar', (
     tester,
   ) async {
+    // Superficie alta: las líneas son perezosas y acá se cuentan todas.
+    tester.view.physicalSize = const Size(1200, 3600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final box = <Object?>[#pending];
     await _open(
       tester,
@@ -178,4 +183,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LineEditor), findsOneWidget);
   });
+
+  testWidgets(
+    'con muchas líneas solo arma las visibles y el botón queda a mano',
+    (tester) async {
+      final box = <Object?>[null];
+      await _open(
+        tester,
+        box,
+        initialLines: [
+          for (var i = 0; i < 40; i++)
+            EmitLabelLine(sku: 'SKU-$i', name: 'Producto $i', quantity: 1),
+        ],
+      );
+
+      expect(find.text('Líneas (40)'), findsOneWidget);
+      expect(find.byType(LineEditor).evaluate().length, lessThan(10));
+      // El botón de enviar está fijo abajo: existe sin scrollear las 40 líneas.
+      expect(findButtonWithText<FilledButton>('Emitir'), findsOneWidget);
+    },
+  );
 }

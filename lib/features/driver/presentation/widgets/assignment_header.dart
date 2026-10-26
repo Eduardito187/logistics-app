@@ -28,7 +28,7 @@ class AssignmentHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping, color: theme.colorScheme.primary),
+            Icon(Icons.local_shipping, color: theme.colorScheme.onSurface),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

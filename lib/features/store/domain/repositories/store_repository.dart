@@ -16,8 +16,9 @@ abstract interface class StoreRepository {
   /// Nodos activos de la red (candidatos a tienda/nodo de recepción).
   Future<List<Node>> listNodes();
 
-  /// Envíos visibles para recepción / entrega en mostrador.
-  Future<List<Shipment>> listShipments();
+  /// Envíos visibles para recepción / entrega en mostrador. Con
+  /// [destinationNodeId] el servidor devuelve solo los que llegan a ese nodo.
+  Future<List<Shipment>> listShipments({String? destinationNodeId});
 
   /// Estado de la recepción de un envío en un nodo. `null` cuando aún no se
   /// abrió (el backend responde 404), lo que la UI usa para ofrecer "Abrir".

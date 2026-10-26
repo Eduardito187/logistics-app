@@ -15,7 +15,11 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final packageCount = shipment.lines.length;
+    // Unidades físicas: una línea puede traer varias (quantity), no es 1 por línea.
+    final packageCount = shipment.lines.fold<int>(
+      0,
+      (sum, line) => sum + line.quantity,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SectionCard(

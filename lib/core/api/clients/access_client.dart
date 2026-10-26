@@ -27,8 +27,8 @@ import '../models/get_app_access_users_user_id_response.dart';
 import '../models/get_integrations_access_token_verify_response.dart';
 import '../models/post_app_access_tokens_response.dart';
 import '../models/post_app_access_tokens_token_id_rotate_response.dart';
-import '../models/status5.dart';
 import '../models/status6.dart';
+import '../models/status7.dart';
 
 part 'access_client.g.dart';
 
@@ -99,7 +99,7 @@ abstract class AccessClient {
   /// List users
   @GET('/app/access/users')
   Future<GetAppAccessUsersResponse> listUsers({
-    @Query('status') Status5? status,
+    @Query('status') Status6? status,
   });
 
   /// Register a user
@@ -150,7 +150,7 @@ abstract class AccessClient {
   /// List integration tokens
   @GET('/app/access/tokens')
   Future<GetAppAccessTokensResponse> listIntegrationTokens({
-    @Query('status') Status6? status,
+    @Query('status') Status7? status,
   });
 
   /// Issue an integration token.

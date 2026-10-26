@@ -8,6 +8,7 @@ import 'package:logistics_app/features/driver/presentation/controllers/fleet_ops
 import 'package:logistics_app/features/driver/presentation/fuel_screen.dart';
 
 import '../support/driver_test_support.dart';
+import '../../../support/button_finders.dart';
 
 // Carga de combustible.
 //
@@ -24,8 +25,9 @@ void main() {
 
   List<Object> overridesFor() => [
     ...gateBase(),
-    currentFuelPriceProvider(FuelType.diesel)
-        .overrideWith((ref) async => buildFuelPrice()),
+    currentFuelPriceProvider(
+      FuelType.diesel,
+    ).overrideWith((ref) async => buildFuelPrice()),
     vehicleRefuelsProvider.overrideWith((ref) async => <Refuel>[]),
   ];
 
@@ -54,7 +56,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Registrar carga'));
+    await tester.tap(findButtonWithText<FilledButton>('Registrar carga'));
     await tester.pump();
 
     expect(find.text('Ingresa los litros cargados.'), findsOneWidget);
@@ -71,7 +73,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, '40');
-    await tester.tap(find.widgetWithText(FilledButton, 'Registrar carga'));
+    await tester.tap(findButtonWithText<FilledButton>('Registrar carga'));
     await tester.pump();
 
     expect(find.text('Ingresa el precio por litro.'), findsOneWidget);
@@ -82,7 +84,7 @@ void main() {
     // Documenta el desenlace esperado del 202 que FuelScreen no puede ejercitar
     // en test por llamar directo a la API.
     final outcome = CommandOutcome.fromAccepted(
-      const AcceptedEnvelope(data: Data21(accepted: true)),
+      const AcceptedEnvelope(data: Data22(accepted: true)),
     );
     expect(outcome.isAccepted, isTrue);
 

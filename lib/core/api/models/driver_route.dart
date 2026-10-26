@@ -6,6 +6,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'driver_route_status.dart';
 import 'driver_route_stop.dart';
+import 'route_geometry.dart';
 
 part 'driver_route.g.dart';
 
@@ -22,6 +23,7 @@ class DriverRoute {
     required this.stopsRemaining,
     required this.stops,
     this.currentStop,
+    this.routeGeometry,
   });
 
   factory DriverRoute.fromJson(Map<String, Object?> json) =>
@@ -42,6 +44,10 @@ class DriverRoute {
   @JsonKey(name: 'current_stop')
   final DriverRouteStop? currentStop;
   final List<DriverRouteStop> stops;
+
+  /// Planned route geometry, matched by vehicle+date: the street-level geometry persisted with the plan (computed on the fly if the plan still lacks it); if there is no plan, a straight line through the route stops in sequence. Null only when fewer than two stops have coordinates.
+  @JsonKey(name: 'route_geometry')
+  final RouteGeometry? routeGeometry;
 
   Map<String, Object?> toJson() => _$DriverRouteToJson(this);
 }

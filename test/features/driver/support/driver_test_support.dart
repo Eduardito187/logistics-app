@@ -1,13 +1,19 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/labels/label_scanner.dart';
+import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/features/driver/domain/repositories/fleet_repository.dart';
 import 'package:logistics_app/features/driver/domain/usecases/conduct_checklist.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
+import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_map.dart';
 
 // Soporte compartido de los tests del chofer: constructores de modelos del
 // contrato (fixtures), dobles de prueba de los servicios de plataforma (GPS,
@@ -54,6 +60,10 @@ DriverRouteStop buildStop({
   DateTime? etaAt,
   double? lat,
   double? lng,
+  String? customerPhone,
+  String? addressReference,
+  List<Items3> items = const [],
+  DateTime? settledAt,
 }) => DriverRouteStop(
   id: id,
   shipmentId: shipmentId,
@@ -65,6 +75,10 @@ DriverRouteStop buildStop({
   etaAt: etaAt,
   lat: lat,
   lng: lng,
+  customerPhone: customerPhone,
+  addressReference: addressReference,
+  items: items,
+  settledAt: settledAt,
 );
 
 DriverRoute buildRoute({
@@ -76,6 +90,7 @@ DriverRoute buildRoute({
   int stopsRemaining = 1,
   List<DriverRouteStop>? stops,
   DriverRouteStop? currentStop,
+  RouteGeometry? routeGeometry,
 }) => DriverRoute(
   id: id,
   vehicleId: vehicleId,
@@ -86,6 +101,7 @@ DriverRoute buildRoute({
   stopsRemaining: stopsRemaining,
   currentStop: currentStop,
   stops: stops ?? const [],
+  routeGeometry: routeGeometry,
 );
 
 /// Ruta vacía (sin paradas pendientes) para que el autostart del rastreo no
@@ -189,6 +205,12 @@ class FakeLocationService extends LocationService {
     Duration timeout = const Duration(seconds: 6),
   }) async => fix;
 
+  /// Veces que una pantalla pidió calentar el GPS ([prefetch]).
+  int prefetchCount = 0;
+
+  @override
+  void prefetch() => prefetchCount++;
+
   @override
   Stream<GpsFix> stream({int distanceFilterMeters = 20}) =>
       const Stream.empty();
@@ -266,7 +288,7 @@ class FakeFleetRepository implements FleetRepository {
   final MyCrew? crew;
   final Object? crewError;
   final List<Driver> drivers;
-  final Data4? checklistResult;
+  final Data5? checklistResult;
   final Object? checklistError;
 
   Map<String, bool>? lastItems;
@@ -281,7 +303,7 @@ class FakeFleetRepository implements FleetRepository {
   Future<List<Driver>> listActiveDrivers() async => drivers;
 
   @override
-  Future<Data4?> conductPreTripChecklist(
+  Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {
     if (checklistError != null) throw checklistError!;
@@ -295,12 +317,12 @@ class FakeConductChecklist extends ConductChecklist {
   FakeConductChecklist({this.result, this.error})
     : super(FakeFleetRepository());
 
-  final Data4? result;
+  final Data5? result;
   final Object? error;
   Map<String, bool>? lastItems;
 
   @override
-  Future<Data4?> call({
+  Future<Data5?> call({
     required String vehicleId,
     required String driverId,
     required Map<String, bool> items,
@@ -358,7 +380,12 @@ Future<void> pumpScoped(
 /// su error) y una ruta sin paradas pendientes (para que el autostart no intente
 /// arrancar el servicio GPS). Devuelve `List<Object>` por la misma razón que
 /// [pumpScoped].
-List<Object> gateBase({MyCrew? crew, Object? crewError, DriverRoute? route}) {
+List<Object> gateBase({
+  MyCrew? crew,
+  Object? crewError,
+  DriverRoute? route,
+  RouteTilePrefetcher? prefetcher,
+}) {
   return [
     locationServiceProvider.overrideWithValue(FakeLocationService()),
     truckTrackingProvider.overrideWith(FakeTruckTracking.new),
@@ -367,5 +394,71 @@ List<Object> gateBase({MyCrew? crew, Object? crewError, DriverRoute? route}) {
       return crew ?? buildMyCrew();
     }),
     driverRouteProvider.overrideWith((ref) async => route ?? buildEmptyRoute()),
+    // Sin precarga real de tiles (red/disco) en los tests.
+    routeTilePrefetcherProvider.overrideWithValue(
+      prefetcher ?? (points, {routeKey}) async {},
+    ),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Escaneo de etiquetas (vector Ed25519 compartido con el backend).
+// ---------------------------------------------------------------------------
+
+/// Vector de prueba Ed25519 compartido con el backend
+/// (`test/fixtures/label_test_vector.json`).
+Map<String, dynamic> labelVector() =>
+    jsonDecode(File('test/fixtures/label_test_vector.json').readAsStringSync())
+        as Map<String, dynamic>;
+
+/// QR de etiqueta con firma válida según el vector.
+String validLabelQr() => labelVector()['qr_content'] as String;
+
+/// QR del vector con el payload alterado: la firma ya no verifica.
+String tamperedLabelQr() => labelVector()['tampered_qr_content'] as String;
+
+/// `unit_id` que trae el QR del vector.
+const vectorUnitId = '01JB8ZQ4X7K2M9N5P6R7S8T9VW';
+
+/// Scanner de etiquetas sin red: con [withKeys] usa la clave pública del
+/// vector; sin claves reproduce una app sin configurar (`canVerify == false`).
+LabelScanner vectorLabelScanner({bool withKeys = true}) {
+  if (!withKeys) return LabelScanner(null);
+  final vector = labelVector();
+  return LabelScanner(
+    LabelVerifier({
+      vector['key_id'] as int: base64.decode(
+        vector['public_key_base64'] as String,
+      ),
+    }),
+  );
+}
+
+/// Monta [child] empujado sobre una ruta base (texto `Inicio`), para poder
+/// verificar que la pantalla hace `Navigator.pop` tras registrar.
+Future<void> pumpPushed(
+  WidgetTester tester, {
+  required Widget child,
+  List<Object> overrides = const [],
+  bool tall = false,
+}) async {
+  await pumpScoped(
+    tester,
+    overrides: overrides,
+    tall: tall,
+    child: Builder(
+      builder: (context) => Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => child)),
+            child: const Text('Inicio'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Inicio'));
+  await tester.pumpAndSettle();
 }

@@ -9,7 +9,7 @@ part of 'queued_notification_envelope.dart';
 QueuedNotificationEnvelope _$QueuedNotificationEnvelopeFromJson(
   Map<String, dynamic> json,
 ) => QueuedNotificationEnvelope(
-  data: Data24.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data25.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$QueuedNotificationEnvelopeToJson(

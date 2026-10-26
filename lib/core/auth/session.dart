@@ -1,3 +1,4 @@
+import '../api/models/node.dart';
 import 'user_role.dart';
 
 // Se reexportan las piezas movidas por SRP (`SessionNotifier`/`sessionProvider`
@@ -16,6 +17,7 @@ class Session {
     required this.role,
     this.token,
     this.abilities = const [],
+    this.storeNode,
   });
 
   final String userName;
@@ -28,6 +30,11 @@ class Session {
   /// Vacío por defecto: dev-login, login sin `/me`, o `/me` caído (red/permiso).
   /// En ese caso se aplica degradación segura (ver [RoleHomeScreen]).
   final List<String> abilities;
+
+  /// Tienda (nodo) a la que pertenece el usuario, según `/app/auth/me`.
+  /// `null` para roles sin tienda o si el backend no la asignó. El rol tienda
+  /// opera SOLO sobre este nodo (el backend lo exige con 403).
+  final Node? storeNode;
 
   /// ¿La sesión tiene este permiso? Chequeo plano contra las abilities del
   /// token. Con abilities vacías devuelve `false`; la regla de "no ocultar

@@ -19,6 +19,11 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:8110/api/v1',
   );
 
+  /// Dónde actualizar la app cuando el backend exige una versión mínima
+  /// (Play Store, MDM o link de descarga). Vacía = la pantalla de bloqueo pide
+  /// avisar al supervisor en vez de mostrar el botón.
+  static const String appUpdateUrl = String.fromEnvironment('APP_UPDATE_URL');
+
   /// Conveniencias para condicionar comportamiento por entorno.
   static bool get isProduction => env == 'production';
   static bool get isDev => env == 'dev';
@@ -36,6 +41,39 @@ class AppConfig {
     defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
 
-  /// Endpoint ntfy/UnifiedPush por defecto (push sin Firebase, ADR 014).
-  static const String pushEndpoint = String.fromEnvironment('PUSH_ENDPOINT');
+  /// Credenciales de Firebase Cloud Messaging (push). Se cargan desde
+  /// `config/<entorno>.json` (`--dart-define-from-file`), sin google-services.json:
+  /// salen de la consola de Firebase → Configuración del proyecto → app Android.
+  /// Vacías = push desactivado (la app funciona igual, sin avisos push).
+  static const String firebaseApiKey = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+  );
+  static const String firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+  static const String firebaseMessagingSenderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
+  static const String firebaseProjectId = String.fromEnvironment(
+    'FIREBASE_PROJECT_ID',
+  );
+
+  /// App iOS registrada en el mismo proyecto de Firebase (consola → app iOS,
+  /// valores de su `GoogleService-Info.plist`). En iOS se usa este appId en vez
+  /// de [firebaseAppId]; vacío = sin push en iOS. La API key de iOS es otra
+  /// (Firebase la restringe por plataforma); vacía = se usa [firebaseApiKey].
+  static const String firebaseIosApiKey = String.fromEnvironment(
+    'FIREBASE_IOS_API_KEY',
+  );
+  static const String firebaseIosAppId = String.fromEnvironment(
+    'FIREBASE_IOS_APP_ID',
+  );
+  static const String firebaseIosBundleId = String.fromEnvironment(
+    'FIREBASE_IOS_BUNDLE_ID',
+  );
+
+  /// ¿Están las cuatro credenciales de Firebase? Si no, el push no arranca.
+  static bool get isFirebaseConfigured =>
+      firebaseApiKey.isNotEmpty &&
+      firebaseAppId.isNotEmpty &&
+      firebaseMessagingSenderId.isNotEmpty &&
+      firebaseProjectId.isNotEmpty;
 }

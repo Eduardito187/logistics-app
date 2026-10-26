@@ -11,6 +11,11 @@ class CostGrid extends StatelessWidget {
 
   final VehicleCostSummary summary;
 
+  /// Ancho mínimo de un mosaico: 2 columnas en un teléfono típico, 1 en uno
+  /// chico, hasta 3 en tablets.
+  static const double _minTileWidth = 140;
+  static const double _spacing = 12;
+
   @override
   Widget build(BuildContext context) {
     final currency = summary.currency;
@@ -53,14 +58,24 @@ class CostGrid extends StatelessWidget {
         color: AppColors.brandDark,
       ),
     ];
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: tiles,
+    // Sin proporción fija (un GridView 1.5:1 se desbordaba en 320 dp con letra
+    // 1.3x): columnas según el ancho disponible y alto según el contenido.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.maxWidth / _minTileWidth).floor().clamp(
+          1,
+          3,
+        );
+        final tileWidth =
+            (constraints.maxWidth - _spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: _spacing,
+          runSpacing: _spacing,
+          children: [
+            for (final tile in tiles) SizedBox(width: tileWidth, child: tile),
+          ],
+        );
+      },
     );
   }
 }

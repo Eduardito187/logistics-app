@@ -9,7 +9,7 @@ part of 'get_app_plans_plan_id_eta_response.dart';
 GetAppPlansPlanIdEtaResponse _$GetAppPlansPlanIdEtaResponseFromJson(
   Map<String, dynamic> json,
 ) => GetAppPlansPlanIdEtaResponse(
-  data: Data6.fromJson(json['data'] as Map<String, dynamic>),
+  data: Data7.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GetAppPlansPlanIdEtaResponseToJson(

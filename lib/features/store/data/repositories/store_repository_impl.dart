@@ -22,7 +22,8 @@ class StoreRepositoryImpl implements StoreRepository {
   Future<List<Node>> listNodes() => _remote.listNetworkNodes();
 
   @override
-  Future<List<Shipment>> listShipments() => _remote.listShipments();
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) =>
+      _remote.listShipments(destinationNodeId: destinationNodeId);
 
   @override
   Future<NodeReceptionView?> getNodeReception({

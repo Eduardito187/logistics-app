@@ -4,6 +4,7 @@ import '../../../core/labels/label_format_exception.dart';
 import '../../../core/labels/label_scanner.dart';
 import '../../../core/labels/signed_label.dart';
 import '../../../core/labels/verification_result.dart';
+import '../../../core/location/location_service.dart';
 
 /// Resultado de resolver un QR a un bulto: el id de la unidad y si la firma
 /// Ed25519 pudo verificarse offline (`null` = no se verificó: sin claves o el
@@ -52,3 +53,32 @@ String unitScanErrorMessage(UnitScan scan) =>
     scan.result == VerificationResult.unknownKey
     ? 'Etiqueta de una clave desconocida: no se puede verificar.'
     : 'Firma inválida: etiqueta editada o falsa.';
+
+/// Mensaje corto (cabe en el aviso sobre la cámara del escaneo continuo) para
+/// una etiqueta que no verificó.
+String unitScanShortError(UnitScan scan) =>
+    scan.result == VerificationResult.unknownKey
+    ? 'Etiqueta inválida: clave desconocida'
+    : 'Etiqueta inválida: editada o falsa';
+
+/// Calienta el GPS al abrir la cámara (sin esperar, nunca lanza): al leer cada
+/// código [prefetchFix] ya encuentra una posición fresca en caché.
+void warmUpLocation(WidgetRef ref) {
+  try {
+    ref.read(locationServiceProvider).prefetch();
+  } on Object {
+    // Sin plugin/permiso: el escaneo sigue sin ubicación (offline-first).
+  }
+}
+
+/// Posición para el registro de un código. No bloquea más de lo que tarda
+/// `LocationService.current` (≤ 1,5 s, casi inmediato tras [warmUpLocation]);
+/// se pasa como `Future` al caso de uso, que no la espera aparte. Nunca falla:
+/// sin permiso, sin plugin o sin señal devuelve `null`.
+Future<GpsFix?> prefetchFix(WidgetRef ref) async {
+  try {
+    return await ref.read(locationServiceProvider).current();
+  } on Object {
+    return null;
+  }
+}

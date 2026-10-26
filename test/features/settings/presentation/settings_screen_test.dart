@@ -54,6 +54,7 @@ class _FakeLabelPrinter implements LabelPrinter {
 Future<_FakeLabelPrinter> _pump(
   WidgetTester tester, {
   PrinterException? printError,
+  UserRole role = UserRole.picker,
 }) async {
   final printer = _FakeLabelPrinter(printError: printError);
   final container = ProviderContainer(
@@ -61,13 +62,14 @@ Future<_FakeLabelPrinter> _pump(
       labelPrinterProvider.overrideWithValue(printer),
       appMeProvider.overrideWith((ref) async => _me),
       selectedPrinterProvider.overrideWith((ref) async => null),
-      discoveredPrintersProvider(PrinterTransport.bluetooth)
-          .overrideWith((ref) async => const []),
+      discoveredPrintersProvider(
+        PrinterTransport.bluetooth,
+      ).overrideWith((ref) async => const []),
     ],
   );
   addTearDown(container.dispose);
   // Sesión de dev (sin token): la sección de sesión se dibuja igual.
-  container.read(sessionProvider.notifier).devSignIn(UserRole.driver);
+  container.read(sessionProvider.notifier).devSignIn(role);
 
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -96,8 +98,26 @@ void main() {
     expect(find.byType(PrinterSection), findsOneWidget);
     expect(find.byType(SessionSection), findsOneWidget);
     expect(find.text('Mis dispositivos'), findsOneWidget);
-    expect(find.text('Estado de sincronización'), findsOneWidget);
+    // Offline invisible: Ajustes no expone la sincronización.
+    expect(find.text('Estado de sincronización'), findsNothing);
   });
+
+  for (final role in UserRole.values) {
+    testWidgets('impresora visible solo para preparador y supervisor '
+        '(${role.name})', (tester) async {
+      tester.view.physicalSize = const Size(1200, 3600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await _pump(tester, role: role);
+
+      final expected = role == UserRole.picker || role == UserRole.supervisor;
+      expect(
+        find.byType(PrinterSection),
+        expected ? findsOneWidget : findsNothing,
+      );
+      expect(find.byType(SessionSection), findsOneWidget);
+    });
+  }
 
   testWidgets('imprimir prueba envía el ZPL fijo y avisa del éxito', (
     tester,
@@ -108,7 +128,7 @@ void main() {
     await tester.pump(); // dispara impresión
     await tester.pump(const Duration(milliseconds: 50)); // aviso
 
-    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba Dismac^FS^XZ');
+    expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ');
     expect(find.text('Etiqueta de prueba enviada.'), findsOneWidget);
   });
 

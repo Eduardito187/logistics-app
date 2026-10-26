@@ -11,7 +11,7 @@ _$PostIntegrationsFleetVehiclesResponseFromJson(Map<String, dynamic> json) =>
     PostIntegrationsFleetVehiclesResponse(
       data: json['data'] == null
           ? null
-          : Data17.fromJson(json['data'] as Map<String, dynamic>),
+          : Data18.fromJson(json['data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PostIntegrationsFleetVehiclesResponseToJson(

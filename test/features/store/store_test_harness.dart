@@ -8,7 +8,7 @@ import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/connectivity_notifier.dart';
-import 'package:logistics_app/core/widgets/sync_badge.dart';
+import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/features/store/domain/repositories/store_repository.dart';
 
 /// Repositorio de Tienda totalmente controlable por los tests. Cada método
@@ -43,9 +43,14 @@ class FakeStoreRepository implements StoreRepository {
   @override
   Future<List<Node>> listNodes() => (onListNodes ?? (() async => <Node>[]))();
 
+  /// Nodo destino pedido en cada `listShipments` (filtro de servidor).
+  final List<String?> listShipmentsNodeIds = <String?>[];
+
   @override
-  Future<List<Shipment>> listShipments() =>
-      (onListShipments ?? (() async => <Shipment>[]))();
+  Future<List<Shipment>> listShipments({String? destinationNodeId}) {
+    listShipmentsNodeIds.add(destinationNodeId);
+    return (onListShipments ?? (() async => <Shipment>[]))();
+  }
 
   @override
   Future<NodeReceptionView?> getNodeReception({

@@ -19,13 +19,21 @@ class SupervisorDashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Tablero del día')),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(dashboardMetricsProvider),
+        onRefresh: () async => _reload(ref),
         child: AsyncValueView<DashboardMetrics>(
           value: metrics,
-          onRetry: () => ref.invalidate(dashboardMetricsProvider),
+          onRetry: () => _reload(ref),
           data: (data) => DashboardBody(metrics: data, date: date),
         ),
       ),
     );
+  }
+
+  /// Los planes del tablero vienen cacheados de [plansProvider]: refrescar el
+  /// tablero los refresca también (si no, contaría planes viejos).
+  void _reload(WidgetRef ref) {
+    ref
+      ..invalidate(plansProvider)
+      ..invalidate(dashboardMetricsProvider);
   }
 }

@@ -5,7 +5,9 @@ import '../../../../core/api/models/notification_view.dart';
 /// uso. Lanza `ApiException` ante un error.
 abstract interface class NotificationsRepository {
   /// Lista global de notificaciones (más recientes primero, según el backend).
-  Future<List<NotificationView>> list();
+  /// [limit] acota cuántas trae (las [limit] más recientes); `null` usa el
+  /// default del backend.
+  Future<List<NotificationView>> list({int? limit});
 
   /// Detalle de una notificación por id.
   Future<NotificationView> get(String id);

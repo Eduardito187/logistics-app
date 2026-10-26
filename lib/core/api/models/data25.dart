@@ -4,25 +4,25 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'order_source.dart';
-import 'status7.dart';
+import 'message_type.dart';
 
 part 'data25.g.dart';
 
 @JsonSerializable()
 class Data25 {
   const Data25({
-    required this.source,
-    required this.externalId,
+    required this.shipmentId,
+    required this.messageType,
     required this.status,
   });
 
   factory Data25.fromJson(Map<String, Object?> json) => _$Data25FromJson(json);
 
-  final OrderSource source;
-  @JsonKey(name: 'external_id')
-  final String externalId;
-  final Status7 status;
+  @JsonKey(name: 'shipment_id')
+  final String shipmentId;
+  @JsonKey(name: 'message_type')
+  final MessageType messageType;
+  final String status;
 
   Map<String, Object?> toJson() => _$Data25ToJson(this);
 }

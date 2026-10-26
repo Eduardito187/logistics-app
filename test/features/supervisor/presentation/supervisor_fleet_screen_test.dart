@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,5 +61,99 @@ void main() {
 
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  group('refresco automático', () {
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    testWidgets('a la vista refresca cada intervalo', (tester) async {
+      final repo = FakeSupervisorRepository()..fleet = [vehicleLive()];
+      await _pumpWidget(tester, repo);
+      await settle(tester);
+      expect(repo.fleetCalls, 1);
+
+      await tester.pump(fleetRefreshInterval);
+      await settle(tester);
+      expect(repo.fleetCalls, 2);
+
+      await tester.pump(fleetRefreshInterval);
+      await settle(tester);
+      expect(repo.fleetCalls, 3);
+    });
+
+    testWidgets('en segundo plano se detiene y al volver refresca', (
+      tester,
+    ) async {
+      final repo = FakeSupervisorRepository()..fleet = [vehicleLive()];
+      await _pumpWidget(tester, repo);
+      await settle(tester);
+      expect(repo.fleetCalls, 1);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump(fleetRefreshInterval * 4);
+      await settle(tester);
+      expect(repo.fleetCalls, 1, reason: 'sin pedidos en segundo plano');
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(repo.fleetCalls, 2, reason: 'refresca enseguida al volver');
+
+      await tester.pump(fleetRefreshInterval);
+      await settle(tester);
+      expect(repo.fleetCalls, 3, reason: 'y retoma el intervalo');
+    });
+
+    testWidgets('tapada por otra pantalla se detiene', (tester) async {
+      final repo = FakeSupervisorRepository()..fleet = [vehicleLive()];
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supervisorRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            home: const SupervisorFleetScreen(),
+          ),
+        ),
+      );
+      await settle(tester);
+      expect(repo.fleetCalls, 1);
+
+      unawaited(
+        navigatorKey.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('Encima')),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(fleetRefreshInterval * 3);
+      await settle(tester);
+      expect(repo.fleetCalls, 1, reason: 'sin pedidos mientras está tapada');
+
+      navigatorKey.currentState!.pop();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await settle(tester);
+      expect(repo.fleetCalls, 2, reason: 'refresca al volver a la vista');
+    });
+
+    testWidgets('al salir de la pantalla no queda ningún timer', (
+      tester,
+    ) async {
+      final repo = FakeSupervisorRepository()..fleet = [vehicleLive()];
+      await _pumpWidget(tester, repo);
+      await settle(tester);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(fleetRefreshInterval * 2);
+      expect(repo.fleetCalls, 1);
+    });
   });
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/breakpoints.dart';
+import '../../../core/layout/responsive_body.dart';
+
 import '../../../core/api/export.dart';
 import '../../../core/commands/command_feedback.dart';
 import '../../../core/commands/command_outcome.dart';
@@ -54,112 +57,114 @@ class _FuelScreenState extends ConsumerState<FuelScreen> {
       title: 'Cargar combustible',
       builder: (context, vehicleId) {
         final priceAsync = ref.watch(currentFuelPriceProvider(_fuelType));
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectionCard(
-              title: 'Datos de la carga',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DropdownButtonFormField<FuelType>(
-                    initialValue: _fuelType,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipo de combustible',
+        return ResponsiveBody(
+          maxWidth: AppBreakpoints.maxFormWidth,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SectionCard(
+                title: 'Datos de la carga',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<FuelType>(
+                      value: _fuelType,
+                      // isExpanded: el ítem ocupa el ancho del campo y se corta
+                      // con elipsis (sin esto desborda en 320 dp con letra 1.3x).
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de combustible',
+                      ),
+                      items: [
+                        for (final type in FuelType.$valuesDefined)
+                          DropdownMenuItem<FuelType>(
+                            value: type,
+                            child: Text(fuelTypeLabel(type)),
+                          ),
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              setState(() => _fuelType = value);
+                            },
                     ),
-                    items: [
-                      for (final type in FuelType.$valuesDefined)
-                        DropdownMenuItem<FuelType>(
-                          value: type,
-                          child: Text(fuelTypeLabel(type)),
-                        ),
-                    ],
-                    onChanged: _busy
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-                            setState(() => _fuelType = value);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  PriceHint(
-                    value: priceAsync,
-                    onUse: (cents) {
-                      _price.text = (cents / 100).toStringAsFixed(2);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _liters,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                    const SizedBox(height: 12),
+                    PriceHint(
+                      value: priceAsync,
+                      onUse: (cents) {
+                        _price.text = (cents / 100).toStringAsFixed(2);
+                      },
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Litros',
-                      suffixText: 'L',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _liters,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [_decimalInput],
+                      decoration: const InputDecoration(
+                        labelText: 'Litros',
+                        suffixText: 'L',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _price,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _price,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [_decimalInput],
+                      decoration: const InputDecoration(
+                        labelText: 'Precio por litro',
+                        prefixText: '$_currency ',
+                      ),
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Precio por litro',
-                      prefixText: '$_currency ',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _odometer,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        labelText: 'Odómetro actual (opcional)',
+                        suffixText: 'km',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _odometer,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Odómetro actual (opcional)',
-                      suffixText: 'km',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _note,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Nota (opcional)',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _note,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Nota (opcional)',
+                    const SizedBox(height: 4),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Tanque lleno'),
+                      value: _fullTank,
+                      onChanged: _busy
+                          ? null
+                          : (value) => setState(() => _fullTank = value),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Tanque lleno'),
-                    value: _fullTank,
-                    onChanged: _busy
-                        ? null
-                        : (value) => setState(() => _fullTank = value),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _submit(vehicleId),
-                    icon: _busy
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.local_gas_station),
-                    label: Text(_busy ? 'Registrando…' : 'Registrar carga'),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => _submit(vehicleId),
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.local_gas_station),
+                      label: Text(_busy ? 'Registrando…' : 'Registrar carga'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const RecentRefuels(),
-          ],
+              const SizedBox(height: 16),
+              const RecentRefuels(),
+            ],
+          ),
         );
       },
     );
@@ -213,3 +218,8 @@ class _FuelScreenState extends ConsumerState<FuelScreen> {
     }
   }
 }
+
+/// Solo dígitos y punto decimal (creado una vez, no en cada build).
+final TextInputFormatter _decimalInput = FilteringTextInputFormatter.allow(
+  RegExp(r'[0-9.]'),
+);

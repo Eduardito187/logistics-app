@@ -1,19 +1,20 @@
 ---
 name: test-battery-and-infra
-description: Batería de tests (~1000 casos) y cómo correrlos; fix de libsqlite3 en test; 3 agentes de reparación quedaron pendientes
+description: Batería de tests (WSL+Windows merge): cómo correr en Windows/WSL, seams/fakes compartidos, trampas de widget tests y fix de libsqlite3; conteo en re-verificación tras el merge
 metadata:
-  node_type: memory
   type: project
   originSessionId: 09382079-47de-4656-9b51-88ca4bb40fff
-  modified: 2026-10-16T05:23:59.285Z
+  modified: 2026-10-20T00:00:00.000Z
 ---
 
-Existe una batería de tests exhaustiva escrita en paralelo (~190 archivos, ~1000 casos) que cubre core y los 5 roles de campo. Patrón: fakes a mano + `ProviderScope`/`ProviderContainer(overrides:)`, sin Dio/GPS/HW real; vector Ed25519 real en `test/fixtures/label_test_vector.json`.
+Batería de tests exhaustiva (core + los 5 roles de campo). Estado pre-merge (cierre del roadmap, 2026-10-16): **1726/1726 verde**, `flutter analyze` limpio, **e2e 6/6** en host y emulador Android (`integration_test/`). Ver [[roadmap-19-cierre]]. (Tras el merge WSL+Windows el conteo se re-verifica.)
 
-**Infra de test clave — `test/flutter_test_config.dart`:** en WSL/Linux falta el symlink `libsqlite3.so` (solo está `libsqlite3.so.0`), así que todo test Drift (`NativeDatabase.memory()`) reventaba con "Failed to load dynamic library 'libsqlite3.so'". Ese config (lo ejecuta el framework antes de todos los tests) redirige la carga a `libsqlite3.so.0`. NO borrarlo. En Windows/CI el host suele traer la librería; el config es no-op si `libsqlite3.so` abre.
+**Correr (Windows, Flutter 3.32):** `C:\flutter\bin\flutter.bat test` (o `-j 2` si la PC está cargada); e2e en host `flutter test integration_test -d flutter-tester` (sin `-d` Windows dice "No supported devices"); `make e2e DEVICE=<id>`. Reporter útil: `--reporter json` + script que agrupe fallas por mensaje.
 
-**Correr:** `export PATH="$HOME/sdk/flutter/bin:$PATH"; cd <repo>; flutter test`. Reporter útil: `flutter test --reporter failures-only`.
+**Patrón:** fakes a mano + `ProviderScope`/`ProviderContainer(overrides:)`; sin Dio/GPS/HW real. Vector Ed25519 real en `test/fixtures/label_test_vector.json`.
 
-**Historia (16-oct):** tras corregir #1–#10, quedaban ~50 tests fallando por BUGS DE AUTORÍA de los tests (se escribieron a ciegas, sin ejecutar), no de producción (`flutter analyze` limpio). Se lanzaron 3 agentes de reparación (driver; store+carrier; core/settings/picking/supervisor/notifications) que SE DETUVIERON al cerrarse la sesión; su progreso quedó guardado en los transcripts. `test/core/offline/` ya está verde (ajustado a mano a los fixes). Causa compartida del grupo driver: "Tried to modify a provider while the widget tree was building" (bug en el harness `test/features/driver/support/driver_test_support.dart`). Reparar tests = SOLO tocar archivos bajo `test/`, nunca `lib/`. Ver [[test-pass-detected-flaws]].
+**Seams y helpers compartidos (`test/support/`):** `fake_code_scanner.dart` (`codeScannerProvider`), `fake_photo_picker.dart` (`photoPickerProvider`), `screen_sizes.dart` (`testOnScreens` 4 tamaños + `withTextScale(1.3)`), `button_finders.dart` (`findButtonWithText<T>`/`findButton<T>`: en Flutter 3.32 los `.icon` son subclases privadas). Arneses por feature en `test/features/<f>/support/` (driver: `pumpScoped(tall:)`, `pumpPushed`, `gateBase` que ya overridea ubicación/rastreo/precarga de tiles). Plugins vía PlatformInterface (`FlutterForegroundTaskPlatform`, `UrlLauncherPlatform`, `FirebaseMessaging` falso inyectado). e2e: backend falso a nivel transporte Dio + cola offline real en Drift en memoria (`integration_test/support/`).
 
-**Estado 2026-10-16: 1080/1080 VERDE** en Windows (CI Linux sin confirmar hasta el próximo push). Se arreglaron los últimos 15. En `lib/` (bugs reales): `showErrorSnack` ignoraba mensajes String (mostraba "Ocurrió un error." en validaciones de combustible/odómetro); `LabelPrinter` no atrapaba `UnsupportedError` de flutter_blue_plus; `PushEndpointNotifier._load` diferido pisaba un save/clear posterior; `VehicleSheet` desbordaba (ahora SingleChildScrollView). En `test/`: ListView perezoso en 800x600 → superficie alta (`tall: true` / `tester.view.physicalSize`); `pumpAndSettle` con spinner infinito; finder de IgnorePointer sin acotar; 500 vs 422 en ApiException.message; widget_test necesita `FlutterSecureStorage.setMockInitialValues({})` (sin mock el canal responde fuera del reloj falso y `signOut` queda trabado por `_closing`).
+**Infra:** `test/flutter_test_config.dart` redirige `libsqlite3.so` en Linux (no-op en Windows; NO borrarlo).
+
+**Trampas frecuentes:** ListView perezoso en 800x600 (usar `tall: true`/`testOnScreens`); `pumpAndSettle` con spinner infinito; `FlutterSecureStorage.setMockInitialValues({})` para logout; `initializeDateFormatting('es')` en setUpAll; `defaultTargetPlatform` es Android en tests (`debugDefaultTargetPlatformOverride`); "override a provider twice" → overridear uno más específico; ruido de `ClientException` de tiles OSM no falla tests. Reparar tests = tocar solo `test/` salvo bug real de `lib/` (ver [[test-pass-detected-flaws]]).

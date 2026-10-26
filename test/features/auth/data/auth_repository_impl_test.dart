@@ -1,9 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/clients/auth_client.dart';
-import 'package:logistics_app/core/api/logistics_api.dart';
+import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/models/app_device_payload.dart';
 import 'package:logistics_app/core/api/models/app_login_request.dart';
 import 'package:logistics_app/core/api/models/device.dart';
@@ -18,7 +20,12 @@ import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/network/dio_client.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:logistics_app/features/auth/domain/entities/login_result.dart';
+import 'package:logistics_app/features/auth/domain/entities/two_factor_challenge.dart';
+import 'package:logistics_app/features/auth/domain/entities/two_factor_enrollment.dart';
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
+
+import '../../store/store_fixtures.dart';
 
 // Capa data de auth. Dos niveles:
 //  1. AuthRepositoryImpl (vía SignIn): mapea rol, abre sesión, carga abilities
@@ -39,10 +46,16 @@ class _FakeTokenStore extends TokenStore {
   Future<void> clearToken() async {}
   @override
   Future<String?> readToken() async => null;
+  @override
+  Future<void> writeSessionSnapshot(Map<String, Object?> snapshot) async {}
+  @override
+  Future<Map<String, Object?>?> readSessionSnapshot() async => null;
+  @override
+  Future<void> clearSessionSnapshot() async {}
 }
 
-/// Endpoint push: nace en null y no lee el almacén.
-class _FakePushEndpoint extends PushEndpointNotifier {
+/// Token push: nace en null y no lee el almacén.
+class _FakePushToken extends PushTokenNotifier {
   @override
   String? build() => null;
 }
@@ -59,18 +72,29 @@ class _FakeLabelKeys extends LabelKeysNotifier {
 class _FakeAuthRemote implements AuthRemoteDataSource {
   _FakeAuthRemote({
     this.loginResponse,
+    this.loginChallenge,
     this.loginError,
     this.meResponse,
     this.meError,
   });
 
   final AppLoginResponse? loginResponse;
+  final TwoFactorChallenge? loginChallenge;
   final Object? loginError;
   final AppMeResponse? meResponse;
   final Object? meError;
 
   @override
-  Future<AppLoginResponse> login(AppLoginRequest request) async {
+  Future<LoginRaw> login(AppLoginRequest request) async {
+    if (loginError != null) throw loginError!;
+    return (success: loginResponse, challenge: loginChallenge);
+  }
+
+  @override
+  Future<AppLoginResponse> verifyTwoFactor({
+    required String challengeId,
+    required String code,
+  }) async {
     if (loginError != null) throw loginError!;
     return loginResponse!;
   }
@@ -80,32 +104,53 @@ class _FakeAuthRemote implements AuthRemoteDataSource {
     if (meError != null) throw meError!;
     return meResponse!;
   }
+
+  @override
+  Future<TwoFactorEnrollment> enrollTwoFactor() => throw UnimplementedError();
+
+  @override
+  Future<void> confirmTwoFactor(String code) async {}
+
+  @override
+  Future<void> disableTwoFactor({String? code, String? password}) async {}
+
+  @override
+  Future<void> forgotPassword(String email) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {}
 }
 
-AppLoginResponse _loginWithRoles(List<String> roles) => AppLoginResponse(
-  token: 'tok-123',
-  tokenType: 'Bearer',
-  expiresAt: null,
-  user: AppUserProfile(
-    id: 1,
-    name: 'Juan Pérez',
-    email: 'juan@x.com',
-    roles: roles,
-  ),
-  device: const AppDevicePayload(
-    uuid: 'dev-uuid',
-    platform: 'android',
-    name: 'App interna',
-    lastSeenAt: null,
-  ),
-);
+AppLoginResponse _loginWithRoles(List<String> roles, {Node? node}) =>
+    AppLoginResponse(
+      token: 'tok-123',
+      tokenType: 'Bearer',
+      expiresAt: null,
+      user: AppUserProfile(
+        id: 1,
+        name: 'Juan Pérez',
+        email: 'juan@x.com',
+        roles: roles,
+        node: node,
+      ),
+      device: const AppDevicePayload(
+        uuid: 'dev-uuid',
+        platform: 'android',
+        name: 'App interna',
+        lastSeenAt: null,
+      ),
+    );
 
 ProviderContainer _container(_FakeAuthRemote remote) {
   final container = ProviderContainer(
     overrides: [
       authRemoteDataSourceProvider.overrideWithValue(remote),
       tokenStoreProvider.overrideWithValue(_FakeTokenStore()),
-      pushEndpointProvider.overrideWith(_FakePushEndpoint.new),
+      pushTokenProvider.overrideWith(_FakePushToken.new),
       labelKeysProvider.overrideWith(_FakeLabelKeys.new),
     ],
   );
@@ -113,52 +158,87 @@ ProviderContainer _container(_FakeAuthRemote remote) {
   return container;
 }
 
-// --- Falsos para el data source (Dio) --------------------------------------
+// --- Falso de Dio para el data source (login usa Dio directo) ---------------
 
-class _FakeAuthClient implements AuthClient {
-  _FakeAuthClient({this.loginThrows = false});
-  final bool loginThrows;
+/// Adaptador HTTP falso: responde con un cuerpo y estado fijos, sin red. Sirve
+/// para probar `AuthRemoteDataSource.login`, que ahora llama Dio directo (los
+/// endpoints de 2FA/password no están en el cliente generado).
+class _FakeDioAdapter implements HttpClientAdapter {
+  _FakeDioAdapter({required this.statusCode, required this.body});
+
+  final int statusCode;
+  final String body;
 
   @override
-  Future<AppLoginResponse> appLogin({required AppLoginRequest body}) async {
-    if (loginThrows) {
-      throw DioException(
-        requestOptions: RequestOptions(path: '/app/auth/login'),
-        response: Response(
-          requestOptions: RequestOptions(path: '/app/auth/login'),
-          statusCode: 401,
-          data: const {'title': 'Sesión no válida', 'detail': 'Credenciales.'},
-        ),
-      );
-    }
-    return _loginWithRoles(['chofer']);
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return ResponseBody.fromString(
+      body,
+      statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 
   @override
-  Future<AppMeResponse> appMe() async => const AppMeResponse(
-    user: AppUserProfile(
-      id: 1,
-      name: 'Juan',
-      email: 'j@x.com',
-      roles: ['chofer'],
-    ),
-    device: null,
-    abilities: [],
-  );
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  void close({bool force = false}) {}
 }
 
-class _FakeApi extends LogisticsApi {
-  _FakeApi(this._authClient) : super(Dio());
-  final AuthClient _authClient;
-  @override
-  AuthClient get auth => _authClient;
-}
+Dio _fakeDio({required int statusCode, required String body}) =>
+    Dio(BaseOptions(validateStatus: (s) => s != null && s < 400))
+      ..httpClientAdapter = _FakeDioAdapter(statusCode: statusCode, body: body);
 
 void main() {
   group('AuthRepositoryImpl (vía SignIn)', () {
+    test('login con 2FA: no abre sesión, devuelve el reto', () async {
+      final remote = _FakeAuthRemote(
+        loginChallenge: const TwoFactorChallenge(
+          challengeId: 'ch-9',
+          expiresInSeconds: 300,
+        ),
+      );
+      final container = _container(remote);
+
+      final result = await container
+          .read(signInProvider)
+          .call(email: 'a@x.com', password: 'b');
+
+      expect(result, isA<LoginNeedsTwoFactor>());
+      expect((result as LoginNeedsTwoFactor).challenge.challengeId, 'ch-9');
+      expect(container.read(sessionProvider), isNull); // no abrió sesión
+    });
+
+    test('usuario tienda: la sesión guarda su tienda (login y /me)', () async {
+      final tienda = storeNode(name: 'Tienda Norte', code: 'ST-09');
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['tienda'], node: tienda),
+        meResponse: AppMeResponse(
+          user: AppUserProfile(
+            id: 1,
+            name: 'Juan',
+            email: 'j@x.com',
+            roles: const ['tienda'],
+            node: tienda,
+          ),
+          device: null,
+          abilities: const [],
+        ),
+      );
+      final container = _container(remote);
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      final session = container.read(sessionProvider)!;
+      expect(session.role, UserRole.store);
+      expect(session.storeNode?.code, 'ST-09');
+    });
+
     test('login ok con rol operativo: abre sesión y carga abilities', () async {
       final remote = _FakeAuthRemote(
         loginResponse: _loginWithRoles(['chofer']),
@@ -223,7 +303,13 @@ void main() {
           throwsA(
             isA<ApiException>()
                 .having((e) => e.status, 'status', 403)
-                .having((e) => e.detail, 'detail', contains('rol')),
+                .having((e) => e.detail, 'detail', contains('rol'))
+                // Se muestra el motivo real, no el genérico "sin permiso".
+                .having(
+                  (e) => e.message,
+                  'message',
+                  contains('rol de terreno'),
+                ),
           ),
         );
         expect(container.read(sessionProvider), isNull);
@@ -296,44 +382,66 @@ void main() {
   });
 
   group('AuthRemoteDataSource', () {
-    test('login ok: devuelve el AppLoginResponse del cliente', () async {
+    const request = AppLoginRequest(
+      email: 'a@x.com',
+      password: 'b',
+      device: Device(fingerprint: 'dev-1'),
+    );
+
+    ProviderContainer dioContainer({
+      required int statusCode,
+      required String body,
+    }) {
       final container = ProviderContainer(
         overrides: [
-          logisticsApiProvider.overrideWithValue(_FakeApi(_FakeAuthClient())),
+          dioProvider.overrideWithValue(
+            _fakeDio(statusCode: statusCode, body: body),
+          ),
         ],
       );
       addTearDown(container.dispose);
+      return container;
+    }
 
-      final ds = container.read(authRemoteDataSourceProvider);
-      final response = await ds.login(
-        const AppLoginRequest(
-          email: 'a@x.com',
-          password: 'b',
-          device: Device(fingerprint: 'dev-1'),
-        ),
-      );
-      expect(response.token, 'tok-123');
+    test('login sin 2FA: devuelve success con el token', () async {
+      final body = jsonEncode(_loginWithRoles(['chofer']).toJson());
+      final container = dioContainer(statusCode: 200, body: body);
+
+      final response = await container
+          .read(authRemoteDataSourceProvider)
+          .login(request);
+
+      expect(response.challenge, isNull);
+      expect(response.success, isNotNull);
+      expect(response.success!.token, 'tok-123');
+    });
+
+    test('login con 2FA: devuelve el reto', () async {
+      final body = jsonEncode({
+        'two_factor_required': true,
+        'challenge_id': 'ch-1',
+        'expires_in': 300,
+      });
+      final container = dioContainer(statusCode: 200, body: body);
+
+      final response = await container
+          .read(authRemoteDataSourceProvider)
+          .login(request);
+
+      expect(response.success, isNull);
+      expect(response.challenge, isNotNull);
+      expect(response.challenge!.challengeId, 'ch-1');
     });
 
     test('DioException se convierte en ApiException', () async {
-      final container = ProviderContainer(
-        overrides: [
-          logisticsApiProvider.overrideWithValue(
-            _FakeApi(_FakeAuthClient(loginThrows: true)),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+      final body = jsonEncode({
+        'title': 'Sesión no válida',
+        'detail': 'Credenciales.',
+      });
+      final container = dioContainer(statusCode: 401, body: body);
 
-      final ds = container.read(authRemoteDataSourceProvider);
       await expectLater(
-        ds.login(
-          const AppLoginRequest(
-            email: 'a@x.com',
-            password: 'b',
-            device: Device(fingerprint: 'dev-1'),
-          ),
-        ),
+        container.read(authRemoteDataSourceProvider).login(request),
         throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
       );
     });

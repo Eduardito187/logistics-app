@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/models/settlement.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/navigation/role_task.dart';
 import 'carrier_assignment_screen.dart';
@@ -55,6 +56,7 @@ final List<RouteBase> carrierRoutes = [
     path: '/carrier/settlements/:settlementId',
     builder: (context, state) => CarrierSettlementDetailScreen(
       settlementId: state.pathParameters['settlementId']!,
+      initial: state.extra is Settlement ? state.extra! as Settlement : null,
     ),
   ),
   GoRoute(

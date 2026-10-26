@@ -8,8 +8,9 @@ Visión, decisiones y ADRs viven en el repo backend: https://github.com/Eduardit
 
 ## Cómo correr cosas
 
-SDK: Flutter 3.47.6 (Dart ^3.13.5). En Windows: `C:\sdk\flutter` (NO `C:\flutter`, que es 3.32 y
-lo usa `dismac-app`). VS Code y `android/local.properties` ya apuntan ahí. Antes en WSL: `~/sdk/flutter`.
+SDK: Flutter 3.32.0 (Dart ^3.8.0), el `C:\flutter` de la PC (el mismo que `dismac-app`). VS Code,
+`android/local.properties` y la CI (`flutter-version: 3.32.0`) usan esa versión. Android: Gradle 8.12,
+AGP 8.7.3, Kotlin 2.1.0 (lo máximo que soporta Flutter 3.32); `minSdk` fijo en 24.
 
 - Dependencias: `flutter pub get`
 - Análisis: `flutter analyze`

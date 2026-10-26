@@ -18,3 +18,20 @@ class CarrierScanRecord {
   final SubmitOutcome outcome;
   final DateTime at;
 }
+
+/// Bultos de la sesión que se muestran a la vez. Los escaneos ya quedaron en
+/// la cola offline: la lista es solo feedback, así que en un turno de cientos
+/// de bultos no hace falta guardarlos todos en memoria.
+const int kMaxSessionRecords = 200;
+
+/// Agrega [record] al principio de [records] (lo último arriba) y descarta los
+/// más viejos por encima de [kMaxSessionRecords].
+void addSessionRecord(
+  List<CarrierScanRecord> records,
+  CarrierScanRecord record,
+) {
+  records.insert(0, record);
+  if (records.length > kMaxSessionRecords) {
+    records.removeRange(kMaxSessionRecords, records.length);
+  }
+}

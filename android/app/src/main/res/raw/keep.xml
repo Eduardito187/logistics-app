@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- isShrinkResources quita recursos que el código no referencia de forma
+     directa. Estos se usan por NOMBRE desde Dart (p. ej. el ícono de las
+     notificaciones locales: '@mipmap/ic_launcher' en push_service.dart), así
+     que se conservan explícitamente. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher,@drawable/launch_background" />

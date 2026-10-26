@@ -1,27 +1,25 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/shipment.dart';
-import '../../../core/api/models/unit_tracking.dart';
-import '../../../core/network/api_exception.dart';
+import '../../../core/layout/responsive_body.dart';
+import '../../../core/media/photo_picker.dart';
+import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snack.dart';
-import '../../../core/widgets/async_value_view.dart';
-import '../../../core/widgets/section_card.dart';
-import '../../../core/widgets/status_pill.dart';
-import '../../../core/widgets/sync_badge.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
 import '../domain/usecases/record_pod.dart';
 import 'controllers/store_controllers.dart';
-import 'short_unit_id.dart';
 import 'unit_scan.dart';
+import 'widgets/bottom_action_bar.dart';
+import 'widgets/pickup_pod_cards.dart';
+
+export 'widgets/pickup_pod_cards.dart' show kPhotoPreviewCacheWidth;
 
 /// Prueba de entrega en mostrador (recojo en tienda): se confirma al cliente,
 /// se toma una foto como evidencia y se registra el POD por cada bulto retirado.
@@ -37,218 +35,95 @@ class PickupPodScreen extends ConsumerStatefulWidget {
 class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
   final TextEditingController _confirmationController = TextEditingController();
   File? _photoFile;
+
+  /// Marca de foto adjunta para el POD: la foto viaja aparte por la cola de
+  /// fotos; acá solo se indica que existe (igual que en el POD del chofer).
   String? _photoPath;
-  bool _uploadingPhoto = false;
   bool _busy = false;
+
+  /// Si hay confirmación escrita. Se cachea para reconstruir solo cuando
+  /// cambia (no en cada tecla, que redibujaría la foto y la lista de bultos).
+  bool _hasConfirmation = false;
   final Set<String> _delivered = <String>{};
 
   Shipment get _shipment => widget.shipment;
 
-  bool get _hasConfirmation => _confirmationController.text.trim().isNotEmpty;
-
   @override
   void dispose() {
     _confirmationController.dispose();
+    _evictPreview(_photoFile);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Solo importa si los bultos ya cargaron, no su contenido.
+    final unitsLoaded = ref.watch(
+      shipmentUnitsProvider(_shipment.id).select((a) => a.hasValue),
+    );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Entrega en mostrador'),
-        actions: [
-          SyncBadge(onTap: () => context.push('/sync')),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _customerCard(context),
-          const SizedBox(height: 16),
-          _confirmationCard(context),
-          const SizedBox(height: 16),
-          _photoCard(context),
-          const SizedBox(height: 16),
-          _unitsCard(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _customerCard(BuildContext context) {
-    final theme = Theme.of(context);
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _shipment.customerName,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Pedido ${_shipment.externalId}',
-            style: theme.textTheme.bodyMedium,
-          ),
-          if (_shipment.customerDocumentId != null)
-            Text(
-              'Documento: ${_shipment.customerDocumentId}',
-              style: theme.textTheme.bodySmall,
-            ),
-          if (_shipment.customerPhone != null)
-            Text(
-              'Teléfono: ${_shipment.customerPhone}',
-              style: theme.textTheme.bodySmall,
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _confirmationCard(BuildContext context) {
-    return SectionCard(
-      title: '1 · Confirmación del cliente',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _confirmationController,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.badge_outlined),
-              labelText: 'QR del cliente o documento',
-              hintText: 'Escanea o escribe la confirmación',
-            ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _scanConfirmation,
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Escanear QR del cliente'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _photoCard(BuildContext context) {
-    return SectionCard(
-      title: '2 · Foto de entrega',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_photoFile != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                _photoFile!,
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          if (_photoFile != null) const SizedBox(height: 8),
-          if (_uploadingPhoto)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+      appBar: AppBar(title: const Text('Recojo en tienda')),
+      body: ResponsiveBody(
+        child: Column(
+          children: [
+            // Slivers: la lista de productos (paso 3) es perezosa; con 100+
+            // productos con foto solo se arman las filas visibles.
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        SliverList.list(
+                          children: [
+                            PickupCustomerCard(shipment: _shipment),
+                            const SizedBox(height: 16),
+                            PickupConfirmationCard(
+                              controller: _confirmationController,
+                              onChanged: _onConfirmationChanged,
+                              onScan: _scanConfirmation,
+                            ),
+                            const SizedBox(height: 16),
+                            PickupPhotoCard(
+                              photo: _photoFile,
+                              busy: _busy,
+                              onTakePhoto: _takePhoto,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                        PickupUnitsCard(
+                          shipmentId: _shipment.id,
+                          hasConfirmation: _hasConfirmation,
+                          delivered: _delivered,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(width: 8),
-                  Text('Subiendo foto…'),
                 ],
               ),
-            )
-          else if (_photoFile != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: StatusPill(
-                _photoPath != null ? 'Foto subida' : 'Foto pendiente de subir',
-                tone: _photoPath != null ? PillTone.success : PillTone.warning,
-                icon: _photoPath != null
-                    ? Icons.cloud_done
-                    : Icons.cloud_upload_outlined,
+            ),
+            // Escaneo seguido de bultos: botón fijo al pie, a mano del pulgar;
+            // los avisos flotan encima (kBottomActionClearance).
+            BottomActionBar(
+              child: FilledButton.icon(
+                onPressed: !_hasConfirmation || _busy || !unitsLoaded
+                    ? null
+                    : _scanAndDeliver,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Escanear y entregar producto'),
               ),
             ),
-          OutlinedButton.icon(
-            onPressed: _uploadingPhoto ? null : _takePhoto,
-            icon: const Icon(Icons.photo_camera),
-            label: Text(_photoFile == null ? 'Tomar foto' : 'Volver a tomar'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _unitsCard(BuildContext context) {
-    final unitsAsync = ref.watch(shipmentUnitsProvider(_shipment.id));
-    return SectionCard(
-      title: '3 · Entregar bultos',
-      child: AsyncValueView<List<UnitTracking>>(
-        value: unitsAsync,
-        onRetry: () => ref.invalidate(shipmentUnitsProvider(_shipment.id)),
-        data: (units) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!_hasConfirmation)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Primero captura la confirmación del cliente.',
-                    style: TextStyle(color: AppColors.warning),
-                  ),
-                ),
-              Text(
-                'Entregados ${_delivered.length} de ${units.length} bulto(s).',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              for (final unit in units)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Bulto ${unit.label ?? shortUnitId(unit.unitId)}',
-                        ),
-                      ),
-                      if (_delivered.contains(unit.unitId))
-                        const StatusPill(
-                          'Entregado',
-                          tone: PillTone.success,
-                          icon: Icons.check_circle,
-                        )
-                      else
-                        const StatusPill('Pendiente', tone: PillTone.neutral),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: !_hasConfirmation || _busy
-                      ? null
-                      : _scanAndDeliver,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Escanear y entregar bulto'),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  void _onConfirmationChanged(String _) {
+    final has = _confirmationController.text.trim().isNotEmpty;
+    if (has != _hasConfirmation) setState(() => _hasConfirmation = has);
   }
 
   Future<void> _scanConfirmation() async {
@@ -258,72 +133,123 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
       helper: 'Apunta al código del cliente que retira.',
     );
     if (qr == null || !mounted) return;
-    setState(() => _confirmationController.text = qr);
+    _confirmationController.text = qr;
+    _onConfirmationChanged(qr);
   }
 
   Future<void> _takePhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 1600,
-      imageQuality: 70,
+    final picked = await ref.read(photoPickerProvider)(
+      maxWidth: kEvidencePhotoMaxWidth,
+      imageQuality: kEvidencePhotoQuality,
     );
     if (picked == null || !mounted) return;
     // La foto se encola y se sube idempotentemente (offline-first); el backend
     // la liga al envío. No se bloquea la entrega esperando a la red.
-    await ref
-        .read(enqueueDeliveryPhotoProvider)
-        .call(shipmentId: _shipment.id, filePath: picked.path, kind: 'pod');
-    if (!mounted) return;
-    setState(() {
-      _photoFile = File(picked.path);
-      _photoPath = 'pendiente';
-      _uploadingPhoto = false;
-    });
-  }
-
-  Future<void> _scanAndDeliver() async {
-    final qr = await scanCode(
-      context,
-      title: 'Escanear bulto',
-      helper: 'Apunta al QR de la etiqueta del bulto.',
-      formats: const [BarcodeFormat.qrCode],
-    );
-    if (qr == null || !mounted) return;
-
-    final scan = await resolveUnitScan(ref, qr);
-    if (!mounted) return;
-    if (scan.verified == false) {
-      // Validación de etiqueta en el cliente: la mostramos en rojo con el helper
-      // compartido (envuelta como ApiException para reutilizar `showErrorSnack`).
-      // Distingue firma inválida de clave desconocida (igual que transportista).
+    try {
+      await ref
+          .read(enqueueDeliveryPhotoProvider)
+          .call(shipmentId: _shipment.id, filePath: picked.path, kind: 'pod');
+    } catch (_) {
+      // Falla local (copiar a disco), no de red: hay que volver a tomarla.
+      if (!mounted) return;
       showErrorSnack(
         context,
-        ApiException(
-          status: 400,
-          title: 'Etiqueta inválida',
-          detail: unitScanErrorMessage(scan),
-        ),
+        'No se pudo guardar la foto. Intentá de nuevo.',
+        bottomClearance: kBottomActionClearance,
       );
       return;
     }
+    if (!mounted) return;
+    // La vista previa anterior ya no se muestra: se libera de la caché.
+    _evictPreview(_photoFile);
+    setState(() {
+      _photoFile = File(picked.path);
+      _photoPath = 'pendiente';
+    });
+  }
 
+  /// Saca de la caché de imágenes la vista previa decodificada de [file].
+  void _evictPreview(File? file) {
+    if (file == null) return;
+    unawaited(
+      ResizeImage(FileImage(file), width: kPhotoPreviewCacheWidth).evict(),
+    );
+  }
+
+  /// Escaneo CONTINUO (tras la confirmación del cliente): la cámara queda
+  /// abierta y cada producto se entrega al leerlo, con aviso sobre la cámara.
+  Future<void> _scanAndDeliver() async {
+    // El GPS se calienta junto con la cámara: el POD no lo espera aparte.
+    warmUpLocation(ref);
+    final before = _delivered.length;
     setState(() => _busy = true);
     try {
-      final outcome = await ref
-          .read(recordPodProvider)
-          .call(
-            shipmentId: _shipment.id,
-            unitId: scan.unitId,
-            confirmation: _confirmationController.text.trim(),
-            customerName: _shipment.customerName,
-            photoPath: _photoPath,
-          );
-      setState(() => _delivered.add(scan.unitId));
-      if (!mounted) return;
-      showSubmitOutcome(context, outcome);
+      await scanContinuous(
+        context,
+        title: 'Escanear producto',
+        helper: 'Apunta al QR de la etiqueta del producto.',
+        formats: const [BarcodeFormat.qrCode],
+        onCode: _deliverCode,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    if (!mounted) return;
+    final delivered = _delivered.length - before;
+    if (delivered <= 0) return;
+    showSuccessSnack(
+      context,
+      delivered == 1
+          ? '1 producto entregado.'
+          : '$delivered productos entregados.',
+      bottomClearance: kBottomActionClearance,
+    );
+  }
+
+  /// Procesa un código de la ráfaga de entrega.
+  Future<ScanFeedback> _deliverCode(String qr) async {
+    final scan = await resolveUnitScan(ref, qr);
+    if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
+    // Validación de etiqueta en el cliente (offline): firma inválida o clave
+    // desconocida, igual que transportista.
+    if (scan.verified == false) {
+      return ScanFeedback.error(unitScanShortError(scan));
+    }
+
+    // Solo bultos de este envío y una sola vez: si no, se entregaría al cliente
+    // algo ajeno o se encolaría un POD duplicado.
+    final units = ref.read(shipmentUnitsProvider(_shipment.id)).value;
+    final unitId = scan.unitId;
+    if (units != null && !units.any((u) => u.unitId == unitId)) {
+      return const ScanFeedback.error('No es de este pedido');
+    }
+    if (_delivered.contains(unitId)) {
+      return const ScanFeedback.error('Ya entregado');
+    }
+
+    // Feedback inmediato: el bulto se marca entregado apenas se lee; el POD
+    // se guarda local y sube por la cola.
+    setState(() => _delivered.add(unitId));
+    final outcome = await ref
+        .read(recordPodProvider)
+        .call(
+          shipmentId: _shipment.id,
+          unitId: unitId,
+          confirmation: _confirmationController.text.trim(),
+          customerName: _shipment.customerName,
+          photoPath: _photoPath,
+          location: prefetchFix(ref),
+        );
+    if (outcome == SubmitOutcome.failed) {
+      // Rechazado por el backend: no queda como entregado.
+      if (mounted) setState(() => _delivered.remove(unitId));
+      return ScanFeedback.error(submitOutcomeMessage(outcome));
+    }
+    final total = units?.length;
+    return ScanFeedback.ok(
+      total == null
+          ? 'Producto entregado'
+          : 'Producto entregado (${_delivered.length}/$total)',
+    );
   }
 }

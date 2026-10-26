@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data6.dart';
+import '../../../../core/api/models/data7.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
@@ -34,6 +34,9 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
   ) => _remote.getVehicleTelemetrySummary(vehicleId);
 
   @override
+  Future<Map<String, String>> getVehiclePlates() => _remote.getVehiclePlates();
+
+  @override
   Future<void> acknowledgeTelemetryAlert(String alertId) =>
       _remote.acknowledgeTelemetryAlert(alertId);
 
@@ -48,7 +51,7 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
   Future<Plan> getPlan(String planId) => _remote.getPlan(planId);
 
   @override
-  Future<Data6> getPlanEta(String planId) => _remote.getPlanEta(planId);
+  Future<Data7> getPlanEta(String planId) => _remote.getPlanEta(planId);
 
   @override
   Future<AutoPlanRun> getDailyPlanRun({

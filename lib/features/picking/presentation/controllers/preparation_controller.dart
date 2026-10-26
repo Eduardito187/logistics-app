@@ -20,8 +20,19 @@ class PreparationController extends Notifier<PreparationState> {
       preparedUnitIds: <String>{...state.preparedUnitIds, unitId},
     );
   }
+
+  /// Deshace una marca optimista (el backend rechazó el escaneo).
+  void unmarkPrepared(String unitId) {
+    if (!state.preparedUnitIds.contains(unitId)) return;
+    state = state.copyWith(
+      preparedUnitIds: <String>{...state.preparedUnitIds}..remove(unitId),
+    );
+  }
 }
 
+/// SIN `autoDispose` a propósito: el progreso (unidades preparadas y carril)
+/// no tiene endpoint de lectura y debe sobrevivir a salir y volver al pedido.
+/// Es chico (un set de ids por pedido abierto en el turno).
 final preparationControllerProvider =
     NotifierProvider.family<PreparationController, PreparationState, String>(
       (_) => PreparationController(),

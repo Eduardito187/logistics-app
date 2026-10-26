@@ -1,6 +1,6 @@
 # Correr la app en un teléfono Android por USB (WSL + VS Code)
 
-Guía para compilar y correr la app interna de logística en un **teléfono Android físico**
+Guía para compilar y correr DisTrack, la app logística interna de Dismac, en un **teléfono Android físico**
 conectado por USB, trabajando desde **VS Code en WSL**.
 
 ## Cómo funciona (contexto, ya está montado)

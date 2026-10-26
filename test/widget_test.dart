@@ -16,7 +16,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dismac Logística'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('DisTrack')), findsWidgets);
     expect(find.text('Ingresar'), findsOneWidget);
   });
 

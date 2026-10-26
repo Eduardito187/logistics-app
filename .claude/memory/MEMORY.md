@@ -1,12 +1,24 @@
 - [App solo consume el backend](app-scope-backend-consumer.md) — la app nunca integra servicios externos; medir completitud por cobertura de endpoints /app/*
-- [Estado de cobertura del API](app-api-coverage-state.md) — 168/169 endpoints /app/* consumidos; ~20 features; contrato rutas/tareas; roles incl. admin
+- [Estado de cobertura del API](app-api-coverage-state.md) — endpoints /app/* útiles consumidos (+issues, +push-token); contrato rutas/tareas; roles incl. admin
 - [Generación del cliente API](api-client-generation.md) — swagger_parser + preprocesado JSON (anchors/params), retrofit pinneado, cómo regenerar
 - [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas que el coordinador cablea al final
 - [Toolchain Android en WSL (histórico)](wsl-run-toolchain.md) — SOLO WSL; en Windows ver windows-native-toolchain
 - [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas saturaron la RAM; topes puestos, nunca apilar builds
-- [Entornos dev/staging/production](run-environments-config.md) — config/*.json con --dart-define-from-file en los botones de play; URLs/claves de staging/prod pendientes
+- [Entornos dev/staging/production](run-environments-config.md) — claves vigentes de config/*.json (FIREBASE_*, APP_UPDATE_URL…), release bloquea http, valores reales pendientes
 - [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
 - [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
-- [Batería de tests e infra](test-battery-and-infra.md) — 1080/1080 verde (2026-10-16); trampas comunes de widget tests (ListView perezoso, spinner, secure storage mock)
+- [Batería de tests e infra](test-battery-and-infra.md) — 1726 + e2e 6/6; cómo correr en Windows; seams/fakes compartidos (scanner, fotos, tamaños, finders de botones) y trampas
 - [Portabilidad de memorias/skills](portable-memory-skills.md) — skills viajan con el repo; memorias no → espejo en .claude/memory/ + instalador para Windows/otras rutas
-- [Toolchain Windows nativo](windows-native-toolchain.md) — migrado 2026-10-16; usar Flutter 3.47.6 en C:\sdk\flutter, no C:\flutter (3.32, de dismac-app)
+- [Toolchain Windows nativo](windows-native-toolchain.md) — proyecto bajado a Flutter 3.32.0 / Dart 3.8 (C:/flutter) a pedido del usuario; deps, Gradle 8.12/AGP 8.7.3, trampas
+- [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
+- [Fases de optimización (RAM/pantallas/velocidad)](perf-responsive-phase.md) — 3 fases: base común, memoria por RAM del equipo + Skia, velocidad (escaneo/GPS sin espera, cacheFor, escáner continuo); medir en release
+- [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
+- [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
+- [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
+- [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
+- [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
+- [Perfil del usuario](user-profile.md) — dueño de la plataforma Dismac, español informal, decide producto, PC Windows con RAM justa
+- [Usuarios de prueba y escenario del día](dev-test-users-scenario.md) — cuentas por rol con password123, TodayScenarioSeeder (SCZ, 904U10), cómo re-correrlo
+- [Forma de trabajar](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, decidir y explicitar, pedidos al backend por doc, reportar con números
+- [Push desde WSL](git-push-from-wsl.md) — WSL sin credenciales GitHub; pushear con el git.exe de Windows apuntando al repo WSL por ruta UNC (wslpath -w)
+- [Consolidación Windows→WSL](windows-wsl-consolidation.md) — oct 2026: merge-unión de las 2 copias en WSL (8b4c04a), checkout de Windows borrado, trabajar solo en /dismac/logistics-app

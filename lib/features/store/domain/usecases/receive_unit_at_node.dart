@@ -17,8 +17,11 @@ class ReceiveUnitAtNode {
     required String unitId,
     required String destinationNodeId,
     required String customerName,
+    Future<GpsFix?>? location,
   }) async {
-    final fix = await _ref.read(locationServiceProvider).current();
+    // [location]: fix pedido por la pantalla en paralelo con la cámara (ya
+    // suele estar listo al leer el código). Sin él se pide acá.
+    final fix = await _fix(location);
     return _ref
         .read(offlineQueueProvider)
         .submit(
@@ -33,6 +36,15 @@ class ReceiveUnitAtNode {
           ).toJson(),
           label: 'Recepción · $customerName',
         );
+  }
+
+  Future<GpsFix?> _fix(Future<GpsFix?>? location) async {
+    try {
+      return await (location ?? _ref.read(locationServiceProvider).current());
+    } on Object {
+      // Sin GPS el registro sigue igual (lat/lng en cero): nunca se traba.
+      return null;
+    }
   }
 }
 

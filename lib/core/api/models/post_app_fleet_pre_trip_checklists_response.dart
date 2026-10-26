@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data4.dart';
+import 'data5.dart';
 
 part 'post_app_fleet_pre_trip_checklists_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostAppFleetPreTripChecklistsResponse {
     Map<String, Object?> json,
   ) => _$PostAppFleetPreTripChecklistsResponseFromJson(json);
 
-  final Data4? data;
+  final Data5? data;
 
   Map<String, Object?> toJson() =>
       _$PostAppFleetPreTripChecklistsResponseToJson(this);

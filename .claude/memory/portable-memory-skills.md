@@ -12,7 +12,7 @@ El dueño quiere poder mover el proyecto (incluido a Windows nativo, fuera de es
 
 **Skills: ya portables.** Viven en el repo (`.claude/skills/*`), viajan con git y Claude Code las lee desde cualquier OS. (Los scripts de `github-pr-flow` son `.ps1` de Windows a propósito.)
 
-**Memorias: NO son portables por defecto.** Viven FUERA del repo en `~/.claude/projects/<slug>/memory/`, donde `<slug>` = ruta absoluta del proyecto con los separadores vueltos `-` (acá `/dismac/logistics-app` → `-dismac-logistics-app`). Al mover el proyecto a otra ruta/OS, el slug cambia y las memorias "desaparecen".
+**Memorias: NO son portables por defecto.** Viven FUERA del repo en `~/.claude/projects/<slug>/memory/`, donde `<slug>` = ruta absoluta del proyecto con los separadores vueltos `-` (en WSL era `-dismac-logistics-app`; en Windows es `c--Users-ehhuallata-Documents-APP-logistics-app`). Al mover el proyecto a otra ruta/OS, el slug cambia y las memorias "desaparecen".
 
 **Solución montada:** hay un espejo versionado en el repo `.claude/memory/` (copia de todos los `.md` + `MEMORY.md`) y un instalador que las copia al dir de memoria del usuario calculando el slug de la ruta actual:
 - Windows (PowerShell): `.\.claude\memory\install.ps1`
