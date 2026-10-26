@@ -100,10 +100,7 @@ class SettlementDetail extends StatelessWidget {
           if (busy)
             // Spinner de pantalla (no de botón): isotipo de marca con pulso.
             const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: BrandLoader(),
-              ),
+              child: Padding(padding: EdgeInsets.all(16), child: BrandLoader()),
             )
           else ...[
             if (canApprove)

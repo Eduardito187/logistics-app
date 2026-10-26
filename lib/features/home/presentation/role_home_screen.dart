@@ -60,9 +60,10 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
       return const SizedBox.shrink();
     }
     final role = session.role;
-    final roleTasks = visibleTasksFor(session, ref.watch(featureTasksProvider))
-        .where((t) => t.id != 'settings')
-        .toList();
+    final roleTasks = visibleTasksFor(
+      session,
+      ref.watch(featureTasksProvider),
+    ).where((t) => t.id != 'settings').toList();
 
     final RoleTask? hero = centerActionFor(role, roleTasks);
     final quick = roleTasks

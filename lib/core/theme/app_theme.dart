@@ -174,25 +174,26 @@ abstract final class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brand,
-      brightness: brightness,
-      // En oscuro el rojo pleno vibra; se usa un rojo claro legible como primario.
-      primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
-      secondary: AppColors.accent,
-      error: AppColors.danger,
-    ).copyWith(
-      // El seed rojo tiñe de rosa los roles neutros que M3 deriva (íconos
-      // funcionales, bordes, divisores, texto secundario). Se fijan a gris
-      // real: el rojo queda para marca y acción, no para la "tinta" de la UI.
-      onSurfaceVariant: isDark
-          ? const Color(0xFFC9C9C9)
-          : const Color(0xFF4A4A4A),
-      outline: isDark ? const Color(0xFF8E8E8E) : const Color(0xFF787878),
-      outlineVariant: isDark
-          ? const Color(0xFF3A3A3A)
-          : const Color(0xFFD9D9D9),
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.brand,
+          brightness: brightness,
+          // En oscuro el rojo pleno vibra; se usa un rojo claro legible como primario.
+          primary: isDark ? const Color(0xFFFF8A80) : AppColors.brand,
+          secondary: AppColors.accent,
+          error: AppColors.danger,
+        ).copyWith(
+          // El seed rojo tiñe de rosa los roles neutros que M3 deriva (íconos
+          // funcionales, bordes, divisores, texto secundario). Se fijan a gris
+          // real: el rojo queda para marca y acción, no para la "tinta" de la UI.
+          onSurfaceVariant: isDark
+              ? const Color(0xFFC9C9C9)
+              : const Color(0xFF4A4A4A),
+          outline: isDark ? const Color(0xFF8E8E8E) : const Color(0xFF787878),
+          outlineVariant: isDark
+              ? const Color(0xFF3A3A3A)
+              : const Color(0xFFD9D9D9),
+        );
 
     // ThemeData.textTheme solo trae colores y pesos; los tamaños viven en la
     // geometría (typography.englishLike) que Flutter combina recién en
@@ -223,7 +224,9 @@ abstract final class AppTheme {
       // Íconos funcionales (acciones de AppBar, list tiles, íconos de tarjeta)
       // en tinta neutra, nunca rojo: el rojo es marca/acción, no decoración de
       // íconos. Botones y pastillas fijan su propio color y no se ven afectados.
-      iconTheme: IconThemeData(color: isDark ? Colors.white : AppColors.nightBg),
+      iconTheme: IconThemeData(
+        color: isDark ? Colors.white : AppColors.nightBg,
+      ),
       // Transiciones baratas: la default de Android (Zoom) captura la pantalla
       // en una textura y en Skia compila shaders la primera vez (tirón al abrir
       // cada pantalla en gama baja). FadeUpwards es un fundido + desplazamiento

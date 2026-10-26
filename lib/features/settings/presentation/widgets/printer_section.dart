@@ -37,7 +37,10 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
       ref.invalidate(selectedPrinterProvider);
     } on Object {
       if (mounted) {
-        showInfoSnack(context, 'No se pudo guardar la impresora. Probá de nuevo.');
+        showInfoSnack(
+          context,
+          'No se pudo guardar la impresora. Probá de nuevo.',
+        );
       }
     }
   }

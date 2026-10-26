@@ -30,7 +30,11 @@ class StopMapScreen extends StatelessWidget {
                 point: point,
                 width: 48,
                 height: 48,
-                child: const Icon(Icons.place, color: AppColors.brand, size: 48),
+                child: const Icon(
+                  Icons.place,
+                  color: AppColors.brand,
+                  size: 48,
+                ),
               ),
             ],
           ),

@@ -115,8 +115,7 @@ class _TwoFactorChallengeScreenState
               maxWidth: AppBreakpoints.maxFormWidth,
             ),
             child: ListView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
               children: [
                 Text(

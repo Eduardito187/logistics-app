@@ -44,11 +44,10 @@ class _BrandLoaderState extends State<BrandLoader>
       _controller?.dispose();
       _controller = null;
     } else {
-      _controller ??=
-          AnimationController(
-            vsync: this,
-            duration: const Duration(milliseconds: 1100),
-          )..repeat(reverse: true);
+      _controller ??= AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1100),
+      )..repeat(reverse: true);
     }
   }
 

@@ -13,9 +13,7 @@ void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
   testWidgets('sin sesión muestra el login', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: LogisticsApp()),
-    );
+    await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
     await tester.pumpAndSettle();
 
     expect(find.bySemanticsLabel(RegExp('DisTrack')), findsWidgets);
@@ -25,9 +23,7 @@ void main() {
   testWidgets('cada rol entra a su propia pantalla de inicio y puede salir', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: LogisticsApp()),
-    );
+    await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
     await tester.pumpAndSettle();
 
     // El contenedor de Riverpod del árbol ya montado: permite setear la sesión

@@ -388,7 +388,10 @@ void main() {
       device: Device(fingerprint: 'dev-1'),
     );
 
-    ProviderContainer dioContainer({required int statusCode, required String body}) {
+    ProviderContainer dioContainer({
+      required int statusCode,
+      required String body,
+    }) {
       final container = ProviderContainer(
         overrides: [
           dioProvider.overrideWithValue(

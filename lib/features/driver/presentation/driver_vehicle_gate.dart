@@ -55,10 +55,7 @@ class DriverVehicleGate extends ConsumerWidget {
         skipLoadingOnReload: true,
         skipLoadingOnRefresh: true,
         loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(48),
-            child: BrandLoader(),
-          ),
+          child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
         ),
         error: (error, _) => NoAssignment(
           message: error is ApiException && error.isConnectionError

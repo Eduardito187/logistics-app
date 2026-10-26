@@ -47,11 +47,7 @@ class GreetingHeader extends StatelessWidget {
           Semantics(
             button: true,
             label: 'Perfil',
-            child: InkResponse(
-              onTap: onAvatarTap,
-              radius: 32,
-              child: avatar,
-            ),
+            child: InkResponse(onTap: onAvatarTap, radius: 32, child: avatar),
           )
         else
           avatar,

@@ -62,9 +62,7 @@ class LoadingView extends StatelessWidget {
         padding: EdgeInsets.all(48),
         // Sin `message`: el propio BrandLoader ya anuncia "Cargando" por
         // accesibilidad (un solo nodo) y queda visualmente limpio.
-        child: RepaintBoundary(
-          child: BrandLoader(),
-        ),
+        child: RepaintBoundary(child: BrandLoader()),
         // (BrandLoader() es const dentro del árbol const de arriba.)
       ),
     );

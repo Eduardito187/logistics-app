@@ -76,23 +76,26 @@ ProviderContainer _containerWith(_FakeAuthRepository repo) {
 }
 
 void main() {
-  test('credenciales ok sin 2FA: devuelve LoginSignedIn y estado AsyncData', () async {
-    final repo = _FakeAuthRepository();
-    final container = _containerWith(repo);
+  test(
+    'credenciales ok sin 2FA: devuelve LoginSignedIn y estado AsyncData',
+    () async {
+      final repo = _FakeAuthRepository();
+      final container = _containerWith(repo);
 
-    final result = await container
-        .read(loginControllerProvider.notifier)
-        .submit(email: 'user@x.com', password: 'secret');
+      final result = await container
+          .read(loginControllerProvider.notifier)
+          .submit(email: 'user@x.com', password: 'secret');
 
-    expect(result, isA<LoginSignedIn>());
-    expect(repo.loginCalled, isTrue);
-    expect(repo.lastEmail, 'user@x.com');
-    expect(repo.lastPassword, 'secret');
-    final state = container.read(loginControllerProvider);
-    expect(state.hasError, isFalse);
-    expect(state.isLoading, isFalse);
-    expect(state, isA<AsyncData<void>>());
-  });
+      expect(result, isA<LoginSignedIn>());
+      expect(repo.loginCalled, isTrue);
+      expect(repo.lastEmail, 'user@x.com');
+      expect(repo.lastPassword, 'secret');
+      final state = container.read(loginControllerProvider);
+      expect(state.hasError, isFalse);
+      expect(state.isLoading, isFalse);
+      expect(state, isA<AsyncData<void>>());
+    },
+  );
 
   test('con 2FA: devuelve LoginNeedsTwoFactor con el reto', () async {
     const challenge = TwoFactorChallenge(

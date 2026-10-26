@@ -12,9 +12,8 @@ import 'two_factor_challenge_screen.dart';
 final List<RouteBase> authRoutes = [
   GoRoute(
     path: '/login/2fa',
-    builder: (context, state) => TwoFactorChallengeScreen(
-      challenge: state.extra! as TwoFactorChallenge,
-    ),
+    builder: (context, state) =>
+        TwoFactorChallengeScreen(challenge: state.extra! as TwoFactorChallenge),
   ),
   GoRoute(
     path: '/login/forgot',

@@ -54,11 +54,10 @@ class _HeroTaskCardState extends State<HeroTaskCard>
       _entry?.dispose();
       _entry = null;
     } else {
-      _entry ??=
-          AnimationController(
-            vsync: this,
-            duration: const Duration(milliseconds: 240),
-          )..forward();
+      _entry ??= AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 240),
+      )..forward();
     }
   }
 

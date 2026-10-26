@@ -12,10 +12,8 @@ class SignIn {
 
   final AuthRepository _repo;
 
-  Future<LoginResult> call({
-    required String email,
-    required String password,
-  }) => _repo.login(email: email, password: password);
+  Future<LoginResult> call({required String email, required String password}) =>
+      _repo.login(email: email, password: password);
 }
 
 final signInProvider = Provider<SignIn>(

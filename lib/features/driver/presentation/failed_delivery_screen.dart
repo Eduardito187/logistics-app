@@ -112,9 +112,7 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: ready && !_busy ? _register : null,
               icon: const Icon(Icons.cancel),
               label: const Text('Registrar entrega fallida'),

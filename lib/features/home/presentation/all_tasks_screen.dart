@@ -30,9 +30,10 @@ class AllTasksScreen extends ConsumerWidget {
     }
     // Todas las tareas visibles para la sesión (rol + permiso) menos "Ajustes":
     // eso vive en la pestaña Perfil.
-    final tasks = visibleTasksFor(session, ref.watch(featureTasksProvider))
-        .where((t) => t.id != 'settings')
-        .toList();
+    final tasks = visibleTasksFor(
+      session,
+      ref.watch(featureTasksProvider),
+    ).where((t) => t.id != 'settings').toList();
 
     final width = MediaQuery.sizeOf(context).width;
     final sidePadding = width > _maxWidth + 32 ? (width - _maxWidth) / 2 : 16.0;

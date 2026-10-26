@@ -46,11 +46,7 @@ class DashboardBody extends StatelessWidget {
       ),
       // KPI principal del día: tinta neutra (estilo "finanzas"). El rojo de
       // marca queda para acciones, no para una métrica sin estado.
-      StatTile(
-        value: rateLabel,
-        label: 'Cumplimiento',
-        icon: Icons.verified,
-      ),
+      StatTile(value: rateLabel, label: 'Cumplimiento', icon: Icons.verified),
       StatTile(
         value: '${metrics.pending}',
         label: 'Por salir',

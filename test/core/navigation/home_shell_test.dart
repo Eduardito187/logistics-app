@@ -110,10 +110,8 @@ void main() {
         container: container,
         child: MaterialApp(
           home: StatefulBuilder(
-            builder: (context, setState) => _shell(
-              index: index,
-              onTap: (i) => setState(() => index = i),
-            ),
+            builder: (context, setState) =>
+                _shell(index: index, onTap: (i) => setState(() => index = i)),
           ),
         ),
       ),
@@ -141,10 +139,8 @@ void main() {
         container: container,
         child: MaterialApp(
           home: StatefulBuilder(
-            builder: (context, setState) => _shell(
-              index: index,
-              onTap: (i) => setState(() => index = i),
-            ),
+            builder: (context, setState) =>
+                _shell(index: index, onTap: (i) => setState(() => index = i)),
           ),
         ),
       ),

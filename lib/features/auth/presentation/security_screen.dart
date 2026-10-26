@@ -36,8 +36,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   }
 
   Future<void> _onEnrollPressed() async {
-    final enrollment =
-        await ref.read(securityControllerProvider.notifier).enroll();
+    final enrollment = await ref
+        .read(securityControllerProvider.notifier)
+        .enroll();
     if (!mounted) return;
     if (enrollment != null) {
       setState(() => _enrollment = enrollment);
@@ -53,8 +54,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       showInfoSnack(context, 'Ingresá el código del autenticador.');
       return;
     }
-    final ok =
-        await ref.read(securityControllerProvider.notifier).confirm(code);
+    final ok = await ref
+        .read(securityControllerProvider.notifier)
+        .confirm(code);
     if (!mounted) return;
     if (ok) {
       showSuccessSnack(context, 'Verificación en dos pasos activada.');
@@ -94,9 +96,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: ListView(
                 padding: const EdgeInsets.all(16),
-                children: [
-                  if (enabled) _buildActive() else _buildInactive(),
-                ],
+                children: [if (enabled) _buildActive() else _buildInactive()],
               ),
             ),
           ),
@@ -234,8 +234,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: AppColors.accent),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.accent,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -395,17 +397,18 @@ class _DisableTwoFactorSheetState
           TextField(
             controller: _controller,
             obscureText: !_useCode && _obscurePassword,
-            keyboardType:
-                _useCode ? TextInputType.number : TextInputType.text,
+            keyboardType: _useCode ? TextInputType.number : TextInputType.text,
             autocorrect: false,
             maxLength: _useCode ? 6 : null,
-            inputFormatters:
-                _useCode ? [FilteringTextInputFormatter.digitsOnly] : null,
+            inputFormatters: _useCode
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
             decoration: InputDecoration(
               labelText: _useCode ? 'Código del autenticador' : 'Contraseña',
               counterText: '',
-              prefixIcon:
-                  Icon(_useCode ? Icons.pin_outlined : Icons.lock_outline),
+              prefixIcon: Icon(
+                _useCode ? Icons.pin_outlined : Icons.lock_outline,
+              ),
               suffixIcon: _useCode
                   ? null
                   : IconButton(
@@ -417,9 +420,8 @@ class _DisableTwoFactorSheetState
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                       ),
-                      onPressed: () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
             ),
           ),
