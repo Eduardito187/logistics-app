@@ -115,7 +115,6 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
                     HeroTaskCard(
                       title: hero.label,
                       subtitle: hero.subtitle,
-                      icon: hero.icon,
                       appIcon: hero.appIcon,
                       statusLabel: 'Acción principal',
                       // Es la pestaña central: cambiá a ella en vez de redirigir.
@@ -162,7 +161,6 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
                   return BigActionTile(
                     label: task.label,
                     subtitle: task.subtitle,
-                    icon: task.icon,
                     appIcon: task.appIcon,
                     accent: task.accent,
                     onTap: () => context.push(task.route),

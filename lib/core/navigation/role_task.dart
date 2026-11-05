@@ -10,24 +10,20 @@ class RoleTask {
   const RoleTask({
     required this.id,
     required this.label,
-    required this.icon,
+    required this.appIcon,
     required this.route,
     required this.roles,
     this.subtitle,
     this.accent = false,
     this.requiredAbility,
-    this.appIcon,
   });
 
   final String id;
   final String label;
   final String? subtitle;
 
-  /// Equivalente Material (fallback mientras no haya [appIcon], brief §6).
-  final IconData icon;
-
   /// Ícono animado DisTrack de la acción (botón central, tarjeta héroe, tiles).
-  final AppIcon? appIcon;
+  final AppIcon appIcon;
 
   /// Ruta go_router a la que navega la tarjeta.
   final String route;

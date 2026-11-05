@@ -19,12 +19,12 @@ import '../../../support/no_home_prefetch.dart';
 // canales de plataforma. La barra inferior vive en el shell (no se prueba acá).
 
 /// Tareas de ejemplo: una exige ability, otra no; cada rol tiene la suya.
-/// `_needsAbility` no trae appIcon (cae al Material); la del preparador es la
-/// acción principal (héroe).
+/// La del preparador es la acción principal (héroe). `_needsAbility` usa un
+/// AppIcon que no choca con el del rol chofer ([UserRole.driver.icon]).
 const _needsAbility = RoleTask(
   id: 'needs-ability',
   label: 'Carga validada',
-  icon: Icons.local_shipping,
+  appIcon: AppIcon.load,
   route: '/loading',
   roles: {UserRole.driver},
   requiredAbility: 'execution:write',
@@ -32,7 +32,6 @@ const _needsAbility = RoleTask(
 const _noAbility = RoleTask(
   id: 'no-ability',
   label: 'Ruta del día',
-  icon: Icons.map,
   appIcon: AppIcon.route,
   route: '/route',
   roles: {UserRole.driver},
@@ -40,7 +39,6 @@ const _noAbility = RoleTask(
 const _pickerTask = RoleTask(
   id: 'picker-task',
   label: 'Escanear EAN',
-  icon: Icons.qr_code,
   appIcon: AppIcon.scan,
   route: '/picking',
   roles: {UserRole.picker},
@@ -86,7 +84,7 @@ void main() {
     expect(findAppIcon(UserRole.driver.icon), findsOneWidget); // avatar del rol
   });
 
-  testWidgets('los tiles dibujan el AppIcon de la tarea o caen al Material', (
+  testWidgets('los tiles dibujan el AppIcon animado de cada tarea', (
     tester,
   ) async {
     final container = _session(UserRole.driver);
@@ -96,8 +94,7 @@ void main() {
       findAppIconInState(AppIcon.route, AppIconState.idle),
       findsOneWidget,
     );
-    // Sin appIcon: fallback al Icon Material de la tarea.
-    expect(find.byIcon(Icons.local_shipping), findsOneWidget);
+    expect(findAppIcon(AppIcon.load), findsOneWidget);
   });
 
   testWidgets('la tarjeta héroe dibuja su AppIcon activo', (tester) async {

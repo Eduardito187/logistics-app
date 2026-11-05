@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/navigation/role_task.dart';
@@ -12,7 +11,6 @@ void main() {
       const task = RoleTask(
         id: 't1',
         label: 'Ruta',
-        icon: Icons.map,
         appIcon: AppIcon.route,
         route: '/driver/route',
         roles: {UserRole.driver},
@@ -32,7 +30,6 @@ void main() {
       const task = RoleTask(
         id: 't2',
         label: 'Carga',
-        icon: Icons.inventory,
         appIcon: AppIcon.receive,
         route: '/picking/prepare',
         roles: {UserRole.picker},
@@ -49,7 +46,7 @@ void main() {
       const task = RoleTask(
         id: 't3',
         label: 'x',
-        icon: Icons.abc,
+        appIcon: AppIcon.tasks,
         route: '/x',
         roles: {UserRole.driver, UserRole.supervisor},
       );

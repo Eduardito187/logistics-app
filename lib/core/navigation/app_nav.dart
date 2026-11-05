@@ -26,8 +26,6 @@ final homeTabProvider = NotifierProvider<HomeTabNotifier, int>(
 class NavTab {
   const NavTab({
     required this.label,
-    required this.icon,
-    required this.activeIcon,
     required this.appIcon,
     required this.path,
   });
@@ -36,14 +34,7 @@ class NavTab {
   /// mayor el texto es lo que da seguridad para tocar (no solo el ícono).
   final String label;
 
-  /// Ícono de línea (pestaña inactiva).
-  final IconData icon;
-
-  /// Ícono relleno (pestaña activa, dentro del círculo de marca).
-  final IconData activeIcon;
-
-  /// Ícono animado DisTrack de la pestaña (lo que se dibuja). [icon] y
-  /// [activeIcon] quedan como equivalentes Material (fallback, brief §6).
+  /// Ícono animado DisTrack de la pestaña (lo que se dibuja).
   final AppIcon appIcon;
 
   /// Ruta go_router de la rama del shell.
@@ -53,34 +44,10 @@ class NavTab {
 /// Las cuatro pestañas fijas, repartidas 2 + 2 alrededor del botón central:
 /// [Inicio] [Tareas]  (FAB)  [Avisos] [Perfil].
 const List<NavTab> kPrimaryNavTabs = [
-  NavTab(
-    label: 'Inicio',
-    icon: Icons.home_outlined,
-    activeIcon: Icons.home_rounded,
-    appIcon: AppIcon.home,
-    path: '/home',
-  ),
-  NavTab(
-    label: 'Tareas',
-    icon: Icons.grid_view_outlined,
-    activeIcon: Icons.grid_view_rounded,
-    appIcon: AppIcon.tasks,
-    path: '/tareas',
-  ),
-  NavTab(
-    label: 'Avisos',
-    icon: Icons.notifications_outlined,
-    activeIcon: Icons.notifications_rounded,
-    appIcon: AppIcon.alerts,
-    path: '/avisos',
-  ),
-  NavTab(
-    label: 'Perfil',
-    icon: Icons.person_outline_rounded,
-    activeIcon: Icons.person_rounded,
-    appIcon: AppIcon.profile,
-    path: '/perfil',
-  ),
+  NavTab(label: 'Inicio', appIcon: AppIcon.home, path: '/home'),
+  NavTab(label: 'Tareas', appIcon: AppIcon.tasks, path: '/tareas'),
+  NavTab(label: 'Avisos', appIcon: AppIcon.alerts, path: '/avisos'),
+  NavTab(label: 'Perfil', appIcon: AppIcon.profile, path: '/perfil'),
 ];
 
 /// La acción principal del rol: la que va en el botón central (FAB) grande.

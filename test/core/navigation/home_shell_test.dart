@@ -23,7 +23,6 @@ import '../../support/app_icon_finders.dart';
 const _driverTask = RoleTask(
   id: 'delivery',
   label: 'Entrega en curso',
-  icon: Icons.local_shipping,
   appIcon: AppIcon.deliver,
   route: '/driver/delivery',
   roles: {UserRole.driver},

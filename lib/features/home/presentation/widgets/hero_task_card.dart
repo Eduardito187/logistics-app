@@ -15,8 +15,7 @@ class HeroTaskCard extends StatefulWidget {
     super.key,
     required this.title,
     this.subtitle,
-    required this.icon,
-    this.appIcon,
+    required this.appIcon,
     required this.onTap,
     this.statusLabel,
     this.actionLabel = 'Abrir',
@@ -25,12 +24,9 @@ class HeroTaskCard extends StatefulWidget {
   final String title;
   final String? subtitle;
 
-  /// Equivalente Material: solo se dibuja si no hay [appIcon].
-  final IconData icon;
-
-  /// Ícono animado DisTrack de la acción (preferido sobre [icon]). Al aparecer
-  /// la tarjeta "ejecuta" su movimiento y queda activo (relleno).
-  final AppIcon? appIcon;
+  /// Ícono animado DisTrack de la acción. Al aparecer la tarjeta "ejecuta" su
+  /// movimiento y queda activo (relleno).
+  final AppIcon appIcon;
   final VoidCallback onTap;
 
   /// Etiqueta de estado opcional (p. ej. "En curso") en una pastilla clara.
@@ -103,20 +99,14 @@ class _HeroTaskCardState extends State<HeroTaskCard>
           Positioned(
             top: -8,
             right: -8,
-            child: widget.appIcon != null
-                ? AnimatedAppIcon(
-                    widget.appIcon!,
-                    state: AppIconState.active,
-                    animateOnMount: true,
-                    size: 96,
-                    color: Colors.white.withValues(alpha: 0.15),
-                    excludeFromSemantics: true,
-                  )
-                : Icon(
-                    widget.icon,
-                    size: 96,
-                    color: Colors.white.withValues(alpha: 0.15),
-                  ),
+            child: AnimatedAppIcon(
+              widget.appIcon,
+              state: AppIconState.active,
+              animateOnMount: true,
+              size: 96,
+              color: Colors.white.withValues(alpha: 0.15),
+              excludeFromSemantics: true,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -79,7 +79,6 @@ class _Tile extends StatelessWidget {
     return BigActionTile(
       label: task.label,
       subtitle: task.subtitle,
-      icon: task.icon,
       appIcon: task.appIcon,
       accent: task.accent,
       onTap: () => context.push(task.route),

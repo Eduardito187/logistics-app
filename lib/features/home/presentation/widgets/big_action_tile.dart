@@ -14,8 +14,7 @@ class BigActionTile extends StatelessWidget {
     super.key,
     required this.label,
     this.subtitle,
-    required this.icon,
-    this.appIcon,
+    required this.appIcon,
     required this.onTap,
     this.accent = false,
   });
@@ -23,11 +22,8 @@ class BigActionTile extends StatelessWidget {
   final String label;
   final String? subtitle;
 
-  /// Equivalente Material: solo se dibuja si no hay [appIcon].
-  final IconData icon;
-
-  /// Ícono animado DisTrack de la tarea (preferido sobre [icon]).
-  final AppIcon? appIcon;
+  /// Ícono animado DisTrack de la tarea.
+  final AppIcon appIcon;
   final VoidCallback onTap;
 
   /// Variante de acento ámbar (alertas / en-curso); por defecto, rojo de marca.
@@ -68,14 +64,12 @@ class BigActionTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   // Decorativo: la etiqueta ya la anuncia el texto del tile.
-                  child: appIcon != null
-                      ? AnimatedAppIcon(
-                          appIcon!,
-                          size: 28,
-                          color: iconColor,
-                          excludeFromSemantics: true,
-                        )
-                      : Icon(icon, size: 28, color: iconColor),
+                  child: AnimatedAppIcon(
+                    appIcon,
+                    size: 28,
+                    color: iconColor,
+                    excludeFromSemantics: true,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

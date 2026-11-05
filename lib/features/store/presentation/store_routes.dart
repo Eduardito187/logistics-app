@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
@@ -16,7 +15,6 @@ const List<RoleTask> storeTasks = [
     id: 'store-reception',
     label: 'Recepción de mercadería',
     subtitle: 'Contra manifiesto',
-    icon: Icons.inventory_2,
     appIcon: AppIcon.receive,
     route: '/store/reception',
     roles: {UserRole.store},
@@ -26,7 +24,6 @@ const List<RoleTask> storeTasks = [
     id: 'store-pickup',
     label: 'Recojo en tienda',
     subtitle: 'Entrega en mostrador',
-    icon: Icons.storefront,
     appIcon: AppIcon.pickupStore,
     route: '/store/pickup',
     roles: {UserRole.store},

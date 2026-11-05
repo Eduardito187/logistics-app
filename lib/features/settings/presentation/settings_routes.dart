@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/user_role.dart';
@@ -24,7 +23,6 @@ const List<RoleTask> settingsTasks = [
   RoleTask(
     id: 'settings',
     label: 'Ajustes',
-    icon: Icons.settings,
     appIcon: AppIcon.settings,
     route: '/settings',
     roles: {

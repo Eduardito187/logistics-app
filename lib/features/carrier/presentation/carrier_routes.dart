@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/settlement.dart';
@@ -18,7 +17,6 @@ const List<RoleTask> carrierTasks = [
   RoleTask(
     id: 'carrier-pickup',
     label: 'Escanear al recoger',
-    icon: Icons.upload_file,
     appIcon: AppIcon.pickupScan,
     route: '/carrier/pickup',
     roles: {UserRole.carrier},
@@ -27,7 +25,6 @@ const List<RoleTask> carrierTasks = [
   RoleTask(
     id: 'carrier-deliver',
     label: 'Escanear al entregar',
-    icon: Icons.task_alt,
     appIcon: AppIcon.deliverScan,
     route: '/carrier/deliver',
     roles: {UserRole.carrier},
@@ -35,7 +32,6 @@ const List<RoleTask> carrierTasks = [
   RoleTask(
     id: 'carrier-settlements',
     label: 'Mis liquidaciones',
-    icon: Icons.receipt_long,
     appIcon: AppIcon.settle,
     route: '/carrier/settlements',
     roles: {UserRole.carrier},
