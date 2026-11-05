@@ -472,7 +472,7 @@ void main() {
       expect(find.text('0 escaneo(s)'), findsOneWidget);
       expect(listCalls, 1);
 
-      await tester.tap(find.text('Envío ship-1'));
+      await tester.tap(find.text('Envío 1'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Escanear bulto para cargar'));
       await tester.pumpAndSettle();

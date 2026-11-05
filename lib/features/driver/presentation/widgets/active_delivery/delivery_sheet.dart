@@ -27,8 +27,11 @@ class DeliverySheet extends StatelessWidget {
 
   final DriverRouteStop stop;
 
-  static const double minSize = 0.30;
-  static const double initialSize = 0.42;
+  // Colapsado BAJO a propósito: la entrega en curso es sobre todo el MAPA; el
+  // modal no debe taparlo. Arranca mostrando lo justo (cliente + acción) y se
+  // arrastra hacia arriba para ver el pedido completo.
+  static const double minSize = 0.18;
+  static const double initialSize = 0.28;
 
   @override
   Widget build(BuildContext context) {
@@ -395,8 +398,11 @@ class ProductTile extends StatelessWidget {
       color: theme.colorScheme.outline,
     );
     final url = item.imageUrl;
-    // ~3x el tamaño lógico alcanza para pantallas de alta densidad.
-    final cache = (_size * 3).round();
+    // Se decodifica al tamaño físico real del thumb (lógico × DPR del equipo,
+    // acotado 1–3). En los Go de 512 MB (DPR 1.5–2) esto decodifica ~1,5× menos
+    // que el ×3 fijo anterior, sin verse borroso en pantallas de alta densidad.
+    final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    final cache = (_size * dpr).round();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

@@ -84,18 +84,27 @@ class _ActiveDelivery extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        MapRoundButton(
-                          tooltip: 'Cerrar',
-                          icon: AppIcon.close,
-                          onPressed: () => Navigator.of(context).maybePop(),
-                        ),
-                        const Spacer(),
+                        // La "X" solo cuando se entró EMPUJANDO desde otra
+                        // sección (hay algo que cerrar). Si es la pestaña
+                        // central de la barra inferior, no hay back → no se
+                        // muestra (antes salía una X que no hacía nada).
+                        if (Navigator.of(context).canPop()) ...[
+                          MapRoundButton(
+                            tooltip: 'Cerrar',
+                            icon: AppIcon.close,
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        // "Ayuda" a la izquierda (junto a Cerrar), no pegada al
+                        // borde derecho donde chocaba con la columna de zoom.
                         MapPillButton(
                           icon: AppIcon.support,
                           label: 'Ayuda',
                           onPressed: () =>
                               showDeliveryHelpSheet(context, ref, stop: stop),
                         ),
+                        const Spacer(),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -133,27 +142,30 @@ class _LiveStatusCard extends ConsumerWidget {
 }
 
 /// Sin paradas pendientes: ruta del día terminada.
-class _RouteFinished extends StatelessWidget {
+class _RouteFinished extends ConsumerWidget {
   const _RouteFinished({required this.route});
 
   final DriverRoute route;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SafeArea(
       child: Column(
         children: [
-          Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: MapRoundButton(
-                tooltip: 'Cerrar',
-                icon: AppIcon.close,
-                onPressed: () => Navigator.of(context).maybePop(),
+          // Igual que en la entrega en curso: la "X" solo si hay algo que
+          // cerrar (se entró empujando). Como pestaña central no se muestra.
+          if (Navigator.of(context).canPop())
+            Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: MapRoundButton(
+                  tooltip: 'Cerrar',
+                  icon: AppIcon.close,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
-          ),
           Expanded(
             child: EmptyState(
               icon: AppIcon.deliverScan,

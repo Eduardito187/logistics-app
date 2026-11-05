@@ -11,6 +11,7 @@ import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../domain/entities/two_factor_enrollment.dart';
 import 'controllers/security_controller.dart';
+import 'widgets/field_icon.dart';
 import 'controllers/two_factor_status.dart';
 
 /// Pantalla de Seguridad (Ajustes): activar o desactivar la verificación en dos
@@ -25,6 +26,7 @@ class SecurityScreen extends ConsumerStatefulWidget {
 
 class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   final _confirmCodeController = TextEditingController();
+  final _confirmCodeFocus = FocusNode();
 
   /// Datos del enrolamiento en curso (QR, secreto, recovery codes). Null cuando
   /// no hay activación en progreso.
@@ -33,6 +35,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   @override
   void dispose() {
     _confirmCodeController.dispose();
+    _confirmCodeFocus.dispose();
     super.dispose();
   }
 
@@ -287,16 +290,21 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             children: [
               TextField(
                 controller: _confirmCodeController,
+                focusNode: _confirmCodeFocus,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onSubmitted: (_) => _onConfirmPressed(),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Código del autenticador',
                   counterText: '',
-                  prefixIcon: AnimatedAppIcon(AppIcon.pin),
+                  prefixIconConstraints: FieldIcon.prefixConstraints,
+                  prefixIcon: FieldIcon(
+                    icon: AppIcon.pin,
+                    focusNode: _confirmCodeFocus,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -334,6 +342,7 @@ class _DisableTwoFactorSheet extends ConsumerStatefulWidget {
 class _DisableTwoFactorSheetState
     extends ConsumerState<_DisableTwoFactorSheet> {
   final _controller = TextEditingController();
+  final _focus = FocusNode();
 
   /// true = pedir código del autenticador; false = pedir contraseña.
   bool _useCode = true;
@@ -342,6 +351,7 @@ class _DisableTwoFactorSheetState
   @override
   void dispose() {
     _controller.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -397,6 +407,7 @@ class _DisableTwoFactorSheetState
           const SizedBox(height: 20),
           TextField(
             controller: _controller,
+            focusNode: _focus,
             obscureText: !_useCode && _obscurePassword,
             keyboardType: _useCode ? TextInputType.number : TextInputType.text,
             autocorrect: false,
@@ -407,8 +418,10 @@ class _DisableTwoFactorSheetState
             decoration: InputDecoration(
               labelText: _useCode ? 'Código del autenticador' : 'Contraseña',
               counterText: '',
-              prefixIcon: AnimatedAppIcon(
-                _useCode ? AppIcon.pin : AppIcon.security,
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(
+                icon: _useCode ? AppIcon.pin : AppIcon.security,
+                focusNode: _focus,
               ),
               suffixIcon: _useCode
                   ? null
@@ -423,6 +436,7 @@ class _DisableTwoFactorSheetState
                         state: _obscurePassword
                             ? AppIconState.idle
                             : AppIconState.active,
+                        size: 20,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -463,7 +477,13 @@ class _ButtonSpinner extends StatelessWidget {
     return const SizedBox(
       height: 24,
       width: 24,
-      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+      child: AnimatedAppIcon(
+        AppIcon.syncing,
+        state: AppIconState.loading,
+        size: 22,
+        color: Colors.white,
+        excludeFromSemantics: true,
+      ),
     );
   }
 }

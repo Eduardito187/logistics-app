@@ -262,8 +262,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
               confirmation: _confirmation!,
               photoPath: photo != null ? 'pendiente' : null,
             ).toJson(),
-            label:
-                'POD · ${widget.stop.customerName ?? widget.stop.shipmentId}',
+            label: 'POD · ${widget.stop.customerName ?? 'Entrega'}',
             occurredAt: now,
           );
       if (!mounted) return;

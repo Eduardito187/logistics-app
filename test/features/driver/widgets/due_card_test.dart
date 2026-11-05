@@ -82,18 +82,20 @@ void main() {
     expect(find.text('Vence hoy'), findsOneWidget);
   });
 
-  testWidgets('sin plate usa el vehicleId y sin servicio usa "Mantenimiento"', (
-    tester,
-  ) async {
-    await pumpScoped(
-      tester,
-      child: Scaffold(
-        body: DueCard(
-          item: const DueMaintenanceItem(overdue: false, vehicleId: 'v-99'),
+  testWidgets(
+    'sin plate muestra "sin placa" (no el uuid) y sin servicio usa "Mantenimiento"',
+    (tester) async {
+      await pumpScoped(
+        tester,
+        child: Scaffold(
+          body: DueCard(
+            item: const DueMaintenanceItem(overdue: false, vehicleId: 'v-99'),
+          ),
         ),
-      ),
-    );
-    expect(find.text('Mantenimiento'), findsOneWidget);
-    expect(find.text('Vehículo: v-99'), findsOneWidget);
-  });
+      );
+      expect(find.text('Mantenimiento'), findsOneWidget);
+      expect(find.text('Vehículo: sin placa'), findsOneWidget);
+      expect(find.text('Vehículo: v-99'), findsNothing);
+    },
+  );
 }

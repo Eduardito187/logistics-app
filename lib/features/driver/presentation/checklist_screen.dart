@@ -97,7 +97,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                 for (final driver in drivers)
                   DropdownMenuItem<String>(
                     value: driver.id,
-                    child: Text(driver.name ?? driver.id),
+                    child: Text(driver.name ?? 'Chofer'),
                   ),
               ],
               onChanged: _busy ? null : (v) => setState(() => _driverId = v),

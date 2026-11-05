@@ -8,6 +8,7 @@ import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import 'controllers/forgot_password_controller.dart';
+import 'widgets/field_icon.dart';
 
 /// Flujo "olvidé mi contraseña" en dos pasos dentro de una sola pantalla:
 /// paso 1 pide el código al correo, paso 2 lo canjea junto con la nueva clave.
@@ -25,6 +26,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  // Foco de cada campo: su ícono se ilumina (active) al enfocar.
+  final _emailFocus = FocusNode();
+  final _codeFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _confirmFocus = FocusNode();
 
   /// 1 = pedir código, 2 = ingresar código y nueva contraseña.
   int _step = 1;
@@ -41,6 +47,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     _codeController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _emailFocus.dispose();
+    _codeFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmFocus.dispose();
     super.dispose();
   }
 
@@ -168,14 +178,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       const SizedBox(height: 24),
       TextField(
         controller: _emailController,
+        focusNode: _emailFocus,
         keyboardType: TextInputType.emailAddress,
         textInputAction: TextInputAction.done,
         autocorrect: false,
         enabled: !isLoading,
         onSubmitted: (_) => _onRequestCodePressed(),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Correo',
-          prefixIcon: AnimatedAppIcon(AppIcon.mail),
+          prefixIconConstraints: FieldIcon.prefixConstraints,
+          prefixIcon: FieldIcon(icon: AppIcon.mail, focusNode: _emailFocus),
         ),
       ),
       const SizedBox(height: 28),
@@ -196,6 +208,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       const SizedBox(height: 24),
       TextField(
         controller: _codeController,
+        focusNode: _codeFocus,
         keyboardType: TextInputType.number,
         textInputAction: TextInputAction.next,
         autocorrect: false,
@@ -205,20 +218,26 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         decoration: InputDecoration(
           labelText: 'Código',
           counterText: '',
-          prefixIcon: const AnimatedAppIcon(AppIcon.pin),
+          prefixIconConstraints: FieldIcon.prefixConstraints,
+          prefixIcon: FieldIcon(icon: AppIcon.pin, focusNode: _codeFocus),
           errorText: _codeError,
         ),
       ),
       const SizedBox(height: 16),
       TextField(
         controller: _passwordController,
+        focusNode: _passwordFocus,
         obscureText: _obscurePassword,
         textInputAction: TextInputAction.next,
         enabled: !isLoading,
         decoration: InputDecoration(
           labelText: 'Nueva contraseña',
           helperText: 'Mínimo 8 caracteres',
-          prefixIcon: const AnimatedAppIcon(AppIcon.security),
+          prefixIconConstraints: FieldIcon.prefixConstraints,
+          prefixIcon: FieldIcon(
+            icon: AppIcon.security,
+            focusNode: _passwordFocus,
+          ),
           errorText: _passwordError,
           suffixIcon: IconButton(
             tooltip: _obscurePassword
@@ -227,6 +246,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             icon: AnimatedAppIcon(
               _obscurePassword ? AppIcon.visibility : AppIcon.visibilityOff,
               state: _obscurePassword ? AppIconState.idle : AppIconState.active,
+              size: 20,
             ),
             onPressed: () =>
                 setState(() => _obscurePassword = !_obscurePassword),
@@ -236,13 +256,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       const SizedBox(height: 16),
       TextField(
         controller: _confirmController,
+        focusNode: _confirmFocus,
         obscureText: _obscurePassword,
         textInputAction: TextInputAction.done,
         enabled: !isLoading,
         onSubmitted: (_) => _onResetPressed(),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Repetir contraseña',
-          prefixIcon: AnimatedAppIcon(AppIcon.security),
+          prefixIconConstraints: FieldIcon.prefixConstraints,
+          prefixIcon: FieldIcon(
+            icon: AppIcon.security,
+            focusNode: _confirmFocus,
+          ),
         ),
       ),
       const SizedBox(height: 28),
@@ -261,7 +286,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 }
 
-/// Spinner blanco reutilizado dentro de los botones de acción.
+/// Loader de marca reutilizado dentro de los botones de acción: el ícono
+/// DisTrack "sincronizando" en loop, en vez del spinner gris plano.
 class _ButtonSpinner extends StatelessWidget {
   const _ButtonSpinner();
 
@@ -270,7 +296,13 @@ class _ButtonSpinner extends StatelessWidget {
     return const SizedBox(
       height: 24,
       width: 24,
-      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+      child: AnimatedAppIcon(
+        AppIcon.syncing,
+        state: AppIconState.loading,
+        size: 22,
+        color: Colors.white,
+        excludeFromSemantics: true,
+      ),
     );
   }
 }

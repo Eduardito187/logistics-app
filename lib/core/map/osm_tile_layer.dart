@@ -37,8 +37,9 @@ const int kMapPanBuffer = 0;
 /// - tiles sin fundido (el fade-in repinta cada tile varias veces),
 /// - los tiles con error se descartan al salir de pantalla.
 ///
-/// Los tiles decodificados viven en la `ImageCache` global, que `main.dart`
-/// limita a 40 MB / 80 imágenes.
+/// Los tiles decodificados viven en la `ImageCache` global, cuyo tope depende
+/// de la RAM del equipo ([MemoryBudget.forDevice]): ~10 MB en 512 MB, 24 MB en
+/// gama baja, 40 MB en media y 64 MB en alta.
 ///
 /// Los tiles bajados se guardan en disco ([MapTileCache], zonas sin señal):
 /// si el tile ya está en el teléfono se muestra sin red. Todos los mapas

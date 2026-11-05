@@ -49,7 +49,9 @@ void main() {
     expect(findAppIcon(AppIcon.chevronRight), findsOneWidget);
   });
 
-  testWidgets('sin referencia externa usa el id del envío', (tester) async {
+  testWidgets('sin referencia externa muestra solo "Envío" (nunca el uuid)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp.router(
         routerConfig: _router(
@@ -58,7 +60,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Envío SHP-7'), findsOneWidget);
+    expect(find.text('Envío'), findsOneWidget);
+    // El id/uuid del envío nunca se muestra al usuario.
+    expect(find.textContaining('SHP-7'), findsNothing);
   });
 
   testWidgets('al tocarla navega al detalle de la notificación', (

@@ -178,11 +178,12 @@ void main() {
     await tester.tap(find.text('Ingresar'));
     await tester.pump(); // dispara submit → AsyncLoading
 
-    // El botón muestra el spinner y queda deshabilitado.
+    // El botón muestra el loader animado de marca (sincronizando) y queda
+    // deshabilitado.
     expect(
       find.descendant(
         of: findButton<FilledButton>(),
-        matching: find.byType(CircularProgressIndicator),
+        matching: findAppIconInState(AppIcon.syncing, AppIconState.loading),
       ),
       findsOneWidget,
     );

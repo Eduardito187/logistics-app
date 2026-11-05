@@ -4,7 +4,9 @@ import '../../../../core/icons/icons.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/map/dark_map_canvas.dart';
 import '../../../../core/map/osm_tile_layer.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../driver_route_status.dart';
 import 'active_delivery/map_round_button.dart';
@@ -21,9 +23,13 @@ import 'stop_pin.dart';
 /// misma instancia de widget: reconstruir la pantalla (p. ej. el botón "Armar
 /// ruta") no vuelve a proyectar los puntos del trazo.
 class RouteMap extends StatefulWidget {
-  const RouteMap({super.key, required this.route});
+  const RouteMap({super.key, required this.route, this.fullscreen = false});
 
   final DriverRoute route;
+
+  /// `true` cuando el mapa se abrió a pantalla completa (desde el botón
+  /// "Expandir"): ahí el botón de la esquina cierra en vez de expandir.
+  final bool fullscreen;
 
   @override
   State<RouteMap> createState() => _RouteMapState();
@@ -52,6 +58,31 @@ class _RouteMapState extends State<RouteMap> {
     super.dispose();
   }
 
+  /// Encaja todo el recorrido (paradas y trazo) en la pantalla.
+  void _fitAll() {
+    if (_fitPoints.length < 2) return;
+    _controller.fitCamera(
+      CameraFit.coordinates(
+        coordinates: _fitPoints,
+        padding: _fitPadding,
+        maxZoom: 17,
+      ),
+    );
+  }
+
+  /// Abre el mapa a PANTALLA COMPLETA (mismo recorrido, sin la hoja de ruta).
+  void _openFullscreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          body: SafeArea(
+            child: RouteMap(route: widget.route, fullscreen: true),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _ensureLayers(Color lineColor) {
     if (identical(_cachedRoute, widget.route) && _cachedColor == lineColor) {
       return;
@@ -65,29 +96,34 @@ class _RouteMapState extends State<RouteMap> {
     final streets = simplifiedRoutePoints(widget.route.routeGeometry);
     final line = streets.length >= 2 ? streets : stopPoints;
     _fitPoints = [...stopPoints, ...streets];
+    // Trazo con glow: una línea ancha translúcida de marca por debajo y una
+    // fina sólida encima, ambas con puntas redondeadas (StrokeCap.round por
+    // defecto en flutter_map v7).
     _lineLayer = line.length >= 2
         ? PolylineLayer(
             polylines: [
               Polyline(
                 points: line,
-                strokeWidth: 5,
-                color: lineColor,
-                borderStrokeWidth: 2,
-                borderColor: Colors.white,
+                strokeWidth: 12,
+                color: lineColor.withValues(alpha: 0.28),
               ),
+              Polyline(points: line, strokeWidth: 4, color: lineColor),
             ],
           )
         : const SizedBox.shrink();
+    const pinSize = 40.0;
     _stopsLayer = MarkerLayer(
       markers: [
         for (final stop in _located)
           Marker(
             point: LatLng(stop.lat!, stop.lng!),
-            width: 44,
-            height: 44,
+            width: pinSize,
+            height: StopPin.heightFor(pinSize),
+            // La punta del pin apunta a la coordenada.
+            alignment: Alignment.topCenter,
             child: GestureDetector(
               onTap: () => openStopDetail(context, stop),
-              child: StopPin(stop: stop),
+              child: StopPin(stop: stop, size: pinSize),
             ),
           ),
       ],
@@ -96,7 +132,8 @@ class _RouteMapState extends State<RouteMap> {
 
   @override
   Widget build(BuildContext context) {
-    _ensureLayers(Theme.of(context).colorScheme.primary);
+    // El trazo va en rojo de marca para el look con glow sobre el mapa oscuro.
+    _ensureLayers(AppColors.brand);
     if (_located.isEmpty) {
       return const EmptyState(
         icon: AppIcon.gpsOff,
@@ -137,7 +174,12 @@ class _RouteMapState extends State<RouteMap> {
           child: FlutterMap(
             mapController: _controller,
             options: options,
-            children: [const OsmTileLayer(), _lineLayer, _stopsLayer],
+            children: [
+              const DarkMapTiles(),
+              const DarkMapScrim(),
+              _lineLayer,
+              _stopsLayer,
+            ],
           ),
         ),
         Positioned(
@@ -150,18 +192,23 @@ class _RouteMapState extends State<RouteMap> {
               const SizedBox(height: 10),
               MapRoundButton(
                 tooltip: 'Ver toda la ruta',
-                icon: AppIcon.zoomOut,
-                onPressed: () {
-                  if (_fitPoints.length < 2) return;
-                  _controller.fitCamera(
-                    CameraFit.coordinates(
-                      coordinates: _fitPoints,
-                      padding: _fitPadding,
-                      maxZoom: 17,
-                    ),
-                  );
-                },
+                icon: AppIcon.route,
+                onPressed: _fitAll,
               ),
+              const SizedBox(height: 10),
+              // Esquina: expandir a pantalla completa o, ya en pantalla
+              // completa, cerrar y volver.
+              widget.fullscreen
+                  ? MapRoundButton(
+                      tooltip: 'Cerrar',
+                      icon: AppIcon.close,
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    )
+                  : MapRoundButton(
+                      tooltip: 'Pantalla completa',
+                      icon: AppIcon.zoomOut,
+                      onPressed: _openFullscreen,
+                    ),
             ],
           ),
         ),

@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/map/osm_tile_layer.dart';
 import 'active_delivery/map_round_button.dart';
+import 'map_motion.dart';
 
 /// Zoom mínimo de los mapas del chofer: más lejos ya no se distingue la ciudad.
 const double kDriverMapMinZoom = 5;
@@ -52,15 +53,43 @@ const InteractionOptions kDriverMapInteraction = InteractionOptions(
 
 /// Botones grandes de acercar/alejar: con guantes o una mano el pellizco no
 /// siempre sale, y en el emulador no hay pellizco.
-class MapZoomButtons extends StatelessWidget {
+class MapZoomButtons extends StatefulWidget {
   const MapZoomButtons({super.key, required this.controller});
 
   final MapController controller;
 
+  @override
+  State<MapZoomButtons> createState() => _MapZoomButtonsState();
+}
+
+class _MapZoomButtonsState extends State<MapZoomButtons>
+    with SingleTickerProviderStateMixin {
+  // Se crea en initState (no `late` perezoso): si se dejara perezoso y el
+  // widget se desmontara sin tocar el zoom, el acceso desde dispose intentaría
+  // crear el AnimationController ya desmontado ("deactivated widget's ancestor").
+  late final AnimatedMapMover _mover;
+
+  @override
+  void initState() {
+    super.initState();
+    _mover = AnimatedMapMover(vsync: this, controller: widget.controller);
+  }
+
+  @override
+  void dispose() {
+    _mover.dispose();
+    super.dispose();
+  }
+
   void _zoomBy(double delta) {
-    final camera = controller.camera;
-    final zoom = (camera.zoom + delta).clamp(kDriverMapMinZoom, kMapMaxZoom);
-    controller.move(camera.center, zoom);
+    // Acumula toques rápidos sobre el zoom pendiente (dos "−" seguidos bajan
+    // dos niveles) y recorta al rango permitido del mapa del chofer.
+    _mover.zoomBy(
+      delta,
+      min: kDriverMapMinZoom,
+      max: kMapMaxZoom,
+      reduceMotion: MediaQuery.disableAnimationsOf(context),
+    );
   }
 
   @override

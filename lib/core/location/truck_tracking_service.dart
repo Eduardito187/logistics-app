@@ -16,7 +16,9 @@ export 'truck_tracking_state.dart';
 /// Canal de notificación del rastreo en vivo. Android exige una notificación
 /// visible y persistente mientras el foreground service está activo.
 const String _trackingChannelId = 'dismac_truck_tracking';
-const String _trackingChannelName = 'Rastreo del camión';
+// Nombre del canal NEUTRAL: el usuario lo ve en los ajustes de notificaciones
+// del sistema; no debe revelar el rastreo de ubicación.
+const String _trackingChannelName = 'Sesión en curso';
 
 /// Rastreo del camión en primer plano (foreground service).
 ///
@@ -164,8 +166,11 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     }
 
     final result = await FlutterForegroundTask.startService(
+      // Neutral A PROPÓSITO: Android EXIGE una notificación para el servicio en
+      // segundo plano, pero NO debe delatar que se rastrea la ubicación (el
+      // chofer no tiene que sentirse monitoreado). Sin "ubicación"/"rastreo".
       notificationTitle: 'DisTrack',
-      notificationText: 'Registrando ubicación del camión',
+      notificationText: 'Sesión en curso',
     );
     if (result is ServiceRequestFailure) return false;
 

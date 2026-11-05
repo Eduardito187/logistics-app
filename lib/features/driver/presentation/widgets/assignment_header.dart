@@ -14,7 +14,8 @@ class AssignmentHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final plate = crew.vehicle.plate ?? crew.vehicle.id;
+    // Nunca mostrar el id/uuid del vehículo: si falta la placa, un texto legible.
+    final plate = crew.vehicle.plate ?? 'Vehículo asignado';
     final driverName = crew.driver.name ?? 'Chofer asignado';
     final helpers = crew.helpers
         .map((h) => h.name)

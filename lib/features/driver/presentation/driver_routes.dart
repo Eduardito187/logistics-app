@@ -8,7 +8,6 @@ import 'checklist_screen.dart';
 import 'driver_route_screen.dart';
 import 'fuel_screen.dart';
 import 'incident_screen.dart';
-import 'live_gps_screen.dart';
 import 'load_scan_screen.dart';
 import 'maintenance_due_screen.dart';
 import 'my_day_screen.dart';
@@ -57,14 +56,6 @@ const List<RoleTask> driverTasks = [
     subtitle: 'Escanear bultos a cargar',
     appIcon: AppIcon.load,
     route: '/driver/load',
-    roles: {UserRole.driver},
-  ),
-  RoleTask(
-    id: 'driver-gps',
-    label: 'Rastreo del camión',
-    subtitle: 'Estado del GPS automático (siempre activo en ruta)',
-    appIcon: AppIcon.gps,
-    route: '/driver/gps',
     roles: {UserRole.driver},
   ),
   RoleTask(
@@ -131,10 +122,6 @@ final List<RouteBase> driverRoutes = [
   GoRoute(
     path: '/driver/load',
     builder: (context, state) => const LoadScanScreen(),
-  ),
-  GoRoute(
-    path: '/driver/gps',
-    builder: (context, state) => const LiveGpsScreen(),
   ),
   GoRoute(
     path: '/driver/incident',

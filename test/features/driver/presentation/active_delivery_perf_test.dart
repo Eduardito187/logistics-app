@@ -95,11 +95,9 @@ void main() {
     final distanceBefore = tester
         .widget<Text>(find.textContaining('Faltan'))
         .data;
-    // El trazo dibujado está simplificado: 2 rectas → 3 vértices.
-    expect(
-      (layerBefore as PolylineLayer).polylines.single.points,
-      hasLength(3),
-    );
+    // El trazo dibujado está simplificado: 2 rectas → 3 vértices. (Ahora hay
+    // dos polylines por el glow: ambas comparten los mismos puntos.)
+    expect((layerBefore as PolylineLayer).polylines.last.points, hasLength(3));
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ActiveDeliveryScreen)),

@@ -84,34 +84,70 @@ enum _Shot { activate, success, error }
 
 class _AnimatedAppIconState extends State<AnimatedAppIcon>
     with TickerProviderStateMixin {
-  late final AnimationController _action;
-  late final AnimationController _loop;
-  late final AnimationController _press;
-  late final AnimationController _fill;
-  late final Listenable _repaint;
+  // Memoria (gama baja 512 MB): los cuatro AnimationController se crean
+  // PEREZOSAMENTE, solo cuando hacen falta. Un ícono en `idle` que nunca se
+  // toca (la mayoría: chevrons, prefijos, badges de lista) termina con CERO
+  // controllers/tickers. En una lista de 20 paradas con ~3 íconos cada una eso
+  // evita ~240 controllers vivos y el churn de crear/destruir al scrollear. El
+  // pintor lee valores por defecto (acción=1, resto=0) cuando el controller no
+  // existe, así el dibujo estático es idéntico.
+  AnimationController? _action;
+  AnimationController? _loop;
+  AnimationController? _press;
+  AnimationController? _fill;
   _Shot _shot = _Shot.activate;
   bool _reduce = false;
   bool _mounted = false;
 
   AppIconSpec get _spec => appIconSpecFor(widget.icon);
 
+  // --- Lecturas null-safe del frame (nunca crean un controller) ---
+  double get _actionT => _action?.value ?? 1.0;
+  bool get _actionRunning =>
+      _action != null && (_action!.isAnimating || _action!.value < 1);
+  double get _loopT => _loop?.value ?? 0.0;
+  bool get _looping => _loop?.isAnimating ?? false;
+  double get _pressV => _press?.value ?? 0.0;
+  double get _fillV => _fill?.value ?? 0.0;
+
+  // --- Creadores perezosos; al crear uno se re-arma el `repaint` del pintor ---
+  AnimationController _ensureAction() => _action ??= _register(
+    AnimationController(vsync: this, duration: _spec.duration)..value = 1,
+  );
+  AnimationController _ensureLoop() => _loop ??= _register(
+    AnimationController(vsync: this)..addStatusListener(_onLoopStatus),
+  );
+  AnimationController _ensurePress() => _press ??= _register(
+    AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    ),
+  );
+  AnimationController _ensureFill() => _fill ??= _register(
+    AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    ),
+  );
+
+  /// `Listenable` ESTABLE que el pintor escucha desde el primer `build`. Cuando
+  /// un controller se crea perezosamente se suma acá, así el pintor repinta con
+  /// sus ticks sin necesidad de `setState` (evita hazards de timing en el ciclo
+  /// de vida). Un ícono idle nunca suma miembros: el grupo queda vacío y el
+  /// pintor dibuja una sola vez.
+  final _RepaintGroup _repaint = _RepaintGroup();
+
+  /// Registra un controller recién creado en el grupo de repintado y lo
+  /// devuelve.
+  AnimationController _register(AnimationController c) {
+    _repaint.add(c);
+    return c;
+  }
+
   @override
   void initState() {
     super.initState();
-    _action = AnimationController(vsync: this, duration: _spec.duration);
-    _loop = AnimationController(vsync: this);
-    _press = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 80),
-    );
-    _fill = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-      value: widget.state == AppIconState.active ? 1 : 0,
-    );
-    _action.value = 1; // en reposo: dibujo completo.
-    _loop.addStatusListener(_onLoopStatus);
-    _repaint = Listenable.merge([_action, _loop, _press, _fill]);
+    // Ningún controller al arrancar: se crean on-demand en _enter/_down/_play.
   }
 
   @override
@@ -130,9 +166,9 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
   void didUpdateWidget(AnimatedAppIcon old) {
     super.didUpdateWidget(old);
     if (old.icon != widget.icon) {
-      _action.duration = _spec.duration;
-      _loop.stop();
-      _loop.value = 0;
+      _action?.duration = _spec.duration;
+      _loop?.stop();
+      _loop?.value = 0;
       _enter(null, widget.state, onMount: true);
       return;
     }
@@ -149,46 +185,59 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
         (widget.ambient &&
             (to == AppIconState.idle || to == AppIconState.active));
     if (!wantsLoop || _reduce) {
-      _loop.stop();
-      _loop.value = 0;
+      // Default (sin loop): si el controller no existe, no hay nada que parar.
+      _loop?.stop();
+      _loop?.value = 0;
     } else if (to == AppIconState.loading) {
       // Loading: loop real mientras dure el estado (escaneo, sync, impresión…).
       _breaths = 0;
-      _loop.duration = _loopDuration(_spec.loop);
-      _loop.repeat();
+      final loop = _ensureLoop();
+      loop.duration = _loopDuration(_spec.loop);
+      loop.repeat();
     } else if (from == null || from == AppIconState.loading || from != to) {
       // Respiración del botón central: unas pocas veces al quedar en reposo y
       // después quieto (invita al toque sin gastar batería en gama baja ni
       // dejar animaciones infinitas que cuelguen `pumpAndSettle`).
       _breaths = 0;
-      _loop.duration = const Duration(milliseconds: 2500);
-      _loop.forward(from: 0);
+      final loop = _ensureLoop();
+      loop.duration = const Duration(milliseconds: 2500);
+      loop.forward(from: 0);
     }
 
-    // Relleno de "activo".
+    // Relleno de "activo". Si el destino es el default (0) y nunca se creó el
+    // controller, no hace falta crearlo: el pintor ya lee fill=0.
     final fillTarget = to == AppIconState.active ? 1.0 : 0.0;
-    if (_reduce || onMount) {
-      _fill.value = fillTarget;
-    } else {
-      _fill.animateTo(fillTarget, curve: Curves.easeOutCubic);
+    if (fillTarget != 0.0 || _fill != null) {
+      final fill = _ensureFill();
+      if (_reduce || onMount) {
+        fill.value = fillTarget;
+      } else {
+        fill.animateTo(fillTarget, curve: Curves.easeOutCubic);
+      }
     }
 
     // Toque explícito.
     if (to == AppIconState.pressed) {
-      _reduce ? _press.value = 1 : _press.forward();
+      final press = _ensurePress();
+      _reduce ? press.value = 1 : press.forward();
     } else if (from == AppIconState.pressed) {
-      _reduce ? _press.value = 0 : _press.reverse();
+      // Venía de pressed → el controller ya existe.
+      _reduce ? _press?.value = 0 : _press?.reverse();
     }
 
-    // Animaciones de una sola vez.
+    // Animaciones de una sola vez. En el PRIMER montaje no se reproducen (salvo
+    // `animateOnMount`): el color/estado final ya se ve estático, y así los
+    // badges de lista (success/error) no re-animan su tilde/sacudida cada vez
+    // que entran al viewport al scrollear (jank en gama baja). Solo animan
+    // cuando el estado cambia EN VIVO estando montados.
+    final playOnMount = !onMount || widget.animateOnMount;
     switch (to) {
-      case AppIconState.active
-          when from != AppIconState.pressed &&
-              (!onMount || widget.animateOnMount):
+      case AppIconState.active when from != AppIconState.pressed && playOnMount:
         _play(_Shot.activate);
-      case AppIconState.success when from != AppIconState.success:
+      case AppIconState.success
+          when from != AppIconState.success && playOnMount:
         _play(_Shot.success);
-      case AppIconState.error when from != AppIconState.error:
+      case AppIconState.error when from != AppIconState.error && playOnMount:
         _play(_Shot.error);
       case AppIconState.idle when onMount && widget.animateOnMount:
         _play(_Shot.activate);
@@ -208,32 +257,45 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
     }
     _breaths++;
     if (_breaths < _kBreathCycles) {
-      _loop.forward(from: 0);
+      _loop?.forward(from: 0);
     } else {
-      _loop.value = 0;
+      _loop?.value = 0;
     }
   }
 
   void _play(_Shot shot) {
     _shot = shot;
+    // Reduce motion: el dibujo estático ya está en el valor final (acción=1);
+    // no se crea el controller solo para fijarlo.
     if (_reduce) {
-      _action.value = 1;
+      _action?.value = 1;
       return;
     }
-    _action.duration = switch (shot) {
+    final action = _ensureAction();
+    action.duration = switch (shot) {
       _Shot.activate => _spec.duration,
       _Shot.success => const Duration(milliseconds: 500),
       _Shot.error => const Duration(milliseconds: 360),
     };
-    _action.forward(from: 0);
+    action.forward(from: 0);
   }
 
   void _settle() {
-    _action.value = 1;
-    _loop.stop();
-    _loop.value = 0;
-    _press.value = widget.state == AppIconState.pressed ? 1 : 0;
-    _fill.value = widget.state == AppIconState.active ? 1 : 0;
+    _action?.value = 1;
+    _loop?.stop();
+    _loop?.value = 0;
+    // Estados finales que necesitan un controller en su valor fijo: se crean
+    // solo si corresponde; idle/no-activo no crea nada (default 0).
+    if (widget.state == AppIconState.pressed) {
+      _ensurePress().value = 1;
+    } else {
+      _press?.value = 0;
+    }
+    if (widget.state == AppIconState.active) {
+      _ensureFill().value = 1;
+    } else {
+      _fill?.value = 0;
+    }
   }
 
   Duration _loopDuration(IconLoop loop) => switch (loop) {
@@ -248,10 +310,13 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
 
   @override
   void dispose() {
-    _action.dispose();
-    _loop.dispose();
-    _press.dispose();
-    _fill.dispose();
+    // El grupo PRIMERO (saca sus listeners de los controllers aún vivos), luego
+    // los controllers que se hayan creado.
+    _repaint.dispose();
+    _action?.dispose();
+    _loop?.dispose();
+    _press?.dispose();
+    _fill?.dispose();
     super.dispose();
   }
 
@@ -259,12 +324,15 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
 
   void _down(PointerDownEvent event) {
     _downAt = event.position;
-    if (!_reduce && widget.state != AppIconState.pressed) _press.forward();
+    if (!_reduce && widget.state != AppIconState.pressed) {
+      _ensurePress().forward();
+    }
   }
 
   void _up(PointerEvent event) {
     if (widget.state == AppIconState.pressed) return;
-    _reduce ? _press.value = 0 : _press.reverse();
+    // Si no se creó el press (reduce o nunca tocado), no hay nada que revertir.
+    _reduce ? _press?.value = 0 : _press?.reverse();
     // Un toque (no un arrastre de scroll) "ejecuta" la animación completa.
     final moved = _downAt == null
         ? double.infinity
@@ -326,13 +394,13 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
             repaint: _repaint,
             frame: () => _Frame(
               shot: _shot,
-              t: _action.value,
-              running: _action.isAnimating || _action.value < 1,
-              loopT: _loop.value,
-              looping: _loop.isAnimating,
+              t: _actionT,
+              running: _actionRunning,
+              loopT: _loopT,
+              looping: _looping,
               breathing: widget.ambient && widget.state != AppIconState.loading,
-              press: _press.value,
-              fill: _fill.value,
+              press: _pressV,
+              fill: _fillV,
               state: widget.state,
             ),
             color: base.withValues(alpha: base.a * opacity),
@@ -363,6 +431,28 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
       excludeSemantics: true,
       child: child,
     );
+  }
+}
+
+/// `Listenable` con membresía dinámica: el pintor lo escucha una sola vez y
+/// repinta cuando cualquiera de los controllers agregados (perezosamente)
+/// notifica. Evita rearmar un `Listenable.merge` o llamar `setState` cada vez
+/// que un ícono crea su primer controller.
+class _RepaintGroup extends ChangeNotifier {
+  final List<Listenable> _members = <Listenable>[];
+
+  void add(Listenable l) {
+    _members.add(l);
+    l.addListener(notifyListeners);
+  }
+
+  @override
+  void dispose() {
+    for (final m in _members) {
+      m.removeListener(notifyListeners);
+    }
+    _members.clear();
+    super.dispose();
   }
 }
 
