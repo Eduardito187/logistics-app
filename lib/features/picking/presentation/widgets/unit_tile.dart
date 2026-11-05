@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/emitted_label.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
-import 'button_spinner.dart';
 
 /// Fila de una unidad del pedido: SKU, bulto y estado, con la acción de escanear
 /// e imprimir (si está pendiente) o reimprimir (si ya está preparada).
@@ -60,9 +60,9 @@ class UnitTile extends StatelessWidget {
                   ? const StatusPill(
                       'Preparada',
                       tone: PillTone.success,
-                      icon: Icons.check,
+                      icon: AppIcon.check,
                     )
-                  : const StatusPill('Pendiente', icon: Icons.schedule);
+                  : const StatusPill('Pendiente', icon: AppIcon.pending);
               // Angosto (teléfono chico, letra grande, columna de tablet): el
               // estado va debajo y el SKU usa todo el ancho.
               if (constraints.maxWidth < _stackBelow) {
@@ -84,15 +84,21 @@ class UnitTile extends StatelessWidget {
           if (prepared)
             OutlinedButton.icon(
               onPressed: busy ? null : onReprint,
-              icon: busy ? const ButtonSpinner() : const Icon(Icons.print),
+              // Mientras reimprime, la hoja sale de la impresora.
+              icon: AnimatedAppIcon(
+                AppIcon.printing,
+                state: busy ? AppIconState.loading : AppIconState.idle,
+              ),
               label: const Text('Reimprimir etiqueta'),
             )
           else
             FilledButton.icon(
               onPressed: busy ? null : onPrepare,
-              icon: busy
-                  ? const ButtonSpinner()
-                  : const Icon(Icons.qr_code_scanner),
+              // Mientras registra el escaneo, el láser barre el marco.
+              icon: AnimatedAppIcon(
+                AppIcon.scan,
+                state: busy ? AppIconState.loading : AppIconState.idle,
+              ),
               label: const Text('Escanear EAN e imprimir'),
             ),
         ],

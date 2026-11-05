@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/icons/icons.dart';
 import 'widgets/carrier_guard.dart';
 import 'widgets/tariff_form.dart';
 
@@ -16,12 +17,12 @@ class CarrierTariffScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Asignación por volumen',
-            icon: const Icon(Icons.local_shipping),
+            icon: const AnimatedAppIcon(AppIcon.deliver),
             onPressed: () => context.push('/carrier/assignment'),
           ),
           IconButton(
             tooltip: 'Tarifa más barata',
-            icon: const Icon(Icons.savings),
+            icon: const AnimatedAppIcon(AppIcon.savings),
             onPressed: () => context.push('/carrier/tariff/cheapest'),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
 import '../../../core/brand/distrack_app_bar_logo.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/navigation/app_nav.dart';
@@ -92,7 +93,7 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
             actions: [
               IconButton(
                 tooltip: 'Cerrar sesión',
-                icon: const Icon(Icons.logout),
+                icon: const AnimatedAppIcon(AppIcon.logout),
                 onPressed: () => ref.read(sessionProvider.notifier).signOut(),
               ),
               SizedBox(width: sidePadding - 4),
@@ -114,7 +115,7 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
                     HeroTaskCard(
                       title: hero.label,
                       subtitle: hero.subtitle,
-                      icon: hero.icon,
+                      appIcon: hero.appIcon,
                       statusLabel: 'Acción principal',
                       // Es la pestaña central: cambiá a ella en vez de redirigir.
                       onTap: () => ref.read(homeTabProvider.notifier).set(2),
@@ -138,7 +139,7 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
               child: Padding(
                 padding: EdgeInsets.only(top: 24),
                 child: EmptyState(
-                  icon: Icons.inbox_outlined,
+                  icon: AppIcon.inbox,
                   title: 'Todo en orden',
                   message: 'No hay flujos disponibles para este rol todavía.',
                 ),
@@ -160,7 +161,7 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
                   return BigActionTile(
                     label: task.label,
                     subtitle: task.subtitle,
-                    icon: task.icon,
+                    appIcon: task.appIcon,
                     accent: task.accent,
                     onTap: () => context.push(task.route),
                   );

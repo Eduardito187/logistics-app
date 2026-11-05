@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
@@ -82,7 +83,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanUnit,
-                    icon: const Icon(Icons.qr_code_scanner),
+                    icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
                       _unitId == null ? 'Escanear bulto' : 'Reescanear',
                     ),
@@ -121,13 +122,13 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanConfirmation,
-                    icon: const Icon(Icons.qr_code),
+                    icon: const AnimatedAppIcon(AppIcon.qrCode),
                     label: const Text('Escanear QR del cliente'),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _sign,
-                    icon: const Icon(Icons.draw),
+                    icon: const AnimatedAppIcon(AppIcon.signature),
                     label: Text(
                       _signature == null
                           ? 'Firma del cliente'
@@ -148,7 +149,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
+                    icon: const AnimatedAppIcon(AppIcon.capture),
                     label: Text(
                       _photo == null ? 'Tomar foto' : 'Volver a tomar',
                     ),
@@ -159,7 +160,10 @@ class _PodScreenState extends ConsumerState<PodScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: ready && !_busy ? _register : null,
-              icon: const Icon(Icons.check_circle),
+              icon: AnimatedAppIcon(
+                AppIcon.success,
+                state: _busy ? AppIconState.loading : AppIconState.idle,
+              ),
               label: const Text('Registrar entrega'),
             ),
           ],

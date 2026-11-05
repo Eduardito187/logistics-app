@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <rect class="ds-p-fill" x="4.5" y="10.5" width="15" height="10.5" rx="2"/>
+  <path d="M12 14.6v2.6"/>
+  <path class="ds-accent ds-p-shackle" d="M8 10.5V7.4a4 4 0 0 1 8 0v3.1"/>
+</svg>

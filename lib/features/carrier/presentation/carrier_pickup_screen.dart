@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/scan_request.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/offline/submit_outcome.dart';
 import '../../../core/scanning/scanner_screen.dart';
@@ -110,10 +111,10 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
       appBar: AppBar(title: const Text('Escanear al recoger')),
       body: CarrierScanSessionView(
         records: _records,
-        emptyIcon: Icons.upload_file,
+        emptyIcon: AppIcon.pickupScan,
         emptyTitle: 'Sin bultos recogidos',
         emptyMessage: 'Escanea la etiqueta de cada bulto al cargarlo.',
-        rowIcon: Icons.inventory_2_outlined,
+        rowIcon: AppIcon.receive,
         actionLabel: 'Escanear bulto',
         busy: _busy,
         onAction: _scan,

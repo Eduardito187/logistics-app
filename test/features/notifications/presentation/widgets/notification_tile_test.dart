@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logistics_app/core/api/models/message_type.dart';
 import 'package:logistics_app/core/api/models/notification_status.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/notifications/presentation/widgets/notification_tile.dart';
 
+import '../../../../support/app_icon_finders.dart';
 import '../../support/notification_fixtures.dart';
 
 // NotificationTile: tipo de mensaje, envío de referencia (external id si existe,
@@ -44,7 +46,7 @@ void main() {
     expect(find.text('En ruta'), findsOneWidget); // tipo
     expect(find.text('Envío EXT-9'), findsOneWidget); // prefiere la externa
     expect(find.text('En cola'), findsOneWidget); // pastilla de estado
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(findAppIcon(AppIcon.chevronRight), findsOneWidget);
   });
 
   testWidgets('sin referencia externa usa el id del envío', (tester) async {

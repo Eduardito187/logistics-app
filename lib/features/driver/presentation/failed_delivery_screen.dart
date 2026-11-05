@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
@@ -62,7 +63,7 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanUnit,
-                    icon: const Icon(Icons.qr_code_scanner),
+                    icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
                       _unitId == null ? 'Escanear bulto' : 'Reescanear',
                     ),
@@ -102,7 +103,7 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
+                    icon: const AnimatedAppIcon(AppIcon.capture),
                     label: Text(
                       _photo == null ? 'Tomar foto' : 'Volver a tomar',
                     ),
@@ -114,7 +115,10 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: ready && !_busy ? _register : null,
-              icon: const Icon(Icons.cancel),
+              icon: AnimatedAppIcon(
+                AppIcon.cancel,
+                state: _busy ? AppIconState.loading : AppIconState.idle,
+              ),
               label: const Text('Registrar entrega fallida'),
             ),
           ],

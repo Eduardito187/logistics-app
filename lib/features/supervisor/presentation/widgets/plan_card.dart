@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/plan.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../supervisor_labels.dart';
@@ -37,9 +38,9 @@ class PlanCard extends ConsumerWidget {
             spacing: 16,
             runSpacing: 6,
             children: [
-              _IconText(icon: Icons.pin_drop, text: '${stops.length} paradas'),
+              _IconText(icon: AppIcon.place, text: '${stops.length} paradas'),
               _IconText(
-                icon: Icons.schedule,
+                icon: AppIcon.pending,
                 text: lastEta == null
                     ? 'ETA final: —'
                     : 'ETA final: ${formatHour(lastEta)}',
@@ -56,7 +57,7 @@ class PlanCard extends ConsumerWidget {
 class _IconText extends StatelessWidget {
   const _IconText({required this.icon, required this.text});
 
-  final IconData icon;
+  final AppIcon icon;
   final String text;
 
   @override
@@ -64,7 +65,7 @@ class _IconText extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18),
+        AnimatedAppIcon(icon, size: 18, excludeFromSemantics: true),
         const SizedBox(width: 6),
         Flexible(child: Text(text)),
       ],

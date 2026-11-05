@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -82,7 +83,10 @@ class PickupConfirmationCard extends StatelessWidget {
             controller: controller,
             onChanged: onChanged,
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.badge_outlined),
+              prefixIcon: AnimatedAppIcon(
+                AppIcon.badge,
+                excludeFromSemantics: true,
+              ),
               labelText: 'QR del cliente o documento',
               hintText: 'Escanea o escribe la confirmación',
             ),
@@ -90,7 +94,10 @@ class PickupConfirmationCard extends StatelessWidget {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: onScan,
-            icon: const Icon(Icons.qr_code_scanner),
+            icon: const AnimatedAppIcon(
+              AppIcon.scan,
+              excludeFromSemantics: true,
+            ),
             label: const Text('Escanear QR del cliente'),
           ),
         ],
@@ -134,7 +141,13 @@ class PickupPhotoCard extends StatelessWidget {
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => const SizedBox(
                   height: 160,
-                  child: Center(child: Icon(Icons.image_outlined, size: 48)),
+                  child: Center(
+                    child: AnimatedAppIcon(
+                      AppIcon.image,
+                      size: 48,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -147,14 +160,19 @@ class PickupPhotoCard extends StatelessWidget {
                 child: StatusPill(
                   'Foto guardada',
                   tone: PillTone.success,
-                  icon: Icons.check_circle,
+                  icon: AppIcon.success,
+                  // El check se dibuja con pop cuando la foto queda guardada.
+                  iconState: AppIconState.success,
                 ),
               ),
             ),
           ],
           OutlinedButton.icon(
             onPressed: busy ? null : onTakePhoto,
-            icon: const Icon(Icons.photo_camera),
+            icon: const AnimatedAppIcon(
+              AppIcon.capture,
+              excludeFromSemantics: true,
+            ),
             label: Text(photo == null ? 'Tomar foto' : 'Volver a tomar'),
           ),
         ],

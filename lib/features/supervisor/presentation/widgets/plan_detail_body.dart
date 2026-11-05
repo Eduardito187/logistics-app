@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/plan.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -59,7 +60,7 @@ class PlanDetailBody extends StatelessWidget {
           child: StatTile(
             value: '${stops.length}',
             label: 'Paradas',
-            icon: Icons.pin_drop,
+            icon: AppIcon.place,
           ),
         ),
         const SizedBox(width: 12),
@@ -67,7 +68,7 @@ class PlanDetailBody extends StatelessWidget {
           child: StatTile(
             value: finalEta == null ? '—' : formatHour(finalEta),
             label: 'ETA final',
-            icon: Icons.schedule,
+            icon: AppIcon.pending,
             color: AppColors.info,
           ),
         ),

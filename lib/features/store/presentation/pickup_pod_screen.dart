@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/shipment.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
@@ -111,7 +112,13 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                 onPressed: !_hasConfirmation || _busy || !unitsLoaded
                     ? null
                     : _scanAndDeliver,
-                icon: const Icon(Icons.qr_code_scanner),
+                // _busy solo cubre la ráfaga de escaneo: barrido mientras la
+                // cámara está abierta.
+                icon: AnimatedAppIcon(
+                  AppIcon.scan,
+                  state: _busy ? AppIconState.loading : AppIconState.idle,
+                  excludeFromSemantics: true,
+                ),
                 label: const Text('Escanear y entregar producto'),
               ),
             ),

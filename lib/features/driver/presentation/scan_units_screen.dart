@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/offline/offline_queue.dart';
@@ -86,7 +87,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                   ? const Center(
                       child: SingleChildScrollView(
                         child: EmptyState(
-                          icon: Icons.qr_code_scanner,
+                          icon: AppIcon.scan,
                           title: 'Sin bultos',
                           message: 'Escanea el primer bulto para empezar.',
                         ),
@@ -121,7 +122,13 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                           minimumSize: const Size.fromHeight(56),
                         ),
                         onPressed: _busy ? null : _scanSession,
-                        icon: const Icon(Icons.qr_code_scanner),
+                        // Láser en loop mientras la cámara continua está abierta.
+                        icon: AnimatedAppIcon(
+                          AppIcon.scan,
+                          state: _busy
+                              ? AppIconState.loading
+                              : AppIconState.idle,
+                        ),
                         label: Text(
                           _isLoad
                               ? 'Escanear bulto para cargar'
@@ -272,7 +279,12 @@ class _ScannedTile extends StatelessWidget {
     final failed = item.outcome == SubmitOutcome.failed;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.inventory_2),
+      // Resultado de cada lectura: tilde o sacudida al aparecer la fila.
+      leading: AnimatedAppIcon(
+        AppIcon.receive,
+        key: ValueKey((item.unitId, item.outcome)),
+        state: failed ? AppIconState.error : AppIconState.success,
+      ),
       title: CodeText(
         item.unitId,
         maxLines: 2,

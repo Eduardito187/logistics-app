@@ -24,4 +24,10 @@ El 2026-10-14 una build colgó **todo el equipo** ~20 min (VmmemWSL ~15 GB, CPU 
 - **Extensiones PHP de VS Code** (`devsense.php.ls` ~1.3 GB, `intelliphp`) corriendo en el workspace Flutter: **se re-lanzan solas** si solo se matan. Fix real: deshabilitarlas en el workspace (Extensiones → DEVSENSE → Disable Workspace).
 - **VmmemWSL no baja aunque Linux libere RAM**: WSL2 no la devuelve a Windows solo. Agregado `[experimental] autoMemoryReclaim=gradual` en `.wslconfig`. El número en Windows solo baja de verdad con `wsl --shutdown` (aplica cap + reclaim; también desconecta el teléfono usbipd).
 
+**Incidente 2026-10-26 (Flutter, no Gradle):** 8 agentes en paralelo corriendo `flutter analyze` + `flutter test` a la vez llevaron VmmemWSL al tope (8,9/10 GB) → WSL colgado ~20 min y VS Code en "Starting Linux Subsystem". Fixes:
+- **Nunca** más de UN `flutter test`/`flutter analyze` a la vez en todo el equipo (los agentes NO corren Flutter; lo corre el coordinador o el dueño, uno por vez). El dueño pidió explícitamente que nadie ejecute Flutter sin su pedido.
+- `dart_test.yaml` en la raíz con `concurrency: 2` (tope de procesos de `flutter test`).
+- `.wslconfig` → `autoMemoryReclaim=dropCache` (con `gradual` la caché de disco quedó retenida en Windows).
+- Liberar RAM al instante SIN `wsl --shutdown` (no tumba Docker): `wsl -d Ubuntu-22.04 -u root -- sh -c "sync; echo 3 > /proc/sys/vm/drop_caches; echo 1 > /proc/sys/vm/compact_memory"` → VmmemWSL bajó de 8,9 GB a 2,2 GB.
+
 Ver [[wsl-run-toolchain]].

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/status_pill.dart';
+import '../../../../core/icons/icons.dart';
 import '../../domain/entities/due_maintenance_urgency.dart';
 
 /// Chip de urgencia de un mantenimiento por vencer.
@@ -15,17 +16,17 @@ class UrgencyPill extends StatelessWidget {
       DueMaintenanceUrgency.overdue => (
         'Vencido',
         PillTone.danger,
-        Icons.error,
+        AppIcon.error,
       ),
       DueMaintenanceUrgency.dueSoon => (
         'Por vencer',
         PillTone.warning,
-        Icons.schedule,
+        AppIcon.pending,
       ),
       DueMaintenanceUrgency.scheduled => (
         'Programado',
         PillTone.info,
-        Icons.event_available,
+        AppIcon.myDay,
       ),
     };
     return StatusPill(label, tone: tone, icon: icon);

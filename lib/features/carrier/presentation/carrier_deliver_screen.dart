@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/proof_of_delivery_request.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/offline/submit_outcome.dart';
 import '../../../core/scanning/scanner_screen.dart';
@@ -130,11 +131,11 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
       appBar: AppBar(title: const Text('Escanear al entregar')),
       body: CarrierScanSessionView(
         records: _records,
-        emptyIcon: Icons.task_alt,
+        emptyIcon: AppIcon.deliverScan,
         emptyTitle: 'Sin entregas registradas',
         emptyMessage:
             'Escanea el bulto y el QR del cliente para registrar la entrega.',
-        rowIcon: Icons.check_circle_outline,
+        rowIcon: AppIcon.success,
         actionLabel: 'Registrar entrega',
         busy: _busy,
         onAction: _deliver,

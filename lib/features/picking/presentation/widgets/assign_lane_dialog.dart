@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/scanning/scanner_screen.dart';
 
 /// Diálogo para asignar/cambiar el carril o vehículo de carga. Devuelve el valor
@@ -59,14 +60,14 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               hintText: 'Ej. Carril 3 / ABC-123',
-              prefixIcon: Icon(Icons.alt_route),
+              prefixIcon: AnimatedAppIcon(AppIcon.plans),
             ),
             onSubmitted: (_) => _save(),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _scan,
-            icon: const Icon(Icons.qr_code_scanner),
+            icon: const AnimatedAppIcon(AppIcon.scan),
             label: const Text('Escanear'),
           ),
         ],

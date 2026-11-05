@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -32,18 +33,15 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
       actions: [
         IconButton(
           tooltip: 'Armar ruta del día',
-          icon: _assembling
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.playlist_add_check),
+          icon: AnimatedAppIcon(
+            AppIcon.checklist,
+            state: _assembling ? AppIconState.loading : AppIconState.idle,
+          ),
           onPressed: _assembling ? null : _assembleDailyRoute,
         ),
         IconButton(
           tooltip: _showMap ? 'Ver lista' : 'Ver mapa',
-          icon: Icon(_showMap ? Icons.list : Icons.map),
+          icon: AnimatedAppIcon(_showMap ? AppIcon.orders : AppIcon.map),
           onPressed: () => setState(() => _showMap = !_showMap),
         ),
       ],
@@ -55,12 +53,12 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
           data: (data) {
             if (data.stops.isEmpty) {
               return EmptyState(
-                icon: Icons.route,
+                icon: AppIcon.route,
                 title: 'Sin paradas',
                 message: 'Esta ruta todavía no tiene paradas asignadas.',
                 action: FilledButton.icon(
                   onPressed: _assembling ? null : _assembleDailyRoute,
-                  icon: const Icon(Icons.playlist_add_check),
+                  icon: const AnimatedAppIcon(AppIcon.checklist),
                   label: const Text('Armar ruta del día'),
                 ),
               );

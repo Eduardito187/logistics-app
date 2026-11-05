@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'devices_screen.dart';
 import 'settings_screen.dart';
@@ -23,7 +23,7 @@ const List<RoleTask> settingsTasks = [
   RoleTask(
     id: 'settings',
     label: 'Ajustes',
-    icon: Icons.settings,
+    appIcon: AppIcon.settings,
     route: '/settings',
     roles: {
       UserRole.driver,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Mosaico de métrica: número grande + etiqueta, con ícono y color opcionales.
 Future<void> _pump(WidgetTester tester, Widget w) {
@@ -16,7 +19,7 @@ void main() {
 
   testWidgets('sin icono no renderiza Icon', (tester) async {
     await _pump(tester, const StatTile(value: '0', label: 'x'));
-    expect(find.byType(Icon), findsNothing);
+    expect(find.byType(AnimatedAppIcon), findsNothing);
   });
 
   testWidgets('con icono lo renderiza', (tester) async {
@@ -25,11 +28,11 @@ void main() {
       const StatTile(
         value: '3',
         label: 'Fallidas',
-        icon: Icons.warning,
+        icon: AppIcon.incident,
         color: Colors.red,
       ),
     );
-    expect(find.byIcon(Icons.warning), findsOneWidget);
+    expect(findAppIcon(AppIcon.incident), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/empty_state.dart';
 import 'button_spinner.dart';
@@ -31,7 +32,7 @@ class PreparationEmptyBody extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               children: const [
                 EmptyState(
-                  icon: Icons.label_off,
+                  icon: AppIcon.labelOff,
                   title: 'Sin etiquetas vigentes',
                   message:
                       'Este pedido todavía no tiene etiquetas emitidas para '
@@ -45,7 +46,9 @@ class PreparationEmptyBody extends StatelessWidget {
             minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: FilledButton.icon(
               onPressed: busy ? null : onEmit,
-              icon: busy ? const ButtonSpinner() : const Icon(Icons.new_label),
+              icon: busy
+                  ? const ButtonSpinner()
+                  : const AnimatedAppIcon(AppIcon.newLabel),
               label: const Text('Emitir etiquetas'),
             ),
           ),

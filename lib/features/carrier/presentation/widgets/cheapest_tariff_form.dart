@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/corridor_type.dart';
 import '../../../../core/api/models/tariff.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/network/api_exception.dart';
@@ -106,7 +107,13 @@ class _CheapestTariffFormState extends ConsumerState<CheapestTariffForm> {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: _query,
-                    icon: const Icon(Icons.savings),
+                    // En acción: loop mientras se consulta.
+                    icon: AnimatedAppIcon(
+                      AppIcon.savings,
+                      state: _result is AsyncLoading
+                          ? AppIconState.loading
+                          : AppIconState.idle,
+                    ),
                     label: const Text('Buscar más barata'),
                   ),
                 ),

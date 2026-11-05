@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Tarjeta "héroe" del inicio: la acción principal del rol, grande y vistosa.
@@ -14,7 +15,7 @@ class HeroTaskCard extends StatefulWidget {
     super.key,
     required this.title,
     this.subtitle,
-    required this.icon,
+    required this.appIcon,
     required this.onTap,
     this.statusLabel,
     this.actionLabel = 'Abrir',
@@ -22,7 +23,10 @@ class HeroTaskCard extends StatefulWidget {
 
   final String title;
   final String? subtitle;
-  final IconData icon;
+
+  /// Ícono animado DisTrack de la acción. Al aparecer la tarjeta "ejecuta" su
+  /// movimiento y queda activo (relleno).
+  final AppIcon appIcon;
   final VoidCallback onTap;
 
   /// Etiqueta de estado opcional (p. ej. "En curso") en una pastilla clara.
@@ -95,10 +99,13 @@ class _HeroTaskCardState extends State<HeroTaskCard>
           Positioned(
             top: -8,
             right: -8,
-            child: Icon(
-              widget.icon,
+            child: AnimatedAppIcon(
+              widget.appIcon,
+              state: AppIconState.active,
+              animateOnMount: true,
               size: 96,
               color: Colors.white.withValues(alpha: 0.15),
+              excludeFromSemantics: true,
             ),
           ),
           Column(
@@ -161,10 +168,11 @@ class _HeroTaskCardState extends State<HeroTaskCard>
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.arrow_forward_rounded,
+                    child: const AnimatedAppIcon(
+                      AppIcon.arrowForward,
                       color: AppColors.brand,
                       size: 28,
+                      excludeFromSemantics: true,
                     ),
                   ),
                 ],

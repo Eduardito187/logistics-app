@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-map" d="M7 15H5l-2 6h18l-2-6h-2"/>
+  <path class="ds-p-fill ds-p-pin" d="M12 18s-5.5-4.6-5.5-9a5.5 5.5 0 0 1 11 0c0 4.4-5.5 9-5.5 9z"/>
+  <circle class="ds-accent ds-p-blip" cx="12" cy="9" r=".6"/>
+</svg>

@@ -7,6 +7,7 @@ import 'package:logistics_app/core/widgets/empty_state.dart';
 import 'package:logistics_app/core/widgets/section_card.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
 import 'package:logistics_app/core/widgets/status_pill.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 // Lectores de pantalla en los widgets compartidos: pastilla "Estado: X",
 // métrica "etiqueta: valor" en un nodo, títulos como encabezados, ícono
@@ -52,7 +53,7 @@ void main() {
         mainAxisSize: MainAxisSize.min,
         children: [
           SectionCard(title: 'Impresora', child: Text('Zebra')),
-          EmptyState(icon: Icons.inbox, title: 'Sin pedidos'),
+          EmptyState(icon: AppIcon.inbox, title: 'Sin pedidos'),
         ],
       ),
     );

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/button_spinner.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
 import '../../picking_test_harness.dart';
+import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
 // Fila de una unidad del pedido. Pendiente → "Escanear EAN e imprimir";
@@ -86,7 +87,11 @@ void main() {
   testWidgets('busy deshabilita el botón y muestra el spinner', (tester) async {
     final taps = await _pump(tester, prepared: false, busy: true);
 
-    expect(find.byType(ButtonSpinner), findsOneWidget);
+    // Mientras registra el escaneo, el láser del ícono de escaneo barre.
+    expect(
+      findAppIconInState(AppIcon.scan, AppIconState.loading),
+      findsOneWidget,
+    );
     final btn = tester.widget<FilledButton>(
       findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
     );

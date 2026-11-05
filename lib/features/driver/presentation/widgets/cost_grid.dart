@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../driver_common.dart';
@@ -23,7 +24,7 @@ class CostGrid extends StatelessWidget {
       StatTile(
         value: formatMoneyCents(summary.totalCents, currency),
         label: 'Costo total',
-        icon: Icons.payments,
+        icon: AppIcon.payments,
         color: AppColors.brand,
       ),
       StatTile(
@@ -31,30 +32,30 @@ class CostGrid extends StatelessWidget {
             ? '—'
             : formatMoneyCents(summary.costPerKmCents!, currency),
         label: 'Costo por km',
-        icon: Icons.speed,
+        icon: AppIcon.speed,
         color: AppColors.info,
       ),
       StatTile(
         value: formatMoneyCents(summary.fuelCents, currency),
         label: 'Combustible',
-        icon: Icons.local_gas_station,
+        icon: AppIcon.fuel,
         color: AppColors.warning,
       ),
       StatTile(
         value: formatMoneyCents(summary.maintenanceCents, currency),
         label: 'Mantenimiento',
-        icon: Icons.build,
+        icon: AppIcon.build,
         color: AppColors.success,
       ),
       StatTile(
         value: formatMoneyCents(summary.expensesCents, currency),
         label: 'Otros gastos',
-        icon: Icons.receipt_long,
+        icon: AppIcon.settle,
       ),
       StatTile(
         value: '${summary.kilometers} km',
         label: 'Recorrido',
-        icon: Icons.route,
+        icon: AppIcon.route,
         color: AppColors.brandDark,
       ),
     ];

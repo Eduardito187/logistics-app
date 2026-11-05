@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
 import '../navigation/app_nav.dart';
 import '../theme/app_colors.dart';
 
@@ -30,7 +31,9 @@ class FloatingPillNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   final String centerLabel;
-  final IconData centerIcon;
+
+  /// Ícono animado de la acción estrella del rol (cambia según el rol).
+  final AppIcon centerIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +172,14 @@ class _NavItem extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  selected ? tab.activeIcon : tab.icon,
+                // Ícono DisTrack animado: al seleccionarse se dibuja y rellena
+                // con su metáfora (techo, celdas, campana, persona).
+                child: AnimatedAppIcon(
+                  tab.appIcon,
+                  state: selected ? AppIconState.active : AppIconState.idle,
                   size: 22,
                   color: selected ? activeColor : muted,
+                  excludeFromSemantics: true,
                 ),
               ),
             ),
@@ -207,7 +214,7 @@ class _CenterButton extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final AppIcon icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -251,7 +258,20 @@ class _CenterButton extends StatelessWidget {
               child: SizedBox(
                 width: 56,
                 height: 56,
-                child: Icon(icon, color: Colors.white, size: 28),
+                // Acción estrella del rol: respira en reposo (invita al toque)
+                // y ejecuta su metáfora al seleccionarse.
+                child: Center(
+                  child: AnimatedAppIcon(
+                    icon,
+                    state: selected ? AppIconState.active : AppIconState.idle,
+                    size: 28,
+                    color: Colors.white,
+                    // Sobre el rojo del botón, el resalte al tocar es Noche.
+                    highlightColor: AppColors.nightBg,
+                    ambient: true,
+                    excludeFromSemantics: true,
+                  ),
+                ),
               ),
             ),
           ),

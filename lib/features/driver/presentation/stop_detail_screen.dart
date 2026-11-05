@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 
 import '../../../core/api/export.dart';
@@ -45,15 +46,15 @@ class StopDetailScreen extends ConsumerWidget {
                 children: [
                   if (stop.orderReference != null)
                     InfoRow(
-                      icon: Icons.receipt_long,
+                      icon: AppIcon.settle,
                       text: stop.orderReference!,
                       mono: true,
                     ),
                   if (stop.address != null)
-                    InfoRow(icon: Icons.place, text: stop.address!),
+                    InfoRow(icon: AppIcon.place, text: stop.address!),
                   if (stop.etaAt != null)
                     InfoRow(
-                      icon: Icons.schedule,
+                      icon: AppIcon.pending,
                       text: 'ETA ${formatTime(stop.etaAt!)}',
                     ),
                   const SizedBox(height: 8),
@@ -77,7 +78,7 @@ class StopDetailScreen extends ConsumerWidget {
                 height: 64,
                 child: FilledButton.icon(
                   onPressed: () => _navigate(context),
-                  icon: const Icon(Icons.navigation, size: 28),
+                  icon: const AnimatedAppIcon(AppIcon.navigation, size: 28),
                   label: const Text(
                     'Navegar',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
@@ -87,7 +88,7 @@ class StopDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => _openMap(context),
-                icon: const Icon(Icons.map),
+                icon: const AnimatedAppIcon(AppIcon.map),
                 label: const Text('Ver en el mapa'),
               ),
             ],
@@ -105,7 +106,7 @@ class StopDetailScreen extends ConsumerWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.download),
+              icon: const AnimatedAppIcon(AppIcon.download),
               label: const Text('Descargar bultos'),
             ),
             const SizedBox(height: 12),
@@ -117,7 +118,7 @@ class StopDetailScreen extends ConsumerWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.check_circle),
+              icon: const AnimatedAppIcon(AppIcon.success),
               label: const Text('Entregado (prueba de entrega)'),
             ),
             const SizedBox(height: 12),
@@ -132,7 +133,7 @@ class StopDetailScreen extends ConsumerWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.cancel),
+              icon: const AnimatedAppIcon(AppIcon.cancel),
               label: const Text('Entrega fallida'),
             ),
           ],

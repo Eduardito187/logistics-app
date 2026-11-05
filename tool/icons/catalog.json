@@ -1,0 +1,1009 @@
+[
+ {
+  "name": "home",
+  "materials": [
+   "home_outlined",
+   "home_rounded"
+  ],
+  "label": "Inicio",
+  "lot": "nav",
+  "hero": true,
+  "ref": "home"
+ },
+ {
+  "name": "tasks",
+  "materials": [
+   "grid_view_outlined",
+   "grid_view_rounded"
+  ],
+  "label": "Tareas",
+  "lot": "nav",
+  "hero": true,
+  "ref": "squares-2x2"
+ },
+ {
+  "name": "alerts",
+  "materials": [
+   "notifications_outlined",
+   "notifications_rounded",
+   "notifications_none"
+  ],
+  "label": "Avisos",
+  "lot": "nav",
+  "hero": true,
+  "ref": "bell"
+ },
+ {
+  "name": "profile",
+  "materials": [
+   "person_outline_rounded",
+   "person_rounded",
+   "person_outline",
+   "account_circle"
+  ],
+  "label": "Perfil",
+  "lot": "nav",
+  "hero": true,
+  "ref": "user"
+ },
+ {
+  "name": "deliver",
+  "materials": [
+   "local_shipping",
+   "local_shipping_outlined"
+  ],
+  "label": "Entrega en curso",
+  "lot": "role",
+  "hero": true,
+  "ref": "truck"
+ },
+ {
+  "name": "route",
+  "materials": [
+   "route"
+  ],
+  "label": "Mi ruta de hoy",
+  "lot": "role",
+  "hero": false,
+  "ref": "map"
+ },
+ {
+  "name": "map",
+  "materials": [
+   "map",
+   "map_outlined"
+  ],
+  "label": "Mapa",
+  "lot": "role",
+  "hero": false,
+  "ref": "map"
+ },
+ {
+  "name": "myDay",
+  "materials": [
+   "today",
+   "calendar_today",
+   "event_available"
+  ],
+  "label": "Mi día",
+  "lot": "role",
+  "hero": false,
+  "ref": "calendar-days"
+ },
+ {
+  "name": "checklist",
+  "materials": [
+   "checklist",
+   "playlist_add_check",
+   "fact_check_outlined"
+  ],
+  "label": "Checklist",
+  "lot": "role",
+  "hero": false,
+  "ref": "clipboard-document-check"
+ },
+ {
+  "name": "load",
+  "materials": [
+   "upload"
+  ],
+  "label": "Carga del camión",
+  "lot": "role",
+  "hero": false,
+  "ref": "arrow-up-tray"
+ },
+ {
+  "name": "gps",
+  "materials": [
+   "my_location",
+   "gps_fixed",
+   "gps_not_fixed"
+  ],
+  "label": "Rastreo GPS",
+  "lot": "role",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "incident",
+  "materials": [
+   "report",
+   "report_outlined",
+   "report_problem_outlined",
+   "report_gmailerrorred",
+   "warning_amber_rounded",
+   "car_crash_outlined",
+   "assignment_late_outlined"
+  ],
+  "label": "Incidente",
+  "lot": "role",
+  "hero": false,
+  "ref": "exclamation-triangle"
+ },
+ {
+  "name": "vehicleSummary",
+  "materials": [
+   "insights"
+  ],
+  "label": "Resumen del vehículo",
+  "lot": "role",
+  "hero": false,
+  "ref": "chart-bar"
+ },
+ {
+  "name": "fuel",
+  "materials": [
+   "local_gas_station"
+  ],
+  "label": "Combustible",
+  "lot": "role",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "orders",
+  "materials": [
+   "list_alt",
+   "list"
+  ],
+  "label": "Pedidos",
+  "lot": "role",
+  "hero": false,
+  "ref": "clipboard-document-list"
+ },
+ {
+  "name": "scan",
+  "materials": [
+   "qr_code_scanner"
+  ],
+  "label": "Escanear",
+  "lot": "role",
+  "hero": true,
+  "ref": null
+ },
+ {
+  "name": "qrCode",
+  "materials": [
+   "qr_code_2",
+   "qr_code"
+  ],
+  "label": "Código QR",
+  "lot": "state",
+  "hero": false,
+  "ref": "qr-code"
+ },
+ {
+  "name": "receive",
+  "materials": [
+   "inventory_2",
+   "inventory_2_outlined",
+   "inventory"
+  ],
+  "label": "Recepción de mercadería",
+  "lot": "role",
+  "hero": true,
+  "ref": "cube"
+ },
+ {
+  "name": "pickupStore",
+  "materials": [
+   "storefront",
+   "store"
+  ],
+  "label": "Recojo en tienda",
+  "lot": "role",
+  "hero": false,
+  "ref": "building-storefront"
+ },
+ {
+  "name": "pickupScan",
+  "materials": [
+   "upload_file"
+  ],
+  "label": "Escanear al recoger",
+  "lot": "role",
+  "hero": true,
+  "ref": "document-plus"
+ },
+ {
+  "name": "deliverScan",
+  "materials": [
+   "task_alt"
+  ],
+  "label": "Escanear al entregar",
+  "lot": "role",
+  "hero": false,
+  "ref": "check-circle"
+ },
+ {
+  "name": "settle",
+  "materials": [
+   "receipt_long"
+  ],
+  "label": "Liquidaciones",
+  "lot": "role",
+  "hero": false,
+  "ref": "document-currency-dollar"
+ },
+ {
+  "name": "dashboard",
+  "materials": [
+   "dashboard"
+  ],
+  "label": "Tablero del día",
+  "lot": "role",
+  "hero": true,
+  "ref": "chart-bar-square"
+ },
+ {
+  "name": "fleet",
+  "materials": [],
+  "label": "Flota en vivo",
+  "lot": "role",
+  "hero": false,
+  "ref": "radar"
+ },
+ {
+  "name": "plans",
+  "materials": [
+   "alt_route"
+  ],
+  "label": "Rutas en curso",
+  "lot": "role",
+  "hero": false,
+  "ref": "arrows-right-left"
+ },
+ {
+  "name": "roleAlerts",
+  "materials": [
+   "notification_important",
+   "notifications_active"
+  ],
+  "label": "Alertas",
+  "lot": "role",
+  "hero": false,
+  "ref": "bell-alert"
+ },
+ {
+  "name": "success",
+  "materials": [
+   "check_circle",
+   "check_circle_outline"
+  ],
+  "label": "Listo",
+  "lot": "state",
+  "hero": false,
+  "ref": "check-circle"
+ },
+ {
+  "name": "check",
+  "materials": [
+   "check",
+   "done_all"
+  ],
+  "label": "Hecho",
+  "lot": "state",
+  "hero": false,
+  "ref": "check"
+ },
+ {
+  "name": "verified",
+  "materials": [
+   "verified",
+   "verified_user_outlined",
+   "shield_outlined"
+  ],
+  "label": "Verificado",
+  "lot": "state",
+  "hero": false,
+  "ref": "shield-check"
+ },
+ {
+  "name": "error",
+  "materials": [
+   "error",
+   "error_outline"
+  ],
+  "label": "Error",
+  "lot": "state",
+  "hero": false,
+  "ref": "exclamation-circle"
+ },
+ {
+  "name": "cancel",
+  "materials": [
+   "cancel",
+   "cancel_outlined",
+   "block"
+  ],
+  "label": "Rechazado",
+  "lot": "state",
+  "hero": false,
+  "ref": "x-circle"
+ },
+ {
+  "name": "pending",
+  "materials": [
+   "schedule",
+   "timer_outlined",
+   "hourglass_bottom",
+   "pending_actions"
+  ],
+  "label": "Pendiente",
+  "lot": "state",
+  "hero": false,
+  "ref": "clock"
+ },
+ {
+  "name": "syncing",
+  "materials": [
+   "sync",
+   "autorenew"
+  ],
+  "label": "Sincronizando",
+  "lot": "state",
+  "hero": false,
+  "ref": "arrow-path"
+ },
+ {
+  "name": "refresh",
+  "materials": [
+   "refresh",
+   "restart_alt"
+  ],
+  "label": "Actualizar",
+  "lot": "state",
+  "hero": false,
+  "ref": "arrow-path"
+ },
+ {
+  "name": "cloudDone",
+  "materials": [
+   "cloud_done"
+  ],
+  "label": "Sincronizado",
+  "lot": "state",
+  "hero": false,
+  "ref": "cloud"
+ },
+ {
+  "name": "cloudOff",
+  "materials": [
+   "cloud_off"
+  ],
+  "label": "Sin conexión",
+  "lot": "state",
+  "hero": false,
+  "ref": "cloud"
+ },
+ {
+  "name": "wifi",
+  "materials": [
+   "wifi"
+  ],
+  "label": "Wi-Fi",
+  "lot": "state",
+  "hero": false,
+  "ref": "signal"
+ },
+ {
+  "name": "wifiOff",
+  "materials": [
+   "wifi_off"
+  ],
+  "label": "Sin Wi-Fi",
+  "lot": "state",
+  "hero": false,
+  "ref": "signal"
+ },
+ {
+  "name": "place",
+  "materials": [
+   "place",
+   "location_on",
+   "location_on_outlined",
+   "pin_drop"
+  ],
+  "label": "Ubicación",
+  "lot": "state",
+  "hero": false,
+  "ref": "map-pin"
+ },
+ {
+  "name": "gpsOff",
+  "materials": [
+   "gps_off",
+   "location_off"
+  ],
+  "label": "Sin ubicación",
+  "lot": "state",
+  "hero": false,
+  "ref": "map-pin"
+ },
+ {
+  "name": "navigation",
+  "materials": [
+   "navigation",
+   "navigation_outlined"
+  ],
+  "label": "Navegación",
+  "lot": "state",
+  "hero": false,
+  "ref": "paper-airplane"
+ },
+ {
+  "name": "printing",
+  "materials": [
+   "print"
+  ],
+  "label": "Imprimir",
+  "lot": "state",
+  "hero": false,
+  "ref": "printer"
+ },
+ {
+  "name": "capture",
+  "materials": [
+   "photo_camera",
+   "camera_alt"
+  ],
+  "label": "Foto",
+  "lot": "state",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "cameraSwitch",
+  "materials": [
+   "cameraswitch"
+  ],
+  "label": "Cambiar cámara",
+  "lot": "state",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "image",
+  "materials": [
+   "image_outlined",
+   "broken_image_outlined"
+  ],
+  "label": "Imagen",
+  "lot": "state",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "signature",
+  "materials": [
+   "draw",
+   "edit_note"
+  ],
+  "label": "Firma",
+  "lot": "state",
+  "hero": false,
+  "ref": "pencil-square"
+ },
+ {
+  "name": "security",
+  "materials": [
+   "lock_outline"
+  ],
+  "label": "Seguridad",
+  "lot": "state",
+  "hero": false,
+  "ref": "lock-closed"
+ },
+ {
+  "name": "badge",
+  "materials": [
+   "badge_outlined"
+  ],
+  "label": "Credencial",
+  "lot": "state",
+  "hero": false,
+  "ref": "identification"
+ },
+ {
+  "name": "bolt",
+  "materials": [
+   "bolt",
+   "flash_on"
+  ],
+  "label": "Acción rápida",
+  "lot": "state",
+  "hero": false,
+  "ref": "bolt"
+ },
+ {
+  "name": "play",
+  "materials": [
+   "play_circle_outline"
+  ],
+  "label": "Iniciar",
+  "lot": "state",
+  "hero": false,
+  "ref": "play"
+ },
+ {
+  "name": "alertsOff",
+  "materials": [
+   "notifications_off",
+   "notifications_off_outlined"
+  ],
+  "label": "Avisos silenciados",
+  "lot": "state",
+  "hero": false,
+  "ref": "bell-slash"
+ },
+ {
+  "name": "speed",
+  "materials": [
+   "speed"
+  ],
+  "label": "Velocidad",
+  "lot": "state",
+  "hero": false,
+  "ref": "gauge"
+ },
+ {
+  "name": "chevronRight",
+  "materials": [
+   "chevron_right"
+  ],
+  "label": "Ver más",
+  "lot": "util",
+  "hero": false,
+  "ref": "chevron-right"
+ },
+ {
+  "name": "arrowForward",
+  "materials": [
+   "arrow_forward",
+   "arrow_forward_rounded"
+  ],
+  "label": "Siguiente",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrow-right"
+ },
+ {
+  "name": "expandMore",
+  "materials": [
+   "expand_more"
+  ],
+  "label": "Desplegar",
+  "lot": "util",
+  "hero": false,
+  "ref": "chevron-down"
+ },
+ {
+  "name": "close",
+  "materials": [
+   "close"
+  ],
+  "label": "Cerrar",
+  "lot": "util",
+  "hero": false,
+  "ref": "x-mark"
+ },
+ {
+  "name": "add",
+  "materials": [
+   "add"
+  ],
+  "label": "Agregar",
+  "lot": "util",
+  "hero": false,
+  "ref": "plus"
+ },
+ {
+  "name": "remove",
+  "materials": [
+   "remove"
+  ],
+  "label": "Quitar",
+  "lot": "util",
+  "hero": false,
+  "ref": "minus"
+ },
+ {
+  "name": "search",
+  "materials": [
+   "search"
+  ],
+  "label": "Buscar",
+  "lot": "util",
+  "hero": false,
+  "ref": "magnifying-glass"
+ },
+ {
+  "name": "settings",
+  "materials": [
+   "settings"
+  ],
+  "label": "Ajustes",
+  "lot": "util",
+  "hero": false,
+  "ref": "cog-6-tooth"
+ },
+ {
+  "name": "logout",
+  "materials": [
+   "logout"
+  ],
+  "label": "Cerrar sesión",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrow-right-start-on-rectangle"
+ },
+ {
+  "name": "call",
+  "materials": [
+   "call",
+   "phone"
+  ],
+  "label": "Llamar",
+  "lot": "util",
+  "hero": false,
+  "ref": "phone"
+ },
+ {
+  "name": "phone",
+  "materials": [
+   "phone_android",
+   "phone_iphone",
+   "smartphone"
+  ],
+  "label": "Teléfono",
+  "lot": "util",
+  "hero": false,
+  "ref": "device-phone-mobile"
+ },
+ {
+  "name": "mail",
+  "materials": [
+   "mail_outline"
+  ],
+  "label": "Correo",
+  "lot": "util",
+  "hero": false,
+  "ref": "envelope"
+ },
+ {
+  "name": "send",
+  "materials": [
+   "send"
+  ],
+  "label": "Enviar",
+  "lot": "util",
+  "hero": false,
+  "ref": "paper-airplane"
+ },
+ {
+  "name": "support",
+  "materials": [
+   "support_agent"
+  ],
+  "label": "Soporte",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "handshake",
+  "materials": [
+   "handshake"
+  ],
+  "label": "Acuerdo",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "build",
+  "materials": [
+   "build"
+  ],
+  "label": "Herramientas",
+  "lot": "util",
+  "hero": false,
+  "ref": "wrench-screwdriver"
+ },
+ {
+  "name": "savings",
+  "materials": [
+   "savings"
+  ],
+  "label": "Ahorro",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "payments",
+  "materials": [
+   "payments",
+   "payments_outlined",
+   "price_change_outlined"
+  ],
+  "label": "Pagos",
+  "lot": "util",
+  "hero": false,
+  "ref": "banknotes"
+ },
+ {
+  "name": "supervisor",
+  "materials": [
+   "supervisor_account"
+  ],
+  "label": "Supervisor",
+  "lot": "util",
+  "hero": false,
+  "ref": "user-group"
+ },
+ {
+  "name": "personOff",
+  "materials": [
+   "person_off",
+   "person_off_outlined"
+  ],
+  "label": "Sin usuario",
+  "lot": "util",
+  "hero": false,
+  "ref": "user"
+ },
+ {
+  "name": "devices",
+  "materials": [
+   "devices",
+   "devices_other",
+   "computer"
+  ],
+  "label": "Dispositivos",
+  "lot": "util",
+  "hero": false,
+  "ref": "computer-desktop"
+ },
+ {
+  "name": "lan",
+  "materials": [
+   "lan",
+   "settings_ethernet"
+  ],
+  "label": "Red cableada",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "usb",
+  "materials": [
+   "usb"
+  ],
+  "label": "USB",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "bluetooth",
+  "materials": [
+   "bluetooth"
+  ],
+  "label": "Bluetooth",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "systemUpdate",
+  "materials": [
+   "system_update"
+  ],
+  "label": "Actualización",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrow-down-tray"
+ },
+ {
+  "name": "download",
+  "materials": [
+   "download"
+  ],
+  "label": "Descargar",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrow-down-tray"
+ },
+ {
+  "name": "save",
+  "materials": [
+   "save"
+  ],
+  "label": "Guardar",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "copy",
+  "materials": [
+   "copy_outlined"
+  ],
+  "label": "Copiar",
+  "lot": "util",
+  "hero": false,
+  "ref": "square-2-stack"
+ },
+ {
+  "name": "delete",
+  "materials": [
+   "delete_outline"
+  ],
+  "label": "Eliminar",
+  "lot": "util",
+  "hero": false,
+  "ref": "trash"
+ },
+ {
+  "name": "visibility",
+  "materials": [
+   "visibility_outlined"
+  ],
+  "label": "Mostrar",
+  "lot": "util",
+  "hero": false,
+  "ref": "eye"
+ },
+ {
+  "name": "visibilityOff",
+  "materials": [
+   "visibility_off_outlined"
+  ],
+  "label": "Ocultar",
+  "lot": "util",
+  "hero": false,
+  "ref": "eye-slash"
+ },
+ {
+  "name": "pin",
+  "materials": [
+   "pin_outlined"
+  ],
+  "label": "PIN",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "keyboard",
+  "materials": [
+   "keyboard"
+  ],
+  "label": "Teclado",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "newLabel",
+  "materials": [
+   "new_label"
+  ],
+  "label": "Nueva etiqueta",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "labelOff",
+  "materials": [
+   "label_off"
+  ],
+  "label": "Etiqueta anulada",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "flag",
+  "materials": [
+   "flag"
+  ],
+  "label": "Bandera",
+  "lot": "util",
+  "hero": false,
+  "ref": "flag"
+ },
+ {
+  "name": "swap",
+  "materials": [
+   "swap_horiz"
+  ],
+  "label": "Intercambiar",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrows-right-left"
+ },
+ {
+  "name": "zoomOut",
+  "materials": [
+   "zoom_out_map"
+  ],
+  "label": "Ver todo",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrows-pointing-out"
+ },
+ {
+  "name": "sun",
+  "materials": [
+   "wb_sunny_outlined"
+  ],
+  "label": "Modo sol",
+  "lot": "util",
+  "hero": false,
+  "ref": "sun"
+ },
+ {
+  "name": "vibration",
+  "materials": [
+   "vibration"
+  ],
+  "label": "Vibración",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "outbound",
+  "materials": [
+   "outbound_outlined"
+  ],
+  "label": "Salida",
+  "lot": "util",
+  "hero": false,
+  "ref": "arrow-top-right-on-square"
+ },
+ {
+  "name": "radioUnchecked",
+  "materials": [
+   "radio_button_unchecked"
+  ],
+  "label": "Sin marcar",
+  "lot": "util",
+  "hero": false,
+  "ref": null
+ },
+ {
+  "name": "inbox",
+  "materials": [
+   "inbox_outlined"
+  ],
+  "label": "Bandeja",
+  "lot": "util",
+  "hero": false,
+  "ref": "inbox-stack"
+ }
+]

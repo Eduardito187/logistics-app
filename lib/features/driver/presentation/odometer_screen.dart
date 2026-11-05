@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 
@@ -74,12 +75,10 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       onPressed: _busy ? null : () => _submit(vehicleId),
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.speed),
+                      icon: AnimatedAppIcon(
+                        AppIcon.speed,
+                        state: _busy ? AppIconState.loading : AppIconState.idle,
+                      ),
                       label: Text(_busy ? 'Registrando…' : 'Registrar lectura'),
                     ),
                   ],

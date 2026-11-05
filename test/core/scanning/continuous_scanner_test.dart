@@ -10,6 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Escaneo continuo: la cámara queda abierta entre bultos, cada código llama a
 // onCode, se muestra el aviso sobre la cámara, el mismo código repetido en
@@ -129,6 +132,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Bulto A1 registrado'), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.success, AppIconState.success),
+      findsOneWidget,
+    );
     expect(find.text('1 registrado'), findsOneWidget);
 
     now = now.add(const Duration(milliseconds: 300));
@@ -143,6 +150,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('No es de esta ruta'), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.error, AppIconState.error),
+      findsOneWidget,
+    );
     // El error no suma al contador.
     expect(find.text('2 registrados'), findsOneWidget);
 

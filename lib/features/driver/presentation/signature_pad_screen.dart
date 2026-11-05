@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signature/signature.dart';
 
+import '../../../core/icons/icons.dart';
+
 /// Exporta el trazo a PNG (inyectable: en tests no se rasteriza).
 typedef SignaturePngExporter =
     Future<Uint8List?> Function(SignatureController controller);
@@ -127,7 +129,7 @@ class _SignaturePadScreenState extends ConsumerState<SignaturePadScreen> {
                             minimumSize: const Size.fromHeight(56),
                           ),
                           onPressed: empty || _busy ? null : _controller.clear,
-                          icon: const Icon(Icons.delete_outline),
+                          icon: const AnimatedAppIcon(AppIcon.delete),
                           label: const Text('Borrar'),
                         ),
                       ),
@@ -138,7 +140,12 @@ class _SignaturePadScreenState extends ConsumerState<SignaturePadScreen> {
                             minimumSize: const Size.fromHeight(56),
                           ),
                           onPressed: empty || _busy ? null : _done,
-                          icon: const Icon(Icons.check),
+                          icon: AnimatedAppIcon(
+                            AppIcon.check,
+                            state: _busy
+                                ? AppIconState.loading
+                                : AppIconState.idle,
+                          ),
                           label: const Text('Listo'),
                         ),
                       ),

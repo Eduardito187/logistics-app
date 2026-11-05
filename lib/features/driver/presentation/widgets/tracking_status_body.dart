@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 
 import '../../../../core/api/export.dart';
@@ -35,8 +36,15 @@ class TrackingStatusBody extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      running ? Icons.gps_fixed : Icons.gps_not_fixed,
+                    // Rastreando sin fix = el anillo de "locating" late mientras
+                    // busca; con fix queda fijado (punto sólido); en espera, quieto.
+                    AnimatedAppIcon(
+                      AppIcon.gps,
+                      state: !running
+                          ? AppIconState.idle
+                          : fix == null
+                          ? AppIconState.loading
+                          : AppIconState.active,
                       // Rastreo activo = señal semántica (verde), no rojo de
                       // marca; apagado = neutro.
                       color: running
@@ -76,7 +84,7 @@ class TrackingStatusBody extends ConsumerWidget {
             )
           else
             const EmptyState(
-              icon: Icons.flag,
+              icon: AppIcon.flag,
               title: 'Ruta sin paradas pendientes',
               message: 'El rastreo se reanuda al haber una parada en curso.',
             ),
@@ -87,7 +95,7 @@ class TrackingStatusBody extends ConsumerWidget {
                 child: StatTile(
                   value: '${tracking.sent}',
                   label: 'Posiciones enviadas',
-                  icon: Icons.my_location,
+                  icon: AppIcon.gps,
                 ),
               ),
               const SizedBox(width: 12),
@@ -95,7 +103,7 @@ class TrackingStatusBody extends ConsumerWidget {
                 child: StatTile(
                   value: running ? 'Activo' : 'En espera',
                   label: 'Estado del rastreo',
-                  icon: running ? Icons.gps_fixed : Icons.gps_off,
+                  icon: running ? AppIcon.gps : AppIcon.gpsOff,
                 ),
               ),
             ],
@@ -107,7 +115,7 @@ class TrackingStatusBody extends ConsumerWidget {
                 : '${fix.lat.toStringAsFixed(4)}, '
                       '${fix.lng.toStringAsFixed(4)}',
             label: 'Última posición',
-            icon: Icons.place,
+            icon: AppIcon.place,
           ),
         ],
       ),

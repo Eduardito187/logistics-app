@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/printing/printer_config.dart';
 import 'package:logistics_app/features/settings/presentation/controllers/printer_controllers.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/discovered_printers.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/printer_section.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/wifi_printer_form.dart';
+import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
 // Sección de impresora: elige transporte, descubre/ingresa, guarda e imprime
@@ -50,7 +52,7 @@ Future<void> _pump(
     ),
   );
   if (printing) {
-    // El spinner anima sin fin: pumpAndSettle nunca terminaría. Unos frames
+    // El ícono en loading anima sin fin: pumpAndSettle nunca terminaría. Unos frames
     // alcanzan para resolver los providers async.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -103,7 +105,7 @@ void main() {
     expect(find.textContaining('Activa: WiFi 192.168.1.50'), findsOneWidget);
   });
 
-  testWidgets('printing=true: el botón de prueba muestra spinner', (
+  testWidgets('printing=true: el ícono de impresora anima en loading', (
     tester,
   ) async {
     await _pump(tester, printing: true);
@@ -111,8 +113,40 @@ void main() {
     expect(
       find.descendant(
         of: findButtonWithText<OutlinedButton>('Imprimir prueba'),
-        matching: find.byType(CircularProgressIndicator),
+        matching: findAppIconInState(AppIcon.printing, AppIconState.loading),
       ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('printing=false: el ícono de impresora queda quieto', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    expect(
+      findAppIconInState(AppIcon.printing, AppIconState.idle),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('el transporte elegido queda activo', (tester) async {
+    await _pump(tester);
+
+    expect(
+      findAppIconInState(AppIcon.bluetooth, AppIconState.active),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('USB'));
+    await tester.pumpAndSettle();
+
+    expect(
+      findAppIconInState(AppIcon.usb, AppIconState.active),
+      findsOneWidget,
+    );
+    expect(
+      findAppIconInState(AppIcon.bluetooth, AppIconState.idle),
       findsOneWidget,
     );
   });

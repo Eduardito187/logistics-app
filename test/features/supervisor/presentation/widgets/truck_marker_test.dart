@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/theme/app_colors.dart';
 import 'package:logistics_app/features/supervisor/presentation/widgets/truck_marker.dart';
 
+import '../../../../support/app_icon_finders.dart';
 import '../../support/supervisor_fixtures.dart';
 
 // TruckMarker: ícono de camión; verde si se mueve, ámbar si está detenido.
@@ -28,7 +30,7 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.local_shipping), findsOneWidget);
+    expect(findAppIcon(AppIcon.deliver), findsOneWidget);
     expect(_markerDecoration(tester).color, AppColors.success);
   });
 

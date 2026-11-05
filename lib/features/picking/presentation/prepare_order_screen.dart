@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/scanning/scanner_screen.dart';
@@ -73,20 +74,20 @@ class _PrepareOrderScreenState extends ConsumerState<PrepareOrderScreen> {
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Ej. DIS-123456',
-                    prefixIcon: Icon(Icons.receipt_long),
+                    prefixIcon: AnimatedAppIcon(AppIcon.settle),
                   ),
                   onSubmitted: _open,
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => _open(_controller.text),
-                  icon: const Icon(Icons.arrow_forward),
+                  icon: const AnimatedAppIcon(AppIcon.arrowForward),
                   label: const Text('Ver etiquetas'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _scan,
-                  icon: const Icon(Icons.qr_code_scanner),
+                  icon: const AnimatedAppIcon(AppIcon.scan),
                   label: const Text('Escanear pedido'),
                 ),
               ],

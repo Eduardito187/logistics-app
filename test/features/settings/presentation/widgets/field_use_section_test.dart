@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/token_store.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/scanning/scan_feedback.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
 import 'package:logistics_app/core/theme/high_contrast.dart';
 import 'package:logistics_app/features/settings/presentation/widgets/field_use_section.dart';
 
 import '../../../../core/auth/test_fakes.dart';
+import '../../../../support/app_icon_finders.dart';
 
 // Sección "Uso en terreno" de Ajustes: switches de alto contraste (default
 // OFF) y de vibrar/sonar al escanear (default ON); cada cambio se guarda.
@@ -60,6 +62,24 @@ void main() {
     expect(container.read(highContrastProvider), isTrue);
     expect(_switchValue(tester, 'highContrastSwitch'), isTrue);
     expect(storage.data[HighContrastNotifier.storageKey], 'true');
+  });
+
+  testWidgets('el ícono de cada switch queda activo según su valor', (
+    tester,
+  ) async {
+    await _pump(tester);
+    expect(findAppIconInState(AppIcon.sun, AppIconState.idle), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.vibration, AppIconState.active),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Alto contraste (sol)'));
+    await tester.pumpAndSettle();
+    expect(
+      findAppIconInState(AppIcon.sun, AppIconState.active),
+      findsOneWidget,
+    );
   });
 
   testWidgets('desactivar el aviso al escanear lo guarda', (tester) async {

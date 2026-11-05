@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-fill ds-p-bell" d="M6.5 17v-5.5a5.5 5.5 0 0 1 11 0V17l1.5 1.5H5z"/>
+  <path class="ds-p-clapper" d="M10 21.5h4"/>
+  <path class="ds-accent ds-p-mark" d="M12 9v3.2M12 15.2v.01"/>
+</svg>

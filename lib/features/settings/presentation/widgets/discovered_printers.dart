@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../controllers/printer_controllers.dart';
@@ -39,7 +40,14 @@ class DiscoveredPrinters extends ConsumerWidget {
           child: TextButton.icon(
             onPressed: () =>
                 ref.invalidate(discoveredPrintersProvider(transport)),
-            icon: const Icon(Icons.refresh),
+            // Gira mientras busca impresoras.
+            icon: AnimatedAppIcon(
+              AppIcon.refresh,
+              state: devices.isLoading
+                  ? AppIconState.loading
+                  : AppIconState.idle,
+              excludeFromSemantics: true,
+            ),
             label: const Text('Buscar'),
           ),
         ),

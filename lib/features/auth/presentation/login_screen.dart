@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
@@ -118,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
                           labelText: 'Usuario o correo',
-                          prefixIcon: Icon(Icons.person_outline),
+                          prefixIcon: AnimatedAppIcon(AppIcon.profile),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -129,15 +130,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onSubmitted: (_) => _onSignInPressed(),
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
-                          prefixIcon: const Icon(Icons.lock_outline),
+                          prefixIcon: const AnimatedAppIcon(AppIcon.security),
                           suffixIcon: IconButton(
                             tooltip: _obscurePassword
                                 ? 'Mostrar contraseña'
                                 : 'Ocultar contraseña',
-                            icon: Icon(
+                            icon: AnimatedAppIcon(
                               _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
+                                  ? AppIcon.visibility
+                                  : AppIcon.visibilityOff,
+                              state: _obscurePassword
+                                  ? AppIconState.idle
+                                  : AppIconState.active,
                             ),
                             onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword,

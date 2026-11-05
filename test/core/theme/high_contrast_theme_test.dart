@@ -4,6 +4,7 @@ import 'package:logistics_app/core/theme/app_colors.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
 import 'package:logistics_app/core/widgets/status_pill.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/screen_sizes.dart';
 
@@ -131,7 +132,7 @@ void main() {
                 key: const Key('icon'),
                 tooltip: 'Linterna',
                 onPressed: () {},
-                icon: const Icon(Icons.flash_on),
+                icon: const AnimatedAppIcon(AppIcon.bolt),
               ),
             ],
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/nav_clearance.dart';
 
 import '../../../../core/layout/breakpoints.dart';
@@ -29,35 +30,35 @@ class DashboardBody extends StatelessWidget {
       StatTile(
         value: '${metrics.delivered}',
         label: 'Entregadas',
-        icon: Icons.check_circle,
+        icon: AppIcon.success,
         color: AppColors.success,
       ),
       StatTile(
         value: '${metrics.inExecution}',
         label: 'En ruta',
-        icon: Icons.local_shipping,
+        icon: AppIcon.deliver,
         color: AppColors.info,
       ),
       StatTile(
         value: '${metrics.failed}',
         label: 'Fallidas',
-        icon: Icons.cancel,
+        icon: AppIcon.cancel,
         color: AppColors.danger,
       ),
       // KPI principal del día: tinta neutra (estilo "finanzas"). El rojo de
       // marca queda para acciones, no para una métrica sin estado.
-      StatTile(value: rateLabel, label: 'Cumplimiento', icon: Icons.verified),
+      StatTile(value: rateLabel, label: 'Cumplimiento', icon: AppIcon.verified),
       StatTile(
         value: '${metrics.pending}',
         label: 'Por salir',
-        icon: Icons.inventory_2,
+        icon: AppIcon.receive,
         color: AppColors.warning,
       ),
       // Planes activos: estado "en curso" → tinta de información, no rojo.
       StatTile(
         value: '${metrics.activePlans}',
         label: 'Rutas en curso',
-        icon: Icons.alt_route,
+        icon: AppIcon.plans,
         color: AppColors.info,
       ),
     ];
@@ -81,15 +82,13 @@ class DashboardBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SummaryLine(
-                  icon: Icons.local_shipping_outlined,
+                  icon: AppIcon.deliver,
                   color: theme.colorScheme.onSurfaceVariant,
                   text: '${metrics.total} envíos del día en total',
                 ),
                 const SizedBox(height: 8),
                 _SummaryLine(
-                  icon: hasOpenAlerts
-                      ? Icons.notifications_active
-                      : Icons.notifications_none,
+                  icon: hasOpenAlerts ? AppIcon.roleAlerts : AppIcon.alerts,
                   color: hasOpenAlerts ? AppColors.warning : AppColors.success,
                   text: '${metrics.openAlerts} alertas sin reconocer',
                 ),
@@ -121,7 +120,7 @@ class _SummaryLine extends StatelessWidget {
     required this.text,
   });
 
-  final IconData icon;
+  final AppIcon icon;
   final Color color;
   final String text;
 
@@ -130,7 +129,13 @@ class _SummaryLine extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 20, color: color),
+        // Decorativo: el texto de la línea ya dice lo mismo.
+        AnimatedAppIcon(
+          icon,
+          size: 20,
+          color: color,
+          excludeFromSemantics: true,
+        ),
         const SizedBox(width: 10),
         Expanded(child: Text(text, style: theme.textTheme.bodyLarge)),
       ],

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -68,13 +70,13 @@ class MapZoomButtons extends StatelessWidget {
       children: [
         MapRoundButton(
           tooltip: 'Acercar',
-          icon: Icons.add,
+          icon: AppIcon.add,
           onPressed: () => _zoomBy(1),
         ),
         const SizedBox(height: 10),
         MapRoundButton(
           tooltip: 'Alejar',
-          icon: Icons.remove,
+          icon: AppIcon.remove,
           onPressed: () => _zoomBy(-1),
         ),
       ],

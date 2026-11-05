@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/icons/icons.dart';
 
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -32,7 +33,7 @@ class MaintenanceDueScreen extends ConsumerWidget {
                 children: const [
                   SizedBox(height: 80),
                   EmptyState(
-                    icon: Icons.verified,
+                    icon: AppIcon.verified,
                     title: 'Todo al día',
                     message: 'No hay mantenimientos por vencer.',
                   ),

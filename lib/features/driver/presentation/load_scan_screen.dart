@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -30,7 +31,7 @@ class LoadScanScreen extends ConsumerWidget {
           data: (list) {
             if (list.isEmpty) {
               return const EmptyState(
-                icon: Icons.inventory,
+                icon: AppIcon.receive,
                 title: 'Sin envíos',
                 message: 'No hay envíos asignados a este vehículo.',
               );
@@ -45,7 +46,7 @@ class LoadScanScreen extends ConsumerWidget {
                       horizontal: 12,
                       vertical: 8,
                     ),
-                    leading: const Icon(Icons.inventory_2, size: 32),
+                    leading: const AnimatedAppIcon(AppIcon.receive, size: 32),
                     title: Text('Envío ${delivery.shipmentId}'),
                     subtitle: Text(
                       '${effectiveScanCount(delivery, loaded[delivery.shipmentId])} escaneo(s)',

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/button_spinner.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
+import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
 // Tarjeta de progreso del armado: contadores preparadas/pendientes, el carril
@@ -100,8 +101,11 @@ void main() {
       busy: true,
     );
 
-    // El botón "Imprimir todas" muestra el spinner en vez del ícono.
-    expect(find.byType(ButtonSpinner), findsOneWidget);
+    // El botón "Imprimir todas" muestra el ícono de impresión en loading.
+    expect(
+      findAppIconInState(AppIcon.printing, AppIconState.loading),
+      findsOneWidget,
+    );
 
     final printBtn = tester.widget<OutlinedButton>(
       findButtonWithText<OutlinedButton>('Imprimir todas las etiquetas'),
@@ -133,7 +137,7 @@ void main() {
       expect(
         find.descendant(
           of: findButtonWithText<OutlinedButton>('Reimprimir lote'),
-          matching: find.byType(ButtonSpinner),
+          matching: findAppIconInState(AppIcon.refresh, AppIconState.loading),
         ),
         findsOneWidget,
       );
@@ -142,7 +146,7 @@ void main() {
           of: findButtonWithText<OutlinedButton>(
             'Imprimir todas las etiquetas',
           ),
-          matching: find.byType(ButtonSpinner),
+          matching: findAppIconInState(AppIcon.printing, AppIconState.loading),
         ),
         findsNothing,
       );

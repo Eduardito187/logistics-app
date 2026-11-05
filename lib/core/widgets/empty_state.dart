@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
+
 /// Estado vacío/ilustrativo reutilizable (sin datos, error, sin permiso).
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -10,7 +12,8 @@ class EmptyState extends StatelessWidget {
     this.action,
   });
 
-  final IconData icon;
+  /// Ícono animado DisTrack (se dibuja al aparecer).
+  final AppIcon icon;
   final String title;
   final String? message;
   final Widget? action;
@@ -25,8 +28,12 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Ícono decorativo: el lector de pantalla lee título y mensaje.
-            ExcludeSemantics(
-              child: Icon(icon, size: 64, color: theme.colorScheme.outline),
+            AnimatedAppIcon(
+              icon,
+              size: 64,
+              color: theme.colorScheme.outline,
+              animateOnMount: true,
+              excludeFromSemantics: true,
             ),
             const SizedBox(height: 16),
             Semantics(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/driver_controllers.dart';
@@ -85,12 +86,12 @@ class _ActiveDelivery extends ConsumerWidget {
                       children: [
                         MapRoundButton(
                           tooltip: 'Cerrar',
-                          icon: Icons.close,
+                          icon: AppIcon.close,
                           onPressed: () => Navigator.of(context).maybePop(),
                         ),
                         const Spacer(),
                         MapPillButton(
-                          icon: Icons.support_agent,
+                          icon: AppIcon.support,
                           label: 'Ayuda',
                           onPressed: () =>
                               showDeliveryHelpSheet(context, ref, stop: stop),
@@ -148,14 +149,14 @@ class _RouteFinished extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: MapRoundButton(
                 tooltip: 'Cerrar',
-                icon: Icons.close,
+                icon: AppIcon.close,
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
             ),
           ),
           Expanded(
             child: EmptyState(
-              icon: Icons.task_alt,
+              icon: AppIcon.deliverScan,
               title: route.stops.isEmpty
                   ? 'Sin entregas asignadas'
                   : 'Ruta completada',
@@ -164,7 +165,7 @@ class _RouteFinished extends StatelessWidget {
                   : 'Atendiste las ${route.totalStops} paradas del día.',
               action: OutlinedButton.icon(
                 onPressed: () => context.push('/driver/route'),
-                icon: const Icon(Icons.map),
+                icon: const AnimatedAppIcon(AppIcon.map),
                 label: const Text('Ver ruta del día'),
               ),
             ),

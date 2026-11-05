@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
+
 /// Pantalla de bloqueo cuando falta el permiso de ubicación "siempre".
 ///
 /// La usa internamente [LocationPermissionGate] cuando el permiso de segundo
@@ -24,7 +26,11 @@ class LocationRequiredView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.location_off, size: 72, color: theme.colorScheme.error),
+          AnimatedAppIcon(
+            AppIcon.gpsOff,
+            size: 72,
+            color: theme.colorScheme.error,
+          ),
           const SizedBox(height: 24),
           Text(
             'La ubicación es obligatoria para operar el camión',
@@ -47,7 +53,7 @@ class LocationRequiredView extends StatelessWidget {
             height: 72,
             child: FilledButton.icon(
               onPressed: onOpenSettings,
-              icon: const Icon(Icons.settings, size: 28),
+              icon: const AnimatedAppIcon(AppIcon.settings, size: 28),
               label: const Text(
                 'Abrir Ajustes',
                 style: TextStyle(fontSize: 20),
@@ -59,7 +65,7 @@ class LocationRequiredView extends StatelessWidget {
             height: 64,
             child: OutlinedButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 26),
+              icon: const AnimatedAppIcon(AppIcon.refresh, size: 26),
               label: const Text('Reintentar', style: TextStyle(fontSize: 18)),
             ),
           ),

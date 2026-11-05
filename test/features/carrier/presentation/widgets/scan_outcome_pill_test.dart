@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
 import 'package:logistics_app/core/widgets/status_pill.dart';
 import 'package:logistics_app/features/carrier/presentation/widgets/scan_outcome_pill.dart';
@@ -19,7 +20,7 @@ void main() {
     final pill = await _pill(tester, SubmitOutcome.sent);
     expect(pill.label, 'Enviado');
     expect(pill.tone, PillTone.success);
-    expect(pill.icon, Icons.cloud_done);
+    expect(pill.icon, AppIcon.cloudDone);
   });
 
   testWidgets('encolado → igual que enviado (offline invisible)', (
@@ -28,13 +29,13 @@ void main() {
     final pill = await _pill(tester, SubmitOutcome.queued);
     expect(pill.label, 'Enviado');
     expect(pill.tone, PillTone.success);
-    expect(pill.icon, Icons.cloud_done);
+    expect(pill.icon, AppIcon.cloudDone);
   });
 
   testWidgets('fallido → peligro con ícono error', (tester) async {
     final pill = await _pill(tester, SubmitOutcome.failed);
     expect(pill.label, 'Error');
     expect(pill.tone, PillTone.danger);
-    expect(pill.icon, Icons.error_outline);
+    expect(pill.icon, AppIcon.error);
   });
 }

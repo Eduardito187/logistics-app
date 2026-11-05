@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -25,7 +26,7 @@ class OrdersWorklistScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Ingresar pedido manualmente',
-            icon: const Icon(Icons.keyboard),
+            icon: const AnimatedAppIcon(AppIcon.keyboard),
             onPressed: () => context.push('/picking/prepare'),
           ),
           const SizedBox(width: 8),
@@ -43,7 +44,7 @@ class OrdersWorklistScreen extends ConsumerWidget {
                 children: const [
                   SizedBox(height: 96),
                   EmptyState(
-                    icon: Icons.inventory_2_outlined,
+                    icon: AppIcon.receive,
                     title: 'No hay pedidos por preparar',
                     message:
                         'Cuando lleguen pedidos para armar y cargar al camión '

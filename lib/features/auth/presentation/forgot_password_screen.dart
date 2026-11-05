@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
@@ -174,7 +175,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         onSubmitted: (_) => _onRequestCodePressed(),
         decoration: const InputDecoration(
           labelText: 'Correo',
-          prefixIcon: Icon(Icons.mail_outline),
+          prefixIcon: AnimatedAppIcon(AppIcon.mail),
         ),
       ),
       const SizedBox(height: 28),
@@ -204,7 +205,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         decoration: InputDecoration(
           labelText: 'Código',
           counterText: '',
-          prefixIcon: const Icon(Icons.pin_outlined),
+          prefixIcon: const AnimatedAppIcon(AppIcon.pin),
           errorText: _codeError,
         ),
       ),
@@ -217,16 +218,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         decoration: InputDecoration(
           labelText: 'Nueva contraseña',
           helperText: 'Mínimo 8 caracteres',
-          prefixIcon: const Icon(Icons.lock_outline),
+          prefixIcon: const AnimatedAppIcon(AppIcon.security),
           errorText: _passwordError,
           suffixIcon: IconButton(
             tooltip: _obscurePassword
                 ? 'Mostrar contraseña'
                 : 'Ocultar contraseña',
-            icon: Icon(
-              _obscurePassword
-                  ? Icons.visibility_outlined
-                  : Icons.visibility_off_outlined,
+            icon: AnimatedAppIcon(
+              _obscurePassword ? AppIcon.visibility : AppIcon.visibilityOff,
+              state: _obscurePassword ? AppIconState.idle : AppIconState.active,
             ),
             onPressed: () =>
                 setState(() => _obscurePassword = !_obscurePassword),
@@ -242,7 +242,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         onSubmitted: (_) => _onResetPressed(),
         decoration: const InputDecoration(
           labelText: 'Repetir contraseña',
-          prefixIcon: Icon(Icons.lock_outline),
+          prefixIcon: AnimatedAppIcon(AppIcon.security),
         ),
       ),
       const SizedBox(height: 28),
