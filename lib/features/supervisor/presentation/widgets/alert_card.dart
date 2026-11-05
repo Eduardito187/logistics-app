@@ -87,7 +87,9 @@ class _AlertCardState extends ConsumerState<AlertCard> {
               // Mientras se envía el reconocimiento, el tilde "carga".
               icon: AnimatedAppIcon(
                 AppIcon.check,
-                state: _acknowledging ? AppIconState.loading : AppIconState.idle,
+                state: _acknowledging
+                    ? AppIconState.loading
+                    : AppIconState.idle,
                 excludeFromSemantics: true,
               ),
               label: Text(_acknowledging ? 'Reconociendo…' : 'Reconocer'),

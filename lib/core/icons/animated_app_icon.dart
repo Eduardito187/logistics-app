@@ -574,11 +574,7 @@ class _AppIconPainter extends CustomPainter {
           : paintColor;
       // La pieza clave llega antes al color de resalte (remata la animación).
       if (part.accent && lit > 0) {
-        partColor = Color.lerp(
-          partColor,
-          glowColor,
-          math.min(1.0, lit * 1.5),
-        )!;
+        partColor = Color.lerp(partColor, glowColor, math.min(1.0, lit * 1.5))!;
       }
       final paint = Paint()
         ..isAntiAlias = true
