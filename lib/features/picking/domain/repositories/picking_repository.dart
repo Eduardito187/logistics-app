@@ -1,3 +1,4 @@
+import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/preparation_scan_request.dart';
@@ -20,6 +21,7 @@ abstract interface class PickingRepository {
 
   /// Etiquetas (unidades/bultos) ya emitidas del pedido.
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber);
+  Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber);
 
   /// Emite el lote de etiquetas del pedido y devuelve las creadas.
   Future<List<EmittedLabel>> emitLabels(

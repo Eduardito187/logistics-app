@@ -24,9 +24,9 @@ import '../domain/usecases/reprint_labels.dart';
 import 'controllers/order_labels_controller.dart';
 import 'controllers/preparation_controller.dart';
 import 'widgets/assign_lane_dialog.dart';
+import 'widgets/dispatch_lines_body.dart';
 import 'widgets/label_batch_sheet.dart';
 import 'widgets/label_preview_sheet.dart';
-import 'widgets/preparation_empty_body.dart';
 import 'widgets/preparation_units_layout.dart';
 import 'widgets/progress_card.dart';
 import 'widgets/unit_tile.dart';
@@ -405,8 +405,15 @@ class _OrderPreparationScreenState
     );
   }
 
-  Widget _buildEmpty() =>
-      PreparationEmptyBody(busy: _orderBusy, onEmit: _emitLabels);
+  /// Sin etiquetas emitidas todavía: en vez del viejo formulario manual
+  /// (origen/destino/SKU a mano), se muestra la LISTA de productos del pedido
+  /// (dispatch-lines: nombre, SKU, foto y destino ya resueltos) y el botón para
+  /// emitir el lote.
+  Widget _buildEmpty() => DispatchLinesBody(
+    orderNumber: _orderNumber,
+    busy: _orderBusy,
+    onEmit: _emitLabels,
+  );
 
   Widget _buildUnits(BuildContext context, List<EmittedLabel> units) {
     final state = ref.watch(preparationControllerProvider(_orderNumber));

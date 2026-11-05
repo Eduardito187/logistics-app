@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/logistics_api.dart';
+import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/reprint_labels_request.dart';
@@ -39,6 +40,19 @@ class PickingRemoteDataSource {
         orderNumber: orderNumber,
       );
       return collection.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET `/app/orders/{orderNumber}/dispatch-lines`: los productos a etiquetar
+  /// del pedido ya resueltos (nombre, SKU, foto, origen/destino por línea,
+  /// autorización y estado de etiqueta). Base de la lista simple de etiquetado.
+  Future<DispatchLinesResponse> getOrderDispatchLines(
+    String orderNumber,
+  ) async {
+    try {
+      return await _api.labels.getOrderDispatchLines(orderNumber: orderNumber);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

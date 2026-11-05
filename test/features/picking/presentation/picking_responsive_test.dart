@@ -171,7 +171,7 @@ void main() {
     expect(last, findsOneWidget);
   });
 
-  testOnScreens('pedido sin etiquetas: estado vacío y botón Emitir', (
+  testOnScreens('pedido sin etiquetas: lista de productos y botón Emitir', (
     tester,
     screen,
   ) async {
@@ -179,7 +179,13 @@ void main() {
       _app(
         const OrderPreparationScreen(orderNumber: 'EXT-1'),
         overrides: [
-          pickingRepositoryProvider.overrideWithValue(FakePickingRepository()),
+          pickingRepositoryProvider.overrideWithValue(
+            FakePickingRepository(
+              onGetOrderDispatchLines: (_) async => buildDispatchLines(
+                lines: [buildDispatchLine(productName: 'Televisor 55"')],
+              ),
+            ),
+          ),
           labelPrinterProvider.overrideWithValue(FakeLabelPrinter()),
           locationServiceProvider.overrideWithValue(FakeLocationService()),
         ],
@@ -187,8 +193,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Sin etiquetas vigentes'), findsOneWidget);
-    final button = tester.getRect(find.text('Emitir etiquetas'));
+    expect(find.text('Televisor 55"'), findsOneWidget); // producto del pedido
+    final button = tester.getRect(find.text('Emitir etiquetas del pedido'));
     expect(button.right, lessThanOrEqualTo(screen.size.width));
   });
 

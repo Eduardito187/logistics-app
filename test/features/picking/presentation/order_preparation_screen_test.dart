@@ -74,18 +74,25 @@ Finder _sheetFields() => find.descendant(
 );
 
 void main() {
-  testWidgets('sin etiquetas vigentes muestra el estado vacío y "Emitir"', (
+  testWidgets('sin etiquetas: muestra la LISTA de productos del pedido', (
     tester,
   ) async {
     await _pump(
       tester,
-      repo: FakePickingRepository(onGetOrderLabels: (_) async => []),
+      repo: FakePickingRepository(
+        onGetOrderLabels: (_) async => [],
+        onGetOrderDispatchLines: (_) async => buildDispatchLines(
+          lines: [buildDispatchLine(productName: 'Lavadora 9 kg', sku: 'SKU-A')],
+        ),
+      ),
     );
 
     expect(find.text('Pedido EXT-1'), findsOneWidget); // AppBar
-    expect(find.text('Sin etiquetas vigentes'), findsOneWidget);
+    // Producto del pedido (nombre + SKU), ya resuelto desde dispatch-lines.
+    expect(find.text('Lavadora 9 kg'), findsOneWidget);
+    expect(find.textContaining('SKU-A'), findsOneWidget);
     expect(
-      findButtonWithText<FilledButton>('Emitir etiquetas'),
+      findButtonWithText<FilledButton>('Emitir etiquetas del pedido'),
       findsOneWidget,
     );
   });
@@ -150,11 +157,12 @@ void main() {
   ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
+      onGetOrderDispatchLines: (_) async => buildDispatchLines(),
       onEmitLabels: (_, _) async => [buildLabel()],
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
     await tester.pumpAndSettle();
 
     await tester.enterText(_sheetFields().at(0), 'LPZ'); // origen
@@ -173,12 +181,13 @@ void main() {
   testWidgets('emitir con 409 avisa que ya hay etiquetas', (tester) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
+      onGetOrderDispatchLines: (_) async => buildDispatchLines(),
       onEmitLabels: (_, _) async =>
           throw const ApiException(status: 409, title: 'Conflicto'),
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
     await tester.pumpAndSettle();
     await tester.enterText(_sheetFields().at(0), 'LPZ');
     await tester.enterText(_sheetFields().at(1), 'SCZ');
@@ -193,12 +202,13 @@ void main() {
   ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
+      onGetOrderDispatchLines: (_) async => buildDispatchLines(),
       onEmitLabels: (_, _) async =>
           throw const ApiException(status: 500, title: 'Boom'),
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas'));
+    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
     await tester.pumpAndSettle();
     await tester.enterText(_sheetFields().at(0), 'LPZ');
     await tester.enterText(_sheetFields().at(1), 'SCZ');

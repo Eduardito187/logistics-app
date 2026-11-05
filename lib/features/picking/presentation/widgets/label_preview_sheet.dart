@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/api/models/destination.dart';
+import '../../../../core/api/models/dispatch_destination.dart';
+import '../../../../core/api/models/dispatch_destination_type.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/type3.dart';
 import '../../../../core/icons/icons.dart';
@@ -23,6 +25,29 @@ String? labelDestinationText(Destination? d) {
     case Type3.store:
       return hasName ? 'Tienda $name' : 'Tienda';
     case Type3.warehouse:
+      return hasName ? 'Almacén $name' : 'Almacén';
+    default:
+      if (hasName) return name;
+      if (hasAddr) return addr;
+      return null;
+  }
+}
+
+/// Igual que [labelDestinationText] pero para el destino POR LÍNEA de
+/// dispatch-lines ([DispatchDestination]).
+String? dispatchDestinationText(DispatchDestination? d) {
+  if (d == null) return null;
+  final name = d.name?.trim();
+  final addr = d.address?.trim();
+  final hasName = name != null && name.isNotEmpty;
+  final hasAddr = addr != null && addr.isNotEmpty;
+  switch (d.type) {
+    case DispatchDestinationType.home:
+      final parts = <String>[if (hasName) name, if (hasAddr) addr];
+      return parts.isEmpty ? 'Domicilio' : 'Domicilio · ${parts.join(' · ')}';
+    case DispatchDestinationType.store:
+      return hasName ? 'Tienda $name' : 'Tienda';
+    case DispatchDestinationType.warehouse:
       return hasName ? 'Almacén $name' : 'Almacén';
     default:
       if (hasName) return name;

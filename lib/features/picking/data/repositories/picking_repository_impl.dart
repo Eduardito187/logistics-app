@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/preparation_scan_request.dart';
@@ -26,6 +27,10 @@ class PickingRepositoryImpl implements PickingRepository {
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) =>
       _remote.getOrderLabels(orderNumber);
+
+  @override
+  Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber) =>
+      _remote.getOrderDispatchLines(orderNumber);
 
   @override
   Future<List<EmittedLabel>> emitLabels(

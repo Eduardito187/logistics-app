@@ -604,6 +604,10 @@ class FakePickingRepository implements PickingRepository {
       : const [];
 
   @override
+  Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber) =>
+      throw UnimplementedError('dispatch-lines no se usa en el e2e');
+
+  @override
   Future<List<EmittedLabel>> emitLabels(
     String orderNumber,
     EmitLabelsRequest body,
