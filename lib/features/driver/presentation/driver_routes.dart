@@ -53,7 +53,7 @@ const List<RoleTask> driverTasks = [
   RoleTask(
     id: 'driver-load',
     label: 'Carga del camión',
-    subtitle: 'Escanear bultos a cargar',
+    subtitle: 'Escanear productos a cargar',
     appIcon: AppIcon.load,
     route: '/driver/load',
     roles: {UserRole.driver},

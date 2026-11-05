@@ -67,7 +67,7 @@ void main() {
     ];
   });
 
-  testOnScreens('recoger: vacío y con bultos sin desbordes', (
+  testOnScreens('recoger: vacío y con productos sin desbordes', (
     tester,
     screen,
   ) async {
@@ -79,10 +79,10 @@ void main() {
       labelScanner: signer.scanner(),
       loadScan: loadScan,
     );
-    expect(find.text('Sin bultos recogidos'), findsOneWidget);
+    expect(find.text('Sin productos recogidos'), findsOneWidget);
 
     // Escaneo continuo: dos bultos en una sola apertura de la cámara.
-    await tester.tap(findButtonWithText<FilledButton>('Escanear bulto'));
+    await tester.tap(findButtonWithText<FilledButton>('Escanear producto'));
     await tester.pumpAndSettle();
 
     expect(loadScan.requests, hasLength(2));
@@ -90,7 +90,7 @@ void main() {
     expect(find.text('SKU-B'), findsOneWidget);
     _expectBoundedWidth(
       tester,
-      findButtonWithText<FilledButton>('Escanear bulto'),
+      findButtonWithText<FilledButton>('Escanear producto'),
       AppBreakpoints.maxContentWidth,
     );
   });
@@ -178,7 +178,7 @@ void main() {
           status: SettlementStatus.submitted,
           amountCents: 987654321,
           carrierName: 'Transportes del Oriente Boliviano',
-          disputeReason: 'Faltaron dos bultos en la entrega del lunes',
+          disputeReason: 'Faltaron dos productos en la entrega del lunes',
           paymentReference: 'TRF-2026-000123456',
         ),
       ),

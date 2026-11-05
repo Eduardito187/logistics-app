@@ -41,14 +41,14 @@ Future<_Taps> _pump(
 }
 
 void main() {
-  testWidgets('pendiente muestra SKU, línea, bulto y botón de escaneo', (
+  testWidgets('pendiente muestra SKU, línea, producto y botón de escaneo', (
     tester,
   ) async {
     await _pump(tester, prepared: false, sku: '789', lineNumber: 4);
 
     expect(find.text('SKU 789'), findsOneWidget);
-    // Bulto = últimos 8 caracteres del labelId.
-    expect(find.text('Línea 4 · Bulto …00000001'), findsOneWidget);
+    // Sin ids sueltos: solo la línea (el id va chico en el preview).
+    expect(find.text('Línea 4'), findsOneWidget);
     expect(find.text('Pendiente'), findsOneWidget);
     expect(
       findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
@@ -102,11 +102,12 @@ void main() {
     expect(taps.prepare, 0);
   });
 
-  testWidgets('labelId corto (<=8) se muestra entero como bulto', (
+  testWidgets('no muestra ids sueltos del label (solo la línea)', (
     tester,
   ) async {
     await _pump(tester, prepared: false, labelId: 'ABC123', lineNumber: 1);
 
-    expect(find.text('Línea 1 · Bulto …ABC123'), findsOneWidget);
+    expect(find.text('Línea 1'), findsOneWidget);
+    expect(find.textContaining('ABC123'), findsNothing);
   });
 }

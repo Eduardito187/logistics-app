@@ -53,19 +53,21 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: '1. Bulto',
+              title: '1. Producto',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    _unitId == null ? 'Escanea el bulto.' : 'Bulto: $_unitId',
+                    _unitId == null
+                        ? 'Escanea el producto.'
+                        : 'Producto: $_unitId',
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanUnit,
                     icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
-                      _unitId == null ? 'Escanear bulto' : 'Reescanear',
+                      _unitId == null ? 'Escanear producto' : 'Reescanear',
                     ),
                   ),
                 ],

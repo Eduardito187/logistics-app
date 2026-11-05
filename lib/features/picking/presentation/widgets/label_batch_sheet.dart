@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/emit_label_line.dart';
 import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import 'label_batch_result.dart';
 import 'line_draft.dart';
 import 'line_editor.dart';
@@ -192,7 +193,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                       decoration: const InputDecoration(
                         labelText: 'Origen',
                         hintText: 'Nodo de origen',
-                        prefixIcon: AnimatedAppIcon(AppIcon.pickupStore),
+                        prefixIconConstraints: FieldIcon.prefixConstraints,
+                        prefixIcon: FieldIcon(icon: AppIcon.pickupStore),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -202,7 +204,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                       decoration: const InputDecoration(
                         labelText: 'Destino',
                         hintText: 'Nodo de destino',
-                        prefixIcon: AnimatedAppIcon(AppIcon.place),
+                        prefixIconConstraints: FieldIcon.prefixConstraints,
+                        prefixIcon: FieldIcon(icon: AppIcon.place),
                       ),
                     ),
                     if (widget.requireReason) ...[
@@ -212,7 +215,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                         decoration: const InputDecoration(
                           labelText: 'Motivo de la reimpresión',
                           hintText: 'Ej. etiqueta dañada',
-                          prefixIcon: AnimatedAppIcon(AppIcon.signature),
+                          prefixIconConstraints: FieldIcon.prefixConstraints,
+                          prefixIcon: FieldIcon(icon: AppIcon.signature),
                         ),
                       ),
                     ],

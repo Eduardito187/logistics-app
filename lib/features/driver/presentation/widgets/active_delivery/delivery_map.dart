@@ -524,11 +524,10 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
         ),
         Positioned(
           right: 14,
-          // Encima de la hoja colapsada (≈32% del alto). Los controles van
-          // AGRUPADOS en una sola tarjeta compacta: ocupa menos alto (no se
-          // encima con el bloque de estado/"Ayuda" en pantallas cortas) y se
-          // ve como un control intencional, no botones sueltos.
-          bottom: MediaQuery.sizeOf(context).height * 0.32 + 12,
+          // Al PIE del mapa (ya no hay hoja persistente que los tapara: antes
+          // iban a ≈32% del alto y la hoja los cubría). Agrupados en una sola
+          // tarjeta compacta, justo encima de la barra de acciones.
+          bottom: 16,
           child: _MapControls(
             children: [
               _MapControlButton(
@@ -635,12 +634,12 @@ class _MapControlButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      // Un poco más chicos (antes 48/24): la columna de controles queda
-      // compacta y no se ve apretada contra el borde derecho.
-      iconSize: 20,
+      // Más chicos aún (antes 42/20): la columna ocupa menos alto y no la tapa
+      // la tarjeta de estado cuando el mapa queda corto.
+      iconSize: 18,
       padding: EdgeInsets.zero,
       color: selected ? scheme.primary : null,
-      constraints: const BoxConstraints.tightFor(width: 42, height: 42),
+      constraints: const BoxConstraints.tightFor(width: 38, height: 38),
       icon: AnimatedAppIcon(
         icon,
         state: selected ? AppIconState.active : AppIconState.idle,

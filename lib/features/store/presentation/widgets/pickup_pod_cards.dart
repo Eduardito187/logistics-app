@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -83,10 +84,8 @@ class PickupConfirmationCard extends StatelessWidget {
             controller: controller,
             onChanged: onChanged,
             decoration: const InputDecoration(
-              prefixIcon: AnimatedAppIcon(
-                AppIcon.badge,
-                excludeFromSemantics: true,
-              ),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.badge),
               labelText: 'QR del cliente o documento',
               hintText: 'Escanea o escribe la confirmación',
             ),

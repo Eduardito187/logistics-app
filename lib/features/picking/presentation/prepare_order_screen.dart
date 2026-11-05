@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/icons/icons.dart';
+import '../../../core/widgets/field_icon.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/scanning/scanner_screen.dart';
@@ -74,7 +75,8 @@ class _PrepareOrderScreenState extends ConsumerState<PrepareOrderScreen> {
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Ej. DIS-123456',
-                    prefixIcon: AnimatedAppIcon(AppIcon.settle),
+                    prefixIconConstraints: FieldIcon.prefixConstraints,
+                    prefixIcon: FieldIcon(icon: AppIcon.settle),
                   ),
                   onSubmitted: _open,
                 ),

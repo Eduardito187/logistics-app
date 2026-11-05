@@ -200,7 +200,7 @@ void main() {
     expect(find.text('Registrar entrega fallida'), findsOneWidget);
   });
 
-  group('escaneo de bultos', () {
+  group('escaneo de productos', () {
     testOnScreens('vacío', (tester, screen) async {
       await _pump(
         tester,
@@ -211,8 +211,8 @@ void main() {
           title: 'Descargar parada 12',
         ),
       );
-      expect(find.text('Sin bultos'), findsOneWidget);
-      expect(find.text('Escanear bulto para descargar'), findsOneWidget);
+      expect(find.text('Sin productos'), findsOneWidget);
+      expect(find.text('Escanear producto para descargar'), findsOneWidget);
     });
 
     testOnScreens('lista de envíos para cargar', (tester, screen) async {

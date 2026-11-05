@@ -102,9 +102,10 @@ Future<void> _pump(WidgetTester tester, {List<Object>? overrides}) async {
   );
 }
 
-/// Expande la hoja de la entrega arrastrándola hacia arriba.
-Future<void> _expandSheet(WidgetTester tester) async {
-  await tester.drag(find.text('Entrega'), const Offset(0, -900));
+/// Abre el modal con los DATOS del pedido (teléfono, dirección, productos)
+/// tocando "Ver pedido" en la barra de acciones.
+Future<void> _openDetails(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('delivery-summary')));
   await tester.pumpAndSettle();
 }
 
@@ -150,32 +151,39 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Entregar pedido'), findsOneWidget);
+    expect(find.text('Entregar'), findsOneWidget);
   });
 
-  testWidgets('muestra el estado, el cliente, el teléfono y la dirección', (
+  testWidgets('muestra el estado y el cliente; detalle en el modal', (
     tester,
   ) async {
     await _pump(tester);
 
+    // Estado + resumen del cliente: visibles SIN abrir nada (el mapa manda).
     expect(find.text('Parada 2 de 5'), findsOneWidget);
     expect(find.text('Llegada 14:05'), findsOneWidget);
     expect(find.text('En camino a Ana Pérez'), findsOneWidget);
     expect(find.byType(RouteProgressBar), findsOneWidget);
+    expect(find.text('Ana Pérez'), findsOneWidget); // resumen de la barra
+    expect(find.text('Pedido PED-9'), findsOneWidget);
 
-    expect(find.text('Ana Pérez'), findsOneWidget);
+    // Teléfono y dirección: en el modal bajo demanda, como ENLACES tocables
+    // (el valor es el enlace; ya no hay botones "Llamar"/"Navegar" aparte).
+    await _openDetails(tester);
     expect(find.text('Cliente · Pedido PED-9'), findsOneWidget);
     expect(find.text('+591 70000001'), findsOneWidget);
-    expect(find.text('Llamar'), findsOneWidget);
+    expect(find.text('Teléfono · toca para llamar'), findsOneWidget);
     expect(find.text('Av. Banzer 123\nPortón verde'), findsOneWidget);
-    expect(find.text('Navegar'), findsOneWidget);
+    expect(find.text('Entregar en · toca para navegar'), findsOneWidget);
+    expect(find.text('Llamar'), findsNothing);
+    expect(find.text('Navegar'), findsNothing);
   });
 
   testWidgets('el pedido lista los productos con SKU y cantidad', (
     tester,
   ) async {
     await _pump(tester);
-    await _expandSheet(tester);
+    await _openDetails(tester);
 
     expect(find.text('Pedido'), findsOneWidget);
     expect(find.text('3 productos'), findsOneWidget);
@@ -189,21 +197,22 @@ void main() {
       tester,
       overrides: _overrides(shipment: _shipment(phone: null)),
     );
+    await _openDetails(tester);
 
     expect(find.text('Teléfono'), findsNothing);
     expect(find.text('Llamar'), findsNothing);
   });
 
-  testWidgets('en curso: entregar, escanear bultos y no se pudo', (
+  testWidgets('en curso: entregar, escanear productos y no se pudo', (
     tester,
   ) async {
     await _pump(tester);
 
-    expect(find.text('Entregar pedido'), findsOneWidget);
-    expect(find.text('Escanear bultos'), findsOneWidget);
+    expect(find.text('Entregar'), findsOneWidget);
+    expect(find.text('Escanear'), findsOneWidget);
     expect(find.text('No se pudo'), findsOneWidget);
 
-    await tester.tap(find.text('Entregar pedido'));
+    await tester.tap(find.text('Entregar'));
     await tester.pumpAndSettle();
     expect(find.byType(PodScreen), findsOneWidget);
     // La foto de la entrega es obligatoria.
@@ -226,7 +235,7 @@ void main() {
     );
 
     expect(find.text('Siguiente entrega'), findsOneWidget);
-    expect(find.text('Entregar pedido'), findsNothing);
+    expect(find.text('Entregar'), findsNothing);
   });
 
   testWidgets('Ayuda: llamar, navegar y reportar inconvenientes, sin chat', (
@@ -268,10 +277,10 @@ void main() {
       child: withTextScale(const ActiveDeliveryScreen()),
     );
 
-    expect(find.text('Entregar pedido'), findsOneWidget);
+    expect(find.text('Entregar'), findsOneWidget);
     expect(find.text('Ayuda'), findsOneWidget);
     // El botón principal queda dentro de la pantalla.
-    final button = tester.getRect(find.text('Entregar pedido'));
+    final button = tester.getRect(find.text('Entregar'));
     expect(button.bottom, lessThanOrEqualTo(screen.size.height));
   });
 
@@ -306,7 +315,7 @@ void main() {
           shipment: _shipment(phone: '+591 70000001'),
         ),
       );
-      await _expandSheet(tester);
+      await _openDetails(tester);
 
       expect(find.text('+591 71111111'), findsOneWidget); // de la parada
       expect(find.text('+591 70000001'), findsNothing);

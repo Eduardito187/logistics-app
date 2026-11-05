@@ -165,13 +165,16 @@ void main() {
           _host(
             const Column(
               children: [
-                AnimatedAppIcon(AppIcon.scan, semanticLabel: 'Escanear bulto'),
+                AnimatedAppIcon(
+                  AppIcon.scan,
+                  semanticLabel: 'Escanear producto',
+                ),
                 AnimatedAppIcon(AppIcon.close, excludeFromSemantics: true),
               ],
             ),
           ),
         );
-        expect(find.bySemanticsLabel('Escanear bulto'), findsOneWidget);
+        expect(find.bySemanticsLabel('Escanear producto'), findsOneWidget);
         expect(find.bySemanticsLabel('Cerrar'), findsNothing);
         handle.dispose();
       },

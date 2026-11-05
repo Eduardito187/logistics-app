@@ -82,7 +82,7 @@ void main() {
                 await Navigator.of(ctx).push<void>(
                   MaterialPageRoute(
                     builder: (_) => ContinuousScannerScreen(
-                      title: 'Cargar bultos',
+                      title: 'Cargar productos',
                       helper: 'Apuntá a la etiqueta',
                       onCode: onCode,
                       now: () => now,
@@ -110,7 +110,7 @@ void main() {
     expect(error.message, 'Ajeno');
   });
 
-  testWidgets('varios bultos sin cerrar la cámara, con aviso y contador', (
+  testWidgets('varios productos sin cerrar la cámara, con aviso y contador', (
     tester,
   ) async {
     final codes = <String>[];
@@ -120,18 +120,18 @@ void main() {
         codes.add(code);
         return code == 'MALO'
             ? const ScanFeedback.error('No es de esta ruta')
-            : ScanFeedback.ok('Bulto $code registrado');
+            : ScanFeedback.ok('Producto $code registrado');
       },
     );
 
-    expect(find.text('Cargar bultos'), findsOneWidget);
+    expect(find.text('Cargar productos'), findsOneWidget);
     expect(find.text('Terminar'), findsOneWidget);
     expect(find.text('0 registrados'), findsOneWidget);
 
     platform.read('A1');
     await tester.pump();
     await tester.pump();
-    expect(find.text('Bulto A1 registrado'), findsOneWidget);
+    expect(find.text('Producto A1 registrado'), findsOneWidget);
     expect(
       findAppIconInState(AppIcon.success, AppIconState.success),
       findsOneWidget,
@@ -142,7 +142,7 @@ void main() {
     platform.read('B2');
     await tester.pump();
     await tester.pump();
-    expect(find.text('Bulto B2 registrado'), findsOneWidget);
+    expect(find.text('Producto B2 registrado'), findsOneWidget);
     expect(find.text('2 registrados'), findsOneWidget);
 
     now = now.add(const Duration(milliseconds: 300));

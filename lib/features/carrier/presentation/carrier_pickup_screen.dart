@@ -43,7 +43,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
       await scanContinuous(
         context,
         title: 'Recoger carga',
-        helper: 'Apunta al QR de la etiqueta de cada bulto',
+        helper: 'Apunta al QR de la etiqueta de cada producto',
         formats: const [BarcodeFormat.qrCode],
         onCode: (qr) async {
           final feedback = await _pickupCode(qr);
@@ -57,7 +57,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
     if (!mounted || count == 0) return;
     showCarrierBatchSummary(
       context,
-      count == 1 ? '1 bulto recogido.' : '$count bultos recogidos.',
+      count == 1 ? '1 producto recogido.' : '$count productos recogidos.',
     );
   }
 
@@ -102,7 +102,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
     if (outcome == SubmitOutcome.failed) {
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
-    return ScanFeedback.ok('Bulto recogido · ${label.sku}');
+    return ScanFeedback.ok('Producto recogido · ${label.sku}');
   }
 
   @override
@@ -112,10 +112,10 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
       body: CarrierScanSessionView(
         records: _records,
         emptyIcon: AppIcon.pickupScan,
-        emptyTitle: 'Sin bultos recogidos',
-        emptyMessage: 'Escanea la etiqueta de cada bulto al cargarlo.',
+        emptyTitle: 'Sin productos recogidos',
+        emptyMessage: 'Escanea la etiqueta de cada producto al cargarlo.',
         rowIcon: AppIcon.receive,
-        actionLabel: 'Escanear bulto',
+        actionLabel: 'Escanear producto',
         busy: _busy,
         onAction: _scan,
         actionStyle: _actionStyle,

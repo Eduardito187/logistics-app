@@ -25,6 +25,7 @@ import 'controllers/order_labels_controller.dart';
 import 'controllers/preparation_controller.dart';
 import 'widgets/assign_lane_dialog.dart';
 import 'widgets/label_batch_sheet.dart';
+import 'widgets/label_preview_sheet.dart';
 import 'widgets/preparation_empty_body.dart';
 import 'widgets/preparation_units_layout.dart';
 import 'widgets/progress_card.dart';
@@ -441,6 +442,16 @@ class _OrderPreparationScreenState
           busy: _busyUnitId == label.labelId,
           onPrepare: () => _prepareUnit(label),
           onReprint: () => _reprintUnit(label),
+          // Ver la etiqueta (QR real + datos del backend: nombre, foto,
+          // destino) antes de imprimir, o solo verla.
+          onPreview: () => showLabelPreviewSheet(
+            context,
+            label: label,
+            productName: label.productName,
+            imageUrl: label.imageUrl,
+            destination: labelDestinationText(label.destination),
+            onPrint: () => _printLabel(label),
+          ),
         );
       },
     );

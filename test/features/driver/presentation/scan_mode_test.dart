@@ -11,7 +11,7 @@ void main() {
     expect(ScanMode.values, hasLength(2));
   });
 
-  test('ScannedUnit guarda el id del bulto y su desenlace', () {
+  test('ScannedUnit guarda el id del producto y su desenlace', () {
     const unit = ScannedUnit('unit-9', SubmitOutcome.queued);
     expect(unit.unitId, 'unit-9');
     expect(unit.outcome, SubmitOutcome.queued);

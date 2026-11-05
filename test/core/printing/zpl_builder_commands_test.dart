@@ -88,7 +88,7 @@ void main() {
     });
   });
 
-  group('ZplBuilder.packageLabel — datos del bulto', () {
+  group('ZplBuilder.packageLabel — datos del producto', () {
     test('imprime unidad y pieza con el formato N/M', () {
       final zpl = ZplBuilder.packageLabel(payload: _payload(), qrContent: qr);
       expect(zpl, contains('U 1/2'));

@@ -5,6 +5,42 @@ import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 
+/// Miniatura del producto (foto decodificada chica) para la fila de la unidad.
+/// Sin `imageUrl`, no ocupa espacio (el tile queda como antes).
+class _ProductThumb extends StatelessWidget {
+  const _ProductThumb({required this.imageUrl});
+
+  final String? imageUrl;
+
+  static const double _size = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    final cache = (_size * dpr).round();
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image(
+          image: ResizeImage(
+            NetworkImage(url),
+            width: cache,
+            height: cache,
+            policy: ResizeImagePolicy.fit,
+          ),
+          width: _size,
+          height: _size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}
+
 /// Fila de una unidad del pedido: SKU, bulto y estado, con la acción de escanear
 /// e imprimir (si está pendiente) o reimprimir (si ya está preparada).
 class UnitTile extends StatelessWidget {
@@ -15,6 +51,7 @@ class UnitTile extends StatelessWidget {
     required this.busy,
     required this.onPrepare,
     required this.onReprint,
+    this.onPreview,
   });
 
   final EmittedLabel label;
@@ -23,37 +60,54 @@ class UnitTile extends StatelessWidget {
   final VoidCallback onPrepare;
   final VoidCallback onReprint;
 
+  /// Abre el PREVIEW de la etiqueta (verla antes de imprimir). Si es `null`, no
+  /// se muestra la acción.
+  final VoidCallback? onPreview;
+
   /// Ancho de contenido por debajo del cual el estado va bajo el SKU.
   static const double _stackBelow = 340;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shortId = label.labelId.length > 8
-        ? label.labelId.substring(label.labelId.length - 8)
-        : label.labelId;
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              final info = Column(
+              // Con datos del backend (EmittedLabel enriquecido): el NOMBRE del
+              // producto manda; SKU y línea quedan de subtítulo. Sin nombre, el
+              // SKU es el título (compatibilidad).
+              final name = label.productName;
+              final hasName = name != null && name.isNotEmpty;
+              final text = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SKU ${label.sku}',
+                    hasName ? name : 'SKU ${label.sku}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Línea ${label.lineNumber} · Bulto …$shortId',
+                    hasName
+                        ? 'SKU ${label.sku} · Línea ${label.lineNumber}'
+                        : 'Línea ${label.lineNumber}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
                   ),
+                ],
+              );
+              final info = Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProductThumb(imageUrl: label.imageUrl),
+                  Expanded(child: text),
                 ],
               );
               final pill = prepared
@@ -65,16 +119,33 @@ class UnitTile extends StatelessWidget {
                   : const StatusPill('Pendiente', icon: AppIcon.pending);
               // Angosto (teléfono chico, letra grande, columna de tablet): el
               // estado va debajo y el SKU usa todo el ancho.
+              final preview = onPreview == null
+                  ? const SizedBox.shrink()
+                  : IconButton(
+                      tooltip: 'Ver etiqueta',
+                      onPressed: onPreview,
+                      icon: const AnimatedAppIcon(AppIcon.qrCode, size: 22),
+                    );
               if (constraints.maxWidth < _stackBelow) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [info, const SizedBox(height: 8), pill],
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: info),
+                        preview,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    pill,
+                  ],
                 );
               }
               return Row(
                 children: [
                   Expanded(child: info),
-                  const SizedBox(width: 8),
+                  preview,
+                  const SizedBox(width: 4),
                   pill,
                 ],
               );

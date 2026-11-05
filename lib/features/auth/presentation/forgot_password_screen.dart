@@ -8,7 +8,7 @@ import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import 'controllers/forgot_password_controller.dart';
-import 'widgets/field_icon.dart';
+import '../../../core/widgets/field_icon.dart';
 
 /// Flujo "olvidé mi contraseña" en dos pasos dentro de una sola pantalla:
 /// paso 1 pide el código al correo, paso 2 lo canjea junto con la nueva clave.

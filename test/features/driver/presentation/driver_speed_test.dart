@@ -21,6 +21,7 @@ import 'package:logistics_app/features/driver/presentation/controllers/locally_s
 import 'package:logistics_app/features/driver/presentation/driver_vehicle_gate.dart';
 import 'package:logistics_app/features/driver/presentation/load_scan_screen.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_map.dart';
+import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_actions_bar.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_sheet.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/route_list.dart';
 
@@ -328,7 +329,9 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(ActiveDeliveryScreen)),
       );
-      final sheet = tester.widget<DeliverySheet>(find.byType(DeliverySheet));
+      final sheet = tester.widget<DeliveryActionsBar>(
+        find.byType(DeliveryActionsBar),
+      );
       expect(sheet.stop.id, 'a');
 
       container
@@ -337,7 +340,10 @@ void main() {
       await tester.pump();
 
       expect(
-        tester.widget<DeliverySheet>(find.byType(DeliverySheet)).stop.id,
+        tester
+            .widget<DeliveryActionsBar>(find.byType(DeliveryActionsBar))
+            .stop
+            .id,
         'b',
       );
     });
@@ -394,6 +400,10 @@ void main() {
         child: const ActiveDeliveryScreen(),
         tall: true,
       );
+      // El detalle vive en el modal bajo demanda; abrirlo NO dispara el GET
+      // porque la parada ya está completa (teléfono, dirección y productos).
+      await tester.tap(find.byKey(const Key('delivery-summary')));
+      await tester.pumpAndSettle();
 
       expect(find.text('+591 7'), findsOneWidget);
       expect(detailCalls, 0);
@@ -474,7 +484,7 @@ void main() {
 
       await tester.tap(find.text('Envío 1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Escanear bulto para cargar'));
+      await tester.tap(find.text('Escanear producto para cargar'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();

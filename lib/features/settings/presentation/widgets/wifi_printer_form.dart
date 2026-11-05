@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/app_snack.dart';
 
@@ -70,7 +71,8 @@ class _WifiPrinterFormState extends State<WifiPrinterForm> {
           decoration: const InputDecoration(
             labelText: 'IP de la impresora',
             hintText: 'Ej. 192.168.1.50',
-            prefixIcon: AnimatedAppIcon(AppIcon.lan),
+            prefixIconConstraints: FieldIcon.prefixConstraints,
+            prefixIcon: FieldIcon(icon: AppIcon.lan),
           ),
         ),
         const SizedBox(height: 8),
@@ -80,7 +82,8 @@ class _WifiPrinterFormState extends State<WifiPrinterForm> {
           decoration: const InputDecoration(
             labelText: 'Puerto',
             hintText: '9100',
-            prefixIcon: AnimatedAppIcon(AppIcon.lan),
+            prefixIconConstraints: FieldIcon.prefixConstraints,
+            prefixIcon: FieldIcon(icon: AppIcon.lan),
           ),
         ),
         const SizedBox(height: 8),

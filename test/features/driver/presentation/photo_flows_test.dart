@@ -92,7 +92,7 @@ void main() {
       expect((image.image as ResizeImage).width, 800);
       expect(find.text('Volver a tomar'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await signOnPad(tester);
       await tester.tap(find.text('Registrar entrega'));
@@ -132,7 +132,7 @@ void main() {
       expect(find.byType(Image), findsNothing);
       expect(find.text('Tomar foto'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await signOnPad(tester);
       // La foto de la entrega es obligatoria: sin ella no se registra.
@@ -189,7 +189,7 @@ void main() {
           tall: true,
         );
 
-        await tester.tap(find.text('Escanear bulto'));
+        await tester.tap(find.text('Escanear producto'));
         await tester.pumpAndSettle();
         await signOnPad(tester);
         // Firmado pero sin foto: la foto sigue siendo obligatoria.
@@ -235,7 +235,7 @@ void main() {
         tall: true,
       );
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Escanear QR del cliente'));
       await tester.pumpAndSettle();
@@ -277,7 +277,7 @@ void main() {
       expect(picker.requests.single.imageQuality, kEvidencePhotoQuality);
       expect(_preview('/tmp/damage.jpg'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Registrar entrega fallida'));
       await tester.pumpAndSettle();
@@ -309,7 +309,7 @@ void main() {
       await tester.pump();
       expect(find.byType(Image), findsNothing);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Registrar entrega fallida'));
       await tester.pumpAndSettle();

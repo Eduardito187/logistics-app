@@ -96,9 +96,16 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
           .call(vehicleId: vehicleId, date: date);
       if (!mounted) return;
       ref.invalidate(driverRouteProvider);
-      showSuccessSnack(context, 'Ruta del día armada.');
+      showSuccessSnack(
+        context,
+        'Ruta del día armada.',
+        bottomClearance: kBottomActionClearance,
+      );
     } on ApiException catch (e) {
-      if (mounted) showErrorSnack(context, e);
+      // Aviso elevado para no tapar los botones de zoom del mapa.
+      if (mounted) {
+        showErrorSnack(context, e, bottomClearance: kBottomActionClearance);
+      }
     } finally {
       if (mounted) setState(() => _assembling = false);
     }

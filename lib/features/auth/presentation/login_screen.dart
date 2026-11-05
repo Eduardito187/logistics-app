@@ -11,7 +11,7 @@ import '../../../core/widgets/app_snack.dart';
 import '../domain/entities/login_result.dart';
 import 'controllers/login_controller.dart';
 import 'widgets/auth_header.dart';
-import 'widgets/field_icon.dart';
+import '../../../core/widgets/field_icon.dart';
 
 /// Pantalla de bienvenida e inicio de sesión de la app interna.
 ///

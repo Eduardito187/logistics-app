@@ -142,7 +142,7 @@ void main() {
     expect(find.text('Sin recojos'), findsOneWidget);
   });
 
-  testOnScreens('detalle de recepción: progreso, bultos y botón fijo', (
+  testOnScreens('detalle de recepción: progreso, productos y botón fijo', (
     tester,
     screen,
   ) async {

@@ -72,20 +72,20 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: '1. Bulto entregado',
+              title: '1. Producto entregado',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_unitId != null)
-                    Text('Bulto: $_unitId')
+                    Text('Producto: $_unitId')
                   else
-                    const Text('Escanea el bulto a entregar.'),
+                    const Text('Escanea el producto a entregar.'),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanUnit,
                     icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
-                      _unitId == null ? 'Escanear bulto' : 'Reescanear',
+                      _unitId == null ? 'Escanear producto' : 'Reescanear',
                     ),
                   ),
                 ],

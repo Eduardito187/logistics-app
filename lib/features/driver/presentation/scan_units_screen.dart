@@ -88,8 +88,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                       child: SingleChildScrollView(
                         child: EmptyState(
                           icon: AppIcon.scan,
-                          title: 'Sin bultos',
-                          message: 'Escanea el primer bulto para empezar.',
+                          title: 'Sin productos',
+                          message: 'Escanea el primer producto para empezar.',
                         ),
                       ),
                     )
@@ -110,7 +110,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                 child: Column(
                   children: [
                     Text(
-                      '${_registered.length} bulto(s) registrados',
+                      '${_registered.length} producto(s) registrados',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
@@ -131,8 +131,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                         ),
                         label: Text(
                           _isLoad
-                              ? 'Escanear bulto para cargar'
-                              : 'Escanear bulto para descargar',
+                              ? 'Escanear producto para cargar'
+                              : 'Escanear producto para descargar',
                         ),
                       ),
                     ),
@@ -153,8 +153,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
     try {
       await scanContinuous(
         context,
-        title: _isLoad ? 'Cargar bultos' : 'Descargar bultos',
-        helper: 'Apunta al QR de cada bulto',
+        title: _isLoad ? 'Cargar productos' : 'Descargar productos',
+        helper: 'Apunta al QR de cada producto',
         formats: const [BarcodeFormat.qrCode],
         onCode: _onCode,
       );
@@ -176,8 +176,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
     if (expected != null && !expected.contains(unitId)) {
       return ScanFeedback.error(
         _isLoad
-            ? 'Ese bulto no es de este camión'
-            : 'Ese bulto no es de esta parada',
+            ? 'Ese producto no es de este camión'
+            : 'Ese producto no es de esta parada',
       );
     }
     if (_alreadyRegistered(unitId)) {
@@ -210,7 +210,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
     final count = _registeredCount();
     final verb = _isLoad ? 'cargado' : 'descargado';
     return ScanFeedback.ok(
-      total == null ? 'Bulto $count $verb' : 'Bulto $count/$total $verb',
+      total == null ? 'Producto $count $verb' : 'Producto $count/$total $verb',
     );
   }
 

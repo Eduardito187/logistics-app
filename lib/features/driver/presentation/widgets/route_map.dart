@@ -184,7 +184,9 @@ class _RouteMapState extends State<RouteMap> {
         ),
         Positioned(
           right: 12,
-          bottom: 12,
+          // Separados del borde inferior (gesto del sistema) y de un posible
+          // aviso al pie, para que no tapen los botones de zoom.
+          bottom: 12 + MediaQuery.viewPaddingOf(context).bottom,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

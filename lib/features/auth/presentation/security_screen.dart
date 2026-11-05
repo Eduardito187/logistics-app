@@ -11,7 +11,7 @@ import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../domain/entities/two_factor_enrollment.dart';
 import 'controllers/security_controller.dart';
-import 'widgets/field_icon.dart';
+import '../../../core/widgets/field_icon.dart';
 import 'controllers/two_factor_status.dart';
 
 /// Pantalla de Seguridad (Ajustes): activar o desactivar la verificación en dos

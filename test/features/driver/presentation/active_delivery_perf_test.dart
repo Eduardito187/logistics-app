@@ -8,6 +8,7 @@ import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/features/driver/presentation/active_delivery_screen.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_map.dart';
+import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_actions_bar.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/active_delivery/delivery_sheet.dart';
 
 import '../support/driver_test_support.dart';
@@ -91,7 +92,7 @@ void main() {
     );
 
     final layerBefore = tester.widget(find.byType(PolylineLayer));
-    final sheetBefore = tester.widget(find.byType(DeliverySheet));
+    final sheetBefore = tester.widget(find.byType(DeliveryActionsBar));
     final distanceBefore = tester
         .widget<Text>(find.textContaining('Faltan'))
         .data;
@@ -107,13 +108,13 @@ void main() {
         .move(const GpsFix(lat: -17.790, lng: -63.181));
     await tester.pumpAndSettle();
 
-    // La capa del trazo y la hoja son la MISMA instancia: no se reconstruyen.
+    // La capa del trazo y la barra son la MISMA instancia: no se reconstruyen.
     expect(
       identical(tester.widget(find.byType(PolylineLayer)), layerBefore),
       isTrue,
     );
     expect(
-      identical(tester.widget(find.byType(DeliverySheet)), sheetBefore),
+      identical(tester.widget(find.byType(DeliveryActionsBar)), sheetBefore),
       isTrue,
     );
     // Lo que falta sí se actualiza.
@@ -123,7 +124,7 @@ void main() {
     );
   });
 
-  testWidgets('un pedido con muchos productos solo construye los visibles', (
+  testWidgets('un pedido con varios productos se lista y hace scroll', (
     tester,
   ) async {
     final stop = buildStop(
@@ -133,7 +134,7 @@ void main() {
       lat: -17.78,
       lng: -63.18,
       items: [
-        for (var i = 0; i < 200; i++)
+        for (var i = 0; i < 12; i++)
           Items3(sku: 'SKU-$i', name: 'Producto $i', quantity: 1),
       ],
     );
@@ -143,12 +144,17 @@ void main() {
       child: const ActiveDeliveryScreen(),
       tall: true,
     );
+    // El pedido vive en el modal bajo demanda: se abre con "Ver pedido". El
+    // modal mide lo que mide el contenido y, si hay muchos ítems, hace scroll.
+    await tester.tap(find.byKey(const Key('delivery-summary')));
+    await tester.pumpAndSettle();
 
-    expect(find.text('200 productos'), findsOneWidget);
+    expect(find.text('12 productos'), findsOneWidget);
     expect(find.text('Producto 0'), findsOneWidget);
-    final built = find.byType(ProductTile, skipOffstage: false).evaluate();
-    expect(built.length, lessThan(200));
-    expect(find.text('Producto 199', skipOffstage: false), findsNothing);
+    // El último puede quedar fuera de vista hasta scrollear el modal.
+    await tester.drag(find.text('Producto 0'), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.text('Producto 11'), findsOneWidget);
   });
 
   testWidgets('la foto del producto se decodifica chica sin deformarse', (
