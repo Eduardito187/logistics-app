@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
 import 'core/auth/session.dart';
+import 'core/auth/user_role.dart';
 import 'core/brand/boot_splash_gate.dart';
 import 'core/auth/token_store.dart';
+import 'core/location/truck_tracking_service.dart';
 import 'core/background/background_sync.dart';
 import 'core/background/ui_alive.dart';
 import 'core/push/push_controller.dart';
@@ -25,6 +28,23 @@ import 'core/version/app_build_info.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Orientación: en TELÉFONOS se fija vertical (el dueño no quiere que la app
+  // rote, independientemente del auto-rotate del sistema). En TABLETS se
+  // permiten todas (sus pantallas tienen layout horizontal). Se decide por el
+  // lado más corto en dp (>=600 = tablet).
+  final view = WidgetsBinding.instance.platformDispatcher.views.first;
+  final shortestSideDp = view.physicalSize.shortestSide / view.devicePixelRatio;
+  await SystemChrome.setPreferredOrientations(
+    shortestSideDp >= 600
+        ? const [
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+            DeviceOrientation.landscapeLeft,
+            DeviceOrientation.landscapeRight,
+          ]
+        : const [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
+  );
 
   // Arranque en paralelo (cada espera suma al tiempo de apertura en gama baja):
   // memoria del equipo, formatos en español, Crashlytics (no-op sin
@@ -107,6 +127,14 @@ Future<void> _afterFirstFrame(
   // del primer cuadro. La suscripción queda viva toda la app.
   await WidgetsBinding.instance.endOfFrame;
   container.listen(pushRegistrationProvider, (_, _) {});
+  // Limpieza de un servicio de rastreo HUÉRFANO: si el usuario actual NO es
+  // chofer (o no hay sesión), se baja la notificación "Sesión en curso" que
+  // pudo quedar colgada de una sesión de chofer previa (el foreground service
+  // sobrevive al cierre de la app y al cambio de rol). Si ES chofer con parada
+  // activa, el autostart del gate lo vuelve a levantar.
+  if (container.read(sessionProvider)?.role != UserRole.driver) {
+    await container.read(truckTrackingProvider.notifier).stopOrphanedService();
+  }
   try {
     await initBackgroundSync();
   } on Object catch (error, stack) {

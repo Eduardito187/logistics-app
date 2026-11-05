@@ -30,6 +30,17 @@ class DateQueryInterceptor extends Interceptor {
     return value;
   }
 
+  /// Normalización SOLO para el query string: además de la fecha, convierte los
+  /// booleanos a `"1"`/`"0"`. El cliente generado (retrofit) serializa un `bool`
+  /// de query como `"true"`/`"false"`, pero la regla `boolean` de Laravel SOLO
+  /// acepta `1/0/"1"/"0"` y responde 422 ("The X field must be true or false",
+  /// p. ej. `only_active` de choferes, `only_passed` del checklist). En el BODY
+  /// no se tocan (ahí el JSON `true`/`false` sí es válido).
+  static Object? _normalizeQuery(Object? value) {
+    if (value is bool) return value ? '1' : '0';
+    return normalize(value);
+  }
+
   /// Recorre mapas y listas anidados recortando las fechas de calendario.
   static Object? _deep(Object? value) {
     if (value is Map) {
@@ -45,7 +56,7 @@ class DateQueryInterceptor extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (options.queryParameters.isNotEmpty) {
       options.queryParameters = options.queryParameters.map(
-        (key, value) => MapEntry(key, normalize(value)),
+        (key, value) => MapEntry(key, _normalizeQuery(value)),
       );
     }
     // Body JSON (Map): recorta `route_date` y cualquier otra fecha de calendario

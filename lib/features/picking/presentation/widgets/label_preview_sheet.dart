@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/api/models/destination.dart';
@@ -8,6 +9,10 @@ import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/type3.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/sharing/capture_boundary.dart';
+import '../../../../core/sharing/share_service.dart';
+import '../../../../core/widgets/app_snack.dart';
+import '../../../../core/widgets/tap_outside_to_dismiss.dart';
 
 /// Texto humano del destino de una etiqueta (nombres, sin uuid):
 /// "Domicilio · cliente · dirección", "Tienda nombre", "Almacén nombre".
@@ -87,7 +92,7 @@ Future<void> showLabelPreviewSheet(
   );
 }
 
-class _LabelPreviewSheet extends StatefulWidget {
+class _LabelPreviewSheet extends ConsumerStatefulWidget {
   const _LabelPreviewSheet({
     required this.label,
     required this.productName,
@@ -103,11 +108,15 @@ class _LabelPreviewSheet extends StatefulWidget {
   final Future<void> Function()? onPrint;
 
   @override
-  State<_LabelPreviewSheet> createState() => _LabelPreviewSheetState();
+  ConsumerState<_LabelPreviewSheet> createState() => _LabelPreviewSheetState();
 }
 
-class _LabelPreviewSheetState extends State<_LabelPreviewSheet> {
+class _LabelPreviewSheetState extends ConsumerState<_LabelPreviewSheet> {
   bool _printing = false;
+  bool _sharing = false;
+
+  /// Boundary de la etiqueta dibujada: se "fotografía" a PNG para compartir.
+  final GlobalKey _labelBoundaryKey = GlobalKey();
 
   Future<void> _print() async {
     final onPrint = widget.onPrint;
@@ -121,12 +130,39 @@ class _LabelPreviewSheetState extends State<_LabelPreviewSheet> {
     }
   }
 
+  /// Captura la etiqueta a PNG y la comparte por el menú nativo (WhatsApp, etc.).
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final png = await ref.read(boundaryCapturerProvider)(_labelBoundaryKey);
+      if (!mounted) return;
+      if (png == null) {
+        showInfoSnack(
+          context,
+          'No se pudo preparar la etiqueta para compartir.',
+        );
+        return;
+      }
+      final label = widget.label;
+      final producto = widget.productName ?? 'SKU ${label.sku}';
+      await ref
+          .read(shareServiceProvider)
+          .shareImagePng(
+            png,
+            filename: 'etiqueta_${label.orderNumber}_L${label.lineNumber}.png',
+            text: 'Etiqueta · Pedido ${label.orderNumber} · $producto',
+          );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
-    return Align(
-      alignment: Alignment.bottomCenter,
+    return TapOutsideToDismiss(
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: AppBreakpoints.maxFormWidth,
@@ -157,11 +193,15 @@ class _LabelPreviewSheetState extends State<_LabelPreviewSheet> {
                       const SizedBox(height: 12),
                       // La etiqueta, como en papel: SIEMPRE blanca (no sigue el
                       // tema oscuro de la app; una etiqueta impresa es blanca).
-                      _LabelCard(
-                        label: widget.label,
-                        productName: widget.productName,
-                        imageUrl: widget.imageUrl,
-                        destination: widget.destination,
+                      // El boundary permite "fotografiarla" para compartir.
+                      RepaintBoundary(
+                        key: _labelBoundaryKey,
+                        child: _LabelCard(
+                          label: widget.label,
+                          productName: widget.productName,
+                          imageUrl: widget.imageUrl,
+                          destination: widget.destination,
+                        ),
                       ),
                     ],
                   ),
@@ -170,7 +210,9 @@ class _LabelPreviewSheetState extends State<_LabelPreviewSheet> {
               _Actions(
                 canPrint: widget.onPrint != null,
                 printing: _printing,
+                sharing: _sharing,
                 onPrint: _print,
+                onShare: _share,
                 onClose: () => Navigator.of(context).maybePop(),
               ),
             ],
@@ -279,18 +321,12 @@ class _LabelCard extends StatelessWidget {
           ),
           if (destination != null && destination!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Destino',
-              style: const TextStyle(color: Color(0xFF888888), fontSize: 12),
+              style: TextStyle(color: Color(0xFF888888), fontSize: 12),
             ),
-            Text(
-              destination!,
-              style: const TextStyle(
-                color: ink,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
+            // Dirección larga: 2 líneas y "Ver más" para no estirar la etiqueta.
+            _ExpandableAddress(text: destination!, inkColor: ink),
           ],
           const SizedBox(height: 16),
           // QR firmado real (el mismo que va impreso y verifica el chofer).
@@ -313,13 +349,16 @@ class _LabelCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          // Código de la etiqueta COMPLETO (sin recortar): es el id que el
+          // chofer ve al verificar. Se centra y envuelve si es largo.
           Center(
-            child: Text(
-              '…${_shortId(label.labelId)}',
+            child: SelectableText(
+              label.labelId,
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF999999),
+                color: Color(0xFF777777),
                 fontSize: 12,
-                letterSpacing: 1,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -327,9 +366,74 @@ class _LabelCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  static String _shortId(String id) =>
-      id.length > 10 ? id.substring(id.length - 10) : id;
+/// Dirección/destino con tope de 2 líneas y un toggle "Ver más / Ver menos".
+/// El toggle solo aparece si el texto realmente excede las 2 líneas.
+class _ExpandableAddress extends StatefulWidget {
+  const _ExpandableAddress({required this.text, required this.inkColor});
+
+  final String text;
+  final Color inkColor;
+
+  @override
+  State<_ExpandableAddress> createState() => _ExpandableAddressState();
+}
+
+class _ExpandableAddressState extends State<_ExpandableAddress> {
+  bool _expanded = false;
+
+  static const int _maxLines = 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      color: widget.inkColor,
+      fontWeight: FontWeight.w700,
+      fontSize: 15,
+      height: 1.25,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // ¿El texto excede 2 líneas al ancho disponible?
+        final tp = TextPainter(
+          text: TextSpan(text: widget.text, style: style),
+          maxLines: _maxLines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = tp.didExceedMaxLines;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              style: style,
+              maxLines: _expanded ? null : _maxLines,
+              overflow: _expanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
+            ),
+            if (overflows)
+              GestureDetector(
+                onTap: () => setState(() => _expanded = !_expanded),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    _expanded ? 'Ver menos' : 'Ver más',
+                    style: const TextStyle(
+                      color: Color(0xFFE30613),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _NoPhoto extends StatelessWidget {
@@ -357,42 +461,68 @@ class _Actions extends StatelessWidget {
   const _Actions({
     required this.canPrint,
     required this.printing,
+    required this.sharing,
     required this.onPrint,
+    required this.onShare,
     required this.onClose,
   });
 
   final bool canPrint;
   final bool printing;
+  final bool sharing;
   final VoidCallback onPrint;
+  final VoidCallback onShare;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
+    final busy = printing || sharing;
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: printing ? null : onClose,
-                child: const Text('Cerrar'),
+            // Compartir: destacado a lo ancho (enviar la etiqueta por WhatsApp,
+            // correo, etc. desde el menú nativo del móvil).
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: busy ? null : onShare,
+                icon: AnimatedAppIcon(
+                  AppIcon.send,
+                  state: sharing ? AppIconState.loading : AppIconState.idle,
+                ),
+                label: const Text('Compartir'),
               ),
             ),
-            if (canPrint) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: printing ? null : onPrint,
-                  icon: AnimatedAppIcon(
-                    AppIcon.printing,
-                    state: printing ? AppIconState.loading : AppIconState.idle,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: busy ? null : onClose,
+                    child: const Text('Cerrar'),
                   ),
-                  label: const Text('Imprimir'),
                 ),
-              ),
-            ],
+                if (canPrint) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: busy ? null : onPrint,
+                      icon: AnimatedAppIcon(
+                        AppIcon.printing,
+                        state: printing
+                            ? AppIconState.loading
+                            : AppIconState.idle,
+                      ),
+                      label: const Text('Imprimir'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),

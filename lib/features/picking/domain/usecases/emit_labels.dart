@@ -19,3 +19,19 @@ class EmitLabels {
 final emitLabelsProvider = Provider<EmitLabels>(
   (ref) => EmitLabels(ref.watch(pickingRepositoryProvider)),
 );
+
+/// Caso de uso (Command, CQRS): emite las etiquetas del pedido POR ORDEN. El
+/// backend deriva origen/destino/líneas del plan publicado; la app no pide nada
+/// al usuario. Idempotente (reabrir emite lo que falte).
+class EmitOrderLabels {
+  const EmitOrderLabels(this._repo);
+
+  final PickingRepository _repo;
+
+  Future<List<EmittedLabel>> call(String orderNumber) =>
+      _repo.emitOrderLabels(orderNumber);
+}
+
+final emitOrderLabelsProvider = Provider<EmitOrderLabels>(
+  (ref) => EmitOrderLabels(ref.watch(pickingRepositoryProvider)),
+);

@@ -8,6 +8,7 @@ import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/tap_outside_to_dismiss.dart';
 import '../../../../../core/widgets/brand_loader.dart';
 import '../../../domain/entities/street_address.dart';
 import '../../controllers/driver_controllers.dart';
@@ -42,8 +43,7 @@ Future<void> showDeliveryDetailsSheet(
     builder: (context) {
       final theme = Theme.of(context);
       final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
-      return Align(
-        alignment: Alignment.bottomCenter,
+      return TapOutsideToDismiss(
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: AppBreakpoints.maxContentWidth,

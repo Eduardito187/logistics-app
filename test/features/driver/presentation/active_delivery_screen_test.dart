@@ -203,20 +203,22 @@ void main() {
     expect(find.text('Llamar'), findsNothing);
   });
 
-  testWidgets('en curso: entregar, escanear productos y no se pudo', (
+  testWidgets('en curso: entregar y no se pudo (sin "Escanear" redundante)', (
     tester,
   ) async {
     await _pump(tester);
 
     expect(find.text('Entregar'), findsOneWidget);
-    expect(find.text('Escanear'), findsOneWidget);
     expect(find.text('No se pudo'), findsOneWidget);
+    // "Escanear" suelto se quitó: la entrega (POD) ya escanea el producto.
+    expect(find.text('Escanear'), findsNothing);
 
     await tester.tap(find.text('Entregar'));
     await tester.pumpAndSettle();
     expect(find.byType(PodScreen), findsOneWidget);
-    // La foto de la entrega es obligatoria.
+    // La foto de la entrega es obligatoria, y el POD escanea el producto.
     expect(find.text('3. Foto de entrega (obligatoria)'), findsOneWidget);
+    expect(find.text('1. Producto entregado'), findsOneWidget);
   });
 
   testWidgets('"No se pudo" abre la entrega fallida', (tester) async {

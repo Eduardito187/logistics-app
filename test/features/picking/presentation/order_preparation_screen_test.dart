@@ -56,18 +56,6 @@ Future<FakeLabelPrinter> _pump(
   return fakePrinter;
 }
 
-Future<void> _submitSheet(WidgetTester tester) async {
-  // El título del sheet y el botón comparten el texto "Emitir etiquetas": se
-  // acota al FilledButton de envío dentro del sheet.
-  final submit = find.descendant(
-    of: find.byType(LabelBatchSheet),
-    matching: findButtonWithText<FilledButton>('Emitir etiquetas'),
-  );
-  await tester.ensureVisible(submit);
-  await tester.tap(submit);
-  await tester.pumpAndSettle();
-}
-
 Finder _sheetFields() => find.descendant(
   of: find.byType(LabelBatchSheet),
   matching: find.byType(TextField),
@@ -82,7 +70,9 @@ void main() {
       repo: FakePickingRepository(
         onGetOrderLabels: (_) async => [],
         onGetOrderDispatchLines: (_) async => buildDispatchLines(
-          lines: [buildDispatchLine(productName: 'Lavadora 9 kg', sku: 'SKU-A')],
+          lines: [
+            buildDispatchLine(productName: 'Lavadora 9 kg', sku: 'SKU-A'),
+          ],
         ),
       ),
     );
@@ -115,7 +105,7 @@ void main() {
     );
 
     expect(find.byType(ProgressCard), findsOneWidget);
-    expect(find.text('Unidades (2)'), findsOneWidget);
+    expect(find.text('Productos (2)'), findsOneWidget);
     expect(find.byType(UnitTile), findsNWidgets(2));
     expect(find.text('0/2'), findsOneWidget); // ninguna preparada aún
   });
@@ -133,7 +123,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Unidades (1)'), findsOneWidget);
+    expect(find.text('Productos (1)'), findsOneWidget);
     expect(find.byType(UnitTile), findsOneWidget);
   });
 
@@ -152,68 +142,66 @@ void main() {
     expect(find.text('Reintentar'), findsOneWidget);
   });
 
-  testWidgets('emitir etiquetas: completa el formulario y confirma', (
+  testWidgets('emitir POR ORDEN: sin formulario, emite directo', (
     tester,
   ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
       onGetOrderDispatchLines: (_) async => buildDispatchLines(),
-      onEmitLabels: (_, _) async => [buildLabel()],
+      onEmitOrderLabels: (_) async => [buildLabel(), buildLabel(labelId: 'L2')],
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
+    await tester.tap(
+      findButtonWithText<FilledButton>('Emitir etiquetas del pedido'),
+    );
     await tester.pumpAndSettle();
 
-    await tester.enterText(_sheetFields().at(0), 'LPZ'); // origen
-    await tester.enterText(_sheetFields().at(1), 'SCZ'); // destino
-    await tester.enterText(_sheetFields().at(2), 'SKU-9'); // sku (cantidad=1)
-    await _submitSheet(tester);
-
-    expect(repo.emitCalls, 1);
-    expect(repo.lastEmitOrder, 'EXT-1');
-    expect(repo.lastEmitBody?.origin, 'LPZ');
-    expect(repo.lastEmitBody?.destination, 'SCZ');
-    expect(repo.lastEmitBody?.lines.single.sku, 'SKU-9');
-    expect(find.text('Etiquetas emitidas.'), findsOneWidget); // snack éxito
+    // No se abre ningún formulario de origen/destino/SKU.
+    expect(find.byType(LabelBatchSheet), findsNothing);
+    expect(repo.emitOrderCalls, 1);
+    expect(repo.lastEmitOrderNumber, 'EXT-1');
+    expect(repo.emitCalls, 0); // nunca el emit explícito (legado)
+    expect(find.text('Etiquetas emitidas: 2.'), findsOneWidget);
   });
 
-  testWidgets('emitir con 409 avisa que ya hay etiquetas', (tester) async {
+  testWidgets('emitir por orden con 409 avisa que ya hay etiquetas', (
+    tester,
+  ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
       onGetOrderDispatchLines: (_) async => buildDispatchLines(),
-      onEmitLabels: (_, _) async =>
+      onEmitOrderLabels: (_) async =>
           throw const ApiException(status: 409, title: 'Conflicto'),
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
+    await tester.tap(
+      findButtonWithText<FilledButton>('Emitir etiquetas del pedido'),
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(_sheetFields().at(0), 'LPZ');
-    await tester.enterText(_sheetFields().at(1), 'SCZ');
-    await tester.enterText(_sheetFields().at(2), 'SKU-9');
-    await _submitSheet(tester);
 
-    expect(find.text('El pedido ya tiene etiquetas emitidas.'), findsOneWidget);
+    expect(
+      find.text('El pedido ya tiene todas sus etiquetas.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('emitir con error genérico muestra el snack de error', (
+  testWidgets('emitir por orden con error genérico muestra el snack de error', (
     tester,
   ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [],
       onGetOrderDispatchLines: (_) async => buildDispatchLines(),
-      onEmitLabels: (_, _) async =>
+      onEmitOrderLabels: (_) async =>
           throw const ApiException(status: 500, title: 'Boom'),
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(findButtonWithText<FilledButton>('Emitir etiquetas del pedido'));
+    await tester.tap(
+      findButtonWithText<FilledButton>('Emitir etiquetas del pedido'),
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(_sheetFields().at(0), 'LPZ');
-    await tester.enterText(_sheetFields().at(1), 'SCZ');
-    await tester.enterText(_sheetFields().at(2), 'SKU-9');
-    await _submitSheet(tester);
 
     expect(
       find.text('Error del servidor. Probá de nuevo en un momento.'),
@@ -286,7 +274,7 @@ void main() {
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.text('Reimprimir lote'));
+    await tester.tap(find.text('Anular y emitir de nuevo'));
     await tester.pumpAndSettle();
 
     // Líneas pre-cargadas por SKU (SKU1 x2); sólo faltan origen/destino/motivo.
@@ -325,11 +313,11 @@ void main() {
       ),
     );
 
-    // La unidad preparada muestra "Reimprimir etiqueta".
+    // La unidad preparada muestra "Imprimir de nuevo".
     expect(find.text('0/1'), findsNothing);
     expect(find.text('1/1'), findsOneWidget);
 
-    final btn = find.text('Reimprimir etiqueta');
+    final btn = find.text('Imprimir de nuevo');
     await tester.ensureVisible(btn);
     // ensureVisible solo mueve el scroll: hace falta un frame para que el
     // botón quede en su nueva posición antes de tocarlo.
@@ -338,6 +326,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(printer.printed, ['ZPL_L1']);
-    expect(find.text('Etiqueta reenviada a la impresora.'), findsOneWidget);
+    expect(find.text('Etiqueta enviada a la impresora.'), findsOneWidget);
   });
 }

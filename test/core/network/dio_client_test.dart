@@ -24,6 +24,10 @@ class _FakeAdapter implements HttpClientAdapter {
   String body = '{}';
   RequestOptions? lastRequest;
 
+  /// Se ejecuta MIENTRAS la request está "en vuelo" (antes de responder): sirve
+  /// para simular que la sesión cambió entre el envío y la respuesta.
+  Future<void> Function()? onFetch;
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -31,6 +35,7 @@ class _FakeAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     lastRequest = options;
+    await onFetch?.call();
     return ResponseBody.fromString(
       body,
       statusCode,
@@ -138,6 +143,21 @@ void main() {
       expect(authClient.logoutCalls, 1);
     });
 
+    test('401 session_superseded avisa "otro dispositivo" y cierra', () async {
+      await signedIn();
+      adapter.statusCode = 401;
+      adapter.body = '{"code":"session_superseded"}';
+
+      await expectLater(
+        dio.get<dynamic>('/app/shipments'),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(expiredMsg(), 'Iniciaste sesión en otro dispositivo.');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(session(), isNull);
+    });
+
     test('sin sesión activa el 401 es no-op (no setea aviso)', () async {
       adapter.statusCode = 401;
       await expectLater(
@@ -147,6 +167,49 @@ void main() {
       expect(expiredMsg(), isNull);
       expect(session(), isNull);
     });
+
+    test(
+      'un 401 de request SIN token NO tumba una sesión creada mientras viajaba '
+      '(bug "me logueé y expiró al instante")',
+      () async {
+        // El request sale SIN sesión (sin Authorization). Mientras viaja, entra
+        // un login. Su 401 (tardío) no debe cerrar la sesión recién abierta.
+        adapter.statusCode = 401;
+        adapter.onFetch = () => container
+            .read(sessionProvider.notifier)
+            .signIn(token: 'tok-nuevo', userName: 'ana', role: UserRole.driver);
+
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(expiredMsg(), isNull);
+        expect(session(), isNotNull); // la sesión nueva sobrevive
+      },
+    );
+
+    test(
+      'un 401 de un token VIEJO (la sesión ya cambió) NO desloguea',
+      () async {
+        await signedIn(); // token 'tok' (viaja en el request)
+        adapter.statusCode = 401;
+        // Mientras el request con 'Bearer tok' viaja, entra una sesión nueva.
+        adapter.onFetch = () async =>
+            container.read(authHeadersProvider.notifier).setToken('tok-nuevo');
+
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // El 401 era del token viejo: la sesión vigente (tok-nuevo) sigue viva.
+        expect(expiredMsg(), isNull);
+        expect(session(), isNotNull);
+      },
+    );
   });
 
   group('onError: 401 en endpoints de autenticación NO desloguea', () {

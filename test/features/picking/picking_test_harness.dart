@@ -33,6 +33,7 @@ class FakePickingRepository implements PickingRepository {
     this.onListShipments,
     this.onGetOrderLabels,
     this.onGetOrderDispatchLines,
+    this.onEmitOrderLabels,
     this.onEmitLabels,
     this.onReprintLabels,
     this.onGetSignedZpl,
@@ -43,6 +44,7 @@ class FakePickingRepository implements PickingRepository {
   Future<List<EmittedLabel>> Function(String orderNumber)? onGetOrderLabels;
   Future<DispatchLinesResponse> Function(String orderNumber)?
   onGetOrderDispatchLines;
+  Future<List<EmittedLabel>> Function(String orderNumber)? onEmitOrderLabels;
   Future<List<EmittedLabel>> Function(
     String orderNumber,
     EmitLabelsRequest body,
@@ -58,9 +60,11 @@ class FakePickingRepository implements PickingRepository {
 
   // Espías de las escrituras.
   int emitCalls = 0;
+  int emitOrderCalls = 0;
   int reprintCalls = 0;
   int recordScanCalls = 0;
   String? lastEmitOrder;
+  String? lastEmitOrderNumber;
   EmitLabelsRequest? lastEmitBody;
   String? lastReprintOrder;
   ReprintLabelsRequest? lastReprintBody;
@@ -82,11 +86,18 @@ class FakePickingRepository implements PickingRepository {
   @override
   Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber) =>
       (onGetOrderDispatchLines ??
-          ((o) async => DispatchLinesResponse(
-            orderReference: o,
-            destinations: const [],
-            data: const [],
-          )))(orderNumber);
+      ((o) async => DispatchLinesResponse(
+        orderReference: o,
+        destinations: const [],
+        data: const [],
+      )))(orderNumber);
+
+  @override
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber) {
+    emitOrderCalls++;
+    lastEmitOrderNumber = orderNumber;
+    return (onEmitOrderLabels ?? ((_) async => <EmittedLabel>[]))(orderNumber);
+  }
 
   @override
   Future<List<EmittedLabel>> emitLabels(

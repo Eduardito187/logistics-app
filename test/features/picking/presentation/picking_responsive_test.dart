@@ -136,12 +136,14 @@ void main() {
         ? find.byType(Scrollable).last
         : find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.text('Unidades (30)'),
+      find.text('Productos (30)'),
       200,
       scrollable: unitsScroll,
     );
+    // Robusto: scrollear al SKU del primer producto (evita `.first` sobre un
+    // match vacío a mitad del drag).
     await tester.scrollUntilVisible(
-      find.byType(UnitTile).first,
+      find.text('SKU ${skus.first}'),
       200,
       scrollable: unitsScroll,
     );
@@ -151,13 +153,19 @@ void main() {
       lessThan(labels.length),
     );
 
-    final progress = tester.getRect(find.byType(ProgressCard));
-    final firstUnit = tester.getRect(find.byType(UnitTile).first);
     if (wide) {
-      // Tablet grande: progreso a la izquierda, unidades a la derecha.
+      // Tablet grande: dos paneles (el de progreso no scrollea con las
+      // unidades), así que ambos están visibles a la vez: progreso a la
+      // izquierda, unidades a la derecha.
+      final progress = tester.getRect(find.byType(ProgressCard));
+      final firstUnit = tester.getRect(find.byType(UnitTile).first);
       expect(firstUnit.left, greaterThan(progress.right));
     } else {
-      expect(firstUnit.top, greaterThan(progress.bottom));
+      // Columna única (apilado): progreso arriba y unidades abajo en el MISMO
+      // scroll — se reveló la primera unidad scrolleando hacia abajo. En
+      // teléfono chico el progreso + la primera unidad no entran juntos en
+      // pantalla, así que no se miden a la vez.
+      expect(find.byType(UnitTile), findsWidgets);
     }
 
     // Se puede llegar a la última unidad scrolleando (sin desbordes).

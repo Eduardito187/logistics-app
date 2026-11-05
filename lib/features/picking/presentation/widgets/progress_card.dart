@@ -18,6 +18,7 @@ class ProgressCard extends StatelessWidget {
     required this.onAssign,
     required this.onPrintAll,
     required this.onReprintBatch,
+    this.onVerify,
   });
 
   final int prepared;
@@ -34,6 +35,10 @@ class ProgressCard extends StatelessWidget {
   final VoidCallback onPrintAll;
   final VoidCallback onReprintBatch;
 
+  /// Verificación OPCIONAL por escaneo del pedido entero (un solo botón, no por
+  /// ítem). `null` = no quedan productos por verificar y no se muestra.
+  final VoidCallback? onVerify;
+
   @override
   Widget build(BuildContext context) {
     final pending = total - prepared;
@@ -48,7 +53,7 @@ class ProgressCard extends StatelessWidget {
               Expanded(
                 child: StatTile(
                   value: '$prepared/$total',
-                  label: 'Preparadas',
+                  label: 'Preparados',
                   icon: AppIcon.success,
                   color: AppColors.success,
                 ),
@@ -57,7 +62,7 @@ class ProgressCard extends StatelessWidget {
               Expanded(
                 child: StatTile(
                   value: '$pending',
-                  label: 'Pendientes',
+                  label: 'Por preparar',
                   icon: AppIcon.receive,
                   color: done ? AppColors.success : AppColors.warning,
                 ),
@@ -78,6 +83,16 @@ class ProgressCard extends StatelessWidget {
             ),
             label: const Text('Imprimir todas las etiquetas'),
           ),
+          // Verificación por escaneo del pedido entero: un solo botón (no por
+          // ítem). Solo aparece si quedan productos por verificar.
+          if (onVerify != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: busy ? null : onVerify,
+              icon: const AnimatedAppIcon(AppIcon.scan),
+              label: const Text('Verificar productos con escaneo'),
+            ),
+          ],
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : onReprintBatch,
@@ -86,7 +101,9 @@ class ProgressCard extends StatelessWidget {
               AppIcon.refresh,
               state: reprinting ? AppIconState.loading : AppIconState.idle,
             ),
-            label: const Text('Reimprimir lote'),
+            // "Reemitir" (no "reimprimir"): anula las etiquetas actuales y emite
+            // nuevas (ADR 004). El texto lo deja claro para no confundir.
+            label: const Text('Anular y emitir de nuevo'),
           ),
         ],
       ),
@@ -112,8 +129,8 @@ class _LaneRow extends StatelessWidget {
     final lane = this.lane;
     final text = Text(
       lane == null || lane.isEmpty
-          ? 'Carril / vehículo sin asignar'
-          : 'Carril / vehículo: $lane',
+          ? 'Vehículo de reparto sin asignar'
+          : 'Vehículo: $lane',
       style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
     );
     final button = TextButton(

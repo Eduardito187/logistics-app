@@ -41,27 +41,27 @@ class _ProductThumb extends StatelessWidget {
   }
 }
 
-/// Fila de una unidad del pedido: SKU, bulto y estado, con la acción de escanear
-/// e imprimir (si está pendiente) o reimprimir (si ya está preparada).
+/// Fila de un producto del pedido: foto, nombre, SKU y estado. La acción
+/// principal es simple: **Imprimir etiqueta** (la etiqueta ya existe, no hay que
+/// escanear nada). El escaneo del producto queda como verificación OPCIONAL.
 class UnitTile extends StatelessWidget {
   const UnitTile({
     super.key,
     required this.label,
     required this.prepared,
     required this.busy,
-    required this.onPrepare,
-    required this.onReprint,
+    required this.onPrint,
     this.onPreview,
   });
 
   final EmittedLabel label;
   final bool prepared;
   final bool busy;
-  final VoidCallback onPrepare;
-  final VoidCallback onReprint;
 
-  /// Abre el PREVIEW de la etiqueta (verla antes de imprimir). Si es `null`, no
-  /// se muestra la acción.
+  /// Imprime la etiqueta del producto (acción principal, un toque).
+  final VoidCallback onPrint;
+
+  /// Abre el PREVIEW de la etiqueta (verla / compartirla). `null` = no se ofrece.
   final VoidCallback? onPreview;
 
   /// Ancho de contenido por debajo del cual el estado va bajo el SKU.
@@ -112,11 +112,11 @@ class UnitTile extends StatelessWidget {
               );
               final pill = prepared
                   ? const StatusPill(
-                      'Preparada',
+                      'Preparado',
                       tone: PillTone.success,
                       icon: AppIcon.check,
                     )
-                  : const StatusPill('Pendiente', icon: AppIcon.pending);
+                  : const StatusPill('Por preparar', icon: AppIcon.pending);
               // Angosto (teléfono chico, letra grande, columna de tablet): el
               // estado va debajo y el SKU usa todo el ancho.
               final preview = onPreview == null
@@ -152,26 +152,16 @@ class UnitTile extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
-          if (prepared)
-            OutlinedButton.icon(
-              onPressed: busy ? null : onReprint,
-              // Mientras reimprime, la hoja sale de la impresora.
-              icon: AnimatedAppIcon(
-                AppIcon.printing,
-                state: busy ? AppIconState.loading : AppIconState.idle,
-              ),
-              label: const Text('Reimprimir etiqueta'),
-            )
-          else
-            FilledButton.icon(
-              onPressed: busy ? null : onPrepare,
-              // Mientras registra el escaneo, el láser barre el marco.
-              icon: AnimatedAppIcon(
-                AppIcon.scan,
-                state: busy ? AppIconState.loading : AppIconState.idle,
-              ),
-              label: const Text('Escanear EAN e imprimir'),
+          // Acción principal, simple y directa: imprimir la etiqueta. No hace
+          // falta escanear ni asignar nada; la etiqueta ya existe.
+          FilledButton.icon(
+            onPressed: busy ? null : onPrint,
+            icon: AnimatedAppIcon(
+              AppIcon.printing,
+              state: busy ? AppIconState.loading : AppIconState.idle,
             ),
+            label: Text(prepared ? 'Imprimir de nuevo' : 'Imprimir etiqueta'),
+          ),
         ],
       ),
     );

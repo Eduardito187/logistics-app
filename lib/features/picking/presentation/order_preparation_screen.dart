@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/emit_label_line.dart';
-import '../../../core/api/models/emit_labels_request.dart';
 import '../../../core/api/models/emitted_label.dart';
 import '../../../core/api/models/preparation_scan_request.dart';
 import '../../../core/api/models/reprint_labels_request.dart';
@@ -85,6 +84,22 @@ class _OrderPreparationScreenState
         .assign(vehicleId: value, lane: value);
   }
 
+  /// Verificación por escaneo del pedido ENTERO (un solo flujo, no por ítem):
+  /// abre la cámara en escaneo continuo empezando por el primer producto por
+  /// preparar; cada código leído marca su producto. Es opcional.
+  Future<void> _verifyAll(List<EmittedLabel> units) async {
+    final state = ref.read(preparationControllerProvider(_orderNumber));
+    EmittedLabel? first;
+    for (final u in units) {
+      if (!state.isPrepared(u.labelId)) {
+        first = u;
+        break;
+      }
+    }
+    if (first == null) return;
+    await _prepareUnit(first);
+  }
+
   Future<void> _prepareUnit(EmittedLabel label) async {
     // El carril/vehículo abre la entrega: es obligatorio antes del primer escaneo.
     if (!ref.read(preparationControllerProvider(_orderNumber)).hasAssignment) {
@@ -109,8 +124,9 @@ class _OrderPreparationScreenState
     _warmUpLocation();
     await scanContinuous(
       context,
-      title: 'Escanear EAN',
-      helper: 'Escaneá el EAN de cada producto (empieza por SKU ${label.sku}).',
+      title: 'Escanear producto',
+      helper:
+          'Escaneá el código de cada producto (empezá por SKU ${label.sku}).',
       formats: const <BarcodeFormat>[
         BarcodeFormat.ean13,
         BarcodeFormat.code128,
@@ -131,8 +147,8 @@ class _OrderPreparationScreenState
     showSuccessSnack(
       context,
       session.prepared == 1
-          ? 'Unidad preparada e impresa.'
-          : '${session.prepared} unidades preparadas e impresas.',
+          ? 'Producto preparado e impreso.'
+          : '${session.prepared} productos preparados e impresos.',
     );
   }
 
@@ -157,7 +173,7 @@ class _OrderPreparationScreenState
     if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
     final label = _nextUnit(ean, session);
     if (label == null) {
-      return const ScanFeedback.error('Pedido completo: no quedan unidades');
+      return const ScanFeedback.error('Pedido completo: no quedan productos');
     }
 
     // Feedback inmediato: la unidad se marca apenas se lee el código; si el
@@ -195,7 +211,7 @@ class _OrderPreparationScreenState
       final state = ref.read(preparationControllerProvider(_orderNumber));
       final done = _activeUnits.where((l) => state.isPrepared(l.labelId));
       return ScanFeedback.ok(
-        'Unidad ${done.length}/${_activeUnits.length} preparada · SKU '
+        'Producto ${done.length}/${_activeUnits.length} preparado · SKU '
         '${label.sku}',
       );
     } finally {
@@ -233,12 +249,13 @@ class _OrderPreparationScreenState
     }
   }
 
-  Future<void> _reprintUnit(EmittedLabel label) async {
+  /// Imprime la etiqueta de un producto (acción principal del tile).
+  Future<void> _printUnit(EmittedLabel label) async {
     setState(() => _busyUnitId = label.labelId);
     try {
       final printed = await _printLabel(label);
       if (!mounted || !printed) return;
-      showSuccessSnack(context, 'Etiqueta reenviada a la impresora.');
+      showSuccessSnack(context, 'Etiqueta enviada a la impresora.');
     } finally {
       if (mounted) setState(() => _busyUnitId = null);
     }
@@ -287,37 +304,29 @@ class _OrderPreparationScreenState
     }
   }
 
-  /// Emite el lote de etiquetas del pedido cuando todavía no existe ninguna.
-  /// Pide origen, destino y las líneas del pedido en un formulario.
+  /// Emite las etiquetas del pedido POR ORDEN, sin formulario: el backend
+  /// deriva origen, destino y líneas de la orden (plan publicado) y emite una
+  /// etiqueta por producto autorizado. Idempotente: si ya estaban, refresca.
   Future<void> _emitLabels() async {
     if (_orderBusy) return;
-    final result = await showLabelBatchSheet(
-      context,
-      title: 'Emitir etiquetas',
-      submitLabel: 'Emitir etiquetas',
-      requireReason: false,
-    );
-    if (!mounted || result == null) return;
-
     setState(() => _orderBusy = true);
     try {
-      await ref
-          .read(emitLabelsProvider)
-          .call(
-            _orderNumber,
-            EmitLabelsRequest(
-              origin: result.origin,
-              destination: result.destination,
-              lines: result.lines,
-            ),
-          );
+      final labels = await ref.read(emitOrderLabelsProvider).call(_orderNumber);
       if (!mounted) return;
-      ref.invalidate(orderLabelsProvider(_orderNumber));
-      showSuccessSnack(context, 'Etiquetas emitidas.');
+      ref
+        ..invalidate(orderLabelsProvider(_orderNumber))
+        ..invalidate(orderDispatchLinesProvider(_orderNumber));
+      showSuccessSnack(
+        context,
+        labels.isEmpty
+            ? 'No hay productos autorizados para etiquetar todavía.'
+            : 'Etiquetas emitidas: ${labels.length}.',
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.isConflict) {
-        showInfoSnack(context, 'El pedido ya tiene etiquetas emitidas.');
+        ref.invalidate(orderLabelsProvider(_orderNumber));
+        showInfoSnack(context, 'El pedido ya tiene todas sus etiquetas.');
       } else {
         showErrorSnack(context, e);
       }
@@ -418,6 +427,7 @@ class _OrderPreparationScreenState
   Widget _buildUnits(BuildContext context, List<EmittedLabel> units) {
     final state = ref.watch(preparationControllerProvider(_orderNumber));
     final prepared = units.where((l) => state.isPrepared(l.labelId)).length;
+    final pending = units.length - prepared;
 
     final progress = ProgressCard(
       prepared: prepared,
@@ -428,9 +438,12 @@ class _OrderPreparationScreenState
       onAssign: _assignLane,
       onPrintAll: () => _printAll(units),
       onReprintBatch: () => _reprintBatch(units),
+      // Verificación por escaneo GLOBAL (un botón para el pedido, no por ítem).
+      // Solo si quedan productos por preparar.
+      onVerify: pending > 0 ? () => _verifyAll(units) : null,
     );
     final title = Text(
-      'Unidades (${units.length})',
+      'Productos (${units.length})',
       style: Theme.of(
         context,
       ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -447,8 +460,7 @@ class _OrderPreparationScreenState
           label: label,
           prepared: state.isPrepared(label.labelId),
           busy: _busyUnitId == label.labelId,
-          onPrepare: () => _prepareUnit(label),
-          onReprint: () => _reprintUnit(label),
+          onPrint: () => _printUnit(label),
           // Ver la etiqueta (QR real + datos del backend: nombre, foto,
           // destino) antes de imprimir, o solo verla.
           onPreview: () => showLabelPreviewSheet(

@@ -8,7 +8,6 @@ import '../../../core/layout/responsive_body.dart';
 import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
 import '../domain/usecases/conduct_checklist.dart';
@@ -28,7 +27,8 @@ const Map<String, String> _checklistItems = {
 };
 
 /// Checklist pre-salida del camión. Es una escritura en línea (no va por la cola
-/// offline): registra la inspección contra el backend.
+/// offline): registra la inspección contra el backend. El chofer que firma es el
+/// ASIGNADO al camión (el del crew, ya visible en la cabecera): no se pregunta.
 class ChecklistScreen extends ConsumerStatefulWidget {
   const ChecklistScreen({super.key});
 
@@ -41,7 +41,6 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     for (final key in _checklistItems.keys) key: false,
   };
   final TextEditingController _notes = TextEditingController();
-  String? _driverId;
   bool _busy = false;
 
   @override
@@ -55,55 +54,28 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     return DriverVehicleGate(
       title: 'Checklist pre-salida',
       builder: (context, vehicleId) {
-        final drivers = ref.watch(driversProvider);
-        return AsyncValueView<List<Driver>>(
-          value: drivers,
-          onRetry: () => ref.invalidate(driversProvider),
-          data: (list) {
-            if (list.isEmpty) {
-              return const EmptyState(
-                icon: AppIcon.personOff,
-                title: 'Sin choferes',
-                message: 'No hay choferes activos para firmar el checklist.',
-              );
-            }
-            return _buildForm(context, vehicleId, list);
-          },
-        );
+        // Dentro del gate el crew ya está resuelto: el chofer que firma es el
+        // asignado al camión (no se elige de una lista).
+        final driver = ref.watch(myCrewProvider).value?.driver;
+        if (driver == null) {
+          return const EmptyState(
+            icon: AppIcon.personOff,
+            title: 'Sin chofer asignado',
+            message: 'El camión no tiene un chofer asignado para firmar.',
+          );
+        }
+        return _buildForm(context, vehicleId, driver);
       },
     );
   }
 
-  Widget _buildForm(
-    BuildContext context,
-    String vehicleId,
-    List<Driver> drivers,
-  ) {
+  Widget _buildForm(BuildContext context, String vehicleId, Driver driver) {
     final passedCount = _checks.values.where((v) => v).length;
     return ResponsiveBody(
       maxWidth: AppBreakpoints.maxFormWidth,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SectionCard(
-            title: 'Chofer',
-            child: DropdownButtonFormField<String>(
-              value: _driverId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Selecciona el chofer',
-              ),
-              items: [
-                for (final driver in drivers)
-                  DropdownMenuItem<String>(
-                    value: driver.id,
-                    child: Text(driver.name ?? 'Chofer'),
-                  ),
-              ],
-              onChanged: _busy ? null : (v) => setState(() => _driverId = v),
-            ),
-          ),
-          const SizedBox(height: 16),
           SectionCard(
             title: 'Inspección ($passedCount/${_checklistItems.length})',
             child: Column(
@@ -133,9 +105,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _driverId != null && !_busy
-                ? () => _submit(vehicleId)
-                : null,
+            onPressed: _busy ? null : () => _submit(vehicleId, driver.id),
             icon: AnimatedAppIcon(
               AppIcon.save,
               state: _busy ? AppIconState.loading : AppIconState.idle,
@@ -147,7 +117,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     );
   }
 
-  Future<void> _submit(String vehicleId) async {
+  Future<void> _submit(String vehicleId, String driverId) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -156,7 +126,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
           .read(conductChecklistProvider)
           .call(
             vehicleId: vehicleId,
-            driverId: _driverId!,
+            driverId: driverId,
             items: Map<String, bool>.from(_checks),
             performedOn: DateTime.now(),
             notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),

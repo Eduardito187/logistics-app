@@ -23,7 +23,13 @@ abstract interface class PickingRepository {
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber);
   Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber);
 
-  /// Emite el lote de etiquetas del pedido y devuelve las creadas.
+  /// Emite las etiquetas del pedido POR ORDEN: el backend deriva origen/destino
+  /// y líneas del plan publicado y emite las autorizadas y pendientes. Sin form.
+  /// Idempotente (reabrir emite lo que falte). Devuelve la colección completa.
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber);
+
+  /// Emite un lote de etiquetas con origen/destino/líneas explícitos (legado /
+  /// reimpresión). La emisión normal usa [emitOrderLabels].
   Future<List<EmittedLabel>> emitLabels(
     String orderNumber,
     EmitLabelsRequest body,

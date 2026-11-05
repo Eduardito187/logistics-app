@@ -112,11 +112,15 @@ class PickupPhotoCard extends StatelessWidget {
     required this.photo,
     required this.busy,
     required this.onTakePhoto,
+    this.onShare,
   });
 
   final File? photo;
   final bool busy;
   final VoidCallback onTakePhoto;
+
+  /// Comparte la foto por el menú nativo (WhatsApp, etc.). `null` = sin botón.
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -152,17 +156,25 @@ class PickupPhotoCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             // Offline invisible: la foto queda guardada y se sube sola.
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: StatusPill(
-                  'Foto guardada',
-                  tone: PillTone.success,
-                  icon: AppIcon.success,
-                  // El check se dibuja con pop cuando la foto queda guardada.
-                  iconState: AppIconState.success,
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const StatusPill(
+                    'Foto guardada',
+                    tone: PillTone.success,
+                    icon: AppIcon.success,
+                    // El check se dibuja con pop cuando la foto queda guardada.
+                    iconState: AppIconState.success,
+                  ),
+                  const Spacer(),
+                  if (onShare != null)
+                    TextButton.icon(
+                      onPressed: busy ? null : onShare,
+                      icon: const AnimatedAppIcon(AppIcon.send, size: 18),
+                      label: const Text('Compartir'),
+                    ),
+                ],
               ),
             ),
           ],

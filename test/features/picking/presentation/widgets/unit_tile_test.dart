@@ -7,12 +7,12 @@ import '../../picking_test_harness.dart';
 import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
-// Fila de una unidad del pedido. Pendiente → "Escanear EAN e imprimir";
-// preparada → pastilla "Preparada" y "Reimprimir etiqueta". busy la bloquea.
+// Fila de un producto del pedido. La acción es simple y única: imprimir la
+// etiqueta ("Imprimir etiqueta" / "Imprimir de nuevo"). El escaneo de
+// verificación es GLOBAL (vive en la tarjeta de progreso), no por ítem.
 
 class _Taps {
-  int prepare = 0;
-  int reprint = 0;
+  int printed = 0;
 }
 
 Future<_Taps> _pump(
@@ -31,8 +31,7 @@ Future<_Taps> _pump(
           label: buildLabel(labelId: labelId, sku: sku, lineNumber: lineNumber),
           prepared: prepared,
           busy: busy,
-          onPrepare: () => taps.prepare++,
-          onReprint: () => taps.reprint++,
+          onPrint: () => taps.printed++,
         ),
       ),
     ),
@@ -41,65 +40,59 @@ Future<_Taps> _pump(
 }
 
 void main() {
-  testWidgets('pendiente muestra SKU, línea, producto y botón de escaneo', (
+  testWidgets('por preparar: imprime directo, sin escaneo por ítem', (
     tester,
   ) async {
     await _pump(tester, prepared: false, sku: '789', lineNumber: 4);
 
     expect(find.text('SKU 789'), findsOneWidget);
-    // Sin ids sueltos: solo la línea (el id va chico en el preview).
     expect(find.text('Línea 4'), findsOneWidget);
-    expect(find.text('Pendiente'), findsOneWidget);
+    expect(find.text('Por preparar'), findsOneWidget);
     expect(
-      findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
+      findButtonWithText<FilledButton>('Imprimir etiqueta'),
       findsOneWidget,
     );
-    expect(find.text('Reimprimir etiqueta'), findsNothing);
+    // El escaneo ya NO está por ítem (es una acción global del pedido).
+    expect(find.text('Verificar con escaneo'), findsNothing);
+    expect(find.textContaining('EAN'), findsNothing);
   });
 
-  testWidgets('preparada muestra pastilla "Preparada" y reimprimir', (
+  testWidgets('preparado muestra pastilla "Preparado" y reimpresión', (
     tester,
   ) async {
     await _pump(tester, prepared: true);
 
-    expect(find.text('Preparada'), findsOneWidget);
+    expect(find.text('Preparado'), findsOneWidget);
     expect(
-      findButtonWithText<OutlinedButton>('Reimprimir etiqueta'),
+      findButtonWithText<FilledButton>('Imprimir de nuevo'),
       findsOneWidget,
     );
-    expect(find.text('Escanear EAN e imprimir'), findsNothing);
   });
 
-  testWidgets('al tocar dispara el callback correcto según el estado', (
+  testWidgets('al tocar imprime', (tester) async {
+    final taps = await _pump(tester, prepared: false);
+    await tester.tap(find.text('Imprimir etiqueta'));
+    await tester.pump();
+    expect(taps.printed, 1);
+  });
+
+  testWidgets('busy deshabilita el botón y muestra el spinner de impresión', (
     tester,
   ) async {
-    var taps = await _pump(tester, prepared: false);
-    await tester.tap(find.text('Escanear EAN e imprimir'));
-    await tester.pump();
-    expect(taps.prepare, 1);
-
-    taps = await _pump(tester, prepared: true);
-    await tester.tap(find.text('Reimprimir etiqueta'));
-    await tester.pump();
-    expect(taps.reprint, 1);
-  });
-
-  testWidgets('busy deshabilita el botón y muestra el spinner', (tester) async {
     final taps = await _pump(tester, prepared: false, busy: true);
 
-    // Mientras registra el escaneo, el láser del ícono de escaneo barre.
     expect(
-      findAppIconInState(AppIcon.scan, AppIconState.loading),
+      findAppIconInState(AppIcon.printing, AppIconState.loading),
       findsOneWidget,
     );
     final btn = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Escanear EAN e imprimir'),
+      findButtonWithText<FilledButton>('Imprimir etiqueta'),
     );
     expect(btn.onPressed, isNull);
 
     await tester.tap(findButton<FilledButton>());
     await tester.pump();
-    expect(taps.prepare, 0);
+    expect(taps.printed, 0);
   });
 
   testWidgets('no muestra ids sueltos del label (solo la línea)', (

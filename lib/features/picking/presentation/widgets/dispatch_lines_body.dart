@@ -102,13 +102,29 @@ class DispatchLinesBody extends ConsumerWidget {
                 ],
                 if (pendingAuthorized) ...[
                   const SizedBox(height: 4),
-                  FilledButton.icon(
+                  // Botón plano (no `.icon`): la fila llena el ancho y el texto
+                  // va en `Flexible`, así en teléfonos chicos con letra grande
+                  // se ajusta en 2 líneas en vez de desbordar.
+                  FilledButton(
                     onPressed: busy ? null : onEmit,
-                    icon: AnimatedAppIcon(
-                      AppIcon.printing,
-                      state: busy ? AppIconState.loading : AppIconState.idle,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedAppIcon(
+                          AppIcon.printing,
+                          state: busy
+                              ? AppIconState.loading
+                              : AppIconState.idle,
+                        ),
+                        const SizedBox(width: 8),
+                        const Flexible(
+                          child: Text(
+                            'Emitir etiquetas del pedido',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
                     ),
-                    label: const Text('Emitir etiquetas del pedido'),
                   ),
                 ],
               ],
@@ -209,9 +225,14 @@ class _DispatchLineCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              _StatusPill(line: line),
             ],
+          ),
+          const SizedBox(height: 10),
+          // El estado va en su propia línea (no compite con el nombre): en
+          // teléfonos chicos con letra grande nunca desborda la fila.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _StatusPill(line: line),
           ),
           if (!line.authorized) ...[
             const SizedBox(height: 10),

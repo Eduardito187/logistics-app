@@ -13,7 +13,13 @@ class EnqueueDeliveryPhoto {
     required String shipmentId,
     required String filePath,
     required String kind,
-  }) => _queue.enqueue(shipmentId: shipmentId, filePath: filePath, kind: kind);
+    Map<String, Object?>? clientSnapshot,
+  }) => _queue.enqueue(
+    shipmentId: shipmentId,
+    filePath: filePath,
+    kind: kind,
+    clientSnapshot: clientSnapshot,
+  );
 }
 
 final enqueueDeliveryPhotoProvider = Provider<EnqueueDeliveryPhoto>(

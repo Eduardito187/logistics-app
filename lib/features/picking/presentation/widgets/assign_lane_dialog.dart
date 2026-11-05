@@ -31,8 +31,8 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
   Future<void> _scan() async {
     final code = await scanCode(
       context,
-      title: 'Escanear carril',
-      helper: 'Apuntá al código del carril o del vehículo.',
+      title: 'Escanear vehículo',
+      helper: 'Apuntá al código del vehículo o de la puerta de carga.',
       formats: const <BarcodeFormat>[
         BarcodeFormat.code128,
         BarcodeFormat.qrCode,
@@ -50,7 +50,7 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Carril / vehículo'),
+      title: const Text('Vehículo de reparto'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -60,7 +60,7 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
             autofocus: true,
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
-              hintText: 'Ej. Carril 3 / ABC-123',
+              hintText: 'Placa o puerta de carga',
               prefixIconConstraints: FieldIcon.prefixConstraints,
               prefixIcon: FieldIcon(icon: AppIcon.plans),
             ),

@@ -27,14 +27,19 @@ import '../../../support/button_finders.dart';
 // dedo): la firma se exporta a PNG, se encola como evidencia y el POD lleva el
 // marcador FIRMA_DIGITAL.
 
-/// Cola de fotos falsa: no toca disco ni red.
+/// Cola de fotos falsa: no toca disco ni red; registra lo encolado.
 class _NoopPhotoUploadQueue implements PhotoUploadQueue {
+  final List<({String kind, Map<String, Object?>? snapshot})> calls = [];
+
   @override
   Future<void> enqueue({
     required String shipmentId,
     required String filePath,
     required String kind,
-  }) async {}
+    Map<String, Object?>? clientSnapshot,
+  }) async {
+    calls.add((kind: kind, snapshot: clientSnapshot));
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

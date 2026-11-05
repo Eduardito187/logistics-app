@@ -608,6 +608,10 @@ class FakePickingRepository implements PickingRepository {
       throw UnimplementedError('dispatch-lines no se usa en el e2e');
 
   @override
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber) =>
+      throw UnimplementedError('emitOrderLabels no se usa en el e2e');
+
+  @override
   Future<List<EmittedLabel>> emitLabels(
     String orderNumber,
     EmitLabelsRequest body,

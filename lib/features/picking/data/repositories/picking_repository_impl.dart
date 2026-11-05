@@ -33,6 +33,10 @@ class PickingRepositoryImpl implements PickingRepository {
       _remote.getOrderDispatchLines(orderNumber);
 
   @override
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber) =>
+      _remote.emitOrderLabels(orderNumber);
+
+  @override
   Future<List<EmittedLabel>> emitLabels(
     String orderNumber,
     EmitLabelsRequest body,

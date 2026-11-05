@@ -108,12 +108,6 @@ class DeliveryActionsBar extends ConsumerWidget {
                             stop,
                             PodScreen(stop: stop),
                           ),
-                          onScan: () => openDeliveryStep(
-                            context,
-                            ref,
-                            stop,
-                            unloadScreenFor(stop),
-                          ),
                           onFailed: () => openDeliveryStep(
                             context,
                             ref,
@@ -131,36 +125,29 @@ class DeliveryActionsBar extends ConsumerWidget {
   }
 }
 
-/// Las tres acciones del paso en UN grupo compacto de una sola fila: "Entregar"
-/// (acción principal, relleno de marca), "Escanear" y "No se pudo" (en rojo). Va
-/// en un solo contenedor redondeado con divisores, así se lee como un control
-/// único y ocupa ~una fila (antes eran dos), dejando más mapa a la vista.
+/// Las dos acciones del paso en UN grupo compacto de una sola fila:
+/// "Entregar" (acción principal, relleno de marca; el POD YA escanea el
+/// producto, toma la foto y la firma) y "No se pudo" (en rojo). Antes había un
+/// tercer botón "Escanear" suelto: era redundante (la entrega ya escanea) y
+/// confundía, así que se quitó.
 class _ActionGroup extends StatelessWidget {
-  const _ActionGroup({
-    required this.onDeliver,
-    required this.onScan,
-    required this.onFailed,
-  });
+  const _ActionGroup({required this.onDeliver, required this.onFailed});
 
   final VoidCallback onDeliver;
-  final VoidCallback onScan;
   final VoidCallback onFailed;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surfaceContainerHighest,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       // IntrinsicHeight: los segmentos miden su contenido (ícono + etiqueta) y
-      // los divisores igualan al más alto. Así crece con "letra grande" sin
+      // el divisor iguala al más alto. Así crece con "letra grande" sin
       // desbordar (antes un alto fijo cortaba 2px).
       child: IntrinsicHeight(
         child: Row(
           children: [
-            // Los 3 segmentos del MISMO ancho (Expanded por igual). "Entregar"
-            // se destaca por el relleno de marca, no por ser más ancho.
             Expanded(
               child: _Segment(
                 icon: AppIcon.capture,
@@ -168,15 +155,6 @@ class _ActionGroup extends StatelessWidget {
                 onTap: onDeliver,
                 background: AppColors.brand,
                 foreground: Colors.white,
-              ),
-            ),
-            const _GroupDivider(),
-            Expanded(
-              child: _Segment(
-                icon: AppIcon.scan,
-                label: 'Escanear',
-                onTap: onScan,
-                foreground: scheme.onSurface,
               ),
             ),
             const _GroupDivider(),
