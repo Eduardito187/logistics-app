@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/location/gps_fix.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/tracking_status_body.dart';
 
+import '../../../support/app_icon_finders.dart';
 import '../support/driver_test_support.dart';
 
 // Cuerpo de la pantalla de rastreo: informa estado automático, contadores y
@@ -32,6 +34,11 @@ void main() {
       );
 
       expect(find.text('Rastreando'), findsOneWidget);
+      // Con fix el GPS queda "fijado" (activo, sin loop).
+      expect(
+        findAppIconInState(AppIcon.gps, AppIconState.active),
+        findsOneWidget,
+      );
       expect(find.text('Activo'), findsOneWidget);
       expect(find.text('42'), findsOneWidget);
       expect(find.text('Posiciones enviadas'), findsOneWidget);

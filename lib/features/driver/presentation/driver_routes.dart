@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'active_delivery_screen.dart';
 import 'checklist_screen.dart';
@@ -23,6 +24,7 @@ const List<RoleTask> driverTasks = [
     label: 'Entrega en curso',
     subtitle: 'Mapa, datos del cliente, pedido y entrega con foto',
     icon: Icons.local_shipping,
+    appIcon: AppIcon.deliver,
     route: '/driver/delivery',
     roles: {UserRole.driver},
     accent: true,
@@ -32,6 +34,7 @@ const List<RoleTask> driverTasks = [
     label: 'Mi ruta de hoy',
     subtitle: 'Paradas en mapa y lista, con navegación',
     icon: Icons.map,
+    appIcon: AppIcon.route,
     route: '/driver/route',
     roles: {UserRole.driver},
   ),
@@ -40,6 +43,7 @@ const List<RoleTask> driverTasks = [
     label: 'Mi día',
     subtitle: 'Entregadas, pendientes y tiempos de hoy',
     icon: Icons.today,
+    appIcon: AppIcon.myDay,
     route: '/driver/my-day',
     roles: {UserRole.driver},
   ),
@@ -48,6 +52,7 @@ const List<RoleTask> driverTasks = [
     label: 'Checklist pre-salida',
     subtitle: 'Inspección del camión antes de salir',
     icon: Icons.checklist,
+    appIcon: AppIcon.checklist,
     route: '/driver/checklist',
     roles: {UserRole.driver},
   ),
@@ -56,6 +61,7 @@ const List<RoleTask> driverTasks = [
     label: 'Carga del camión',
     subtitle: 'Escanear bultos a cargar',
     icon: Icons.upload,
+    appIcon: AppIcon.load,
     route: '/driver/load',
     roles: {UserRole.driver},
   ),
@@ -64,6 +70,7 @@ const List<RoleTask> driverTasks = [
     label: 'Rastreo del camión',
     subtitle: 'Estado del GPS automático (siempre activo en ruta)',
     icon: Icons.my_location,
+    appIcon: AppIcon.gps,
     route: '/driver/gps',
     roles: {UserRole.driver},
   ),
@@ -72,6 +79,7 @@ const List<RoleTask> driverTasks = [
     label: 'Reportar incidente',
     subtitle: 'Avería o accidente en ruta',
     icon: Icons.report,
+    appIcon: AppIcon.incident,
     route: '/driver/incident',
     roles: {UserRole.driver},
   ),
@@ -80,6 +88,7 @@ const List<RoleTask> driverTasks = [
     label: 'Resumen del vehículo',
     subtitle: 'Costos y utilización',
     icon: Icons.insights,
+    appIcon: AppIcon.vehicleSummary,
     route: '/driver/summary',
     roles: {UserRole.driver},
   ),
@@ -88,6 +97,7 @@ const List<RoleTask> driverTasks = [
     label: 'Cargar combustible',
     subtitle: 'Registrar litros, precio y odómetro',
     icon: Icons.local_gas_station,
+    appIcon: AppIcon.fuel,
     route: '/driver/fuel',
     roles: {UserRole.driver},
   ),
@@ -96,6 +106,7 @@ const List<RoleTask> driverTasks = [
     label: 'Odómetro',
     subtitle: 'Registrar el kilometraje actual',
     icon: Icons.speed,
+    appIcon: AppIcon.speed,
     route: '/driver/odometer',
     roles: {UserRole.driver},
   ),
@@ -104,6 +115,7 @@ const List<RoleTask> driverTasks = [
     label: 'Mantenimiento',
     subtitle: 'Servicios por vencer del vehículo',
     icon: Icons.build,
+    appIcon: AppIcon.build,
     route: '/driver/maintenance',
     roles: {UserRole.driver},
   ),

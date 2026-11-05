@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/settlement.dart';
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'carrier_assignment_screen.dart';
 import 'carrier_cheapest_tariff_screen.dart';
@@ -18,6 +19,7 @@ const List<RoleTask> carrierTasks = [
     id: 'carrier-pickup',
     label: 'Escanear al recoger',
     icon: Icons.upload_file,
+    appIcon: AppIcon.pickupScan,
     route: '/carrier/pickup',
     roles: {UserRole.carrier},
     accent: true,
@@ -26,6 +28,7 @@ const List<RoleTask> carrierTasks = [
     id: 'carrier-deliver',
     label: 'Escanear al entregar',
     icon: Icons.task_alt,
+    appIcon: AppIcon.deliverScan,
     route: '/carrier/deliver',
     roles: {UserRole.carrier},
   ),
@@ -33,6 +36,7 @@ const List<RoleTask> carrierTasks = [
     id: 'carrier-settlements',
     label: 'Mis liquidaciones',
     icon: Icons.receipt_long,
+    appIcon: AppIcon.settle,
     route: '/carrier/settlements',
     roles: {UserRole.carrier},
   ),

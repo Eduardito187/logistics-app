@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
+
 /// Pantalla de bloqueo cuando el chofer no tiene asignación para hoy (404) o no
 /// se pudo leer. No hay forma de operar sin una tripulación asignada.
 class NoAssignment extends StatelessWidget {
@@ -17,9 +19,10 @@ class NoAssignment extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.assignment_late_outlined,
+            AnimatedAppIcon(
+              AppIcon.incident,
               size: 72,
+              animateOnMount: true,
               color: theme.colorScheme.outline,
             ),
             const SizedBox(height: 16),
@@ -39,7 +42,7 @@ class NoAssignment extends StatelessWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: const AnimatedAppIcon(AppIcon.refresh),
               label: const Text('Reintentar'),
             ),
           ],

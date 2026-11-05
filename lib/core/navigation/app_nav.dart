@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/user_role.dart';
+import '../icons/icons.dart';
 import 'role_task.dart';
 
 /// Pestaña activa del shell inferior (0 Inicio, 1 Tareas, 2 Avisos, 3 Perfil).
@@ -27,6 +28,7 @@ class NavTab {
     required this.label,
     required this.icon,
     required this.activeIcon,
+    required this.appIcon,
     required this.path,
   });
 
@@ -40,6 +42,10 @@ class NavTab {
   /// Ícono relleno (pestaña activa, dentro del círculo de marca).
   final IconData activeIcon;
 
+  /// Ícono animado DisTrack de la pestaña (lo que se dibuja). [icon] y
+  /// [activeIcon] quedan como equivalentes Material (fallback, brief §6).
+  final AppIcon appIcon;
+
   /// Ruta go_router de la rama del shell.
   final String path;
 }
@@ -51,24 +57,28 @@ const List<NavTab> kPrimaryNavTabs = [
     label: 'Inicio',
     icon: Icons.home_outlined,
     activeIcon: Icons.home_rounded,
+    appIcon: AppIcon.home,
     path: '/home',
   ),
   NavTab(
     label: 'Tareas',
     icon: Icons.grid_view_outlined,
     activeIcon: Icons.grid_view_rounded,
+    appIcon: AppIcon.tasks,
     path: '/tareas',
   ),
   NavTab(
     label: 'Avisos',
     icon: Icons.notifications_outlined,
     activeIcon: Icons.notifications_rounded,
+    appIcon: AppIcon.alerts,
     path: '/avisos',
   ),
   NavTab(
     label: 'Perfil',
     icon: Icons.person_outline_rounded,
     activeIcon: Icons.person_rounded,
+    appIcon: AppIcon.profile,
     path: '/perfil',
   ),
 ];

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/emit_label_line.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_result.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/line_editor.dart';
+import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
 // Formulario (bottom sheet) de emisión/reimpresión de etiquetas. Valida origen,
@@ -178,8 +180,8 @@ void main() {
     expect(find.text('Líneas (2)'), findsOneWidget);
 
     // Ahora cada línea puede quitarse: quitamos una.
-    expect(find.byIcon(Icons.delete_outline), findsNWidgets(2));
-    await tester.tap(find.byIcon(Icons.delete_outline).first);
+    expect(findAppIcon(AppIcon.delete), findsNWidgets(2));
+    await tester.tap(findAppIcon(AppIcon.delete).first);
     await tester.pumpAndSettle();
     expect(find.byType(LineEditor), findsOneWidget);
   });

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/assignment.dart';
 import '../../../../core/api/models/corridor_type.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/network/api_exception.dart';
@@ -128,7 +129,13 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: _query,
-                    icon: const Icon(Icons.local_shipping),
+                    // En acción: loop mientras se consulta.
+                    icon: AnimatedAppIcon(
+                      AppIcon.deliver,
+                      state: _result is AsyncLoading
+                          ? AppIconState.loading
+                          : AppIconState.idle,
+                    ),
                     label: const Text('Calcular asignación'),
                   ),
                 ),

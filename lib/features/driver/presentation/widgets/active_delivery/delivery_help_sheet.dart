@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/map/map_launcher.dart';
 import '../../controllers/driver_controllers.dart';
 import '../../failed_delivery_screen.dart';
@@ -94,14 +95,14 @@ class DeliveryHelpSheet extends ConsumerWidget {
             ),
             if (phone != null && phone.isNotEmpty)
               _HelpTile(
-                icon: Icons.call,
+                icon: AppIcon.call,
                 title: 'Llamar al cliente',
                 subtitle: phone,
                 onTap: () => closeThen(() => unawaited(dialPhone(phone))),
               ),
             if (hasLocation)
               _HelpTile(
-                icon: Icons.navigation,
+                icon: AppIcon.navigation,
                 title: 'Abrir en la app de mapas',
                 subtitle: 'Indicaciones paso a paso hasta el cliente',
                 onTap: () => closeThen(
@@ -115,7 +116,7 @@ class DeliveryHelpSheet extends ConsumerWidget {
                 ),
               ),
             _HelpTile(
-              icon: Icons.qr_code_scanner,
+              icon: AppIcon.scan,
               title: 'Escanear bultos',
               subtitle: 'QR o código de barras de las etiquetas',
               onTap: () => closeThen(onScanUnits),
@@ -132,7 +133,7 @@ class DeliveryHelpSheet extends ConsumerWidget {
               ),
             ),
             _HelpTile(
-              icon: Icons.report_outlined,
+              icon: AppIcon.incident,
               title: 'Otro inconveniente',
               subtitle:
                   'Demora, acceso restringido, el cliente pide esperar… '
@@ -140,7 +141,7 @@ class DeliveryHelpSheet extends ConsumerWidget {
               onTap: () => closeThen(onReportIssue),
             ),
             _HelpTile(
-              icon: Icons.person_off_outlined,
+              icon: AppIcon.personOff,
               title: 'No se pudo entregar',
               subtitle:
                   'Cliente ausente, dirección incorrecta, rechazo o producto '
@@ -149,14 +150,14 @@ class DeliveryHelpSheet extends ConsumerWidget {
               onTap: () => closeThen(onFailedDelivery),
             ),
             _HelpTile(
-              icon: Icons.car_crash_outlined,
+              icon: AppIcon.incident,
               title: 'Problema con el vehículo',
               subtitle: 'Avería o accidente',
               danger: true,
               onTap: () => closeThen(() => onOpenRoute('/driver/incident')),
             ),
             _HelpTile(
-              icon: Icons.map_outlined,
+              icon: AppIcon.map,
               title: 'Ver la ruta completa',
               subtitle: 'Todas las paradas del día',
               onTap: () => closeThen(() => onOpenRoute('/driver/route')),
@@ -177,7 +178,7 @@ class _HelpTile extends StatelessWidget {
     this.danger = false,
   });
 
-  final IconData icon;
+  final AppIcon icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -187,13 +188,13 @@ class _HelpTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = danger ? Theme.of(context).colorScheme.error : null;
     return ListTile(
-      leading: Icon(icon, color: color, size: 28),
+      leading: AnimatedAppIcon(icon, color: color, size: 28),
       title: Text(
         title,
         style: TextStyle(fontWeight: FontWeight.w700, color: color),
       ),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: const AnimatedAppIcon(AppIcon.chevronRight),
       onTap: onTap,
     );
   }

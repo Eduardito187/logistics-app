@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'order_preparation_screen.dart';
 import 'orders_worklist_screen.dart';
@@ -16,6 +17,7 @@ const List<RoleTask> pickingTasks = [
     label: 'Pedidos por preparar',
     subtitle: 'Lista de pedidos para armar y cargar',
     icon: Icons.list_alt,
+    appIcon: AppIcon.orders,
     route: '/picking/orders',
     roles: {UserRole.picker},
     accent: true,
@@ -25,6 +27,7 @@ const List<RoleTask> pickingTasks = [
     label: 'Ingresar pedido',
     subtitle: 'Escanear o escribir el número de pedido',
     icon: Icons.qr_code_scanner,
+    appIcon: AppIcon.scan,
     route: '/picking/prepare',
     roles: {UserRole.picker},
   ),

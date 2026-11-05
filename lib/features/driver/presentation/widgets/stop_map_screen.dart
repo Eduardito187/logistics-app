@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/map/osm_tile_layer.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -30,8 +31,8 @@ class StopMapScreen extends StatelessWidget {
                 point: point,
                 width: 48,
                 height: 48,
-                child: const Icon(
-                  Icons.place,
+                child: const AnimatedAppIcon(
+                  AppIcon.place,
                   color: AppColors.brand,
                   size: 48,
                 ),

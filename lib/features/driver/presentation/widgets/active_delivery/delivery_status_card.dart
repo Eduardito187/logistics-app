@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/route_navigation.dart';
 
@@ -63,8 +64,8 @@ class DeliveryStatusCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.local_shipping,
+                AnimatedAppIcon(
+                  AppIcon.deliver,
                   size: 32,
                   color: theme.colorScheme.onSurface,
                 ),
@@ -126,8 +127,8 @@ class _RemainingRow extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.alt_route,
+                const AnimatedAppIcon(
+                  AppIcon.plans,
                   size: 16,
                   color: AppColors.hcWarning,
                 ),

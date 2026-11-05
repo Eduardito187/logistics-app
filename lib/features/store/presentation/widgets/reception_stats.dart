@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_tile.dart';
 
@@ -31,7 +32,7 @@ class ReceptionStats extends StatelessWidget {
               child: StatTile(
                 value: '$receivedExpected/$expectedCount',
                 label: 'Recibidos',
-                icon: Icons.inventory_2,
+                icon: AppIcon.receive,
                 color: AppColors.brand,
               ),
             ),
@@ -40,7 +41,7 @@ class ReceptionStats extends StatelessWidget {
               child: StatTile(
                 value: '$pending',
                 label: 'Faltan',
-                icon: Icons.hourglass_bottom,
+                icon: AppIcon.pending,
                 color: pending == 0 ? AppColors.success : AppColors.warning,
               ),
             ),
@@ -51,7 +52,7 @@ class ReceptionStats extends StatelessWidget {
           StatTile(
             value: '$surplusCount',
             label: 'Sobrantes (no esperados)',
-            icon: Icons.report_gmailerrorred,
+            icon: AppIcon.incident,
             color: AppColors.danger,
           ),
         ],

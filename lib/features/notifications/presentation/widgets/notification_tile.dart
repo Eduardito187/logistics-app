@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/notification_view.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../domain/notification_labels.dart';
@@ -48,7 +49,10 @@ class NotificationTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+          AnimatedAppIcon(
+            AppIcon.chevronRight,
+            color: theme.colorScheme.outline,
+          ),
         ],
       ),
     );

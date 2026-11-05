@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_contrast.dart';
 import 'pill_tone.dart';
@@ -18,12 +19,19 @@ class StatusPill extends StatelessWidget {
     super.key,
     this.tone = PillTone.neutral,
     this.icon,
+    this.iconState = AppIconState.idle,
     this.semanticsLabel,
   });
 
   final String label;
   final PillTone tone;
-  final IconData? icon;
+
+  /// Ícono animado DisTrack opcional delante de la etiqueta.
+  final AppIcon? icon;
+
+  /// Estado del ícono: p. ej. [AppIconState.success] en una pastilla de
+  /// resultado ("Foto guardada") para que el check se dibuje al aparecer.
+  final AppIconState iconState;
 
   /// Texto para lectores de pantalla; por defecto "Estado: [label]".
   final String? semanticsLabel;
@@ -65,7 +73,13 @@ class StatusPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 16, color: color),
+                AnimatedAppIcon(
+                  icon!,
+                  state: iconState,
+                  size: 16,
+                  color: color,
+                  excludeFromSemantics: true,
+                ),
                 const SizedBox(width: 6),
               ],
               // Flexible + elipsis: con letra grande o etiquetas largas la

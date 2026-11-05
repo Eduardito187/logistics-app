@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../controllers/driver_controllers.dart';
 import '../../controllers/locally_settled_stops.dart';
@@ -85,7 +86,7 @@ class DeliveryActionsBar extends ConsumerWidget {
                         }
                         ref.invalidate(driverRouteProvider);
                       },
-                      icon: const Icon(Icons.arrow_forward),
+                      icon: const AnimatedAppIcon(AppIcon.arrowForward),
                       label: const Text('Siguiente entrega'),
                     )
                   : Column(
@@ -99,7 +100,7 @@ class DeliveryActionsBar extends ConsumerWidget {
                             stop,
                             PodScreen(stop: stop),
                           ),
-                          icon: const Icon(Icons.photo_camera),
+                          icon: const AnimatedAppIcon(AppIcon.capture),
                           label: const Text('Entregar pedido'),
                         ),
                         const SizedBox(height: 8),
@@ -113,7 +114,7 @@ class DeliveryActionsBar extends ConsumerWidget {
                                   stop,
                                   unloadScreenFor(stop),
                                 ),
-                                icon: const Icon(Icons.qr_code_scanner),
+                                icon: const AnimatedAppIcon(AppIcon.scan),
                                 label: const Text(
                                   'Escanear bultos',
                                   maxLines: 1,
@@ -133,7 +134,7 @@ class DeliveryActionsBar extends ConsumerWidget {
                                   stop,
                                   FailedDeliveryScreen(stop: stop),
                                 ),
-                                icon: const Icon(Icons.cancel_outlined),
+                                icon: const AnimatedAppIcon(AppIcon.cancel),
                                 label: const Text(
                                   'No se pudo',
                                   maxLines: 1,

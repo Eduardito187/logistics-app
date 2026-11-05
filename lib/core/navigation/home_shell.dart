@@ -12,6 +12,7 @@ import '../../features/store/presentation/node_reception_screen.dart';
 import '../../features/supervisor/presentation/supervisor_dashboard_screen.dart';
 import '../auth/session.dart';
 import '../auth/user_role.dart';
+import '../icons/icons.dart';
 import '../widgets/floating_pill_nav_bar.dart';
 import 'app_nav.dart';
 import 'feature_tasks.dart';
@@ -90,7 +91,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         currentIndex: index,
         onTap: (i) => ref.read(homeTabProvider.notifier).set(i),
         centerLabel: center?.label ?? 'Acción',
-        centerIcon: center?.icon ?? Icons.bolt,
+        centerIcon: center?.appIcon ?? AppIcon.bolt,
       ),
     );
   }

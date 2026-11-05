@@ -13,6 +13,7 @@ import '../../../core/api/models/open_node_reception_request_destination_node_ki
 import '../../../core/api/models/open_node_reception_request_origin_node_kind.dart';
 import '../../../core/api/models/reconcile_node_reception_request.dart';
 import '../../../core/api/models/shipment.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/offline/offline_queue.dart';
@@ -62,6 +63,12 @@ const Duration kReceptionRefreshDebounce = Duration(seconds: 5);
 
 class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   bool _busy = false;
+
+  /// Cámara de escaneo abierta: el ícono del botón muestra el barrido.
+  bool _scanning = false;
+
+  /// Conciliación en curso: el ícono del botón muestra que trabaja.
+  bool _reconciling = false;
 
   /// Refresco diferido de la recepción (ver [kReceptionRefreshDebounce]).
   Timer? _refreshTimer;
@@ -155,7 +162,13 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
                   BottomActionBar(
                     child: FilledButton.icon(
                       onPressed: _busy ? null : _scanAndReceive,
-                      icon: const Icon(Icons.qr_code_scanner),
+                      icon: AnimatedAppIcon(
+                        AppIcon.scan,
+                        state: _scanning
+                            ? AppIconState.loading
+                            : AppIconState.idle,
+                        excludeFromSemantics: true,
+                      ),
                       label: const Text('Escanear producto'),
                     ),
                   ),
@@ -207,7 +220,9 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
               child: StatusPill(
                 'Recepción conciliada',
                 tone: PillTone.success,
-                icon: Icons.verified,
+                icon: AppIcon.verified,
+                // El escudo se dibuja con pop al conciliarse (resultado en acción).
+                iconState: AppIconState.success,
               ),
             ),
           ],
@@ -233,7 +248,13 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
                         tally.pending,
                         tally.surplus.length,
                       ),
-                icon: const Icon(Icons.fact_check_outlined),
+                icon: AnimatedAppIcon(
+                  AppIcon.checklist,
+                  state: _reconciling
+                      ? AppIconState.loading
+                      : AppIconState.idle,
+                  excludeFromSemantics: true,
+                ),
                 label: const Text('Conciliar y cerrar'),
               ),
             ),
@@ -281,7 +302,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
     // haber fix y el registro no lo espera aparte.
     warmUpLocation(ref);
     final registered = <String>[];
-    setState(() => _busy = true);
+    setState(() => _busy = _scanning = true);
     try {
       await scanContinuous(
         context,
@@ -291,7 +312,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
         onCode: (qr) => _receiveCode(qr, registered),
       );
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busy = _scanning = false);
     }
     if (!mounted || registered.isEmpty) return;
     showSuccessSnack(
@@ -382,7 +403,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   }
 
   Future<void> _reconcile() async {
-    setState(() => _busy = true);
+    setState(() => _busy = _reconciling = true);
     try {
       await ref
           .read(reconcileNodeReceptionProvider)
@@ -402,7 +423,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
       if (!mounted) return;
       showErrorSnack(context, e, bottomClearance: kBottomActionClearance);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busy = _reconciling = false);
     }
   }
 

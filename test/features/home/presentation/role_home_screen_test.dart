@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/navigation/feature_tasks.dart';
 import 'package:logistics_app/core/navigation/role_task.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/big_action_tile.dart';
 import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
 
+import '../../../support/app_icon_finders.dart';
 import '../../../support/no_home_prefetch.dart';
 
 // Inicio por rol (rediseño): panel glanceable con saludo (rol + nombre), la
@@ -17,6 +19,8 @@ import '../../../support/no_home_prefetch.dart';
 // canales de plataforma. La barra inferior vive en el shell (no se prueba acá).
 
 /// Tareas de ejemplo: una exige ability, otra no; cada rol tiene la suya.
+/// `_needsAbility` no trae appIcon (cae al Material); la del preparador es la
+/// acción principal (héroe).
 const _needsAbility = RoleTask(
   id: 'needs-ability',
   label: 'Carga validada',
@@ -29,6 +33,7 @@ const _noAbility = RoleTask(
   id: 'no-ability',
   label: 'Ruta del día',
   icon: Icons.map,
+  appIcon: AppIcon.route,
   route: '/route',
   roles: {UserRole.driver},
 );
@@ -36,8 +41,10 @@ const _pickerTask = RoleTask(
   id: 'picker-task',
   label: 'Escanear EAN',
   icon: Icons.qr_code,
+  appIcon: AppIcon.scan,
   route: '/picking',
   roles: {UserRole.picker},
+  accent: true,
 );
 
 ProviderContainer _session(UserRole role, {List<String>? abilities}) {
@@ -76,6 +83,32 @@ void main() {
     expect(find.text('Chofer'), findsWidgets); // etiqueta del rol en el saludo
     expect(find.text('dev.driver'), findsOneWidget); // nombre del devSignIn
     expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
+    expect(findAppIcon(UserRole.driver.icon), findsOneWidget); // avatar del rol
+  });
+
+  testWidgets('los tiles dibujan el AppIcon de la tarea o caen al Material', (
+    tester,
+  ) async {
+    final container = _session(UserRole.driver);
+    await _pump(tester, container);
+
+    expect(
+      findAppIconInState(AppIcon.route, AppIconState.idle),
+      findsOneWidget,
+    );
+    // Sin appIcon: fallback al Icon Material de la tarea.
+    expect(find.byIcon(Icons.local_shipping), findsOneWidget);
+  });
+
+  testWidgets('la tarjeta héroe dibuja su AppIcon activo', (tester) async {
+    final container = _session(UserRole.picker);
+    await _pump(tester, container);
+
+    expect(find.text('Escanear EAN'), findsOneWidget);
+    final hero = tester.widget<AnimatedAppIcon>(
+      findAppIconInState(AppIcon.scan, AppIconState.active),
+    );
+    expect(hero.animateOnMount, isTrue);
   });
 
   testWidgets('con la ability presente muestra la tarjeta con permiso', (

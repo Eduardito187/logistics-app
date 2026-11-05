@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/notification_view.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -108,7 +109,7 @@ class NotificationDetailBody extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.block),
+                  : const AnimatedAppIcon(AppIcon.cancel),
               label: const Text('Suprimir notificación'),
             ),
           ],

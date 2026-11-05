@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/scanning/scan_feedback.dart';
 import '../../../../core/theme/high_contrast.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -22,7 +23,12 @@ class FieldUseSection extends ConsumerWidget {
           SwitchListTile(
             key: const Key('highContrastSwitch'),
             contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.wb_sunny_outlined),
+            // Activo mientras el modo sol está prendido.
+            secondary: AnimatedAppIcon(
+              AppIcon.sun,
+              state: highContrast ? AppIconState.active : AppIconState.idle,
+              excludeFromSemantics: true,
+            ),
             title: const Text('Alto contraste (sol)'),
             subtitle: const Text(
               'Fondo blanco y letra negra, más fácil de leer.',
@@ -34,7 +40,11 @@ class FieldUseSection extends ConsumerWidget {
           SwitchListTile(
             key: const Key('scanFeedbackSwitch'),
             contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.vibration),
+            secondary: AnimatedAppIcon(
+              AppIcon.vibration,
+              state: scanFeedback ? AppIconState.active : AppIconState.idle,
+              excludeFromSemantics: true,
+            ),
             title: const Text('Vibrar y sonar al escanear'),
             subtitle: const Text(
               'Confirma cada lectura sin mirar la pantalla.',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/icons/icons.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/widgets/async_value_view.dart';
@@ -34,17 +35,17 @@ class DeliveryStateCard extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               InfoRow(
-                icon: Icons.qr_code_scanner,
+                icon: AppIcon.scan,
                 text: '${delivery.scans.length} escaneo(s) registrados',
               ),
               if (delivery.podConfirmation != null)
                 InfoRow(
-                  icon: Icons.verified,
+                  icon: AppIcon.verified,
                   text: 'Confirmación: ${delivery.podConfirmation!}',
                 ),
               if (reason != null)
                 InfoRow(
-                  icon: Icons.error_outline,
+                  icon: AppIcon.error,
                   text: 'Motivo de falla: ${_failureReasonLabel(reason)}',
                 ),
             ],

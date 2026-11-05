@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/location/location_service.dart';
 import '../../../../../core/location/truck_tracking_service.dart';
 import '../../../../../core/map/osm_tile_layer.dart';
@@ -288,8 +289,8 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
             width: 56,
             height: 56,
             alignment: Alignment.topCenter,
-            child: Icon(
-              Icons.location_on,
+            child: AnimatedAppIcon(
+              AppIcon.place,
               size: 56,
               color: lineColor,
               semanticLabel: 'Destino',
@@ -446,7 +447,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
               if (driver != null) ...[
                 MapRoundButton(
                   tooltip: _follow ? 'Dejar de seguir' : 'Seguir camión',
-                  icon: _follow ? Icons.navigation : Icons.navigation_outlined,
+                  icon: AppIcon.navigation,
                   selected: _follow,
                   onPressed: () => _toggleFollow(driver),
                 ),
@@ -454,7 +455,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
               ],
               MapRoundButton(
                 tooltip: 'Centrar',
-                icon: Icons.my_location,
+                icon: AppIcon.gps,
                 onPressed: () => _recenter(driver),
               ),
             ],
@@ -477,8 +478,8 @@ class _TruckMarker extends StatelessWidget {
         border: Border.all(color: Colors.white, width: 3),
         boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
       ),
-      child: const Icon(
-        Icons.local_shipping,
+      child: const AnimatedAppIcon(
+        AppIcon.deliver,
         color: Colors.white,
         size: 22,
         semanticLabel: 'Tu camión',

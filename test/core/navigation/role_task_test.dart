@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/navigation/role_task.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 // RoleTask es la tarjeta de acción del inicio; se filtra por rol y, opcional,
 // por ability. Se cubren sus defaults y el filtro visibleFor.
@@ -12,6 +13,7 @@ void main() {
         id: 't1',
         label: 'Ruta',
         icon: Icons.map,
+        appIcon: AppIcon.route,
         route: '/driver/route',
         roles: {UserRole.driver},
       );
@@ -23,6 +25,7 @@ void main() {
       expect(task.subtitle, isNull);
       expect(task.requiredAbility, isNull);
       expect(task.accent, isFalse);
+      expect(task.appIcon, AppIcon.route);
     });
 
     test('acepta subtitle, accent y requiredAbility', () {
@@ -30,6 +33,7 @@ void main() {
         id: 't2',
         label: 'Carga',
         icon: Icons.inventory,
+        appIcon: AppIcon.receive,
         route: '/picking/prepare',
         roles: {UserRole.picker},
         subtitle: 'Valida la carga',

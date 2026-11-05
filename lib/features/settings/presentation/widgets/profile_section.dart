@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/app_me_response.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -20,7 +21,12 @@ class ProfileSection extends ConsumerWidget {
     return SectionCard(
       title: 'Perfil',
       trailing: IconButton(
-        icon: const Icon(Icons.refresh),
+        // Gira mientras recarga el perfil.
+        icon: AnimatedAppIcon(
+          AppIcon.refresh,
+          state: profile.isLoading ? AppIconState.loading : AppIconState.idle,
+          excludeFromSemantics: true,
+        ),
         tooltip: 'Actualizar',
         onPressed: () => ref.invalidate(appMeProvider),
       ),
@@ -34,7 +40,7 @@ class ProfileSection extends ConsumerWidget {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.account_circle),
+                leading: const AnimatedAppIcon(AppIcon.profile),
                 title: Text(me.user.name),
                 subtitle: Text(me.user.email),
               ),
@@ -58,8 +64,8 @@ class ProfileSection extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(
-                      Icons.smartphone,
+                    AnimatedAppIcon(
+                      AppIcon.phone,
                       size: 16,
                       color: theme.colorScheme.outline,
                     ),

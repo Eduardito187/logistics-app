@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
@@ -9,6 +10,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../store/fake_continuous_scanner.dart';
 import '../carrier_scan_harness.dart';
+import '../../../support/app_icon_finders.dart';
 import '../../../support/button_finders.dart';
 
 // Flujo RECOGER con escaneo CONTINUO: la cámara queda abierta y cada QR firmado
@@ -68,6 +70,11 @@ void main() {
     expect(find.text(vectorSku), findsOneWidget);
     expect(find.textContaining(vectorUnitId), findsOneWidget);
     expect(find.text('Enviado'), findsOneWidget);
+    // La fila anima el resultado de la lectura (éxito).
+    expect(
+      findAppIconInState(AppIcon.receive, AppIconState.success),
+      findsOneWidget,
+    );
     expect(find.text('1 bulto recogido.'), findsOneWidget);
   });
 
@@ -177,6 +184,11 @@ void main() {
     expect(loadScan.requests, hasLength(1));
     expect(scanner.messages, ['No se pudo registrar. Intentá de nuevo.']);
     expect(find.text('Error'), findsOneWidget);
+    // La fila anima el error de la lectura (sacudida ámbar).
+    expect(
+      findAppIconInState(AppIcon.error, AppIconState.error),
+      findsOneWidget,
+    );
     // Sin bultos registrados no hay resumen.
     expect(find.byType(SnackBar), findsNothing);
   });

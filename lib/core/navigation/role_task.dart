@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/user_role.dart';
+import '../icons/icons.dart';
 
 /// Una tarjeta de acción en el inicio del rol. Cada feature aporta las suyas y
 /// el inicio las filtra por el rol de la sesión.
@@ -15,12 +16,18 @@ class RoleTask {
     this.subtitle,
     this.accent = false,
     this.requiredAbility,
+    this.appIcon,
   });
 
   final String id;
   final String label;
   final String? subtitle;
+
+  /// Equivalente Material (fallback mientras no haya [appIcon], brief §6).
   final IconData icon;
+
+  /// Ícono animado DisTrack de la acción (botón central, tarjeta héroe, tiles).
+  final AppIcon? appIcon;
 
   /// Ruta go_router a la que navega la tarjeta.
   final String route;

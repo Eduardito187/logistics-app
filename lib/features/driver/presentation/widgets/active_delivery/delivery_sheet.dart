@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
 import '../../../../../core/widgets/brand_loader.dart';
@@ -143,18 +144,18 @@ class _DeliveryDetails extends ConsumerWidget {
         ),
         if (phone != null && phone.isNotEmpty)
           _DetailRow(
-            leading: const Icon(Icons.phone, size: 28),
+            leading: const AnimatedAppIcon(AppIcon.call, size: 28),
             label: 'Teléfono',
             value: phone,
             action: _RowAction(
               label: 'Llamar',
-              icon: Icons.call,
+              icon: AppIcon.call,
               onPressed: () => unawaited(dialPhone(phone)),
             ),
           ),
         if (address != null && address.isNotEmpty)
           _DetailRow(
-            leading: const Icon(Icons.location_on_outlined, size: 28),
+            leading: const AnimatedAppIcon(AppIcon.place, size: 28),
             label: 'Entregar en',
             value: note == null || note.isEmpty ? address : '$address\n$note',
             // La dirección es lo más largo de la hoja: letra más chica.
@@ -162,7 +163,7 @@ class _DeliveryDetails extends ConsumerWidget {
             action: stop.lat != null && stop.lng != null
                 ? _RowAction(
                     label: 'Navegar',
-                    icon: Icons.navigation,
+                    icon: AppIcon.navigation,
                     onPressed: () => unawaited(
                       openExternalNavigation(stop.lat!, stop.lng!, label: name),
                     ),
@@ -190,7 +191,7 @@ class _RowAction {
   });
 
   final String label;
-  final IconData icon;
+  final AppIcon icon;
   final VoidCallback onPressed;
 }
 
@@ -246,7 +247,7 @@ class _DetailRow extends StatelessWidget {
           if (action != null)
             TextButton.icon(
               onPressed: action!.onPressed,
-              icon: Icon(action!.icon),
+              icon: AnimatedAppIcon(action!.icon),
               label: Text(action!.label),
             ),
         ],
@@ -389,8 +390,8 @@ class ProductTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final placeholder = Icon(
-      Icons.inventory_2_outlined,
+    final placeholder = AnimatedAppIcon(
+      AppIcon.receive,
       color: theme.colorScheme.outline,
     );
     final url = item.imageUrl;

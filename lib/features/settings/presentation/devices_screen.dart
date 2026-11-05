@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/device_list_item.dart';
 import '../../../core/auth/session.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -85,7 +86,7 @@ class DevicesScreen extends ConsumerWidget {
                         SliverFillRemaining(
                           hasScrollBody: false,
                           child: EmptyState(
-                            icon: Icons.devices_other,
+                            icon: AppIcon.devices,
                             title: 'Sin dispositivos',
                             message: 'No hay sesiones activas registradas.',
                           ),

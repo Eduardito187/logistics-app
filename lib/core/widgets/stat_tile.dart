@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_contrast.dart';
 
@@ -21,7 +22,9 @@ class StatTile extends StatelessWidget {
 
   final String value;
   final String label;
-  final IconData? icon;
+
+  /// Ícono animado DisTrack opcional sobre el número.
+  final AppIcon? icon;
   final Color? color;
 
   /// Texto para lectores de pantalla; por defecto "[label]: [value]".
@@ -66,7 +69,12 @@ class StatTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: tint, size: 24),
+              AnimatedAppIcon(
+                icon!,
+                color: tint,
+                size: 24,
+                excludeFromSemantics: true,
+              ),
               const SizedBox(height: 8),
             ],
             // En celdas angostas (grilla de 2 en teléfono chico) el número se

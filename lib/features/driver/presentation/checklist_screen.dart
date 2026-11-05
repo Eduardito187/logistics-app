@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 
@@ -61,7 +62,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
           data: (list) {
             if (list.isEmpty) {
               return const EmptyState(
-                icon: Icons.person_off,
+                icon: AppIcon.personOff,
                 title: 'Sin choferes',
                 message: 'No hay choferes activos para firmar el checklist.',
               );
@@ -135,7 +136,10 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             onPressed: _driverId != null && !_busy
                 ? () => _submit(vehicleId)
                 : null,
-            icon: const Icon(Icons.save),
+            icon: AnimatedAppIcon(
+              AppIcon.save,
+              state: _busy ? AppIconState.loading : AppIconState.idle,
+            ),
             label: const Text('Registrar checklist'),
           ),
         ],

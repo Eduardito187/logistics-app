@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/icons/icons.dart';
 
 /// Botón circular blanco flotante sobre el mapa (cerrar, centrar, seguir).
 /// Con [selected] se pinta relleno (p. ej. modo "seguir" activo).
@@ -11,7 +12,7 @@ class MapRoundButton extends StatelessWidget {
     this.selected = false,
   });
 
-  final IconData icon;
+  final AppIcon icon;
   final String tooltip;
   final VoidCallback onPressed;
   final bool selected;
@@ -28,7 +29,10 @@ class MapRoundButton extends StatelessWidget {
         iconSize: 26,
         color: selected ? scheme.onPrimary : null,
         constraints: const BoxConstraints.tightFor(width: 56, height: 56),
-        icon: Icon(icon),
+        icon: AnimatedAppIcon(
+          icon,
+          state: selected ? AppIconState.active : AppIconState.idle,
+        ),
         onPressed: onPressed,
       ),
     );
@@ -44,7 +48,7 @@ class MapPillButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  final IconData icon;
+  final AppIcon icon;
   final String label;
   final VoidCallback onPressed;
 
@@ -65,7 +69,7 @@ class MapPillButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 24),
+                AnimatedAppIcon(icon, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   label,

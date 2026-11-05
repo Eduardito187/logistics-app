@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../icons/icons.dart';
 import '../network/api_exception.dart';
 import 'brand_loader.dart';
 import 'empty_state.dart';
@@ -31,14 +32,14 @@ class AsyncValueView<T> extends StatelessWidget {
             ? error.message
             : 'Ocurrió un error.';
         return EmptyState(
-          icon: Icons.cloud_off,
+          icon: AppIcon.cloudOff,
           title: 'No se pudo cargar',
           message: message,
           action: onRetry == null
               ? null
               : FilledButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
+                  icon: const AnimatedAppIcon(AppIcon.refresh),
                   label: const Text('Reintentar'),
                 ),
         );

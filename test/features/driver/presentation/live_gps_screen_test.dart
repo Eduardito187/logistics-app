@@ -13,8 +13,11 @@ void main() {
   testWidgets('muestra la parada en curso como parada asociada', (
     tester,
   ) async {
+    // Sin pumpAndSettle: con el rastreo andando y sin fix, el ícono del GPS
+    // queda en loading (loop "buscando") y nunca asentaría.
     await pumpScoped(
       tester,
+      settle: false,
       overrides: gateBase(
         route: buildRoute(
           status: DriverRouteStatus.inProgress,
@@ -34,6 +37,9 @@ void main() {
       ),
       child: const LiveGpsScreen(),
     );
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(find.text('Rastreo del camión'), findsOneWidget);
     expect(find.byType(TrackingStatusBody), findsOneWidget);

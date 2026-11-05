@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/assignment.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import 'corridor_format.dart';
@@ -24,7 +25,7 @@ class AssignmentResult extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
-                icon: Icons.local_shipping,
+                icon: AppIcon.deliver,
                 value: vehicleClassLabel(assignment.vehicleClass),
                 label: 'Vehículo sugerido',
               ),
@@ -32,7 +33,7 @@ class AssignmentResult extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: StatTile(
-                icon: Icons.inventory_2,
+                icon: AppIcon.receive,
                 value: '${assignment.volumeM3} m³',
                 label: 'Volumen',
               ),

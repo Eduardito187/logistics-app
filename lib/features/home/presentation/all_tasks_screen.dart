@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/navigation/feature_tasks.dart';
@@ -42,7 +43,7 @@ class AllTasksScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Tareas')),
       body: tasks.isEmpty
           ? const EmptyState(
-              icon: Icons.inbox_outlined,
+              icon: AppIcon.inbox,
               title: 'Sin tareas por ahora',
               message: 'No hay flujos disponibles para este rol todavía.',
             )
@@ -79,6 +80,7 @@ class _Tile extends StatelessWidget {
       label: task.label,
       subtitle: task.subtitle,
       icon: task.icon,
+      appIcon: task.appIcon,
       accent: task.accent,
       onTap: () => context.push(task.route),
     );

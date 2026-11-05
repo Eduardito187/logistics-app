@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snack.dart';
@@ -62,10 +63,15 @@ class _AlertCardState extends ConsumerState<AlertCard> {
           if (acknowledged)
             Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
+                // Éxito del reconocimiento: la key remonta el ícono (y su
+                // animación) si llega un reconocimiento nuevo.
+                AnimatedAppIcon(
+                  AppIcon.success,
+                  key: ValueKey(alert.acknowledgedAt),
+                  state: AppIconState.success,
                   color: AppColors.success,
                   size: 20,
+                  excludeFromSemantics: true,
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -78,13 +84,12 @@ class _AlertCardState extends ConsumerState<AlertCard> {
           else
             FilledButton.icon(
               onPressed: _acknowledging ? null : _acknowledge,
-              icon: _acknowledging
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.done_all),
+              // Mientras se envía el reconocimiento, el tilde "carga".
+              icon: AnimatedAppIcon(
+                AppIcon.check,
+                state: _acknowledging ? AppIconState.loading : AppIconState.idle,
+                excludeFromSemantics: true,
+              ),
               label: Text(_acknowledging ? 'Reconociendo…' : 'Reconocer'),
             ),
         ],

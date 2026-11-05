@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/offline/app_database.dart';
 import '../../../../core/offline/offline_queue.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -24,8 +25,10 @@ class SyncActionTile extends ConsumerWidget {
     final theme = Theme.of(context);
     return Card(
       child: ListTile(
-        leading: Icon(
-          failed ? Icons.error : Icons.schedule,
+        leading: AnimatedAppIcon(
+          failed ? AppIcon.error : AppIcon.pending,
+          // Rechazada: la sacudida de error se reproduce al aparecer.
+          state: failed ? AppIconState.error : AppIconState.idle,
           color: failed ? AppColors.danger : theme.colorScheme.onSurfaceVariant,
         ),
         title: Text(action.label ?? action.kind),

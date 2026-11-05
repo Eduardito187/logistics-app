@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
-import 'button_spinner.dart';
 
 /// Tarjeta de progreso del armado: preparadas/pendientes, carril asignado y las
 /// acciones a nivel pedido (asignar carril, imprimir todas, reimprimir lote).
@@ -49,7 +49,7 @@ class ProgressCard extends StatelessWidget {
                 child: StatTile(
                   value: '$prepared/$total',
                   label: 'Preparadas',
-                  icon: Icons.check_circle,
+                  icon: AppIcon.success,
                   color: AppColors.success,
                 ),
               ),
@@ -58,7 +58,7 @@ class ProgressCard extends StatelessWidget {
                 child: StatTile(
                   value: '$pending',
                   label: 'Pendientes',
-                  icon: Icons.inventory_2,
+                  icon: AppIcon.receive,
                   color: done ? AppColors.success : AppColors.warning,
                 ),
               ),
@@ -69,17 +69,23 @@ class ProgressCard extends StatelessWidget {
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : onPrintAll,
-            icon: busy && !reprinting
-                ? const ButtonSpinner()
-                : const Icon(Icons.print),
+            // Mientras imprime, la hoja sale de la impresora (loop de impresión).
+            icon: AnimatedAppIcon(
+              AppIcon.printing,
+              state: busy && !reprinting
+                  ? AppIconState.loading
+                  : AppIconState.idle,
+            ),
             label: const Text('Imprimir todas las etiquetas'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : onReprintBatch,
-            icon: reprinting
-                ? const ButtonSpinner()
-                : const Icon(Icons.restart_alt),
+            // Mientras se reemite el lote, las flechas giran.
+            icon: AnimatedAppIcon(
+              AppIcon.refresh,
+              state: reprinting ? AppIconState.loading : AppIconState.idle,
+            ),
             label: const Text('Reimprimir lote'),
           ),
         ],
@@ -114,8 +120,8 @@ class _LaneRow extends StatelessWidget {
       onPressed: onAssign,
       child: Text(lane == null ? 'Asignar' : 'Cambiar'),
     );
-    final icon = Icon(
-      Icons.alt_route,
+    final icon = AnimatedAppIcon(
+      AppIcon.plans,
       color: Theme.of(context).colorScheme.onSurface,
     );
     return LayoutBuilder(

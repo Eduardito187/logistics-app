@@ -1,9 +1,9 @@
 - [App solo consume el backend](app-scope-backend-consumer.md) — la app nunca integra servicios externos; medir completitud por cobertura de endpoints /app/*
 - [Estado de cobertura del API](app-api-coverage-state.md) — endpoints /app/* útiles consumidos (+issues, +push-token); contrato rutas/tareas; roles incl. admin
 - [Generación del cliente API](api-client-generation.md) — swagger_parser + preprocesado JSON (anchors/params), retrofit pinneado, cómo regenerar
-- [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas que el coordinador cablea al final
+- [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas; los agentes NO corren Flutter (solo código + revisión estática)
 - [Toolchain Android en WSL (histórico)](wsl-run-toolchain.md) — SOLO WSL; en Windows ver windows-native-toolchain
-- [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas saturaron la RAM; topes puestos, nunca apilar builds
+- [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas, y 8 agentes con flutter test (2026-10-26) saturaron la RAM; topes, drop_caches sin shutdown
 - [Entornos dev/staging/production](run-environments-config.md) — claves vigentes de config/*.json (FIREBASE_*, APP_UPDATE_URL…), release bloquea http, valores reales pendientes
 - [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
 - [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
@@ -19,6 +19,7 @@
 - [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
 - [Perfil del usuario](user-profile.md) — dueño de la plataforma Dismac, español informal, decide producto, PC Windows con RAM justa
 - [Usuarios de prueba y escenario del día](dev-test-users-scenario.md) — cuentas por rol con password123, TodayScenarioSeeder (SCZ, 904U10), cómo re-correrlo
-- [Forma de trabajar](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, decidir y explicitar, pedidos al backend por doc, reportar con números
+- [Forma de trabajar](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, "solo trabaja" (no correr Flutter/Docker/backend sin pedido), íconos animados completos
 - [Push desde WSL](git-push-from-wsl.md) — WSL sin credenciales GitHub; pushear con el git.exe de Windows apuntando al repo WSL por ruta UNC (wslpath -w)
 - [Consolidación Windows→WSL](windows-wsl-consolidation.md) — oct 2026: merge-unión de las 2 copias en WSL (8b4c04a), checkout de Windows borrado, trabajar solo en /dismac/logistics-app
+- [Íconos custom animados](custom-animated-icons.md) — AnimatedAppIcon reemplaza Icons.* en toda la app; anima el ícono COMPLETO; motor sin compilar, lo verifica el dueño; skill animated-app-icons

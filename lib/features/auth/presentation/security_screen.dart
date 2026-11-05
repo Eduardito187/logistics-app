@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -115,7 +116,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           const StatusPill(
             'Activada',
             tone: PillTone.success,
-            icon: Icons.verified_user_outlined,
+            icon: AppIcon.verified,
           ),
           const SizedBox(height: 16),
           Text(
@@ -218,7 +219,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   ),
                   IconButton(
                     tooltip: 'Copiar clave',
-                    icon: const Icon(Icons.copy_outlined),
+                    icon: const AnimatedAppIcon(AppIcon.copy),
                     onPressed: () => _copy(enrollment.secret, 'Clave copiada.'),
                   ),
                 ],
@@ -234,8 +235,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
+                  const AnimatedAppIcon(
+                    AppIcon.incident,
                     color: AppColors.accent,
                   ),
                   const SizedBox(width: 8),
@@ -272,7 +273,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   enrollment.recoveryCodes.join('\n'),
                   'Códigos copiados.',
                 ),
-                icon: const Icon(Icons.copy_outlined),
+                icon: const AnimatedAppIcon(AppIcon.copy),
                 label: const Text('Copiar códigos'),
               ),
             ],
@@ -295,7 +296,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Código del autenticador',
                   counterText: '',
-                  prefixIcon: Icon(Icons.pin_outlined),
+                  prefixIcon: AnimatedAppIcon(AppIcon.pin),
                 ),
               ),
               const SizedBox(height: 16),
@@ -406,8 +407,8 @@ class _DisableTwoFactorSheetState
             decoration: InputDecoration(
               labelText: _useCode ? 'Código del autenticador' : 'Contraseña',
               counterText: '',
-              prefixIcon: Icon(
-                _useCode ? Icons.pin_outlined : Icons.lock_outline,
+              prefixIcon: AnimatedAppIcon(
+                _useCode ? AppIcon.pin : AppIcon.security,
               ),
               suffixIcon: _useCode
                   ? null
@@ -415,10 +416,13 @@ class _DisableTwoFactorSheetState
                       tooltip: _obscurePassword
                           ? 'Mostrar contraseña'
                           : 'Ocultar contraseña',
-                      icon: Icon(
+                      icon: AnimatedAppIcon(
                         _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+                            ? AppIcon.visibility
+                            : AppIcon.visibilityOff,
+                        state: _obscurePassword
+                            ? AppIconState.idle
+                            : AppIconState.active,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),

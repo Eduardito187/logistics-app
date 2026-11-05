@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/shipment.dart';
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'counter_pickup_screen.dart';
 import 'node_reception_screen.dart';
@@ -16,6 +17,7 @@ const List<RoleTask> storeTasks = [
     label: 'Recepción de mercadería',
     subtitle: 'Contra manifiesto',
     icon: Icons.inventory_2,
+    appIcon: AppIcon.receive,
     route: '/store/reception',
     roles: {UserRole.store},
     accent: true,
@@ -25,6 +27,7 @@ const List<RoleTask> storeTasks = [
     label: 'Recojo en tienda',
     subtitle: 'Entrega en mostrador',
     icon: Icons.storefront,
+    appIcon: AppIcon.pickupStore,
     route: '/store/pickup',
     roles: {UserRole.store},
   ),

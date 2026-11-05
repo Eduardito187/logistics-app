@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
@@ -10,6 +10,7 @@ import 'package:logistics_app/features/driver/presentation/widgets/route_list.da
 import 'package:logistics_app/features/driver/presentation/widgets/route_summary.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/stop_card.dart';
 
+import '../../../support/app_icon_finders.dart';
 import '../support/driver_test_support.dart';
 
 // Pantalla "Mi ruta de hoy": resumen + mapa/lista de paradas y estados.
@@ -64,7 +65,7 @@ void main() {
     expect(find.text('1/2 entregadas · 1 por hacer'), findsOneWidget);
 
     // Alternar a la vista de lista.
-    await tester.tap(find.byIcon(Icons.list));
+    await tester.tap(findAppIcon(AppIcon.orders));
     await tester.pumpAndSettle();
 
     expect(find.byType(RouteList), findsOneWidget);

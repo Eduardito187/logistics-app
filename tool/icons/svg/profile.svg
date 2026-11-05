@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-body ds-p-fill" d="M4.6 20.6v-1a5 5 0 0 1 5-5h4.8a5 5 0 0 1 5 5v1z"/>
+  <circle class="ds-accent ds-p-head ds-p-fill" cx="12" cy="7.8" r="3.8"/>
+</svg>

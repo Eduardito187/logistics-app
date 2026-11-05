@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../driver_common.dart';
 
 /// Cabecera de solo lectura con la asignación del día: vehículo, chofer,
@@ -28,7 +29,10 @@ class AssignmentHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping, color: theme.colorScheme.onSurface),
+            AnimatedAppIcon(
+              AppIcon.deliver,
+              color: theme.colorScheme.onSurface,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

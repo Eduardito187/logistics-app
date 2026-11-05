@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/theme/app_colors.dart';
@@ -26,26 +27,20 @@ class SyncScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sincronización'),
-        actions: [
-          IconButton(
-            tooltip: 'Reintentar ahora',
-            icon: const Icon(Icons.sync),
-            onPressed: () => ref.read(offlineQueueProvider).drain(),
-          ),
-        ],
+        actions: const [_SyncNowButton()],
       ),
       body: queue.when(
         loading: () =>
             const Center(child: BrandLoader(message: 'Cargando cola...')),
         error: (e, _) => EmptyState(
-          icon: Icons.error_outline,
+          icon: AppIcon.error,
           title: 'No se pudo leer la cola',
           message: '$e',
         ),
         data: (actions) {
           if (actions.isEmpty) {
             return const EmptyState(
-              icon: Icons.cloud_done,
+              icon: AppIcon.cloudDone,
               title: 'Todo sincronizado',
               message: 'No hay escaneos ni registros pendientes de subir.',
             );
@@ -80,6 +75,55 @@ class SyncScreen extends ConsumerWidget {
   }
 }
 
+/// "Reintentar ahora": drena la cola y, mientras sincroniza, las flechas de la
+/// nube giran (sutil: el escaneo nunca espera a la red). Al terminar queda la
+/// nube con tilde hasta el próximo reintento.
+class _SyncNowButton extends ConsumerStatefulWidget {
+  const _SyncNowButton();
+
+  @override
+  ConsumerState<_SyncNowButton> createState() => _SyncNowButtonState();
+}
+
+class _SyncNowButtonState extends ConsumerState<_SyncNowButton> {
+  bool _syncing = false;
+
+  /// Cantidad de drenados terminados: 0 = todavía no se sincronizó a mano.
+  int _runs = 0;
+
+  Future<void> _drain() async {
+    setState(() => _syncing = true);
+    try {
+      await ref.read(offlineQueueProvider).drain();
+      if (mounted) setState(() => _runs++);
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final done = !_syncing && _runs > 0;
+    return IconButton(
+      tooltip: 'Reintentar ahora',
+      icon: done
+          // Key por drenado: cada sincronización terminada vuelve a animar.
+          ? AnimatedAppIcon(
+              AppIcon.cloudDone,
+              key: ValueKey('sync-done-$_runs'),
+              state: AppIconState.success,
+              excludeFromSemantics: true,
+            )
+          : AnimatedAppIcon(
+              AppIcon.syncing,
+              state: _syncing ? AppIconState.loading : AppIconState.idle,
+              excludeFromSemantics: true,
+            ),
+      onPressed: _syncing ? null : _drain,
+    );
+  }
+}
+
 /// Aviso de conectividad sobre la lista de pendientes.
 class _ConnectivityBanner extends StatelessWidget {
   const _ConnectivityBanner({required this.online});
@@ -91,8 +135,8 @@ class _ConnectivityBanner extends StatelessWidget {
     return SectionCard(
       child: Row(
         children: [
-          Icon(
-            online ? Icons.wifi : Icons.wifi_off,
+          AnimatedAppIcon(
+            online ? AppIcon.wifi : AppIcon.wifiOff,
             color: online ? AppColors.success : AppColors.warning,
           ),
           const SizedBox(width: 12),

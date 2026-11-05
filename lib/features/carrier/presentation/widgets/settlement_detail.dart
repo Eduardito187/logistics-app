@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/settlement.dart';
 import '../../../../core/api/models/settlement_status.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/brand_loader.dart';
@@ -110,7 +111,7 @@ class SettlementDetail extends StatelessWidget {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: onApprove,
-                    icon: const Icon(Icons.check),
+                    icon: const AnimatedAppIcon(AppIcon.check),
                     label: const Text('Aprobar'),
                   ),
                 ),
@@ -125,7 +126,7 @@ class SettlementDetail extends StatelessWidget {
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.success,
                     ),
-                    icon: const Icon(Icons.payments_outlined),
+                    icon: const AnimatedAppIcon(AppIcon.payments),
                     label: const Text('Marcar como pagada'),
                   ),
                 ),
@@ -138,7 +139,7 @@ class SettlementDetail extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.danger,
                   ),
-                  icon: const Icon(Icons.report_problem_outlined),
+                  icon: const AnimatedAppIcon(AppIcon.incident),
                   label: const Text('Disputar'),
                 ),
               ),

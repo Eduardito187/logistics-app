@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-roof ds-p-fill" d="M2.8 11.2L12 3.6l9.2 7.6"/>
+  <path class="ds-p-walls ds-p-fill" d="M5.5 11.2v9.3h13v-9.3"/>
+  <path class="ds-accent ds-p-door" d="M9.8 20.5v-5.3h4.4v5.3"/>
+</svg>

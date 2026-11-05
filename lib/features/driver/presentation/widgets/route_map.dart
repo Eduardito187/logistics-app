@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import '../../../../core/icons/icons.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/api/export.dart';
@@ -98,7 +99,7 @@ class _RouteMapState extends State<RouteMap> {
     _ensureLayers(Theme.of(context).colorScheme.primary);
     if (_located.isEmpty) {
       return const EmptyState(
-        icon: Icons.location_off,
+        icon: AppIcon.gpsOff,
         title: 'Sin ubicaciones',
         message: 'Las paradas no tienen coordenadas. Usa la lista.',
       );
@@ -149,7 +150,7 @@ class _RouteMapState extends State<RouteMap> {
               const SizedBox(height: 10),
               MapRoundButton(
                 tooltip: 'Ver toda la ruta',
-                icon: Icons.zoom_out_map,
+                icon: AppIcon.zoomOut,
                 onPressed: () {
                   if (_fitPoints.length < 2) return;
                   _controller.fitCamera(

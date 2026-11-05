@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
+import '../../../../core/offline/submit_outcome.dart';
 import '../../../../core/theme/code_text.dart';
 import '../../../../core/widgets/empty_state.dart';
 import 'carrier_scan_record.dart';
@@ -28,10 +30,10 @@ class CarrierScanSessionView extends StatelessWidget {
   });
 
   final List<CarrierScanRecord> records;
-  final IconData emptyIcon;
+  final AppIcon emptyIcon;
   final String emptyTitle;
   final String emptyMessage;
-  final IconData rowIcon;
+  final AppIcon rowIcon;
   final String actionLabel;
   final bool busy;
   final VoidCallback onAction;
@@ -76,7 +78,11 @@ class CarrierScanSessionView extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: busy ? null : onAction,
                   style: actionStyle,
-                  icon: const Icon(Icons.qr_code_scanner),
+                  // En acción: el láser barre mientras se escanea/registra.
+                  icon: AnimatedAppIcon(
+                    AppIcon.scan,
+                    state: busy ? AppIconState.loading : AppIconState.idle,
+                  ),
                   label: Text(actionLabel),
                 ),
               ),
@@ -98,7 +104,7 @@ class CarrierScanTile extends StatelessWidget {
   const CarrierScanTile({super.key, required this.record, required this.icon});
 
   final CarrierScanRecord record;
-  final IconData icon;
+  final AppIcon icon;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +119,21 @@ class CarrierScanTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon)),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              // Resultado de la lectura: éxito (enviado/encolado) o error. La
+              // key hace que cada registro nuevo remonte y anime su resultado.
+              child: AnimatedAppIcon(
+                record.outcome == SubmitOutcome.failed ? AppIcon.error : icon,
+                key: ValueKey(
+                  '${record.unitId}@${record.at.microsecondsSinceEpoch}',
+                ),
+                state: record.outcome == SubmitOutcome.failed
+                    ? AppIconState.error
+                    : AppIconState.success,
+                excludeFromSemantics: true,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

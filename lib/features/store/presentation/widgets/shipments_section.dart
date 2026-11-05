@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/shipment.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/adaptive_card_rows.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -45,7 +46,7 @@ class ShipmentsSection extends ConsumerWidget {
               value: shipmentsAsync,
               onRetry: () => ref.invalidate(storeShipmentsProvider),
               data: (_) => const EmptyState(
-                icon: Icons.inbox_outlined,
+                icon: AppIcon.inbox,
                 title: 'Sin envíos',
                 message: 'No hay envíos para recibir por ahora.',
               ),
