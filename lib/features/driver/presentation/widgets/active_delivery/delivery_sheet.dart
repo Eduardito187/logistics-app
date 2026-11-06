@@ -8,7 +8,10 @@ import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/status_pill.dart';
 import '../../../../../core/widgets/tap_outside_to_dismiss.dart';
+import '../../../data/datasources/delivery_evidence_data_source.dart';
+import '../../../domain/entities/delivery_evidence.dart';
 import '../../../../../core/widgets/brand_loader.dart';
 import '../../../domain/entities/street_address.dart';
 import '../../controllers/driver_controllers.dart';
@@ -77,6 +80,7 @@ Future<void> showDeliveryDetailsSheet(
                         _DeliveryDetails(stop: stop),
                         const SizedBox(height: 20),
                         _OrderSection(stop: stop),
+                        _EvidenceSection(stop: stop),
                       ],
                     ),
                   ),
@@ -107,6 +111,76 @@ class _Grabber extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Evidencia del cliente (firma / documento / foto) con su estado de validación
+/// anti-fraude. Solo aparece si el envío ya tiene evidencia subida. Para el
+/// chofer: si el documento "No coincide", conviene volver a tomarlo.
+class _EvidenceSection extends ConsumerWidget {
+  const _EvidenceSection({required this.stop});
+
+  final DriverRouteStop stop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items =
+        ref.watch(deliveryEvidenceProvider(stop.shipmentId)).value ??
+        const <DeliveryEvidenceItem>[];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Evidencia del cliente',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final e in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(child: Text(_kindLabel(e.kind))),
+                  const SizedBox(width: 12),
+                  _validationPill(e.status),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static String _kindLabel(String kind) => switch (kind) {
+    'signature' => 'Firma del cliente',
+    'id_document' => 'Documento del cliente',
+    'damage' => 'Foto de daño',
+    _ => 'Foto de entrega',
+  };
+
+  static Widget _validationPill(EvidenceValidation status) => switch (status) {
+    EvidenceValidation.ok => const StatusPill(
+      'Validado',
+      tone: PillTone.success,
+      icon: AppIcon.check,
+    ),
+    EvidenceValidation.review => const StatusPill(
+      'Revisar',
+      tone: PillTone.warning,
+      icon: AppIcon.pending,
+    ),
+    EvidenceValidation.mismatch => const StatusPill(
+      'No coincide',
+      tone: PillTone.danger,
+      icon: AppIcon.cancel,
+    ),
+    _ => const StatusPill('Validando…', icon: AppIcon.pending),
+  };
 }
 
 /// Cliente, teléfono (con llamar) y dirección (con navegar). El teléfono sale
