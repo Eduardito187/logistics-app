@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.text('Escanear'));
     await tester.pumpAndSettle();
 
-    expect(scanner.requestedTitles, ['Escanear carril']);
+    expect(scanner.requestedTitles, ['Escanear vehículo']);
     expect(scanner.requestedFormats.single, [
       BarcodeFormat.code128,
       BarcodeFormat.qrCode,
@@ -89,7 +89,7 @@ void main() {
     await tester.tap(find.text('Escanear'));
     await tester.pumpAndSettle();
 
-    expect(scanner.requestedTitles, ['Escanear carril']);
+    expect(scanner.requestedTitles, ['Escanear vehículo']);
     expect(find.byType(AssignLaneDialog), findsOneWidget);
     expect(_fieldText(tester), 'Carril 1');
     expect(box[0], #pending);

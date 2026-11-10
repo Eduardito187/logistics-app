@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Tarjeta "héroe" del inicio: la acción principal del rol, grande y vistosa.
@@ -14,7 +15,7 @@ class HeroTaskCard extends StatefulWidget {
     super.key,
     required this.title,
     this.subtitle,
-    required this.icon,
+    required this.appIcon,
     required this.onTap,
     this.statusLabel,
     this.actionLabel = 'Abrir',
@@ -22,7 +23,10 @@ class HeroTaskCard extends StatefulWidget {
 
   final String title;
   final String? subtitle;
-  final IconData icon;
+
+  /// Ícono animado DisTrack de la acción. Al aparecer la tarjeta "ejecuta" su
+  /// movimiento y queda activo (relleno).
+  final AppIcon appIcon;
   final VoidCallback onTap;
 
   /// Etiqueta de estado opcional (p. ej. "En curso") en una pastilla clara.
@@ -91,16 +95,6 @@ class _HeroTaskCardState extends State<HeroTaskCard>
       padding: const EdgeInsets.all(20),
       child: Stack(
         children: [
-          // Ícono decorativo grande y tenue a la derecha.
-          Positioned(
-            top: -8,
-            right: -8,
-            child: Icon(
-              widget.icon,
-              size: 96,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -161,10 +155,16 @@ class _HeroTaskCardState extends State<HeroTaskCard>
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.arrow_forward_rounded,
+                    // El ícono de la acción, CLARO (rojo de marca sobre blanco)
+                    // y animado al aparecer: se entiende qué es, sin el ícono
+                    // gigante difuminado de antes.
+                    child: AnimatedAppIcon(
+                      widget.appIcon,
+                      state: AppIconState.active,
+                      animateOnMount: true,
                       color: AppColors.brand,
-                      size: 28,
+                      size: 30,
+                      excludeFromSemantics: true,
                     ),
                   ),
                 ],

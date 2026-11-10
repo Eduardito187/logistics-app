@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Saludo cálido del inicio, estilo app de consumo, sobre fondo claro ("Andén").
@@ -19,7 +20,9 @@ class GreetingHeader extends StatelessWidget {
 
   final String name;
   final String roleLabel;
-  final IconData roleIcon;
+
+  /// Ícono animado DisTrack del rol ([UserRole.icon]).
+  final AppIcon roleIcon;
 
   /// Acción al tocar el avatar (p. ej. abrir el perfil); si es `null`, el
   /// avatar no es interactivo.
@@ -38,7 +41,12 @@ class GreetingHeader extends StatelessWidget {
         color: AppColors.brand.withValues(alpha: 0.12),
         shape: BoxShape.circle,
       ),
-      child: Icon(roleIcon, color: AppColors.brand, size: 26),
+      child: AnimatedAppIcon(
+        roleIcon,
+        color: AppColors.brand,
+        size: 26,
+        excludeFromSemantics: true,
+      ),
     );
 
     return Row(

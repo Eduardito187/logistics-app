@@ -106,7 +106,11 @@ final vehicleCostSummaryProvider =
       if (vehicleId == null) {
         throw const ApiException(status: 0, title: 'Sin vehículo asignado');
       }
-      final to = DateTime.now();
+      // Fechas de CALENDARIO (medianoche local, sin hora): el backend espera
+      // `Y-m-d` para este rango y `DateQueryInterceptor` solo recorta un valor
+      // a medianoche. Con la hora actual, cost-summary respondía 500.
+      final now = DateTime.now();
+      final to = DateTime(now.year, now.month, now.day);
       final from = to.subtract(const Duration(days: 30));
       return ref
           .watch(getVehicleCostSummaryProvider)
@@ -141,7 +145,11 @@ final vehicleUtilizationProvider =
       if (vehicleId == null) {
         throw const ApiException(status: 0, title: 'Sin vehículo asignado');
       }
-      final to = DateTime.now();
+      // Fechas de CALENDARIO (medianoche local, sin hora): el backend espera
+      // `Y-m-d` para este rango y `DateQueryInterceptor` solo recorta un valor
+      // a medianoche. Con la hora actual, cost-summary respondía 500.
+      final now = DateTime.now();
+      final to = DateTime(now.year, now.month, now.day);
       final from = to.subtract(const Duration(days: 30));
       return ref
           .watch(getVehicleUtilizationProvider)

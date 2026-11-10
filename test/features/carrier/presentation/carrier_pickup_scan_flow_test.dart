@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
@@ -9,6 +10,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../store/fake_continuous_scanner.dart';
 import '../carrier_scan_harness.dart';
+import '../../../support/app_icon_finders.dart';
 import '../../../support/button_finders.dart';
 
 // Flujo RECOGER con escaneo CONTINUO: la cámara queda abierta y cada QR firmado
@@ -17,7 +19,7 @@ import '../../../support/button_finders.dart';
 // cámara se reemplaza con FakeContinuousScanner (varios códigos por sesión).
 
 Future<void> _tapScan(WidgetTester tester) async {
-  await tester.tap(findButtonWithText<FilledButton>('Escanear bulto'));
+  await tester.tap(findButtonWithText<FilledButton>('Escanear producto'));
   await tester.pumpAndSettle();
 }
 
@@ -62,16 +64,21 @@ void main() {
     expect(request.lat, -16.5);
     expect(request.lng, -68.15);
     expect(loadScan.labels.single, 'Recojo · $vectorSku');
-    expect(scanner.messages, ['Bulto recogido · $vectorSku']);
+    expect(scanner.messages, ['Producto recogido · $vectorSku']);
 
-    expect(find.text('Sin bultos recogidos'), findsNothing);
+    expect(find.text('Sin productos recogidos'), findsNothing);
     expect(find.text(vectorSku), findsOneWidget);
     expect(find.textContaining(vectorUnitId), findsOneWidget);
     expect(find.text('Enviado'), findsOneWidget);
-    expect(find.text('1 bulto recogido.'), findsOneWidget);
+    // La fila anima el resultado de la lectura (éxito).
+    expect(
+      findAppIconInState(AppIcon.receive, AppIconState.success),
+      findsOneWidget,
+    );
+    expect(find.text('1 producto recogido.'), findsOneWidget);
   });
 
-  testWidgets('varios bultos en una sola sesión de cámara', (tester) async {
+  testWidgets('varios productos en una sola sesión de cámara', (tester) async {
     final scanner = FakeContinuousScanner([qrA, qrB, qrC]);
     final loadScan = FakeRecordLoadScan();
     await pumpCarrierScanScreen(
@@ -90,10 +97,10 @@ void main() {
     for (final sku in ['SKU-A', 'SKU-B', 'SKU-C']) {
       expect(find.text(sku), findsOneWidget);
     }
-    expect(find.text('3 bultos recogidos.'), findsOneWidget);
+    expect(find.text('3 productos recogidos.'), findsOneWidget);
   });
 
-  testWidgets('duplicado: el mismo bulto otra vez avisa "Ya recogido"', (
+  testWidgets('duplicado: el mismo producto otra vez avisa "Ya recogido"', (
     tester,
   ) async {
     final scanner = FakeContinuousScanner.sessions([
@@ -114,10 +121,10 @@ void main() {
 
     expect(loadScan.requests.map((r) => r.unitId), ['U-A', 'U-B']);
     expect(scanner.messages, [
-      'Bulto recogido · SKU-A',
+      'Producto recogido · SKU-A',
       'Ya recogido',
       'Ya recogido',
-      'Bulto recogido · SKU-B',
+      'Producto recogido · SKU-B',
     ]);
     expect(find.text('SKU-A'), findsOneWidget);
   });
@@ -155,7 +162,7 @@ void main() {
     expect(find.text('Enviado'), findsOneWidget);
     expect(find.text('Pendiente'), findsNothing);
     expect(scanner.feedbacks.single.ok, isTrue);
-    expect(find.text('1 bulto recogido.'), findsOneWidget);
+    expect(find.text('1 producto recogido.'), findsOneWidget);
   });
 
   testWidgets('rechazo del backend: aviso rojo, fila "Error" y se reintenta', (
@@ -177,6 +184,11 @@ void main() {
     expect(loadScan.requests, hasLength(1));
     expect(scanner.messages, ['No se pudo registrar. Intentá de nuevo.']);
     expect(find.text('Error'), findsOneWidget);
+    // La fila anima el error de la lectura (sacudida ámbar).
+    expect(
+      findAppIconInState(AppIcon.error, AppIconState.error),
+      findsOneWidget,
+    );
     // Sin bultos registrados no hay resumen.
     expect(find.byType(SnackBar), findsNothing);
   });
@@ -200,7 +212,7 @@ void main() {
     expect(snack.duration, kShortSnackDuration);
     final snackRect = tester.getRect(_snackSurface());
     final buttonRect = tester.getRect(
-      findButtonWithText<FilledButton>('Escanear bulto'),
+      findButtonWithText<FilledButton>('Escanear producto'),
     );
     expect(snackRect.bottom, lessThanOrEqualTo(buttonRect.top));
   });
@@ -219,11 +231,11 @@ void main() {
 
     expect(scanner.requestedTitles, ['Recoger carga']);
     expect(loadScan.requests, isEmpty);
-    expect(find.text('Sin bultos recogidos'), findsOneWidget);
+    expect(find.text('Sin productos recogidos'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
     // El botón vuelve a estar habilitado.
     final button = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Escanear bulto'),
+      findButtonWithText<FilledButton>('Escanear producto'),
     );
     expect(button.onPressed, isNotNull);
   });
@@ -247,7 +259,7 @@ void main() {
 
       expect(scanner.messages, [
         'Etiqueta inválida: editada o falsa',
-        'Bulto recogido · $vectorSku',
+        'Producto recogido · $vectorSku',
       ]);
       expect(loadScan.requests.single.unitId, vectorUnitId);
       expect(find.text(vectorSku), findsOneWidget);

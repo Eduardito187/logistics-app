@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/emit_label_line.dart';
+import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import 'label_batch_result.dart';
 import 'line_draft.dart';
 import 'line_editor.dart';
@@ -191,7 +193,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                       decoration: const InputDecoration(
                         labelText: 'Origen',
                         hintText: 'Nodo de origen',
-                        prefixIcon: Icon(Icons.store),
+                        prefixIconConstraints: FieldIcon.prefixConstraints,
+                        prefixIcon: FieldIcon(icon: AppIcon.pickupStore),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -201,7 +204,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                       decoration: const InputDecoration(
                         labelText: 'Destino',
                         hintText: 'Nodo de destino',
-                        prefixIcon: Icon(Icons.place),
+                        prefixIconConstraints: FieldIcon.prefixConstraints,
+                        prefixIcon: FieldIcon(icon: AppIcon.place),
                       ),
                     ),
                     if (widget.requireReason) ...[
@@ -211,7 +215,8 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                         decoration: const InputDecoration(
                           labelText: 'Motivo de la reimpresión',
                           hintText: 'Ej. etiqueta dañada',
-                          prefixIcon: Icon(Icons.edit_note),
+                          prefixIconConstraints: FieldIcon.prefixConstraints,
+                          prefixIcon: FieldIcon(icon: AppIcon.signature),
                         ),
                       ),
                     ],
@@ -228,7 +233,7 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
                         ),
                         TextButton.icon(
                           onPressed: _addLine,
-                          icon: const Icon(Icons.add),
+                          icon: const AnimatedAppIcon(AppIcon.add),
                           label: const Text('Agregar'),
                         ),
                       ],
@@ -263,7 +268,7 @@ class _LabelBatchSheetState extends State<LabelBatchSheet> {
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _submit,
-            icon: const Icon(Icons.check),
+            icon: const AnimatedAppIcon(AppIcon.check),
             label: Text(widget.submitLabel),
           ),
         ],

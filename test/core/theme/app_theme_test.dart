@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/screen_sizes.dart';
 
@@ -33,7 +34,7 @@ void main() {
                 IconButton(
                   key: const Key('icon'),
                   onPressed: () {},
-                  icon: const Icon(Icons.flash_on),
+                  icon: const AnimatedAppIcon(AppIcon.bolt),
                 ),
               ],
             ),

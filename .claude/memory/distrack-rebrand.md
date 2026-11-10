@@ -22,6 +22,8 @@ La app Flutter se renombró de "Dismac Logística" a **DisTrack** (tagline **DE 
 - Deps nuevas: `flutter_svg`, `lottie`; dev: `flutter_launcher_icons`, `flutter_native_splash` (con sus bloques de config en pubspec).
 - Íconos de app (Android adaptive fondo #141414 + iOS) y splash nativo (#141414 + isotipo) GENERADOS y commiteados. Para regenerarlos: `dart run flutter_launcher_icons` y `dart run flutter_native_splash:create`.
 - Splash animado Lottie: widget `lib/core/brand/brand_splash.dart` (respeta reduced-motion), YA CABLEADO al arranque vía `BootSplashGate` one-shot en `main.dart` (detalle y guardas en [[perf-rebrand-stability-fixes]]). El splash nativo (#141414 + isotipo) cubre el cold start antes.
+- Splash Lottie de la marca Dismac (oct 2026): reconstruido desde el video del dueño, solo formas (sin imágenes), versión aprobada de **3 s** → `C:\Users\ehhuallata\Downloads\logo_dismac_splash_3s.json` + `prueba_splash_dismac_3s.html` (abrir en el navegador para probarlo). Respeta los colores del video; NO tocar el brand al trabajarlo.
+- Íconos de la app: set propio animado, ver [[custom-animated-icons]]. Set del panel web: `distrack-icons-final.zip` en Descargas.
 - Kit original del usuario: `C:\Users\ehhuallata\Downloads\distrack-brand-kit.zip` (+ .md/.html). El .zip trae también web/favicon y páginas de error (web/ops, NO parte de la app Flutter).
 
 Pendiente de verificación: `flutter analyze` quedó limpio en WSL (solo infos de deprecación por SDK 3.47.6 vs 3.32 del proyecto); la suite completa la valida la CI (Linux 3.32). Ver [[test-battery-and-infra]].

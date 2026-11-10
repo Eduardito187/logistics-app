@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../controllers/supervisor_controllers.dart';
 import '../supervisor_labels.dart';
 
@@ -30,7 +31,11 @@ class PlansDateBar extends ConsumerWidget {
             // El tema pide ancho completo (Size.fromHeight); acá el botón va
             // junto al texto y se dimensiona a su contenido.
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 56)),
-            icon: const Icon(Icons.calendar_today),
+            // Decorativo: el botón ya se anuncia con su texto.
+            icon: const AnimatedAppIcon(
+              AppIcon.myDay,
+              excludeFromSemantics: true,
+            ),
             label: const Text('Cambiar fecha'),
             onPressed: () async {
               final picked = await showDatePicker(

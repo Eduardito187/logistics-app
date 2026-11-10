@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/auth/domain/entities/login_result.dart';
 import 'package:logistics_app/features/auth/domain/entities/two_factor_enrollment.dart';
@@ -10,6 +11,7 @@ import 'package:logistics_app/features/auth/domain/repositories/auth_repository.
 import 'package:logistics_app/features/auth/domain/usecases/sign_in.dart';
 import 'package:logistics_app/features/auth/presentation/login_screen.dart';
 import 'package:logistics_app/features/auth/presentation/widgets/auth_header.dart';
+import '../../../support/app_icon_finders.dart';
 import '../../../support/button_finders.dart';
 
 // Pantalla de login: encabezado de marca, dos campos y un único botón
@@ -176,11 +178,12 @@ void main() {
     await tester.tap(find.text('Ingresar'));
     await tester.pump(); // dispara submit → AsyncLoading
 
-    // El botón muestra el spinner y queda deshabilitado.
+    // El botón muestra el loader animado de marca (sincronizando) y queda
+    // deshabilitado.
     expect(
       find.descendant(
         of: findButton<FilledButton>(),
-        matching: find.byType(CircularProgressIndicator),
+        matching: findAppIconInState(AppIcon.syncing, AppIconState.loading),
       ),
       findsOneWidget,
     );
@@ -203,16 +206,27 @@ void main() {
 
     expect(passwordField().obscureText, isTrue);
     expect(find.byTooltip('Mostrar contraseña'), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.visibility, AppIconState.idle),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byTooltip('Mostrar contraseña'));
     await tester.pump();
     expect(passwordField().obscureText, isFalse);
-    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+    // Contraseña visible: el ojo tachado queda activo.
+    expect(
+      findAppIconInState(AppIcon.visibilityOff, AppIconState.active),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byTooltip('Ocultar contraseña'));
     await tester.pump();
     expect(passwordField().obscureText, isTrue);
-    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.visibility, AppIconState.idle),
+      findsOneWidget,
+    );
   });
 
   testWidgets('sin conexión: no promete reintento automático y ofrece '

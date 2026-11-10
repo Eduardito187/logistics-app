@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/carrier.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -50,7 +51,7 @@ class CarrierGuard extends ConsumerWidget {
                     ref.read(selectedCarrierProvider.notifier).select(carrier),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_shipping_outlined),
+                    const AnimatedAppIcon(AppIcon.deliver),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -64,7 +65,7 @@ class CarrierGuard extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right),
+                    const AnimatedAppIcon(AppIcon.chevronRight),
                   ],
                 ),
               ),

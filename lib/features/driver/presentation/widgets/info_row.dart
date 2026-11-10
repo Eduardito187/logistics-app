@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/code_text.dart';
+import '../../../../core/icons/icons.dart';
 
 /// Fila de ícono + texto para mostrar un dato de la parada o la entrega.
 class InfoRow extends StatelessWidget {
@@ -11,7 +12,7 @@ class InfoRow extends StatelessWidget {
     this.mono = false,
   });
 
-  final IconData icon;
+  final AppIcon icon;
   final String text;
 
   /// Si el texto es un id/referencia (p. ej. la referencia del pedido), lo
@@ -25,7 +26,7 @@ class InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20),
+          AnimatedAppIcon(icon, size: 20),
           const SizedBox(width: 10),
           Expanded(child: mono ? CodeText(text) : Text(text)),
         ],

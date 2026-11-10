@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/scan_request.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/offline/submit_outcome.dart';
 import '../../../core/scanning/scanner_screen.dart';
@@ -42,7 +43,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
       await scanContinuous(
         context,
         title: 'Recoger carga',
-        helper: 'Apunta al QR de la etiqueta de cada bulto',
+        helper: 'Apunta al QR de la etiqueta de cada producto',
         formats: const [BarcodeFormat.qrCode],
         onCode: (qr) async {
           final feedback = await _pickupCode(qr);
@@ -56,7 +57,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
     if (!mounted || count == 0) return;
     showCarrierBatchSummary(
       context,
-      count == 1 ? '1 bulto recogido.' : '$count bultos recogidos.',
+      count == 1 ? '1 producto recogido.' : '$count productos recogidos.',
     );
   }
 
@@ -101,7 +102,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
     if (outcome == SubmitOutcome.failed) {
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
-    return ScanFeedback.ok('Bulto recogido · ${label.sku}');
+    return ScanFeedback.ok('Producto recogido · ${label.sku}');
   }
 
   @override
@@ -110,11 +111,11 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
       appBar: AppBar(title: const Text('Escanear al recoger')),
       body: CarrierScanSessionView(
         records: _records,
-        emptyIcon: Icons.upload_file,
-        emptyTitle: 'Sin bultos recogidos',
-        emptyMessage: 'Escanea la etiqueta de cada bulto al cargarlo.',
-        rowIcon: Icons.inventory_2_outlined,
-        actionLabel: 'Escanear bulto',
+        emptyIcon: AppIcon.pickupScan,
+        emptyTitle: 'Sin productos recogidos',
+        emptyMessage: 'Escanea la etiqueta de cada producto al cargarlo.',
+        rowIcon: AppIcon.receive,
+        actionLabel: 'Escanear producto',
         busy: _busy,
         onAction: _scan,
         actionStyle: _actionStyle,

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/async_value_view.dart';
 import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/screen_sizes.dart';
 
@@ -53,7 +54,7 @@ void main() {
                       child: StatTile(
                         value: 'Bs 1.234.567,89',
                         label: 'Cobrado contra entrega en el turno de hoy',
-                        icon: Icons.payments,
+                        icon: AppIcon.payments,
                       ),
                     ),
                     SizedBox(width: 12),

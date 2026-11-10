@@ -15,7 +15,8 @@ El dueño pide repetidamente **agentes en paralelo** y "completar al 100%", no d
 - El **coordinador (yo)** construye primero la fundación compartida (pubspec, deps, `app.dart`, `main.dart`, AndroidManifest, core/*) y **prohíbe** a los agentes tocar: `lib/core/**`, `app.dart`, `main.dart`, `AndroidManifest.xml`, `lib/core/router/app_router.dart`, `lib/core/navigation/feature_tasks.dart`, `pubspec.yaml`.
 - Cada agente expone `const List<RoleTask> <f>Tasks` + `final List<RouteBase> <f>Routes` en `presentation/<f>_routes.dart`; el coordinador los cablea al final en `app_router.dart` + `feature_tasks.dart` en una sola pasada.
 - Solo UN agente corre `build_runner` por vez (si agrega tabla Drift); el resto no corre `build_runner` ni `pub get`.
-- DoD por agente: `dart format lib/features/<f>; flutter analyze lib/features/<f>` → "No issues found!". El coordinador corre la verificación global (format+analyze+test) al final.
+- DoD por agente (desde 2026-10-26): **solo código, sin ejecutar Flutter** — revisión estática (imports, nombres válidos contra el enum/catálogo, sin duplicados, fin de línea conservado) y un reporte de riesgos. Ocho agentes corriendo `flutter analyze`+`flutter test` a la vez colgaron WSL ~20 min. La verificación global la corre el dueño (o el coordinador si él lo pide), UN proceso de Flutter a la vez.
+- Agentes que reescriben archivos con scripts: conservar CRLF/LF de cada archivo (el repo mezcla ambos) o el diff muestra el archivo entero.
 - Si la sesión se reinicia y quedan agentes a medias: NO reanudar a ciegas; evaluar el estado real (`flutter analyze`, revisar archivos), correr `build_runner` si alguien dejó una tabla Drift sin generar, y relanzar agentes frescos para lo incompleto.
 
 **Lecciones 2026-10-16 (9 agentes, roadmap de 19 puntos):**

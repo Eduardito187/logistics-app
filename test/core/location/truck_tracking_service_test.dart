@@ -1,6 +1,7 @@
 // ignore_for_file: depend_on_referenced_packages
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,8 +116,35 @@ ProviderContainer _container(_FakeLocationService location) {
   return container;
 }
 
+// Simulan el paso a segundo/primer plano respetando la máquina de estados de
+// AppLifecycleListener (resumed → inactive → hidden → paused y vuelta).
+Future<void> _toBackground() async {
+  final b = WidgetsBinding.instance;
+  b.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+  b.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  b.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  await pumpEventQueue();
+}
+
+Future<void> _toForeground() async {
+  final b = WidgetsBinding.instance;
+  b.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  b.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+  b.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await pumpEventQueue();
+}
+
 void main() {
+  // El servicio observa el ciclo de vida (AppLifecycleListener), que necesita el
+  // WidgetsBinding; se inicializa para poder simular primer/segundo plano.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() {
+    // Dejar el ciclo de vida en "primer plano" antes de cada test (un test
+    // previo pudo dejarlo en paused); sin listener activo no dispara asserts.
+    WidgetsBinding.instance.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
     _platform = _FakeForegroundTask();
     FlutterForegroundTaskPlatform.instance = _platform;
     _queue = _FakeQueue();
@@ -152,42 +180,52 @@ void main() {
     },
   );
 
-  test('start levanta el servicio y activa el rastreo del envío', () async {
+  test(
+    'start activa el rastreo SIN levantar el servicio (en primer plano)',
+    () async {
+      final container = _container(_FakeLocationService());
+
+      final ok = await container
+          .read(truckTrackingProvider.notifier)
+          .start(shipmentId: 'SHP-1');
+
+      expect(ok, isTrue);
+      // En primer plano NO se levanta el foreground service → sin notificación.
+      expect(_platform.starts, 0);
+      final state = container.read(truckTrackingProvider);
+      expect(state.active, isTrue);
+      expect(state.shipmentId, 'SHP-1');
+      expect(state.sent, 0);
+    },
+  );
+
+  test(
+    'notificación fantasma: a segundo plano levanta el servicio; al volver lo baja',
+    () async {
+      final container = _container(_FakeLocationService());
+      await container
+          .read(truckTrackingProvider.notifier)
+          .start(shipmentId: 'SHP-1');
+      expect(_platform.starts, 0); // primer plano: sin servicio ni notificación
+
+      // App a segundo plano → se levanta el servicio (con su notificación).
+      await _toBackground();
+      expect(_platform.running, isTrue);
+      expect(_platform.starts, 1);
+
+      // De vuelta al primer plano → se baja (desaparece la notificación).
+      await _toForeground();
+      expect(_platform.running, isFalse);
+    },
+  );
+
+  test('sin rastreo activo, cambiar de plano NO levanta el servicio', () async {
     final container = _container(_FakeLocationService());
+    container.read(truckTrackingProvider); // construye el notifier (listener)
 
-    final ok = await container
-        .read(truckTrackingProvider.notifier)
-        .start(shipmentId: 'SHP-1');
+    await _toBackground();
 
-    expect(ok, isTrue);
-    expect(_platform.starts, 1);
-    final state = container.read(truckTrackingProvider);
-    expect(state.active, isTrue);
-    expect(state.shipmentId, 'SHP-1');
-    expect(state.sent, 0);
-  });
-
-  test('pide el permiso de notificación solo si no está concedido', () async {
-    final container = _container(_FakeLocationService());
-    await container.read(truckTrackingProvider.notifier).start(shipmentId: 'A');
-    expect(_platform.permissionRequests, 0);
-
-    await container.read(truckTrackingProvider.notifier).stop();
-    _platform.permission = NotificationPermission.denied;
-    await container.read(truckTrackingProvider.notifier).start(shipmentId: 'B');
-    expect(_platform.permissionRequests, 1);
-  });
-
-  test('si el servicio no arranca devuelve false y no se activa', () async {
-    _platform.failStart = true;
-    final container = _container(_FakeLocationService());
-
-    final ok = await container
-        .read(truckTrackingProvider.notifier)
-        .start(shipmentId: 'SHP-1');
-
-    expect(ok, isFalse);
-    expect(container.read(truckTrackingProvider).active, isFalse);
+    expect(_platform.starts, 0);
   });
 
   test('cada fix se encola como ingestTruckPosition con el envío', () async {
@@ -221,7 +259,7 @@ void main() {
     location.fixes.add(const GpsFix(lat: 1, lng: 2));
     await pumpEventQueue();
 
-    expect(_platform.starts, 1); // no se levantó otro servicio
+    expect(location.streamCalls, 1); // no se abrió otro stream de GPS
     expect(container.read(truckTrackingProvider).shipmentId, 'SHP-2');
     expect(_queue.submitted.single.payload['@shipmentId'], 'SHP-2');
   });
@@ -259,7 +297,8 @@ void main() {
     location.fixes.add(const GpsFix(lat: 1, lng: 2));
     await pumpEventQueue();
 
-    expect(_platform.stops, 1);
+    // En primer plano no había servicio corriendo; lo que importa es que el
+    // rastreo queda inactivo y deja de encolar posiciones.
     expect(container.read(truckTrackingProvider).active, isFalse);
     expect(_queue.submitted, isEmpty);
   });
@@ -276,9 +315,26 @@ void main() {
     await container.read(sessionProvider.notifier).signOut();
     await pumpEventQueue();
 
-    expect(_platform.stops, 1);
     expect(container.read(truckTrackingProvider).active, isFalse);
   });
+
+  test(
+    'stopOrphanedService baja un servicio huérfano (estado inactivo)',
+    () async {
+      final container = _container(_FakeLocationService());
+      // Simula un foreground service que sobrevivió a un reinicio: corriendo en el
+      // SO, pero con el estado en memoria limpio (inactivo).
+      _platform.running = true;
+      expect(container.read(truckTrackingProvider).active, isFalse);
+
+      await container
+          .read(truckTrackingProvider.notifier)
+          .stopOrphanedService();
+
+      expect(_platform.running, isFalse);
+      expect(_platform.stops, 1);
+    },
+  );
 
   test(
     'dos start a la vez: un solo servicio y un solo stream de GPS',
@@ -293,8 +349,9 @@ void main() {
       ]);
 
       expect(results, [isTrue, isTrue]);
-      expect(_platform.starts, 1);
+      // Un solo stream de GPS (en primer plano no se levanta el servicio).
       expect(location.streamCalls, 1);
+      expect(_platform.starts, 0);
       // Gana el último envío pedido.
       expect(container.read(truckTrackingProvider).shipmentId, 'B');
     },

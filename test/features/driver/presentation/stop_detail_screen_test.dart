@@ -48,7 +48,7 @@ void main() {
     // Acciones de terreno.
     expect(find.text('Navegar'), findsOneWidget);
     expect(find.text('Ver en el mapa'), findsOneWidget);
-    expect(find.text('Descargar bultos'), findsOneWidget);
+    expect(find.text('Descargar productos'), findsOneWidget);
     expect(find.text('Entregado (prueba de entrega)'), findsOneWidget);
     expect(find.text('Entrega fallida'), findsOneWidget);
   });
@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Navegar'), findsNothing);
     expect(find.text('Ver en el mapa'), findsNothing);
     // Las acciones que no dependen de coordenadas siguen presentes.
-    expect(find.text('Descargar bultos'), findsOneWidget);
+    expect(find.text('Descargar productos'), findsOneWidget);
   });
 
   testWidgets('parada entregada muestra el estado "Entregada"', (tester) async {

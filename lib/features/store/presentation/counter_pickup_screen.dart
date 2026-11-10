@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/shipment.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -45,7 +46,7 @@ class CounterPickupScreen extends ConsumerWidget {
                     value: shipmentsAsync,
                     onRetry: () => ref.invalidate(storeShipmentsProvider),
                     data: (_) => const EmptyState(
-                      icon: Icons.storefront,
+                      icon: AppIcon.pickupStore,
                       title: 'Sin recojos',
                       message: 'No hay pedidos para recojo en tienda.',
                     ),

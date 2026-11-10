@@ -21,15 +21,29 @@ import '../support/signature_test_support.dart';
 
 /// Cola de fotos falsa: registra lo encolado sin tocar disco ni red.
 class _FakePhotoUploadQueue implements PhotoUploadQueue {
-  final List<({String shipmentId, String filePath, String kind})> enqueued = [];
+  final List<
+    ({
+      String shipmentId,
+      String filePath,
+      String kind,
+      Map<String, Object?>? snapshot,
+    })
+  >
+  enqueued = [];
 
   @override
   Future<void> enqueue({
     required String shipmentId,
     required String filePath,
     required String kind,
+    Map<String, Object?>? clientSnapshot,
   }) async {
-    enqueued.add((shipmentId: shipmentId, filePath: filePath, kind: kind));
+    enqueued.add((
+      shipmentId: shipmentId,
+      filePath: filePath,
+      kind: kind,
+      snapshot: clientSnapshot,
+    ));
   }
 
   @override
@@ -92,17 +106,23 @@ void main() {
       expect((image.image as ResizeImage).width, 800);
       expect(find.text('Volver a tomar'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await signOnPad(tester);
       await tester.tap(find.text('Registrar entrega'));
       await tester.pumpAndSettle();
 
-      // Foto de la entrega + imagen de la firma (como evidencia `pod`).
-      expect(photos.enqueued, [
-        (shipmentId: 'ship-7', filePath: '/tmp/pod.jpg', kind: 'pod'),
-        (shipmentId: 'ship-7', filePath: '/tmp/firma.png', kind: 'pod'),
-      ]);
+      // Foto de la entrega (pod) + firma como evidencia `signature` ligada al
+      // cliente (con snapshot anti-fraude).
+      expect(photos.enqueued.length, 2);
+      final pod = photos.enqueued.firstWhere((e) => e.kind == 'pod');
+      expect(pod.filePath, '/tmp/pod.jpg');
+      expect(pod.snapshot, isNull); // el POD va por el endpoint estable
+      final sig = photos.enqueued.firstWhere((e) => e.kind == 'signature');
+      expect(sig.filePath, '/tmp/firma.png');
+      // La firma lleva el snapshot del cliente (nombre, momento de captura).
+      expect(sig.snapshot, isNotNull);
+      expect(sig.snapshot!['captured_at'], isNotNull);
       expect(queue.submissions.single['photo_path'], 'pendiente');
       expect(find.byType(PodScreen), findsNothing);
     });
@@ -132,7 +152,7 @@ void main() {
       expect(find.byType(Image), findsNothing);
       expect(find.text('Tomar foto'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await signOnPad(tester);
       // La foto de la entrega es obligatoria: sin ella no se registra.
@@ -189,7 +209,7 @@ void main() {
           tall: true,
         );
 
-        await tester.tap(find.text('Escanear bulto'));
+        await tester.tap(find.text('Escanear producto'));
         await tester.pumpAndSettle();
         await signOnPad(tester);
         // Firmado pero sin foto: la foto sigue siendo obligatoria.
@@ -207,11 +227,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(signatures.saved.single, kTinyPng);
-        expect(photos.enqueued.last, (
-          shipmentId: 'ship-3',
-          filePath: '/docs/firma-1.png',
-          kind: kSignatureEvidenceKind,
-        ));
+        final sig = photos.enqueued.firstWhere(
+          (e) => e.kind == kSignatureEvidenceKind,
+        );
+        expect(sig.shipmentId, 'ship-3');
+        expect(sig.filePath, '/docs/firma-1.png');
+        expect(sig.snapshot, isNotNull); // ligada al cliente
         expect(signatures.discarded, ['/docs/firma-1.png']);
         expect(queue.submissions.single['confirmation'], 'FIRMA_DIGITAL');
       },
@@ -235,7 +256,7 @@ void main() {
         tall: true,
       );
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Escanear QR del cliente'));
       await tester.pumpAndSettle();
@@ -244,9 +265,9 @@ void main() {
       await tester.tap(find.text('Registrar entrega'));
       await tester.pumpAndSettle();
 
-      expect(photos.enqueued, [
-        (shipmentId: 'ship-4', filePath: '/tmp/pod.jpg', kind: 'pod'),
-      ]);
+      expect(photos.enqueued.length, 1);
+      expect(photos.enqueued.single.kind, 'pod');
+      expect(photos.enqueued.single.filePath, '/tmp/pod.jpg');
       expect(signatures.saved, isEmpty);
     });
   });
@@ -277,14 +298,14 @@ void main() {
       expect(picker.requests.single.imageQuality, kEvidencePhotoQuality);
       expect(_preview('/tmp/damage.jpg'), findsOneWidget);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Registrar entrega fallida'));
       await tester.pumpAndSettle();
 
-      expect(photos.enqueued, [
-        (shipmentId: 'ship-5', filePath: '/tmp/damage.jpg', kind: 'damage'),
-      ]);
+      expect(photos.enqueued.length, 1);
+      expect(photos.enqueued.single.kind, 'damage');
+      expect(photos.enqueued.single.filePath, '/tmp/damage.jpg');
       expect(queue.lastKind, 'recordFailedDelivery');
       expect(find.byType(FailedDeliveryScreen), findsNothing);
     });
@@ -309,7 +330,7 @@ void main() {
       await tester.pump();
       expect(find.byType(Image), findsNothing);
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Registrar entrega fallida'));
       await tester.pumpAndSettle();

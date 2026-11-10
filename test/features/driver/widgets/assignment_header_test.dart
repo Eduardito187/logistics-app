@@ -38,12 +38,15 @@ void main() {
     expect(find.text('Turno: 08:00 - 17:30'), findsOneWidget);
   });
 
-  testWidgets('usa el id del vehículo cuando no hay placa', (tester) async {
+  testWidgets('sin placa NO muestra el uuid, muestra un texto legible', (
+    tester,
+  ) async {
     await _pump(
       tester,
       buildMyCrew(vehicle: buildVehicle(id: 'v-sin-placa', plate: null)),
     );
-    expect(find.text('v-sin-placa'), findsOneWidget);
+    expect(find.text('Vehículo asignado'), findsOneWidget);
+    expect(find.text('v-sin-placa'), findsNothing); // nunca el uuid
   });
 
   testWidgets('chofer sin nombre usa texto por defecto', (tester) async {

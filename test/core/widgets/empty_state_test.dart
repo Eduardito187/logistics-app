@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/empty_state.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Estado vacío reutilizable: ícono + título, con mensaje y acción opcionales.
 Future<void> _pump(WidgetTester tester, Widget w) {
@@ -11,9 +14,9 @@ void main() {
   testWidgets('muestra ícono y título', (tester) async {
     await _pump(
       tester,
-      const EmptyState(icon: Icons.inbox, title: 'Sin pendientes'),
+      const EmptyState(icon: AppIcon.inbox, title: 'Sin pendientes'),
     );
-    expect(find.byIcon(Icons.inbox), findsOneWidget);
+    expect(findAppIcon(AppIcon.inbox), findsOneWidget);
     expect(find.text('Sin pendientes'), findsOneWidget);
   });
 
@@ -21,7 +24,7 @@ void main() {
     await _pump(
       tester,
       const EmptyState(
-        icon: Icons.inbox,
+        icon: AppIcon.inbox,
         title: 'Vacío',
         message: 'No hay nada por ahora',
       ),
@@ -30,7 +33,7 @@ void main() {
   });
 
   testWidgets('sin mensaje solo muestra el título', (tester) async {
-    await _pump(tester, const EmptyState(icon: Icons.inbox, title: 'Vacío'));
+    await _pump(tester, const EmptyState(icon: AppIcon.inbox, title: 'Vacío'));
     expect(find.byType(Text), findsOneWidget);
   });
 
@@ -38,7 +41,7 @@ void main() {
     await _pump(
       tester,
       EmptyState(
-        icon: Icons.cloud_off,
+        icon: AppIcon.cloudOff,
         title: 'Error',
         action: FilledButton(onPressed: () {}, child: const Text('Reintentar')),
       ),

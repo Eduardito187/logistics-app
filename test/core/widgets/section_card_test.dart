@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/section_card.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Tarjeta estándar: título opcional, trailing opcional y onTap opcional.
 Future<void> _pump(WidgetTester tester, Widget card) {
@@ -18,12 +21,12 @@ void main() {
       tester,
       const SectionCard(
         title: 'Resumen',
-        trailing: Icon(Icons.more_horiz),
+        trailing: AnimatedAppIcon(AppIcon.chevronRight),
         child: Text('cuerpo'),
       ),
     );
     expect(find.text('Resumen'), findsOneWidget);
-    expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+    expect(findAppIcon(AppIcon.chevronRight), findsOneWidget);
   });
 
   testWidgets('sin título no muestra encabezado', (tester) async {

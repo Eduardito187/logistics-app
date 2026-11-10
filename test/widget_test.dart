@@ -6,6 +6,15 @@ import 'package:logistics_app/app.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 
+/// El botón central del shell "respira" en reposo (loop ambiente de
+/// AnimatedAppIcon, brief §5/§6), así que `pumpAndSettle` nunca asentaría.
+/// Con "reducir movimiento" el ícono queda quieto y el flujo se puede asentar.
+void _reduceMotion(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 void main() {
   // Secure storage en memoria: sin mock, el canal de plataforma responde fuera
   // del reloj falso del test y `signOut` (que espera clearToken) queda en vuelo,
@@ -23,6 +32,7 @@ void main() {
   testWidgets('cada rol entra a su propia pantalla de inicio y puede salir', (
     tester,
   ) async {
+    _reduceMotion(tester);
     await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
     await tester.pumpAndSettle();
 

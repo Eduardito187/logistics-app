@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/notification_view.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -24,8 +25,9 @@ class NotificationDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reference =
-        notification.shipmentExternalId ?? notification.shipmentId;
+    // El campo ya se titula "Envío": sin referencia externa (nunca el uuid) se
+    // muestra un guion, no "Envío" repetido.
+    final reference = notification.shipmentExternalId ?? '—';
 
     // En tablet el detalle no se estira de borde a borde.
     return ResponsiveBody(
@@ -108,7 +110,7 @@ class NotificationDetailBody extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.block),
+                  : const AnimatedAppIcon(AppIcon.cancel),
               label: const Text('Suprimir notificación'),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../domain/entities/unit_product.dart';
 import '../controllers/shelf_locations_notifier.dart';
@@ -109,26 +110,18 @@ class UnitProductRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final (String text, PillTone tone, IconData icon) = switch (status) {
-      UnitRowStatus.surplus => (
-        'Sobrante',
-        PillTone.danger,
-        Icons.report_gmailerrorred,
-      ),
-      UnitRowStatus.received => (
-        'Recibido',
-        PillTone.success,
-        Icons.check_circle,
-      ),
+    final (String text, PillTone tone, AppIcon icon) = switch (status) {
+      UnitRowStatus.surplus => ('Sobrante', PillTone.danger, AppIcon.incident),
+      UnitRowStatus.received => ('Recibido', PillTone.success, AppIcon.success),
       UnitRowStatus.delivered => (
         'Entregado',
         PillTone.success,
-        Icons.check_circle,
+        AppIcon.success,
       ),
       UnitRowStatus.pending => (
         'Pendiente',
         PillTone.neutral,
-        Icons.radio_button_unchecked,
+        AppIcon.radioUnchecked,
       ),
     };
     final name = product?.name;
@@ -193,9 +186,10 @@ class _Thumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final placeholder = Icon(
-      Icons.inventory_2_outlined,
+    final placeholder = AnimatedAppIcon(
+      AppIcon.receive,
       color: theme.colorScheme.outline,
+      excludeFromSemantics: true,
     );
     // Decodificada al tamaño real en pantalla (dp x densidad, tope 3x): una
     // foto de catálogo de 1000+ px pesa ~4 MB decodificada; así ~80 KB.

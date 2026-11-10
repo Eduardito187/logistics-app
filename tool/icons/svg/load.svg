@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <rect class="ds-p-box ds-p-fill" x="5" y="12" width="14" height="8.5" rx="1"/>
+  <path class="ds-p-box" d="M12 12v3"/>
+  <path class="ds-p-arrow" d="M12 3.5V9"/>
+  <path class="ds-p-arrow ds-accent" d="M8 7l4-4 4 4"/>
+</svg>

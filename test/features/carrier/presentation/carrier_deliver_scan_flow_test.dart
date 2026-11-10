@@ -40,7 +40,7 @@ void main() {
     qrOther = await signer.qr(id: 'U-X', order: 'DM-9', sku: 'SKU-X');
   });
 
-  testWidgets('confirmación + bulto válido: registra la prueba de entrega', (
+  testWidgets('confirmación + producto válido: registra la prueba de entrega', (
     tester,
   ) async {
     final scanner = FakeCodeScanner(['CONF-CLIENTE-1']);
@@ -61,7 +61,7 @@ void main() {
     expect(scanner.requestedFormats, [
       [BarcodeFormat.qrCode],
     ]);
-    expect(units.requestedTitles, ['Entregar bultos']);
+    expect(units.requestedTitles, ['Entregar productos']);
     expect(units.requestedFormats.single, [BarcodeFormat.qrCode]);
     final request = pod.requests.single;
     expect(request.shipmentId, vectorOrder);
@@ -70,15 +70,15 @@ void main() {
     expect(request.lat, -17.8);
     expect(request.lng, -63.2);
     expect(pod.labels.single, 'Entrega · $vectorSku');
-    expect(units.messages, ['Bulto entregado · $vectorSku']);
+    expect(units.messages, ['Producto entregado · $vectorSku']);
 
     expect(find.text('Sin entregas registradas'), findsNothing);
     expect(find.text(vectorSku), findsOneWidget);
     expect(find.text('Enviado'), findsOneWidget);
-    expect(find.text('1 bulto entregado.'), findsOneWidget);
+    expect(find.text('1 producto entregado.'), findsOneWidget);
   });
 
-  testWidgets('varios bultos del pedido con una sola confirmación', (
+  testWidgets('varios productos del pedido con una sola confirmación', (
     tester,
   ) async {
     final units = FakeContinuousScanner([qrA, qrB]);
@@ -98,10 +98,10 @@ void main() {
     expect(pod.requests.map((r) => r.confirmation), ['CONF-1', 'CONF-1']);
     expect(find.text('SKU-A'), findsOneWidget);
     expect(find.text('SKU-B'), findsOneWidget);
-    expect(find.text('2 bultos entregados.'), findsOneWidget);
+    expect(find.text('2 productos entregados.'), findsOneWidget);
   });
 
-  testWidgets('bulto de otro pedido en la tanda: "No es de este pedido"', (
+  testWidgets('producto de otro pedido en la tanda: "No es de este pedido"', (
     tester,
   ) async {
     final units = FakeContinuousScanner([qrA, qrOther, qrB]);
@@ -119,14 +119,14 @@ void main() {
 
     expect(pod.requests.map((r) => r.unitId), ['U-A', 'U-B']);
     expect(units.messages, [
-      'Bulto entregado · SKU-A',
+      'Producto entregado · SKU-A',
       'No es de este pedido',
-      'Bulto entregado · SKU-B',
+      'Producto entregado · SKU-B',
     ]);
     expect(find.text('SKU-X'), findsNothing);
   });
 
-  testWidgets('duplicado: el mismo bulto otra vez avisa "Ya entregado"', (
+  testWidgets('duplicado: el mismo producto otra vez avisa "Ya entregado"', (
     tester,
   ) async {
     final units = FakeContinuousScanner([qrA, qrA]);
@@ -143,7 +143,7 @@ void main() {
     await _tapDeliver(tester);
 
     expect(pod.requests, hasLength(1));
-    expect(units.messages, ['Bulto entregado · SKU-A', 'Ya entregado']);
+    expect(units.messages, ['Producto entregado · SKU-A', 'Ya entregado']);
   });
 
   testWidgets('encolado offline: se ve igual que enviado (offline invisible)', (
@@ -161,7 +161,7 @@ void main() {
 
     expect(find.text('Enviado'), findsOneWidget);
     expect(find.text('Pendiente'), findsNothing);
-    expect(find.text('1 bulto entregado.'), findsOneWidget);
+    expect(find.text('1 producto entregado.'), findsOneWidget);
   });
 
   testWidgets('envío fallido: fila "Error" y aviso rojo sobre la cámara', (
@@ -183,7 +183,7 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('cancelar la confirmación no abre la cámara de bultos', (
+  testWidgets('cancelar la confirmación no abre la cámara de productos', (
     tester,
   ) async {
     final scanner = FakeCodeScanner([null]);
@@ -210,7 +210,7 @@ void main() {
     expect(button.onPressed, isNotNull);
   });
 
-  testWidgets('terminar sin leer bultos no registra la entrega', (
+  testWidgets('terminar sin leer productos no registra la entrega', (
     tester,
   ) async {
     final pod = FakeRecordProofOfDelivery();
@@ -229,7 +229,7 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('bulto con firma inválida: aviso rojo y no entrega', (
+  testWidgets('producto con firma inválida: aviso rojo y no entrega', (
     tester,
   ) async {
     final units = FakeContinuousScanner([tamperedLabelQr()]);
@@ -248,7 +248,7 @@ void main() {
     expect(units.messages, ['Etiqueta inválida: editada o falsa']);
   });
 
-  testWidgets('QR del bulto que no es etiqueta: avisa y no registra', (
+  testWidgets('QR del producto que no es etiqueta: avisa y no registra', (
     tester,
   ) async {
     final units = FakeContinuousScanner(['no-es-json']);

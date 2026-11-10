@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/shipment.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import 'shipment_status_pill.dart';
 
@@ -51,7 +52,7 @@ class OrderCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right),
+            const AnimatedAppIcon(AppIcon.chevronRight),
           ],
         ),
       ),

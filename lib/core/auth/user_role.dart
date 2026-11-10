@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+import '../icons/icons.dart';
 
 /// Roles de la app interna. La vista de inicio y los flujos disponibles dependen del rol.
 enum UserRole {
   driver(
     label: 'Chofer',
     backendKey: 'chofer',
-    icon: Icons.local_shipping,
+    icon: AppIcon.deliver,
     tasks: [
       'Checklist pre-salida del camión',
       'Ruta del día y navegación con un toque',
@@ -17,7 +17,7 @@ enum UserRole {
   picker(
     label: 'Preparador / andén',
     backendKey: 'preparador',
-    icon: Icons.qr_code_scanner,
+    icon: AppIcon.scan,
     tasks: [
       'Escanear EAN e imprimir la etiqueta',
       'Asignar carril y posición de carga',
@@ -27,7 +27,7 @@ enum UserRole {
   store(
     label: 'Tienda',
     backendKey: 'tienda',
-    icon: Icons.storefront,
+    icon: AppIcon.pickupStore,
     tasks: [
       'Recepción contra manifiesto',
       'Ubicación en estante',
@@ -37,13 +37,13 @@ enum UserRole {
   carrier(
     label: 'Transportista externo',
     backendKey: 'transportista',
-    icon: Icons.handshake,
+    icon: AppIcon.handshake,
     tasks: ['Escanear al recoger', 'Escanear al entregar'],
   ),
   supervisor(
     label: 'Supervisor',
     backendKey: 'supervisor',
-    icon: Icons.supervisor_account,
+    icon: AppIcon.supervisor,
     tasks: ['Rutas en curso y alertas', 'Incidencias en campo'],
   );
 
@@ -59,7 +59,8 @@ enum UserRole {
   /// Clave del rol tal como la devuelve el backend (`App\Enums\Role`).
   final String backendKey;
 
-  final IconData icon;
+  /// Ícono animado DisTrack del rol.
+  final AppIcon icon;
 
   /// Flujos que este rol tendrá en la app (Fase 1). Se muestran en su pantalla de inicio.
   final List<String> tasks;

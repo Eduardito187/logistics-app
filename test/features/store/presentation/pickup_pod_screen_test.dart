@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Pendiente'), findsNWidgets(2));
   });
 
-  testWidgets('sin bultos muestra 0 de 0', (tester) async {
+  testWidgets('sin productos muestra 0 de 0', (tester) async {
     await _pump(tester);
     expect(find.text('Entregados 0 de 0 producto(s).'), findsOneWidget);
   });

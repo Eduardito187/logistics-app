@@ -257,7 +257,12 @@ class SessionNotifier extends Notifier<Session?> {
   /// superior pueda avisar al usuario y delega en [signOut], que es resiliente.
   /// Si ya no hay sesión no hace nada: evita avisos y trabajo redundantes
   /// cuando llegan varios 401 seguidos.
-  void handleUnauthorized() {
+  /// Cierra la sesión ante un 401 global. [reason] permite un aviso específico
+  /// según el motivo que informa el backend (código RFC7807):
+  /// - `session_superseded`: se inició sesión en otro dispositivo del mismo tipo.
+  /// - `device_revoked`: el dispositivo fue dado de baja (robo/extravío).
+  /// - por defecto (token expirado/ausente): "Tu sesión expiró…".
+  void handleUnauthorized({String? reason}) {
     // `_closing` cubre el caso de 401 concurrentes: mientras la revocación está
     // en vuelo el estado todavía no es null, así que sin esta condición cada
     // 401 en paralelo volvería a avisar y a cerrar.
@@ -266,7 +271,7 @@ class SessionNotifier extends Notifier<Session?> {
     }
     ref
         .read(sessionExpiredProvider.notifier)
-        .set('Tu sesión expiró, volvé a ingresar.');
+        .set(reason ?? 'Tu sesión expiró, volvé a ingresar.');
     unawaited(signOut());
   }
 }

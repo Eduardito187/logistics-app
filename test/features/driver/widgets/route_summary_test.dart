@@ -23,7 +23,9 @@ void main() {
       ),
     );
 
-    expect(find.text('2/5 entregadas · 3 por hacer'), findsOneWidget);
+    expect(find.text('2/5'), findsOneWidget); // centro del anillo
+    expect(find.text('2 entregadas'), findsOneWidget);
+    expect(find.text('3 por hacer'), findsOneWidget);
     expect(find.text('En curso'), findsOneWidget);
   });
 
@@ -42,7 +44,9 @@ void main() {
       ),
     );
 
-    expect(find.text('4/4 entregadas · 0 por hacer'), findsOneWidget);
+    expect(find.text('4/4'), findsOneWidget);
+    expect(find.text('4 entregadas'), findsOneWidget);
+    expect(find.text('0 por hacer'), findsOneWidget);
     expect(find.text('Completada'), findsOneWidget);
   });
 }

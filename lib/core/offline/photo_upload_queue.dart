@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -49,14 +50,21 @@ class PhotoUploadQueue {
   /// Encola una foto para subirla idempotentemente aunque no haya red.
   ///
   /// [filePath] es la ruta devuelta por el picker (caché efímera); se copia a un
-  /// directorio persistente antes de encolar. [kind] es `pod` o `damage`.
+  /// directorio persistente antes de encolar. [kind] es `pod` | `damage` |
+  /// `signature` | `id_document`. [clientSnapshot] (anti-fraude) liga la
+  /// evidencia al cliente; se persiste junto a la foto (sidecar JSON) para
+  /// sobrevivir offline y se manda al subir.
   Future<void> enqueue({
     required String shipmentId,
     required String filePath,
     required String kind,
+    Map<String, Object?>? clientSnapshot,
   }) async {
     final id = Ulid().toString();
     final persistentPath = await _persistPhoto(id, filePath);
+    if (clientSnapshot != null) {
+      await _writeSnapshot(persistentPath, id, clientSnapshot);
+    }
     await _db.enqueuePhoto(
       PendingPhotosCompanion.insert(
         id: id,
@@ -117,6 +125,7 @@ class PhotoUploadQueue {
         await _upload(photo, file);
         await _db.deletePhoto(photo.id);
         await _safeDelete(file);
+        await _safeDelete(_snapshotFileFor(photo.filePath, photo.id));
       } on ApiException catch (e) {
         final attempts = photo.attempts + 1;
         if (SyncRetryPolicy.isTransient(e)) {
@@ -171,6 +180,7 @@ class PhotoUploadQueue {
     for (final photo in rows) {
       await _db.deletePhoto(photo.id);
       await _safeDelete(File(photo.filePath));
+      await _safeDelete(_snapshotFileFor(photo.filePath, photo.id));
     }
     return rows.length;
   }
@@ -187,10 +197,21 @@ class PhotoUploadQueue {
     if (!dir.existsSync()) return 0;
     final referenced = await _db.photoFilePaths();
     final normalized = {for (final path in referenced) p.normalize(path)};
+    // Ids de las fotos vigentes (el archivo es `<id><ext>`), para conservar su
+    // snapshot `<id>.snapshot.json` mientras la foto siga encolada.
+    final referencedIds = {
+      for (final path in referenced) p.basenameWithoutExtension(path),
+    };
     var removed = 0;
     for (final entity in dir.listSync(followLinks: false)) {
       if (entity is! File) continue;
-      if (normalized.contains(p.normalize(entity.path))) continue;
+      final name = p.basename(entity.path);
+      if (name.endsWith('.snapshot.json')) {
+        final id = name.substring(0, name.length - '.snapshot.json'.length);
+        if (referencedIds.contains(id)) continue;
+      } else if (normalized.contains(p.normalize(entity.path))) {
+        continue;
+      }
       await _safeDelete(entity);
       removed++;
     }
@@ -198,6 +219,13 @@ class PhotoUploadQueue {
   }
 
   Future<void> _upload(PendingPhoto photo, File file) async {
+    // Firma y documento del cliente: endpoint de EVIDENCIA anti-fraude, que
+    // liga la captura al cliente (snapshot) y la valida en el backend.
+    if (photo.kind == 'signature' || photo.kind == 'id_document') {
+      await _uploadEvidence(photo, file);
+      return;
+    }
+    // POD / daños: endpoint estable de siempre.
     final api = _ref.read(logisticsApiProvider);
     try {
       await api.execution.uploadDeliveryPhoto(
@@ -207,6 +235,67 @@ class PhotoUploadQueue {
       );
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Sube la evidencia (firma / documento) al endpoint anti-fraude
+  /// `POST /app/deliveries/evidence` (multipart), ligada al cliente con el
+  /// snapshot persistido y con `Idempotency-Key` = id de la foto. Se usa Dio
+  /// crudo (el cliente generado aún no tiene este endpoint).
+  Future<void> _uploadEvidence(PendingPhoto photo, File file) async {
+    final dio = _ref.read(dioProvider);
+    final snapshot = await _readSnapshot(photo.filePath, photo.id);
+    final form = FormData.fromMap({
+      'shipment_id': photo.shipmentId,
+      'kind': photo.kind,
+      'photo': await MultipartFile.fromFile(
+        file.path,
+        filename: p.basename(file.path),
+      ),
+      if (snapshot != null)
+        for (final e in snapshot.entries)
+          if (e.value != null) e.key: '${e.value}',
+    });
+    try {
+      await dio.post<dynamic>(
+        '/app/deliveries/evidence',
+        data: form,
+        options: Options(headers: {'Idempotency-Key': photo.id}),
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  // --- Snapshot del cliente (sidecar JSON junto a la foto) -------------------
+
+  /// Archivo del snapshot para una foto: `<dir>/<id>.snapshot.json`.
+  File _snapshotFileFor(String photoPath, String id) =>
+      File(p.join(p.dirname(photoPath), '$id.snapshot.json'));
+
+  Future<void> _writeSnapshot(
+    String photoPath,
+    String id,
+    Map<String, Object?> snapshot,
+  ) async {
+    try {
+      await _snapshotFileFor(photoPath, id).writeAsString(jsonEncode(snapshot));
+    } on Object {
+      // Sin snapshot la evidencia igual se sube (menos ligada); no bloquea.
+    }
+  }
+
+  Future<Map<String, Object?>?> _readSnapshot(
+    String photoPath,
+    String id,
+  ) async {
+    try {
+      final f = _snapshotFileFor(photoPath, id);
+      if (!f.existsSync()) return null;
+      final decoded = jsonDecode(await f.readAsString());
+      return decoded is Map ? decoded.cast<String, Object?>() : null;
+    } on Object {
+      return null;
     }
   }
 

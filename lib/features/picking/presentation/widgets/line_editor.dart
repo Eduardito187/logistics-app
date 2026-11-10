@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/widgets/section_card.dart';
 import 'line_draft.dart';
 
@@ -25,7 +27,7 @@ class LineEditor extends StatelessWidget {
       trailing: canRemove
           ? IconButton(
               onPressed: onRemove,
-              icon: const Icon(Icons.delete_outline),
+              icon: const AnimatedAppIcon(AppIcon.delete),
               tooltip: 'Quitar línea',
             )
           : null,
@@ -37,7 +39,8 @@ class LineEditor extends StatelessWidget {
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: 'SKU',
-              prefixIcon: Icon(Icons.qr_code_2),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.qrCode),
             ),
           ),
           const SizedBox(height: 8),
@@ -46,7 +49,8 @@ class LineEditor extends StatelessWidget {
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               labelText: 'Nombre del producto',
-              prefixIcon: Icon(Icons.inventory_2),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.receive),
             ),
           ),
           const SizedBox(height: 8),

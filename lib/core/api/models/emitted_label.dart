@@ -4,6 +4,9 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'destination.dart';
+import 'origin.dart';
+
 part 'emitted_label.g.dart';
 
 @JsonSerializable()
@@ -20,6 +23,10 @@ class EmittedLabel {
     required this.revoked,
     this.revokedAt,
     this.revokedReason,
+    this.productName,
+    this.imageUrl,
+    this.origin,
+    this.destination,
   });
 
   factory EmittedLabel.fromJson(Map<String, Object?> json) =>
@@ -60,6 +67,20 @@ class EmittedLabel {
   /// Motivo de la revocación, o null si está vigente
   @JsonKey(name: 'revoked_reason')
   final String? revokedReason;
+
+  /// Nombre humano del producto, resuelto por SKU (líneas del envío / catálogo). null si no se pudo resolver.
+  @JsonKey(name: 'product_name')
+  final String? productName;
+
+  /// URL servible ABSOLUTA de la imagen del producto (resuelta por SKU). null si no hay imagen.
+  @JsonKey(name: 'image_url')
+  final String? imageUrl;
+
+  /// Origen de despacho. `code` es el código embebido en el QR; `name` es el nombre de nodo si el código matchea la red.
+  final Origin? origin;
+
+  /// Destino del envío de la orden (nombres humanos, sin uuid).
+  final Destination? destination;
 
   Map<String, Object?> toJson() => _$EmittedLabelToJson(this);
 }

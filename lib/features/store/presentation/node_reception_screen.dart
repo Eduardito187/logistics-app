@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -40,7 +41,7 @@ class NodeReceptionScreen extends ConsumerWidget {
                 sliver: selected == null
                     ? const SliverToBoxAdapter(
                         child: EmptyState(
-                          icon: Icons.storefront,
+                          icon: AppIcon.pickupStore,
                           title: 'Sin tienda asignada',
                           message:
                               'Tu usuario no tiene una tienda asignada. '

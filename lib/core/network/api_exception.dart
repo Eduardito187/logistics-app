@@ -78,6 +78,12 @@ class ApiException implements Exception {
       return 'Hay un conflicto con el estado actual. Actualizá y probá de nuevo.';
     }
     if (isValidation) {
+      // Mostrar el error de validación CONCRETO del backend (Laravel lo manda
+      // en `errors`), no un genérico inútil: así se ve qué campo falla en vez
+      // de "Revisá los datos ingresados." a secas.
+      if (fieldErrors.isNotEmpty) {
+        return fieldErrors.values.first.first;
+      }
       return 'Revisá los datos ingresados.';
     }
     return title;

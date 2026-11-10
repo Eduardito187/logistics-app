@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/button_spinner.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
+import '../../../../support/app_icon_finders.dart';
 import '../../../../support/button_finders.dart';
 
 // Tarjeta de progreso del armado: contadores preparadas/pendientes, el carril
@@ -51,8 +52,8 @@ void main() {
 
     expect(find.text('2/5'), findsOneWidget); // preparadas
     expect(find.text('3'), findsOneWidget); // pendientes = total - prepared
-    expect(find.text('Preparadas'), findsOneWidget);
-    expect(find.text('Pendientes'), findsOneWidget);
+    expect(find.text('Preparados'), findsOneWidget);
+    expect(find.text('Por preparar'), findsOneWidget);
   });
 
   testWidgets('sin carril muestra "sin asignar" y el botón "Asignar"', (
@@ -60,7 +61,7 @@ void main() {
   ) async {
     await _pump(tester, prepared: 0, total: 3, lane: null);
 
-    expect(find.text('Carril / vehículo sin asignar'), findsOneWidget);
+    expect(find.text('Vehículo de reparto sin asignar'), findsOneWidget);
     expect(find.text('Asignar'), findsOneWidget);
     expect(find.text('Cambiar'), findsNothing);
   });
@@ -70,7 +71,7 @@ void main() {
   ) async {
     await _pump(tester, prepared: 1, total: 3, lane: 'ABC-123');
 
-    expect(find.text('Carril / vehículo: ABC-123'), findsOneWidget);
+    expect(find.text('Vehículo: ABC-123'), findsOneWidget);
     expect(find.text('Cambiar'), findsOneWidget);
   });
 
@@ -81,7 +82,7 @@ void main() {
 
     await tester.tap(find.text('Cambiar'));
     await tester.tap(find.text('Imprimir todas las etiquetas'));
-    await tester.tap(find.text('Reimprimir lote'));
+    await tester.tap(find.text('Anular y emitir de nuevo'));
     await tester.pump();
 
     expect(taps.assign, 1);
@@ -100,14 +101,17 @@ void main() {
       busy: true,
     );
 
-    // El botón "Imprimir todas" muestra el spinner en vez del ícono.
-    expect(find.byType(ButtonSpinner), findsOneWidget);
+    // El botón "Imprimir todas" muestra el ícono de impresión en loading.
+    expect(
+      findAppIconInState(AppIcon.printing, AppIconState.loading),
+      findsOneWidget,
+    );
 
     final printBtn = tester.widget<OutlinedButton>(
       findButtonWithText<OutlinedButton>('Imprimir todas las etiquetas'),
     );
     final reprintBtn = tester.widget<OutlinedButton>(
-      findButtonWithText<OutlinedButton>('Reimprimir lote'),
+      findButtonWithText<OutlinedButton>('Anular y emitir de nuevo'),
     );
     expect(printBtn.onPressed, isNull);
     expect(reprintBtn.onPressed, isNull);
@@ -119,7 +123,7 @@ void main() {
   });
 
   testWidgets(
-    'reprinting: el spinner va en "Reimprimir lote", no en imprimir',
+    'reprinting: el spinner va en "Anular y emitir de nuevo", no en imprimir',
     (tester) async {
       await _pump(
         tester,
@@ -132,8 +136,8 @@ void main() {
 
       expect(
         find.descendant(
-          of: findButtonWithText<OutlinedButton>('Reimprimir lote'),
-          matching: find.byType(ButtonSpinner),
+          of: findButtonWithText<OutlinedButton>('Anular y emitir de nuevo'),
+          matching: findAppIconInState(AppIcon.refresh, AppIconState.loading),
         ),
         findsOneWidget,
       );
@@ -142,7 +146,7 @@ void main() {
           of: findButtonWithText<OutlinedButton>(
             'Imprimir todas las etiquetas',
           ),
-          matching: find.byType(ButtonSpinner),
+          matching: findAppIconInState(AppIcon.printing, AppIconState.loading),
         ),
         findsNothing,
       );

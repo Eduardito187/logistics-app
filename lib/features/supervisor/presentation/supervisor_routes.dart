@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/models/plan.dart';
 import '../../../core/auth/user_role.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
 import 'supervisor_alerts_screen.dart';
 import 'supervisor_dashboard_screen.dart';
@@ -15,7 +15,7 @@ const List<RoleTask> supervisorTasks = [
   RoleTask(
     id: 'sup-dashboard',
     label: 'Tablero del día',
-    icon: Icons.dashboard,
+    appIcon: AppIcon.dashboard,
     route: '/supervisor/dashboard',
     roles: {UserRole.supervisor},
     accent: true,
@@ -23,21 +23,21 @@ const List<RoleTask> supervisorTasks = [
   RoleTask(
     id: 'sup-fleet',
     label: 'Flota en vivo',
-    icon: Icons.map,
+    appIcon: AppIcon.fleet,
     route: '/supervisor/fleet',
     roles: {UserRole.supervisor},
   ),
   RoleTask(
     id: 'sup-plans',
     label: 'Rutas en curso',
-    icon: Icons.alt_route,
+    appIcon: AppIcon.plans,
     route: '/supervisor/plans',
     roles: {UserRole.supervisor},
   ),
   RoleTask(
     id: 'sup-alerts',
     label: 'Alertas',
-    icon: Icons.notification_important,
+    appIcon: AppIcon.roleAlerts,
     route: '/supervisor/alerts',
     roles: {UserRole.supervisor},
   ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
+import '../icons/icons.dart';
 import 'version_gate.dart';
 
 /// Abre la tienda/MDM. Se sobreescribe en tests.
@@ -73,8 +74,8 @@ class _UpdateRequiredScreenState extends ConsumerState<UpdateRequiredScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.system_update,
+                  AnimatedAppIcon(
+                    AppIcon.systemUpdate,
                     size: 96,
                     color: theme.colorScheme.primary,
                   ),
@@ -108,7 +109,7 @@ class _UpdateRequiredScreenState extends ConsumerState<UpdateRequiredScreen> {
                   if (canOpen)
                     FilledButton.icon(
                       onPressed: () => _openUpdate(uri),
-                      icon: const Icon(Icons.download),
+                      icon: const AnimatedAppIcon(AppIcon.download),
                       label: const Text('Actualizar'),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(64),

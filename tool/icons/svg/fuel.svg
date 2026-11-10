@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-fill" d="M4.5 20.5V5A1.5 1.5 0 0 1 6 3.5h6A1.5 1.5 0 0 1 13.5 5v15.5"/>
+  <path d="M2.5 20.5h13"/>
+  <path d="M13.5 10h1.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 0 3 0V8.5L17 6"/>
+  <path class="ds-p-drop ds-accent" d="M9 7.5c-1.3 1.8-2 3-2 4a2 2 0 0 0 4 0c0-1-.7-2.2-2-4z"/>
+</svg>
