@@ -25,8 +25,9 @@ class NotificationDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reference =
-        notification.shipmentExternalId ?? notification.shipmentId;
+    // El campo ya se titula "Envío": sin referencia externa (nunca el uuid) se
+    // muestra un guion, no "Envío" repetido.
+    final reference = notification.shipmentExternalId ?? '—';
 
     // En tablet el detalle no se estira de borde a borde.
     return ResponsiveBody(

@@ -49,35 +49,37 @@ LabelScanner _scannerWithKey(int keyId) {
 }
 
 void main() {
-  testWidgets('QR firmado válido: devuelve el id del bulto y verified=true', (
-    tester,
-  ) async {
-    final qr = _vector()['qr_content'] as String;
-    await _withRef(
-      tester,
-      [labelScannerProvider.overrideWithValue(_scannerWithKey(1))],
-      (ref) async {
-        final scan = await resolveUnitScan(ref, qr);
-        expect(scan.unitId, _expectedUnitId);
-        expect(scan.verified, isTrue);
-      },
-    );
-  });
+  testWidgets(
+    'QR firmado válido: devuelve el id del producto y verified=true',
+    (tester) async {
+      final qr = _vector()['qr_content'] as String;
+      await _withRef(
+        tester,
+        [labelScannerProvider.overrideWithValue(_scannerWithKey(1))],
+        (ref) async {
+          final scan = await resolveUnitScan(ref, qr);
+          expect(scan.unitId, _expectedUnitId);
+          expect(scan.verified, isTrue);
+        },
+      );
+    },
+  );
 
-  testWidgets('QR manipulado: id del bulto pero verified=false (firma mala)', (
-    tester,
-  ) async {
-    final qr = _vector()['tampered_qr_content'] as String;
-    await _withRef(
-      tester,
-      [labelScannerProvider.overrideWithValue(_scannerWithKey(1))],
-      (ref) async {
-        final scan = await resolveUnitScan(ref, qr);
-        expect(scan.unitId, _expectedUnitId);
-        expect(scan.verified, isFalse);
-      },
-    );
-  });
+  testWidgets(
+    'QR manipulado: id del producto pero verified=false (firma mala)',
+    (tester) async {
+      final qr = _vector()['tampered_qr_content'] as String;
+      await _withRef(
+        tester,
+        [labelScannerProvider.overrideWithValue(_scannerWithKey(1))],
+        (ref) async {
+          final scan = await resolveUnitScan(ref, qr);
+          expect(scan.unitId, _expectedUnitId);
+          expect(scan.verified, isFalse);
+        },
+      );
+    },
+  );
 
   testWidgets(
     'clave desconocida: verified=false aunque el QR esté bien formado',

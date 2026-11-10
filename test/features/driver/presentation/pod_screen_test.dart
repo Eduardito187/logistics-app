@@ -27,14 +27,19 @@ import '../../../support/button_finders.dart';
 // dedo): la firma se exporta a PNG, se encola como evidencia y el POD lleva el
 // marcador FIRMA_DIGITAL.
 
-/// Cola de fotos falsa: no toca disco ni red.
+/// Cola de fotos falsa: no toca disco ni red; registra lo encolado.
 class _NoopPhotoUploadQueue implements PhotoUploadQueue {
+  final List<({String kind, Map<String, Object?>? snapshot})> calls = [];
+
   @override
   Future<void> enqueue({
     required String shipmentId,
     required String filePath,
     required String kind,
-  }) async {}
+    Map<String, Object?>? clientSnapshot,
+  }) async {
+    calls.add((kind: kind, snapshot: clientSnapshot));
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -73,10 +78,10 @@ void main() {
     await pumpScoped(tester, child: PodScreen(stop: buildStop()), tall: true);
 
     expect(find.text('Prueba de entrega'), findsOneWidget);
-    expect(find.text('1. Bulto entregado'), findsOneWidget);
+    expect(find.text('1. Producto entregado'), findsOneWidget);
     expect(find.text('2. Confirmación del cliente'), findsOneWidget);
     expect(find.text('3. Foto de entrega (obligatoria)'), findsOneWidget);
-    expect(find.text('Escanea el bulto a entregar.'), findsOneWidget);
+    expect(find.text('Escanea el producto a entregar.'), findsOneWidget);
     expect(_registerButton(tester).onPressed, isNull);
   });
 
@@ -123,7 +128,7 @@ void main() {
   });
 
   testWidgets(
-    'camino feliz: escanea bulto y QR del cliente, registra el POD y vuelve',
+    'camino feliz: escanea producto y QR del cliente, registra el POD y vuelve',
     (tester) async {
       final fake = FakeCodeScanner([validLabelQr(), 'CONF-123']);
       final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -138,15 +143,15 @@ void main() {
         tall: true,
       );
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
-      expect(find.text('Bulto: $vectorUnitId'), findsOneWidget);
+      expect(find.text('Producto: $vectorUnitId'), findsOneWidget);
       expect(find.text('Reescanear'), findsOneWidget);
 
       await tester.tap(find.text('Escanear QR del cliente'));
       await tester.pumpAndSettle();
       expect(find.text('Confirmación: CONF-123'), findsOneWidget);
-      expect(fake.requestedTitles, ['Escanear bulto', 'QR del cliente']);
+      expect(fake.requestedTitles, ['Escanear producto', 'QR del cliente']);
       expect(find.byType(ScannerScreen), findsNothing);
 
       // Sin la foto el botón sigue deshabilitado: es obligatoria.
@@ -184,7 +189,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await signOnPad(tester);
     await _takePhoto(tester);
@@ -214,7 +219,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Escanear QR del cliente'));
     await tester.pumpAndSettle();
@@ -232,7 +237,7 @@ void main() {
     expect(_registerButton(tester).onPressed, isNotNull);
   });
 
-  testWidgets('cancelar el escaneo del bulto no cambia nada ni envía', (
+  testWidgets('cancelar el escaneo del producto no cambia nada ni envía', (
     tester,
   ) async {
     final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -243,11 +248,11 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await signOnPad(tester);
 
-    expect(find.text('Escanea el bulto a entregar.'), findsOneWidget);
+    expect(find.text('Escanea el producto a entregar.'), findsOneWidget);
     expect(find.text('Etiqueta no válida'), findsNothing);
     expect(_registerButton(tester).onPressed, isNull);
     expect(queue.submissions, isEmpty);
@@ -267,12 +272,12 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Escanear QR del cliente'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bulto: $vectorUnitId'), findsOneWidget);
+    expect(find.text('Producto: $vectorUnitId'), findsOneWidget);
     expect(
       find.text('Escanea el QR del cliente o pedile que firme.'),
       findsOneWidget,
@@ -281,7 +286,7 @@ void main() {
     expect(queue.submissions, isEmpty);
   });
 
-  testWidgets('etiqueta con firma inválida: avisa y no toma el bulto', (
+  testWidgets('etiqueta con firma inválida: avisa y no toma el producto', (
     tester,
   ) async {
     final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -292,11 +297,11 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
 
     expect(find.text('Etiqueta no válida'), findsOneWidget);
-    expect(find.text('Escanea el bulto a entregar.'), findsOneWidget);
+    expect(find.text('Escanea el producto a entregar.'), findsOneWidget);
     expect(_registerButton(tester).onPressed, isNull);
     expect(queue.submissions, isEmpty);
   });

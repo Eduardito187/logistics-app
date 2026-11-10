@@ -13,7 +13,6 @@ import 'package:logistics_app/features/driver/presentation/driver_route_screen.d
 import 'package:logistics_app/features/driver/presentation/failed_delivery_screen.dart';
 import 'package:logistics_app/features/driver/presentation/fuel_screen.dart';
 import 'package:logistics_app/features/driver/presentation/incident_screen.dart';
-import 'package:logistics_app/features/driver/presentation/live_gps_screen.dart';
 import 'package:logistics_app/features/driver/presentation/load_scan_screen.dart';
 import 'package:logistics_app/features/driver/presentation/maintenance_due_screen.dart';
 import 'package:logistics_app/features/driver/presentation/odometer_screen.dart';
@@ -24,6 +23,7 @@ import 'package:logistics_app/features/driver/presentation/stop_detail_screen.da
 import 'package:logistics_app/features/driver/presentation/vehicle_summary_screen.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/due_card.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/stop_card.dart';
+import 'package:logistics_app/features/driver/presentation/widgets/stop_timeline_tile.dart';
 
 import '../../../support/fake_photo_picker.dart';
 import '../../../support/screen_sizes.dart';
@@ -112,14 +112,22 @@ void main() {
       await tester.tap(find.byTooltip('Ver lista'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(StopCard), findsWidgets);
-      // En tablets las tarjetas se reparten en columnas (misma fila).
-      final columns = AppBreakpoints.columnsFor(screen.size.width);
-      if (columns > 1) {
-        final first = tester.getTopLeft(find.byType(StopCard).at(0));
-        final second = tester.getTopLeft(find.byType(StopCard).at(1));
-        expect(second.dy, first.dy);
-        expect(second.dx, greaterThan(first.dx));
+      // En teléfono la lista es un timeline de una columna (StopTimelineTile);
+      // en tablet, tarjetas en grilla (StopCard). Se verifica el layout que
+      // efectivamente se renderizó (sin desbordes: un overflow haría fallar el
+      // test por sí solo).
+      final usesGrid = find.byType(StopCard).evaluate().isNotEmpty;
+      if (usesGrid) {
+        expect(find.byType(StopCard), findsWidgets);
+        final columns = AppBreakpoints.columnsFor(screen.size.width);
+        if (columns > 1) {
+          final first = tester.getTopLeft(find.byType(StopCard).at(0));
+          final second = tester.getTopLeft(find.byType(StopCard).at(1));
+          expect(second.dy, first.dy);
+          expect(second.dx, greaterThan(first.dx));
+        }
+      } else {
+        expect(find.byType(StopTimelineTile), findsWidgets);
       }
       await _scrollToEnd(tester);
     });
@@ -192,7 +200,7 @@ void main() {
     expect(find.text('Registrar entrega fallida'), findsOneWidget);
   });
 
-  group('escaneo de bultos', () {
+  group('escaneo de productos', () {
     testOnScreens('vacío', (tester, screen) async {
       await _pump(
         tester,
@@ -203,8 +211,8 @@ void main() {
           title: 'Descargar parada 12',
         ),
       );
-      expect(find.text('Sin bultos'), findsOneWidget);
-      expect(find.text('Escanear bulto para descargar'), findsOneWidget);
+      expect(find.text('Sin productos'), findsOneWidget);
+      expect(find.text('Escanear producto para descargar'), findsOneWidget);
     });
 
     testOnScreens('lista de envíos para cargar', (tester, screen) async {
@@ -282,20 +290,6 @@ void main() {
       ],
     );
     _expectCappedWidth(tester, screen);
-    await _scrollToEnd(tester);
-  });
-
-  testOnScreens('rastreo del camión', (tester, screen) async {
-    await _pump(
-      tester,
-      const LiveGpsScreen(),
-      overrides: gateBase(
-        crew: buildMyCrew(
-          vehicle: buildVehicle(plate: 'CAMIÓN-1234-SCZ'),
-          driver: buildDriver(name: 'Juan Carlos Pérez Mamani de la Fuente'),
-        ),
-      ),
-    );
     await _scrollToEnd(tester);
   });
 

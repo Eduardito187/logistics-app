@@ -117,7 +117,7 @@ class DeliveryHelpSheet extends ConsumerWidget {
               ),
             _HelpTile(
               icon: AppIcon.scan,
-              title: 'Escanear bultos',
+              title: 'Escanear productos',
               subtitle: 'QR o código de barras de las etiquetas',
               onTap: () => closeThen(onScanUnits),
             ),

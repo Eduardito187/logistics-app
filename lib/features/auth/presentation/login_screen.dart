@@ -11,6 +11,7 @@ import '../../../core/widgets/app_snack.dart';
 import '../domain/entities/login_result.dart';
 import 'controllers/login_controller.dart';
 import 'widgets/auth_header.dart';
+import '../../../core/widgets/field_icon.dart';
 
 /// Pantalla de bienvenida e inicio de sesión de la app interna.
 ///
@@ -27,6 +28,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _userController = TextEditingController();
   final _passwordController = TextEditingController();
+  // Foco de cada campo: su ícono se ilumina (active) al enfocar.
+  final _userFocus = FocusNode();
+  final _passwordFocus = FocusNode();
 
   /// Contraseña oculta (puntos) o visible (texto); se alterna con el ojo.
   bool _obscurePassword = true;
@@ -35,6 +39,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _userController.dispose();
     _passwordController.dispose();
+    _userFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -114,23 +120,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 24),
                       TextField(
                         controller: _userController,
+                        focusNode: _userFocus,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Usuario o correo',
-                          prefixIcon: AnimatedAppIcon(AppIcon.profile),
+                          prefixIconConstraints: FieldIcon.prefixConstraints,
+                          prefixIcon: FieldIcon(
+                            icon: AppIcon.profile,
+                            focusNode: _userFocus,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
+                        focusNode: _passwordFocus,
                         obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) => _onSignInPressed(),
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
-                          prefixIcon: const AnimatedAppIcon(AppIcon.security),
+                          prefixIconConstraints: FieldIcon.prefixConstraints,
+                          prefixIcon: FieldIcon(
+                            icon: AppIcon.security,
+                            focusNode: _passwordFocus,
+                          ),
                           suffixIcon: IconButton(
                             tooltip: _obscurePassword
                                 ? 'Mostrar contraseña'
@@ -142,6 +158,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               state: _obscurePassword
                                   ? AppIconState.idle
                                   : AppIconState.active,
+                              size: 20,
                             ),
                             onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword,
@@ -152,13 +169,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 28),
                       FilledButton(
                         onPressed: isLoading ? null : _onSignInPressed,
+                        // Al enviar, el botón muestra el ícono de marca
+                        // "sincronizando" en loop (animación DisTrack) en vez
+                        // del spinner gris plano.
                         child: isLoading
                             ? const SizedBox(
                                 height: 24,
                                 width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
+                                child: AnimatedAppIcon(
+                                  AppIcon.syncing,
+                                  state: AppIconState.loading,
+                                  size: 22,
                                   color: Colors.white,
+                                  excludeFromSemantics: true,
                                 ),
                               )
                             : const Text('Ingresar'),

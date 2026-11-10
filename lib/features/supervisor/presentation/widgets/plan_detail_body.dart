@@ -74,6 +74,11 @@ class PlanDetailBody extends StatelessWidget {
         ),
       ],
     );
+    // Nota (512 MB): esta es la ÚNICA lista que se arma eager (Column), pero es
+    // una pantalla de SUPERVISOR (tablet/oficina), no del personal de terreno
+    // con teléfonos de 512 MB. Con ~20-60 StopTile livianos en tablet es
+    // aceptable; virtualizar exigiría CustomScrollView/slivers (romper el
+    // SectionCard) sin beneficio en el equipo objetivo. Se deja a propósito.
     final stopsCard = SectionCard(
       title: 'Secuencia de paradas',
       child: stops.isEmpty

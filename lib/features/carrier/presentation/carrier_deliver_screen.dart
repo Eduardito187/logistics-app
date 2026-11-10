@@ -53,8 +53,8 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
       String? shipmentId;
       await scanContinuous(
         context,
-        title: 'Entregar bultos',
-        helper: 'Apunta al QR de la etiqueta de cada bulto',
+        title: 'Entregar productos',
+        helper: 'Apunta al QR de la etiqueta de cada producto',
         formats: const [BarcodeFormat.qrCode],
         onCode: (qr) async {
           final check = await verifyLabelQr(ref, qr);
@@ -79,7 +79,7 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
     if (!mounted || count == 0) return;
     showCarrierBatchSummary(
       context,
-      count == 1 ? '1 bulto entregado.' : '$count bultos entregados.',
+      count == 1 ? '1 producto entregado.' : '$count productos entregados.',
     );
   }
 
@@ -122,7 +122,7 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
     if (outcome == SubmitOutcome.failed) {
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
-    return ScanFeedback.ok('Bulto entregado · ${label.sku}');
+    return ScanFeedback.ok('Producto entregado · ${label.sku}');
   }
 
   @override
@@ -134,7 +134,7 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
         emptyIcon: AppIcon.deliverScan,
         emptyTitle: 'Sin entregas registradas',
         emptyMessage:
-            'Escanea el bulto y el QR del cliente para registrar la entrega.',
+            'Escanea el producto y el QR del cliente para registrar la entrega.',
         rowIcon: AppIcon.success,
         actionLabel: 'Registrar entrega',
         busy: _busy,

@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../controllers/driver_controllers.dart';
 import '../../controllers/locally_settled_stops.dart';
 import '../../failed_delivery_screen.dart';
 import '../../pod_screen.dart';
 import '../../scan_mode.dart';
 import '../../scan_units_screen.dart';
+import 'delivery_sheet.dart';
 
 /// Abre un paso de la entrega y, al volver, refresca la ruta y el estado de la
 /// entrega (la parada pudo cerrarse y la siguiente pasa a ser la actual).
@@ -32,7 +34,7 @@ Widget unloadScreenFor(DriverRouteStop stop) => ScanUnitsScreen(
   mode: ScanMode.unload,
   shipmentId: stop.shipmentId,
   nodeId: stop.id,
-  title: 'Escanear bultos · parada ${stop.sequence}',
+  title: 'Escanear productos · parada ${stop.sequence}',
 );
 
 /// Botones del pie según el paso de la entrega:
@@ -53,7 +55,6 @@ class DeliveryActionsBar extends ConsumerWidget {
         stop.status != DriverRouteStopStatus.pending ||
         status == DeliveryStatus.delivered ||
         status == DeliveryStatus.failed;
-    final danger = Theme.of(context).colorScheme.error;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -93,56 +94,26 @@ class DeliveryActionsBar extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        FilledButton.icon(
-                          onPressed: () => openDeliveryStep(
+                        // Resumen compacto del cliente + acceso a los DATOS del
+                        // pedido (modal bajo demanda).
+                        _DeliverySummary(stop: stop),
+                        const SizedBox(height: 10),
+                        // Las 3 acciones en UN grupo de botones en una sola fila
+                        // (antes ocupaban 2 filas): "Entregar" destacado y las
+                        // otras dos al lado. Ocupa menos alto → más mapa visible.
+                        _ActionGroup(
+                          onDeliver: () => openDeliveryStep(
                             context,
                             ref,
                             stop,
                             PodScreen(stop: stop),
                           ),
-                          icon: const AnimatedAppIcon(AppIcon.capture),
-                          label: const Text('Entregar pedido'),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => openDeliveryStep(
-                                  context,
-                                  ref,
-                                  stop,
-                                  unloadScreenFor(stop),
-                                ),
-                                icon: const AnimatedAppIcon(AppIcon.scan),
-                                label: const Text(
-                                  'Escanear bultos',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: danger,
-                                ),
-                                onPressed: () => openDeliveryStep(
-                                  context,
-                                  ref,
-                                  stop,
-                                  FailedDeliveryScreen(stop: stop),
-                                ),
-                                icon: const AnimatedAppIcon(AppIcon.cancel),
-                                label: const Text(
-                                  'No se pudo',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
+                          onFailed: () => openDeliveryStep(
+                            context,
+                            ref,
+                            stop,
+                            FailedDeliveryScreen(stop: stop),
+                          ),
                         ),
                       ],
                     ),
@@ -152,4 +123,202 @@ class DeliveryActionsBar extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Las dos acciones del paso en UN grupo compacto de una sola fila:
+/// "Entregar" (acción principal, relleno de marca; el POD YA escanea el
+/// producto, toma la foto y la firma) y "No se pudo" (en rojo). Antes había un
+/// tercer botón "Escanear" suelto: era redundante (la entrega ya escanea) y
+/// confundía, así que se quitó.
+class _ActionGroup extends StatelessWidget {
+  const _ActionGroup({required this.onDeliver, required this.onFailed});
+
+  final VoidCallback onDeliver;
+  final VoidCallback onFailed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      // IntrinsicHeight: los segmentos miden su contenido (ícono + etiqueta) y
+      // el divisor iguala al más alto. Así crece con "letra grande" sin
+      // desbordar (antes un alto fijo cortaba 2px).
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: _Segment(
+                icon: AppIcon.capture,
+                label: 'Entregar',
+                onTap: onDeliver,
+                background: AppColors.brand,
+                foreground: Colors.white,
+              ),
+            ),
+            const _GroupDivider(),
+            Expanded(
+              child: _Segment(
+                icon: AppIcon.cancel,
+                label: 'No se pudo',
+                onTap: onFailed,
+                foreground: AppColors.danger,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un segmento del grupo: ícono arriba + etiqueta abajo, todo tocable.
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.foreground,
+    this.background,
+  });
+
+  final AppIcon icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color foreground;
+  final Color? background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: background ?? Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedAppIcon(icon, size: 22, color: foreground),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Divisor fino entre segmentos del grupo.
+class _GroupDivider extends StatelessWidget {
+  const _GroupDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return VerticalDivider(
+      width: 1,
+      thickness: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
+  }
+}
+
+/// Fila compacta (siempre visible en la barra) con el cliente de la parada y un
+/// botón "Ver pedido" que abre los DATOS completos (teléfono, dirección,
+/// productos) en un modal. Reemplaza a la hoja que antes tapaba medio mapa.
+class _DeliverySummary extends StatelessWidget {
+  const _DeliverySummary({required this.stop});
+
+  final DriverRouteStop stop;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name =
+        stop.customerName ?? stop.orderReference ?? 'Parada ${stop.sequence}';
+    final reference = stop.orderReference;
+    return Material(
+      key: const Key('delivery-summary'),
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => showDeliveryDetailsSheet(context, stop),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                child: Text(
+                  _initials(name),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      reference == null
+                          ? 'Toca para ver el pedido'
+                          : 'Pedido $reference',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Chevron como afordancia de "abrir" (toda la fila es el botón):
+              // evita un botón con texto que, con letra grande, desbordaba.
+              const AnimatedAppIcon(
+                AppIcon.chevronRight,
+                size: 22,
+                excludeFromSemantics: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Iniciales (1-2) del nombre para el avatar del resumen.
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  if (parts.isEmpty) return '?';
+  final letters = parts.take(2).map((p) => p[0].toUpperCase()).join();
+  return letters.isEmpty ? '?' : letters;
 }

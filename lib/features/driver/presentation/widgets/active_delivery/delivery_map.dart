@@ -10,13 +10,17 @@ import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
 import '../../../../../core/location/location_service.dart';
 import '../../../../../core/location/truck_tracking_service.dart';
+import '../../../../../core/map/dark_map_canvas.dart';
 import '../../../../../core/map/osm_tile_layer.dart';
 import '../../../../../core/map/tile_prefetch.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/route_navigation.dart';
+import '../map_motion.dart';
 import '../map_zoom_buttons.dart';
+import '../radar_pulse.dart';
 import '../route_points.dart';
-import 'map_round_button.dart';
+import '../stop_pin.dart';
+import 'truck_marker.dart';
 
 export '../route_points.dart'
     show routeGeometryPoints, routePrefetchPoints, simplifiedRoutePoints;
@@ -174,11 +178,25 @@ class DeliveryMap extends ConsumerStatefulWidget {
   ConsumerState<DeliveryMap> createState() => _DeliveryMapState();
 }
 
-class _DeliveryMapState extends ConsumerState<DeliveryMap> {
+class _DeliveryMapState extends ConsumerState<DeliveryMap>
+    with SingleTickerProviderStateMixin {
   final MapController _controller = MapController();
+  // Se asigna en initState (no `late` perezoso): un acceso perezoso desde
+  // dispose crearía el AnimationController con el widget ya desmontado.
+  late final AnimatedMapMover _mover;
 
   /// Modo "seguir al camión".
   bool _follow = false;
+
+  /// Última posición usada para calcular el rumbo del camión y el rumbo actual
+  /// (grados, 0 = norte). Se actualiza solo cuando el camión se movió lo
+  /// suficiente (umbral), así el camión no "tiembla" girando con el jitter del
+  /// GPS estando parado.
+  LatLng? _headingFrom;
+  double? _heading;
+
+  /// Metros que debe moverse el camión para recalcular su rumbo.
+  static const double _headingMinMeters = 4;
 
   /// Zoom al seguir: suficiente para ver la cuadra siguiente.
   static const double _followZoom = 17;
@@ -193,6 +211,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
   DriverRouteStop? _layersStop;
   Color? _layersColor;
   List<LatLng> _upcoming = const [];
+  List<DriverRouteStop> _upcomingStops = const [];
   Widget? _streetsLayer;
   Widget _stopsLayer = const SizedBox.shrink();
 
@@ -206,6 +225,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
   @override
   void initState() {
     super.initState();
+    _mover = AnimatedMapMover(vsync: this, controller: _controller);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _prefetchTimer = Timer(_prefetchDelay, _prefetchTiles);
@@ -237,6 +257,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
   @override
   void dispose() {
     _prefetchTimer?.cancel();
+    _mover.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -251,6 +272,17 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
     if (_follow && driver != null) _followTo(driver);
   }
 
+  void _zoomBy(double delta) {
+    // Transición suave: el move directo hacía saltar el mapa y cortaba tiles.
+    // El mover acumula los toques rápidos sobre el zoom pendiente.
+    _mover.zoomBy(
+      delta,
+      min: kDriverMapMinZoom,
+      max: kMapMaxZoom,
+      reduceMotion: MediaQuery.disableAnimationsOf(context),
+    );
+  }
+
   /// Arma (una vez por ruta/parada/color) el trazo, las paradas siguientes y
   /// sus capas. Con la misma ruta, parada y color no hace nada.
   void _ensureStaticLayers(Color lineColor) {
@@ -263,37 +295,60 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
     _layersStop = widget.stop;
     _layersColor = lineColor;
     final streets = simplifiedRoutePoints(widget.route.routeGeometry);
-    _upcoming = [
+    _upcomingStops = [
       for (final s in widget.route.stops)
         if (s.id != widget.stop.id &&
             s.status == DriverRouteStopStatus.pending &&
             s.lat != null &&
             s.lng != null)
-          LatLng(s.lat!, s.lng!),
+          s,
     ];
+    _upcoming = [for (final s in _upcomingStops) LatLng(s.lat!, s.lng!)];
+    // Trazo con glow: línea ancha translúcida de marca por debajo y una fina
+    // sólida de marca encima (StrokeCap.round por defecto en flutter_map v7).
     _streetsLayer = streets.length >= 2
         ? PolylineLayer(
             polylines: [
-              Polyline(points: streets, strokeWidth: 5, color: lineColor),
+              Polyline(
+                points: streets,
+                strokeWidth: 12,
+                color: lineColor.withValues(alpha: 0.28),
+              ),
+              Polyline(points: streets, strokeWidth: 4, color: lineColor),
             ],
           )
         : null;
     final destination = _destination;
+    const upcomingSize = 30.0;
+    const destSize = 52.0;
     _stopsLayer = MarkerLayer(
       markers: [
-        for (final p in _upcoming)
-          Marker(point: p, width: 18, height: 18, child: const _UpcomingDot()),
+        // Paradas siguientes: pines chicos numerados, coloreados por estado.
+        for (final s in _upcomingStops)
+          Marker(
+            point: LatLng(s.lat!, s.lng!),
+            width: upcomingSize,
+            height: StopPin.heightFor(upcomingSize),
+            alignment: Alignment.topCenter,
+            child: StopPin(stop: s, size: upcomingSize),
+          ),
+        // Destino: pin teardrop destacado de marca con glow y el pin de lugar.
         if (destination != null)
           Marker(
             point: destination,
-            width: 56,
-            height: 56,
+            width: destSize,
+            height: TeardropPin.heightFor(destSize),
             alignment: Alignment.topCenter,
-            child: AnimatedAppIcon(
-              AppIcon.place,
-              size: 56,
-              color: lineColor,
-              semanticLabel: 'Destino',
+            child: const TeardropPin(
+              color: AppColors.brand,
+              size: destSize,
+              glow: true,
+              child: AnimatedAppIcon(
+                AppIcon.place,
+                size: 30,
+                color: Colors.white,
+                semanticLabel: 'Destino',
+              ),
             ),
           ),
       ],
@@ -369,8 +424,20 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
       ref.watch(deliveryDriverFixProvider).value,
     );
     final driver = fix == null ? null : LatLng(fix.lat, fix.lng);
-    final scheme = Theme.of(context).colorScheme;
-    _ensureStaticLayers(scheme.onSurface);
+    // Rumbo del camión: ángulo del último tramo recorrido (si se movió lo
+    // suficiente), para orientarlo en el mapa como Uber/inDrive.
+    if (driver != null) {
+      final from = _headingFrom;
+      if (from == null) {
+        _headingFrom = driver;
+      } else if (const Distance()(from, driver) >= _headingMinMeters) {
+        _heading = _bearingDegrees(from, driver);
+        _headingFrom = driver;
+      }
+    }
+    // El trazo y la línea directa van en rojo de marca para el look con glow
+    // sobre el mapa oscuro.
+    _ensureStaticLayers(AppColors.brand);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -385,7 +452,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
             _optionsFor(
               _initialCamera(constraints.biggest, anchor, destination, driver),
             );
-        return _buildMap(context, options, driver: driver, scheme: scheme);
+        return _buildMap(context, options, driver: driver);
       },
     );
   }
@@ -394,7 +461,6 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
     BuildContext context,
     MapOptions options, {
     required LatLng? driver,
-    required ColorScheme scheme,
   }) {
     final destination = _destination;
     return Stack(
@@ -406,7 +472,8 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
             mapController: _controller,
             options: options,
             children: [
-              const OsmTileLayer(),
+              const DarkMapTiles(),
+              const DarkMapScrim(),
               if (_streetsLayer != null)
                 _streetsLayer!
               else if (destination != null && driver != null)
@@ -414,46 +481,77 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
                   polylines: [
                     Polyline(
                       points: [driver, destination],
-                      strokeWidth: 5,
-                      color: scheme.onSurface,
+                      strokeWidth: 12,
+                      color: AppColors.brand.withValues(alpha: 0.28),
+                    ),
+                    Polyline(
+                      points: [driver, destination],
+                      strokeWidth: 4,
+                      color: AppColors.brand,
                     ),
                   ],
                 ),
               _stopsLayer,
-              // Única capa que cambia con cada fix del GPS.
-              if (driver != null)
+              // Capas que cambian con cada fix del GPS: el radar debajo del
+              // camión (solo con fix en vivo) y el marcador del camión encima.
+              if (driver != null) ...[
                 MarkerLayer(
                   markers: [
                     Marker(
                       point: driver,
-                      width: 44,
-                      height: 44,
-                      child: const _TruckMarker(),
+                      width: 120,
+                      height: 120,
+                      // trigger: cada fix del GPS dispara un ping finito.
+                      child: RadarPulse(size: 120, trigger: driver),
                     ),
                   ],
                 ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: driver,
+                      width: 52,
+                      height: 52,
+                      // Camión visto desde arriba que apunta al rumbo (Uber/
+                      // inDrive): rota suave al doblar o retroceder.
+                      child: TruckMarker(headingDegrees: _heading, size: 52),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
         Positioned(
-          right: 12,
-          // Encima de la hoja colapsada (≈32% del alto).
-          bottom: MediaQuery.sizeOf(context).height * 0.32 + 12,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          right: 14,
+          // Al PIE del mapa (ya no hay hoja persistente que los tapara: antes
+          // iban a ≈32% del alto y la hoja los cubría). Agrupados en una sola
+          // tarjeta compacta, justo encima de la barra de acciones.
+          bottom: 16,
+          child: _MapControls(
             children: [
-              MapZoomButtons(controller: _controller),
-              const SizedBox(height: 10),
+              _MapControlButton(
+                tooltip: 'Acercar',
+                icon: AppIcon.add,
+                onPressed: () => _zoomBy(1),
+              ),
+              const _MapControlDivider(),
+              _MapControlButton(
+                tooltip: 'Alejar',
+                icon: AppIcon.remove,
+                onPressed: () => _zoomBy(-1),
+              ),
               if (driver != null) ...[
-                MapRoundButton(
+                const _MapControlDivider(),
+                _MapControlButton(
                   tooltip: _follow ? 'Dejar de seguir' : 'Seguir camión',
                   icon: AppIcon.navigation,
                   selected: _follow,
                   onPressed: () => _toggleFollow(driver),
                 ),
-                const SizedBox(height: 10),
               ],
-              MapRoundButton(
+              const _MapControlDivider(),
+              _MapControlButton(
                 tooltip: 'Centrar',
                 icon: AppIcon.gps,
                 onPressed: () => _recenter(driver),
@@ -466,38 +564,85 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap> {
   }
 }
 
-class _TruckMarker extends StatelessWidget {
-  const _TruckMarker();
+/// Rumbo (grados, 0 = norte, 90 = este) del tramo [a]→[b], para orientar el
+/// camión en el mapa.
+double _bearingDegrees(LatLng a, LatLng b) {
+  final lat1 = a.latitude * math.pi / 180;
+  final lat2 = b.latitude * math.pi / 180;
+  final dLon = (b.longitude - a.longitude) * math.pi / 180;
+  final y = math.sin(dLon) * math.cos(lat2);
+  final x =
+      math.cos(lat1) * math.sin(lat2) -
+      math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+  return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+}
+
+/// Tarjeta flotante que agrupa los controles del mapa (acercar, alejar, seguir,
+/// centrar) en un solo bloque compacto. Ocupa menos alto que botones sueltos,
+/// así no se encima con el bloque de estado/"Ayuda" en pantallas cortas, y se
+/// lee como un control único (mejor UX).
+class _MapControls extends StatelessWidget {
+  const _MapControls({required this.children});
+
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.brand,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
-      ),
-      child: const AnimatedAppIcon(
-        AppIcon.deliver,
-        color: Colors.white,
-        size: 22,
-        semanticLabel: 'Tu camión',
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surface,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }
 
-class _UpcomingDot extends StatelessWidget {
-  const _UpcomingDot();
+/// Línea divisoria tenue entre controles de la tarjeta.
+class _MapControlDivider extends StatelessWidget {
+  const _MapControlDivider();
+
+  @override
+  Widget build(BuildContext context) => Divider(
+    height: 1,
+    thickness: 1,
+    indent: 10,
+    endIndent: 10,
+    color: Theme.of(context).colorScheme.outlineVariant,
+  );
+}
+
+/// Un control del mapa dentro de la tarjeta: botón táctil de 48 con el ícono
+/// animado DisTrack; relleno de marca cuando está [selected] (modo "seguir").
+class _MapControlButton extends StatelessWidget {
+  const _MapControlButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.selected = false,
+  });
+
+  final String tooltip;
+  final AppIcon icon;
+  final VoidCallback onPressed;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade500,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      // Más chicos aún (antes 42/20): la columna ocupa menos alto y no la tapa
+      // la tarjeta de estado cuando el mapa queda corto.
+      iconSize: 18,
+      padding: EdgeInsets.zero,
+      color: selected ? scheme.primary : null,
+      constraints: const BoxConstraints.tightFor(width: 38, height: 38),
+      icon: AnimatedAppIcon(
+        icon,
+        state: selected ? AppIconState.active : AppIconState.idle,
       ),
     );
   }

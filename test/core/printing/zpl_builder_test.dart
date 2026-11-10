@@ -69,7 +69,7 @@ void main() {
       expect(zpl, isNot(contains('^BCN')));
     });
 
-    test('con symbology both agrega Code128 con el id corto del bulto', () {
+    test('con symbology both agrega Code128 con el id corto del producto', () {
       final zpl = ZplBuilder.packageLabel(
         payload: _payload(),
         qrContent: qr,

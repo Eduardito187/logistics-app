@@ -38,7 +38,7 @@ void main() {
     final adapter = _CaptureAdapter();
     final dio = Dio(BaseOptions(baseUrl: 'http://api.test'))
       ..httpClientAdapter = adapter;
-    final source = PickingRemoteDataSource(LogisticsApi(dio));
+    final source = PickingRemoteDataSource(LogisticsApi(dio), dio);
 
     await source.listShipments(status: ShipmentStatus.planned);
 
@@ -46,4 +46,22 @@ void main() {
     expect(uri.path, '/app/shipments');
     expect(uri.queryParameters['status'], 'PLANNED');
   });
+
+  test(
+    'emitOrderLabels hace POST con body vacío al endpoint del pedido',
+    () async {
+      final adapter = _CaptureAdapter();
+      final dio = Dio(BaseOptions(baseUrl: 'http://api.test'))
+        ..httpClientAdapter = adapter;
+      final source = PickingRemoteDataSource(LogisticsApi(dio), dio);
+
+      await source.emitOrderLabels('SCZ-1');
+
+      final req = adapter.requests.single;
+      expect(req.method, 'POST');
+      expect(req.uri.path, '/app/orders/SCZ-1/labels');
+      // Body vacío: el backend deriva origen/destino/líneas (emisión por orden).
+      expect(req.data, isEmpty);
+    },
+  );
 }

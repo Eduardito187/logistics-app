@@ -15,6 +15,7 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
+import '../../../core/sharing/share_service.dart';
 import '../../../core/widgets/section_card.dart';
 import '../data/datasources/signature_file_store.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
@@ -27,10 +28,15 @@ import 'widgets/evidence_photo_preview.dart';
 /// de la firma viaja aparte como evidencia por la cola de fotos).
 const String kDigitalSignatureConfirmation = 'FIRMA_DIGITAL';
 
-/// `kind` con que se sube la firma a `/app/deliveries/photos`. El contrato hoy
-/// solo acepta `pod` y `damage`; se usa `pod` (lo más cercano) hasta que el
-/// backend agregue `signature` (docs/backend-requests/2026-10-16-firma-cliente.md).
-const String kSignatureEvidenceKind = 'pod';
+/// `kind` de la firma del cliente: va al endpoint de EVIDENCIA anti-fraude
+/// (`/app/deliveries/evidence`) LIGADA al cliente (snapshot) y se valida en el
+/// backend (docs/backend-requests/2026-11-05-evidencia-ligada-al-cliente-antifraude.md).
+const String kSignatureEvidenceKind = 'signature';
+
+/// `kind` de la foto del documento (carnet) del cliente: evidencia anti-fraude
+/// ligada al cliente; el backend hace OCR del nº y lo cruza con el documento del
+/// cliente.
+const String kDocumentEvidenceKind = 'id_document';
 
 /// Prueba de entrega (POD): bulto + confirmación del cliente (QR o firma en
 /// pantalla) + foto obligatoria + GPS. El registro es offline-first; la foto y
@@ -48,6 +54,9 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   String? _unitId;
   String? _confirmation;
   XFile? _photo;
+
+  /// Foto del documento (carnet) del cliente — evidencia anti-fraude OPCIONAL.
+  XFile? _document;
 
   /// PNG de la firma del cliente (solo si confirmó firmando en pantalla).
   Uint8List? _signature;
@@ -72,20 +81,20 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: '1. Bulto entregado',
+              title: '1. Producto entregado',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_unitId != null)
-                    Text('Bulto: $_unitId')
+                    Text('Producto: $_unitId')
                   else
-                    const Text('Escanea el bulto a entregar.'),
+                    const Text('Escanea el producto a entregar.'),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _scanUnit,
                     icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
-                      _unitId == null ? 'Escanear bulto' : 'Reescanear',
+                      _unitId == null ? 'Escanear producto' : 'Reescanear',
                     ),
                   ),
                 ],
@@ -113,6 +122,14 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                       child: SignaturePreview(
                         key: const ValueKey('signature-preview'),
                         png: _signature!,
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _busy ? null : _shareSignature,
+                        icon: const AnimatedAppIcon(AppIcon.send, size: 18),
+                        label: const Text('Compartir firma'),
                       ),
                     ),
                   ] else if (_confirmation != null)
@@ -145,13 +162,53 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Decodificada chica y liberada del caché al salir.
-                  if (_photo != null) EvidencePhotoPreview(path: _photo!.path),
+                  if (_photo != null) ...[
+                    EvidencePhotoPreview(path: _photo!.path),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _busy ? null : _sharePhoto,
+                        icon: const AnimatedAppIcon(AppIcon.send, size: 18),
+                        label: const Text('Compartir foto'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _takePhoto,
                     icon: const AnimatedAppIcon(AppIcon.capture),
                     label: Text(
                       _photo == null ? 'Tomar foto' : 'Volver a tomar',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: '4. Documento del cliente (opcional)',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_document != null) ...[
+                    EvidencePhotoPreview(path: _document!.path),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _busy ? null : _shareDocument,
+                        icon: const AnimatedAppIcon(AppIcon.send, size: 18),
+                        label: const Text('Compartir documento'),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _takeDocument,
+                    icon: const AnimatedAppIcon(AppIcon.capture),
+                    label: Text(
+                      _document == null
+                          ? 'Foto del documento'
+                          : 'Volver a tomar',
                     ),
                   ),
                 ],
@@ -202,6 +259,30 @@ class _PodScreenState extends ConsumerState<PodScreen> {
     }
   }
 
+  /// Comparte la firma del cliente por el menú nativo (WhatsApp, correo, etc.).
+  Future<void> _shareSignature() async {
+    final sig = _signature;
+    if (sig == null || _busy) return;
+    final cliente = widget.stop.customerName ?? 'Entrega';
+    await ref
+        .read(shareServiceProvider)
+        .shareImagePng(
+          sig,
+          filename: 'firma_${widget.stop.shipmentId}.png',
+          text: 'Firma del cliente · $cliente',
+        );
+  }
+
+  /// Comparte la foto de evidencia (documento/entrega) por el menú nativo.
+  Future<void> _sharePhoto() async {
+    final photo = _photo;
+    if (photo == null || _busy) return;
+    final cliente = widget.stop.customerName ?? 'Entrega';
+    await ref
+        .read(shareServiceProvider)
+        .shareFile(photo.path, text: 'Foto de entrega · $cliente');
+  }
+
   Future<void> _takePhoto() async {
     // Foto reducida (ancho y calidad acotados): en teléfonos de 1 GB una foto
     // de 12 MP a resolución completa ocupa ~48 MB al decodificarse.
@@ -212,14 +293,47 @@ class _PodScreenState extends ConsumerState<PodScreen> {
     if (photo != null && mounted) setState(() => _photo = photo);
   }
 
+  Future<void> _takeDocument() async {
+    final doc = await ref.read(photoPickerProvider)(
+      maxWidth: kEvidencePhotoMaxWidth,
+      imageQuality: kEvidencePhotoQuality,
+    );
+    if (doc != null && mounted) setState(() => _document = doc);
+  }
+
+  Future<void> _shareDocument() async {
+    final doc = _document;
+    if (doc == null || _busy) return;
+    final cliente = widget.stop.customerName ?? 'Cliente';
+    await ref
+        .read(shareServiceProvider)
+        .shareFile(doc.path, text: 'Documento del cliente · $cliente');
+  }
+
+  /// Snapshot del cliente para LIGAR la evidencia a su identidad (anti-fraude):
+  /// nombre, teléfono, ubicación de captura y momento. El backend cruza el envío
+  /// con el cliente; esto deja constancia de a quién dijo el chofer que entregó.
+  Map<String, Object?> _clientSnapshot(GpsFix? fix) => {
+    if (widget.stop.customerName != null)
+      'customer_name': widget.stop.customerName,
+    if (widget.stop.customerPhone != null)
+      'customer_phone': widget.stop.customerPhone,
+    if (fix != null) 'lat': fix.lat,
+    if (fix != null) 'lng': fix.lng,
+    'captured_at': DateTime.now().toUtc().toIso8601String(),
+  };
+
   Future<void> _register() async {
     setState(() => _busy = true);
     try {
-      // El GPS se pide en paralelo con el encolado de la foto (no en serie).
-      final fixFuture = currentFix(ref);
-      // La foto (y la firma, si la hay) se encolan aparte y se suben
-      // idempotentemente (offline-first); el backend las liga al envío. El POD
-      // no espera a la subida.
+      // El GPS se pide primero: su posición va en el snapshot del cliente de la
+      // evidencia anti-fraude (firma/documento) y en el POD. Suele salir de la
+      // caché (se precalentó al abrir).
+      final fix = await currentFix(ref);
+      if (!mounted) return;
+      final snapshot = _clientSnapshot(fix);
+      // La foto, la firma y el documento se encolan aparte y se suben
+      // idempotentemente (offline-first). El POD no espera a la subida.
       final enqueue = ref.read(enqueueDeliveryPhotoProvider);
       final photo = _photo;
       if (photo != null) {
@@ -227,6 +341,15 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           shipmentId: widget.stop.shipmentId,
           filePath: photo.path,
           kind: 'pod',
+        );
+      }
+      final document = _document;
+      if (document != null) {
+        await enqueue(
+          shipmentId: widget.stop.shipmentId,
+          filePath: document.path,
+          kind: kDocumentEvidenceKind,
+          clientSnapshot: snapshot,
         );
       }
       final signature = _signature;
@@ -238,6 +361,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
             shipmentId: widget.stop.shipmentId,
             filePath: path,
             kind: kSignatureEvidenceKind,
+            clientSnapshot: snapshot,
           );
           // La cola ya copió el archivo a su directorio persistente.
           await store.discard(path);
@@ -246,7 +370,6 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           // igual con el marcador FIRMA_DIGITAL.
         }
       }
-      final fix = await fixFuture;
       if (!mounted) return;
       final now = DateTime.now();
       final outcome = await ref
@@ -262,8 +385,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
               confirmation: _confirmation!,
               photoPath: photo != null ? 'pendiente' : null,
             ).toJson(),
-            label:
-                'POD · ${widget.stop.customerName ?? widget.stop.shipmentId}',
+            label: 'POD · ${widget.stop.customerName ?? 'Entrega'}',
             occurredAt: now,
           );
       if (!mounted) return;

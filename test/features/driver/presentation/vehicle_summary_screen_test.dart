@@ -18,7 +18,7 @@ void main() {
           (ref) async => buildCostSummary(costPerKmCents: 500),
         ),
         vehicleUtilizationProvider.overrideWith(
-          (ref) async => <String, Object?>{'active_days': 20},
+          (ref) async => <String, Object?>{'departures_count': 20},
         ),
       ],
       child: const VehicleSummaryScreen(),
@@ -30,7 +30,7 @@ void main() {
     expect(find.text('BOB 1700.00'), findsOneWidget); // costo total
     expect(find.text('BOB 5.00'), findsOneWidget); // costo por km
     expect(find.byType(UtilizationCard), findsOneWidget);
-    expect(find.text('active days'), findsOneWidget);
+    expect(find.text('Salidas'), findsOneWidget);
     expect(find.text('20'), findsOneWidget);
   });
 }

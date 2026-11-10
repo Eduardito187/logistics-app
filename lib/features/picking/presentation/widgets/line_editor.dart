@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/widgets/section_card.dart';
 import 'line_draft.dart';
 
@@ -38,7 +39,8 @@ class LineEditor extends StatelessWidget {
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: 'SKU',
-              prefixIcon: AnimatedAppIcon(AppIcon.qrCode),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.qrCode),
             ),
           ),
           const SizedBox(height: 8),
@@ -47,7 +49,8 @@ class LineEditor extends StatelessWidget {
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               labelText: 'Nombre del producto',
-              prefixIcon: AnimatedAppIcon(AppIcon.receive),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.receive),
             ),
           ),
           const SizedBox(height: 8),

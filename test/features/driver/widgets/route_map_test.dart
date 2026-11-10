@@ -45,7 +45,7 @@ void main() {
     expect(find.byType(StopPin), findsNWidgets(2));
     // Sin geometría del backend igual traza la ruta entre paradas.
     final layer = tester.widget<PolylineLayer>(find.byType(PolylineLayer));
-    expect(layer.polylines.single.points, hasLength(2));
+    expect(layer.polylines.last.points, hasLength(2));
     expect(find.byTooltip('Acercar'), findsOneWidget);
     expect(find.byTooltip('Alejar'), findsOneWidget);
     expect(find.byTooltip('Ver toda la ruta'), findsOneWidget);
@@ -80,7 +80,7 @@ void main() {
     );
 
     final layer = tester.widget<PolylineLayer>(find.byType(PolylineLayer));
-    expect(layer.polylines.single.points, hasLength(4));
+    expect(layer.polylines.last.points, hasLength(4));
 
     final controller = MapController.maybeOf(
       tester.element(find.byType(MarkerLayer)),

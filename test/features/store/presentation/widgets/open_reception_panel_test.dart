@@ -44,22 +44,23 @@ Future<void> _pumpWithNodes(
 }
 
 void main() {
-  testWidgets('muestra el conteo de bultos esperados y el selector de origen', (
-    tester,
-  ) async {
-    await _pumpWithNodes(
-      tester,
-      units: () async => [unit(unitId: 'u1'), unit(unitId: 'u2')],
-      nodes: () async => [_dest, originNode()],
-      onOpen: (_, _) async {},
-    );
+  testWidgets(
+    'muestra el conteo de productos esperados y el selector de origen',
+    (tester) async {
+      await _pumpWithNodes(
+        tester,
+        units: () async => [unit(unitId: 'u1'), unit(unitId: 'u2')],
+        nodes: () async => [_dest, originNode()],
+        onOpen: (_, _) async {},
+      );
 
-    expect(
-      find.textContaining('Este envío tiene 2 producto(s) esperado(s)'),
-      findsOneWidget,
-    );
-    expect(find.text('Nodo de origen'), findsOneWidget);
-  });
+      expect(
+        find.textContaining('Este envío tiene 2 producto(s) esperado(s)'),
+        findsOneWidget,
+      );
+      expect(find.text('Nodo de origen'), findsOneWidget);
+    },
+  );
 
   testWidgets('el botón abrir está deshabilitado hasta elegir el origen', (
     tester,

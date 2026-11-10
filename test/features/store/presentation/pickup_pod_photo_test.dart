@@ -19,7 +19,7 @@ import '../store_fixtures.dart';
 import '../store_test_harness.dart';
 
 // Recojo en tienda: foto de evidencia (cámara falsa vía `photoPickerProvider`)
-// y avisos que flotan encima del botón fijo "Escanear y entregar bulto".
+// y avisos que flotan encima del botón fijo "Escanear y entregar producto".
 
 final _shipment = shipment(customerName: 'Ana Pérez');
 
@@ -212,7 +212,7 @@ void main() {
     );
   });
 
-  testWidgets('bulto ajeno: aviso rojo sobre la cámara y sin resumen', (
+  testWidgets('producto ajeno: aviso rojo sobre la cámara y sin resumen', (
     tester,
   ) async {
     final h = await _pump(tester, codes: ['unit-de-otro']);

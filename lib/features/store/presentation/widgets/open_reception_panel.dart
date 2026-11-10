@@ -6,6 +6,7 @@ import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/store_controllers.dart';
@@ -67,10 +68,8 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                     value: _originId,
                     isExpanded: true,
                     decoration: const InputDecoration(
-                      prefixIcon: AnimatedAppIcon(
-                        AppIcon.outbound,
-                        excludeFromSemantics: true,
-                      ),
+                      prefixIconConstraints: FieldIcon.prefixConstraints,
+                      prefixIcon: FieldIcon(icon: AppIcon.outbound),
                       labelText: 'Nodo de origen',
                     ),
                     items: [

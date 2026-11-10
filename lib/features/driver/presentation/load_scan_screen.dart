@@ -47,7 +47,9 @@ class LoadScanScreen extends ConsumerWidget {
                       vertical: 8,
                     ),
                     leading: const AnimatedAppIcon(AppIcon.receive, size: 32),
-                    title: Text('Envío ${delivery.shipmentId}'),
+                    // Nº de secuencia, NO el uuid del envío (el backend aún no
+                    // devuelve una referencia legible aquí).
+                    title: Text('Envío ${i + 1}'),
                     subtitle: Text(
                       '${effectiveScanCount(delivery, loaded[delivery.shipmentId])} escaneo(s)',
                     ),

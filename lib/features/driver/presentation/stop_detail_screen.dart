@@ -107,7 +107,7 @@ class StopDetailScreen extends ConsumerWidget {
                 );
               },
               icon: const AnimatedAppIcon(AppIcon.download),
-              label: const Text('Descargar bultos'),
+              label: const Text('Descargar productos'),
             ),
             const SizedBox(height: 12),
             FilledButton.icon(

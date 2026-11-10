@@ -33,9 +33,9 @@ void main() {
 
     expect(find.text('Escanear al recoger'), findsOneWidget);
     expect(find.byType(EmptyState), findsOneWidget);
-    expect(find.text('Sin bultos recogidos'), findsOneWidget);
+    expect(find.text('Sin productos recogidos'), findsOneWidget);
     final button = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Escanear bulto'),
+      findButtonWithText<FilledButton>('Escanear producto'),
     );
     expect(button.onPressed, isNotNull);
   });

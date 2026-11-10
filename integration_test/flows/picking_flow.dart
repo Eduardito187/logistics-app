@@ -4,10 +4,11 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../support/e2e_app.dart';
 
-/// Flujo 4: picking — preparar unidad (escaneo EAN) → imprimir (impresora
-/// falsa).
+/// Flujo 4: picking — verificar producto (escaneo EAN) → imprimir (impresora
+/// falsa). El escaneo de verificación es GLOBAL (un botón del pedido) y cada
+/// producto imprime su etiqueta.
 void pickingFlowTests() {
-  group('Preparador: escanear EAN e imprimir', () {
+  group('Preparador: verificar con escaneo e imprimir', () {
     setUp(e2eSetUp);
 
     Future<void> openOrder(WidgetTester tester) async {
@@ -17,24 +18,30 @@ void pickingFlowTests() {
         tester,
         find.text('Pedido ${FakeBackend.pickingOrderNumber}'),
       );
-      await pumpUntilFound(tester, find.text('Unidades (2)'));
+      await pumpUntilFound(tester, find.text('Productos (2)'));
     }
 
-    Finder prepareButtons() =>
-        findButtonWithText<FilledButton>('Escanear EAN e imprimir');
+    // El escaneo de verificación es un único botón del pedido (no por ítem).
+    Finder verifyButton() => find.text('Verificar productos con escaneo');
 
-    testWidgets('asigna carril, prepara las dos unidades, imprime cada '
-        'etiqueta y luego el lote firmado', (tester) async {
+    testWidgets('verifica las dos unidades con escaneo (asigna vehículo), '
+        'imprime cada etiqueta y luego el lote firmado', (tester) async {
       final h = await pumpE2eApp(
         tester,
         scans: ['7791234000011', '7791234000028'],
       );
       await openOrder(tester);
-      expect(prepareButtons(), findsNWidgets(2));
+      // Cada producto ofrece "Imprimir etiqueta" (la lista es perezosa: al menos
+      // el primero está construido) y el escaneo es un único botón global.
+      expect(
+        findButtonWithText<FilledButton>('Imprimir etiqueta'),
+        findsWidgets,
+      );
+      expect(verifyButton(), findsOneWidget);
 
-      // Primera unidad: sin carril asignado, lo pide antes de escanear.
-      await tapVisible(tester, prepareButtons());
-      await pumpUntilFound(tester, find.text('Carril / vehículo'));
+      // Primer producto: sin vehículo asignado, lo pide antes de escanear.
+      await tapVisible(tester, verifyButton());
+      await pumpUntilFound(tester, find.text('Vehículo de reparto'));
       await tester.enterText(
         find.descendant(
           of: find.byType(AlertDialog),
@@ -43,22 +50,28 @@ void pickingFlowTests() {
         'CARRIL 3',
       );
       await tapVisible(tester, find.text('Guardar'));
-      await pumpUntilFound(tester, find.text('Unidad preparada e impresa.'));
-      await pumpUntilFound(tester, find.text('Reimprimir etiqueta'));
-      expect(prepareButtons(), findsOneWidget);
+      await pumpUntilFound(tester, find.text('Producto preparado e impreso.'));
+      await pumpUntilFound(tester, find.text('Imprimir de nuevo'));
 
-      // Segunda unidad: el carril ya está, va directo al escaneo.
-      await tapVisible(tester, prepareButtons());
+      // Segundo producto: el vehículo ya está, va directo al escaneo. Cuando las
+      // dos unidades quedan preparadas el botón global de verificar desaparece
+      // (el ProgressCard está siempre construido; no dependemos de la fila
+      // perezosa del segundo producto para comprobarlo).
+      await tapVisible(tester, verifyButton());
       await pumpUntil(
         tester,
-        () => find.text('Reimprimir etiqueta').evaluate().length == 2,
+        () => verifyButton().evaluate().isEmpty,
         reason: 'Las dos unidades deberían quedar preparadas',
       );
-      expect(prepareButtons(), findsNothing);
-      expect(find.text('Carril / vehículo'), findsNothing);
+      // Ya no quedan productos por verificar.
+      expect(verifyButton(), findsNothing);
+      expect(find.text('Vehículo de reparto'), findsNothing);
 
-      // Escaneo de EAN (no QR) por unidad.
-      expect(h.scanner.requestedTitles, ['Escanear EAN', 'Escanear EAN']);
+      // Escaneo de EAN (no QR) por producto.
+      expect(h.scanner.requestedTitles, [
+        'Escanear producto',
+        'Escanear producto',
+      ]);
       expect(h.scanner.requestedFormats.first, contains(BarcodeFormat.ean13));
 
       // Impresora: el ZPL de cada etiqueta, en orden.
@@ -99,8 +112,8 @@ void pickingFlowTests() {
       );
       await openOrder(tester);
 
-      await tapVisible(tester, prepareButtons());
-      await pumpUntilFound(tester, find.text('Carril / vehículo'));
+      await tapVisible(tester, verifyButton());
+      await pumpUntilFound(tester, find.text('Vehículo de reparto'));
       await tester.enterText(
         find.descendant(
           of: find.byType(AlertDialog),
@@ -114,10 +127,10 @@ void pickingFlowTests() {
         tester,
         find.text('Seleccioná una impresora en Ajustes.'),
       );
-      expect(find.text('Unidad preparada e impresa.'), findsNothing);
+      expect(find.text('Producto preparado e impreso.'), findsNothing);
       // La preparación igual quedó registrada (offline-first).
       expect(h.backend.preparationScans, hasLength(1));
-      expect(find.text('Reimprimir etiqueta'), findsOneWidget);
+      expect(find.text('Imprimir de nuevo'), findsOneWidget);
       expect(h.backend.unhandled, isEmpty);
     });
   });

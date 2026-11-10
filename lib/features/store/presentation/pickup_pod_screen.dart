@@ -12,6 +12,7 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
+import '../../../core/sharing/share_service.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
 import '../domain/usecases/record_pod.dart';
@@ -90,6 +91,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                               photo: _photoFile,
                               busy: _busy,
                               onTakePhoto: _takePhoto,
+                              onShare: _photoFile == null ? null : _sharePhoto,
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -142,6 +144,16 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     if (qr == null || !mounted) return;
     _confirmationController.text = qr;
     _onConfirmationChanged(qr);
+  }
+
+  /// Comparte la foto de evidencia/documento por el menú nativo (WhatsApp, etc.).
+  Future<void> _sharePhoto() async {
+    final file = _photoFile;
+    if (file == null || _busy) return;
+    final cliente = _shipment.customerName;
+    await ref
+        .read(shareServiceProvider)
+        .shareFile(file.path, text: 'Foto de entrega · $cliente');
   }
 
   Future<void> _takePhoto() async {

@@ -52,8 +52,8 @@ void main() {
 
     expect(find.text('2/5'), findsOneWidget); // preparadas
     expect(find.text('3'), findsOneWidget); // pendientes = total - prepared
-    expect(find.text('Preparadas'), findsOneWidget);
-    expect(find.text('Pendientes'), findsOneWidget);
+    expect(find.text('Preparados'), findsOneWidget);
+    expect(find.text('Por preparar'), findsOneWidget);
   });
 
   testWidgets('sin carril muestra "sin asignar" y el botón "Asignar"', (
@@ -61,7 +61,7 @@ void main() {
   ) async {
     await _pump(tester, prepared: 0, total: 3, lane: null);
 
-    expect(find.text('Carril / vehículo sin asignar'), findsOneWidget);
+    expect(find.text('Vehículo de reparto sin asignar'), findsOneWidget);
     expect(find.text('Asignar'), findsOneWidget);
     expect(find.text('Cambiar'), findsNothing);
   });
@@ -71,7 +71,7 @@ void main() {
   ) async {
     await _pump(tester, prepared: 1, total: 3, lane: 'ABC-123');
 
-    expect(find.text('Carril / vehículo: ABC-123'), findsOneWidget);
+    expect(find.text('Vehículo: ABC-123'), findsOneWidget);
     expect(find.text('Cambiar'), findsOneWidget);
   });
 
@@ -82,7 +82,7 @@ void main() {
 
     await tester.tap(find.text('Cambiar'));
     await tester.tap(find.text('Imprimir todas las etiquetas'));
-    await tester.tap(find.text('Reimprimir lote'));
+    await tester.tap(find.text('Anular y emitir de nuevo'));
     await tester.pump();
 
     expect(taps.assign, 1);
@@ -111,7 +111,7 @@ void main() {
       findButtonWithText<OutlinedButton>('Imprimir todas las etiquetas'),
     );
     final reprintBtn = tester.widget<OutlinedButton>(
-      findButtonWithText<OutlinedButton>('Reimprimir lote'),
+      findButtonWithText<OutlinedButton>('Anular y emitir de nuevo'),
     );
     expect(printBtn.onPressed, isNull);
     expect(reprintBtn.onPressed, isNull);
@@ -123,7 +123,7 @@ void main() {
   });
 
   testWidgets(
-    'reprinting: el spinner va en "Reimprimir lote", no en imprimir',
+    'reprinting: el spinner va en "Anular y emitir de nuevo", no en imprimir',
     (tester) async {
       await _pump(
         tester,
@@ -136,7 +136,7 @@ void main() {
 
       expect(
         find.descendant(
-          of: findButtonWithText<OutlinedButton>('Reimprimir lote'),
+          of: findButtonWithText<OutlinedButton>('Anular y emitir de nuevo'),
           matching: findAppIconInState(AppIcon.refresh, AppIconState.loading),
         ),
         findsOneWidget,

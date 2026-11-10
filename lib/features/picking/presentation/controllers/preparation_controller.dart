@@ -33,6 +33,13 @@ class PreparationController extends Notifier<PreparationState> {
 /// SIN `autoDispose` a propósito: el progreso (unidades preparadas y carril)
 /// no tiene endpoint de lectura y debe sobrevivir a salir y volver al pedido.
 /// Es chico (un set de ids por pedido abierto en el turno).
+///
+/// 512 MB: se evaluó acotar/purgar por turno largo, pero liberar la entrada
+/// mientras la pantalla la observa (o antes de terminar el pedido) le borraría
+/// al preparador el progreso de escaneo en curso —peor que los pocos KB que
+/// acumula—. `autoDispose` pierde el estado al salir del pedido, que es
+/// justamente lo que hay que conservar. Se deja a propósito: el costo real es
+/// mínimo (decenas de pedidos × un set de ids corto por turno).
 final preparationControllerProvider =
     NotifierProvider.family<PreparationController, PreparationState, String>(
       (_) => PreparationController(),

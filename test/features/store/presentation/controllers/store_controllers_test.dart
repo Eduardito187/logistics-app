@@ -50,7 +50,7 @@ void main() {
   });
 
   group('LocallyReceivedNotifier', () {
-    test('acumula ids de bulto por envío y los lee con forShipment', () {
+    test('acumula ids de producto por envío y los lee con forShipment', () {
       final container = _container(FakeStoreRepository());
       final notifier = container.read(locallyReceivedProvider.notifier);
 
@@ -63,7 +63,7 @@ void main() {
       expect(notifier.forShipment('ship-2'), {'unit-9'});
     });
 
-    test('agregar el mismo bulto dos veces no lo duplica (Set)', () {
+    test('agregar el mismo producto dos veces no lo duplica (Set)', () {
       final container = _container(FakeStoreRepository());
       final notifier = container.read(locallyReceivedProvider.notifier);
       notifier
@@ -105,7 +105,7 @@ void main() {
   });
 
   group('ShelfLocationsNotifier', () {
-    test('guarda y sobrescribe la ubicación por bulto', () {
+    test('guarda y sobrescribe la ubicación por producto', () {
       final container = _container(FakeStoreRepository());
       final notifier = container.read(shelfLocationsProvider.notifier);
 
@@ -314,7 +314,7 @@ void main() {
   });
 
   group('shipmentUnitsProvider', () {
-    test('devuelve los bultos esperados del envío', () async {
+    test('devuelve los productos esperados del envío', () async {
       final container = _container(
         FakeStoreRepository(
           onGetShipmentUnits: (shipmentId) async => [
@@ -329,7 +329,7 @@ void main() {
       expect(units.map((u) => u.unitId), ['u1', 'u2']);
     });
 
-    test('sin bultos devuelve lista vacía', () async {
+    test('sin productos devuelve lista vacía', () async {
       final container = _container(
         FakeStoreRepository(onGetShipmentUnits: (_) async => <UnitTracking>[]),
       );

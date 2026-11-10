@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/pill_tone.dart';
 import 'stop_detail_screen.dart';
@@ -35,6 +36,16 @@ PillTone stopTone(DriverRouteStopStatus status) => switch (status) {
   DriverRouteStopStatus.failed => PillTone.danger,
   DriverRouteStopStatus.pending => PillTone.info,
   _ => PillTone.neutral,
+};
+
+/// Ícono animado DisTrack del estado de una parada (marcador en el mapa y
+/// badge en las tarjetas): entregada = tilde, fallida = error, pendiente/otro
+/// = pin de ubicación.
+AppIcon stopAppIcon(DriverRouteStopStatus status) => switch (status) {
+  DriverRouteStopStatus.completed => AppIcon.success,
+  DriverRouteStopStatus.failed => AppIcon.error,
+  DriverRouteStopStatus.pending => AppIcon.place,
+  _ => AppIcon.place,
 };
 
 /// Abre el detalle de una parada.

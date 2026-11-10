@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import 'brand_splash.dart';
 
@@ -31,6 +32,9 @@ class _BootSplashGateState extends State<BootSplashGate> {
       color: const Color(0xFF141414),
       home: BrandSplash(
         onDone: () {
+          // El splash corre una sola vez por arranque: liberar la composición
+          // Lottie parseada de su caché global (en 512 MB cada KB cuenta).
+          Lottie.cache.clear();
           if (mounted) setState(() => _done = true);
         },
       ),

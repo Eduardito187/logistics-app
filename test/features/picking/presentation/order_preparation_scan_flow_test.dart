@@ -93,7 +93,11 @@ List<EmittedLabel> _threeUnits() => [
 ];
 
 Future<void> _tapPrepare(WidgetTester tester) async {
-  await tester.tap(find.text('Escanear EAN e imprimir').first);
+  // El escaneo de verificación es GLOBAL (un botón en la tarjeta de progreso).
+  final btn = find.text('Verificar productos con escaneo');
+  await tester.ensureVisible(btn);
+  await tester.pumpAndSettle();
+  await tester.tap(btn);
   await tester.pumpAndSettle();
 }
 
@@ -117,7 +121,7 @@ void main() {
     await _tapPrepare(tester);
 
     // Se abrió la cámara continua de EAN (no QR).
-    expect(scanner.requestedTitles, ['Escanear EAN']);
+    expect(scanner.requestedTitles, ['Escanear producto']);
     expect(scanner.requestedFormats.single, [
       BarcodeFormat.ean13,
       BarcodeFormat.code128,
@@ -130,12 +134,12 @@ void main() {
     expect(scan.vehicleId, 'V1');
     expect(scan.lat, -17.78);
     expect(scan.lng, -63.18);
-    expect(scanner.messages, ['Unidad 1/1 preparada · SKU SKU1']);
+    expect(scanner.messages, ['Producto 1/1 preparado · SKU SKU1']);
     // Marcada, impresa y con aviso de éxito.
     expect(printer.printed, ['ZPL_L1']);
     expect(find.text('1/1'), findsOneWidget);
-    expect(find.text('Reimprimir etiqueta'), findsOneWidget);
-    expect(find.text('Unidad preparada e impresa.'), findsOneWidget);
+    expect(find.text('Imprimir de nuevo'), findsOneWidget);
+    expect(find.text('Producto preparado e impreso.'), findsOneWidget);
   });
 
   testWidgets('varias unidades en una sesión: SKU coincidente o la siguiente', (
@@ -160,14 +164,14 @@ void main() {
     // 1º la tocada (L1); "SKU2" coincide con L3; el resto va a L2.
     expect(scans.map((s) => s.unitId), ['L1', 'L3', 'L2']);
     expect(scanner.messages, [
-      'Unidad 1/3 preparada · SKU SKU1',
-      'Unidad 2/3 preparada · SKU SKU2',
-      'Unidad 3/3 preparada · SKU SKU1',
+      'Producto 1/3 preparado · SKU SKU1',
+      'Producto 2/3 preparado · SKU SKU2',
+      'Producto 3/3 preparado · SKU SKU1',
     ]);
     // La impresión sale en cola, en el orden del escaneo.
     expect(printer.printed, ['ZPL_L1', 'ZPL_L3', 'ZPL_L2']);
     expect(find.text('3/3'), findsOneWidget);
-    expect(find.text('3 unidades preparadas e impresas.'), findsOneWidget);
+    expect(find.text('3 productos preparados e impresos.'), findsOneWidget);
   });
 
   testWidgets('pedido completo: un EAN de más avisa y no registra', (
@@ -187,8 +191,8 @@ void main() {
 
     expect(repo.recordScanCalls, 1);
     expect(scanner.messages, [
-      'Unidad 1/1 preparada · SKU SKU1',
-      'Pedido completo: no quedan unidades',
+      'Producto 1/1 preparado · SKU SKU1',
+      'Pedido completo: no quedan productos',
     ]);
     expect(scanner.feedbacks.map((f) => f.ok), [true, false]);
   });
@@ -228,11 +232,11 @@ void main() {
 
     await _tapPrepare(tester);
 
-    expect(scanner.requestedTitles, ['Escanear EAN']);
+    expect(scanner.requestedTitles, ['Escanear producto']);
     expect(repo.recordScanCalls, 0);
     expect(printer.printed, isEmpty);
     expect(find.text('0/1'), findsOneWidget);
-    expect(find.text('Escanear EAN e imprimir'), findsOneWidget);
+    expect(find.text('Verificar productos con escaneo'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
   });
 
@@ -257,7 +261,7 @@ void main() {
       expect(find.text('1/1'), findsOneWidget);
       // Offline invisible: encolado se informa igual que enviado.
       expect(scanner.feedbacks.single.ok, isTrue);
-      expect(find.text('Unidad preparada e impresa.'), findsOneWidget);
+      expect(find.text('Producto preparado e impreso.'), findsOneWidget);
     },
   );
 
@@ -309,7 +313,7 @@ void main() {
     expect(scans.map((s) => s.unitId), ['L1', 'L1']);
     expect(scanner.messages, [
       'No se pudo registrar. Intentá de nuevo.',
-      'Unidad 1/1 preparada · SKU SKU1',
+      'Producto 1/1 preparado · SKU SKU1',
     ]);
     expect(find.text('1/1'), findsOneWidget);
   });
@@ -334,7 +338,7 @@ void main() {
       expect(find.text('1/1'), findsOneWidget);
       // Debe quedar visible el aviso de la impresora, no un éxito falso.
       expect(find.text('Seleccioná una impresora en Ajustes.'), findsOneWidget);
-      expect(find.text('Unidad preparada e impresa.'), findsNothing);
+      expect(find.text('Producto preparado e impreso.'), findsNothing);
     },
   );
 
@@ -403,7 +407,7 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
-    expect(scanner.requestedTitles, ['Escanear EAN']);
+    expect(scanner.requestedTitles, ['Escanear producto']);
     expect(repo.recordScanCalls, 1);
     expect(repo.lastScan!.vehicleId, 'Carril 3');
     expect(printer.printed, ['ZPL_L1']);
@@ -430,9 +434,9 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
 
-    expect(laneScanner.requestedTitles, ['Escanear carril']);
-    expect(scanner.requestedTitles, ['Escanear EAN']);
+    expect(laneScanner.requestedTitles, ['Escanear vehículo']);
+    expect(scanner.requestedTitles, ['Escanear producto']);
     expect(repo.lastScan!.vehicleId, 'LANE-7');
-    expect(find.text('Unidad preparada e impresa.'), findsOneWidget);
+    expect(find.text('Producto preparado e impreso.'), findsOneWidget);
   });
 }

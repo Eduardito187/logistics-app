@@ -17,8 +17,10 @@ class NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final reference =
-        notification.shipmentExternalId ?? notification.shipmentId;
+    // Nunca el uuid del envío: con referencia externa (código/pedido) se
+    // muestra "Envío <código>"; sin ella, solo "Envío" (no "Envío Envío").
+    final external = notification.shipmentExternalId;
+    final reference = external != null ? 'Envío $external' : 'Envío';
 
     return SectionCard(
       onTap: () => context.push('/notifications/${notification.id}'),
@@ -36,7 +38,7 @@ class NotificationTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Envío $reference',
+                  reference,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

@@ -141,12 +141,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Disputar liquidación'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), 'Faltan bultos');
+      await tester.enterText(find.byType(TextField), 'Faltan productos');
       await tester.tap(findButtonWithText<FilledButton>('Disputar'));
       await tester.pumpAndSettle();
 
       expect(repo.disputeCalls, 1);
-      expect(repo.lastDisputeReason, 'Faltan bultos');
+      expect(repo.lastDisputeReason, 'Faltan productos');
       expect(find.text('Aceptado. Se está procesando.'), findsOneWidget);
     },
   );
