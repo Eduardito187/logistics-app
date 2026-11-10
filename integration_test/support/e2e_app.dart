@@ -21,6 +21,7 @@ import 'package:logistics_app/core/offline/photo_upload_queue.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/scanning/code_scanner.dart';
+import 'package:logistics_app/core/scanning/continuous_scanner.dart';
 import 'package:logistics_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:logistics_app/features/driver/data/repositories/driver_route_repository_impl.dart';
 import 'package:logistics_app/features/driver/data/repositories/fleet_repository_impl.dart';
@@ -75,15 +76,29 @@ class _VectorLabelKeys extends LabelKeysNotifier {
 /// Cola de fotos falsa: registra lo encolado (la subida multipart y el
 /// directorio de documentos quedan fuera del e2e: dependen de path_provider).
 class FakePhotoUploadQueue implements PhotoUploadQueue {
-  final List<({String shipmentId, String filePath, String kind})> enqueued = [];
+  final List<
+    ({
+      String shipmentId,
+      String filePath,
+      String kind,
+      Map<String, Object?>? clientSnapshot,
+    })
+  >
+  enqueued = [];
 
   @override
   Future<void> enqueue({
     required String shipmentId,
     required String filePath,
     required String kind,
+    Map<String, Object?>? clientSnapshot,
   }) async {
-    enqueued.add((shipmentId: shipmentId, filePath: filePath, kind: kind));
+    enqueued.add((
+      shipmentId: shipmentId,
+      filePath: filePath,
+      kind: kind,
+      clientSnapshot: clientSnapshot,
+    ));
   }
 
   @override
@@ -176,8 +191,9 @@ Future<E2eHarness> pumpE2eApp(
     // Storage (el secure storage se mockea en e2eSetUp).
     appDatabaseProvider.overrideWithValue(database),
     photoUploadQueueProvider.overrideWithValue(h.photos),
-    // Cámara.
+    // Cámara (puntual y continuo comparten la misma cola de códigos).
     codeScannerProvider.overrideWithValue(h.scanner.call),
+    continuousScannerProvider.overrideWithValue(h.scanner.callContinuous),
     photoPickerProvider.overrideWithValue(h.picker.call),
     // GPS.
     locationServiceProvider.overrideWithValue(

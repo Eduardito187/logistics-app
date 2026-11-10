@@ -174,6 +174,21 @@ class FakeBackend {
       ('POST', '/app/deliveries/scans/preparation') => _preparation(body),
       _ => null,
     };
+    if (response == null && options.method == 'GET') {
+      // GET no simulado: son LECTURAS de datos del inicio que el e2e no cubre
+      // (campana de notificaciones de todos los roles, tablero del supervisor,
+      // etc.). Se responde vacío para no romper el flujo; los tests que validan
+      // datos usan overrides de repositorio, no esta ruta. No cuenta como
+      // `unhandled` (que sigue cazando ESCRITURAS inesperadas).
+      handler.resolve(
+        Response<Object?>(
+          requestOptions: options,
+          statusCode: 200,
+          data: <String, Object?>{'data': <Object?>[]},
+        ),
+      );
+      return;
+    }
     if (response == null) {
       unhandled.add('${options.method} $path');
       handler.reject(
