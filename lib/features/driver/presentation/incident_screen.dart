@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 
@@ -99,7 +100,10 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
                   backgroundColor: AppColors.danger,
                 ),
                 onPressed: _busy ? null : () => _report(vehicleId),
-                icon: const Icon(Icons.report),
+                icon: AnimatedAppIcon(
+                  AppIcon.incident,
+                  state: _busy ? AppIconState.loading : AppIconState.idle,
+                ),
                 label: const Text('Reportar incidente'),
               ),
             ],

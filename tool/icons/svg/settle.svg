@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-fill ds-p-paper" d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/>
+  <path class="ds-p-paper ds-p-line" d="M9.5 8h5"/>
+  <path class="ds-accent ds-p-paper ds-p-line" d="M9.5 12.5h5"/>
+</svg>

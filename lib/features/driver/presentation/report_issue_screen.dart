@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
@@ -89,12 +90,10 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _canSubmit ? _submit : null,
-              icon: _busy
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
+              icon: AnimatedAppIcon(
+                AppIcon.send,
+                state: _busy ? AppIconState.loading : AppIconState.idle,
+              ),
               label: const Text('Enviar reporte'),
             ),
           ],

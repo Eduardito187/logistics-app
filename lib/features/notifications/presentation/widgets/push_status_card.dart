@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/push/push_controller.dart';
 import '../../../../core/push/push_status.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -66,7 +67,7 @@ class PushStatusCard extends ConsumerWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.notifications_active),
+                  : const AnimatedAppIcon(AppIcon.roleAlerts),
               label: Text(isBusy ? 'Activando...' : 'Activar notificaciones'),
             ),
           ],

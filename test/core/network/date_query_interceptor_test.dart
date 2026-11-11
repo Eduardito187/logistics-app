@@ -44,5 +44,27 @@ void main() {
       expect(sent.queryParameters, {'date': '2026-10-19', 'vehicle_id': 'abc'});
       expect(sent.uri.query, 'date=2026-10-19&vehicle_id=abc');
     });
+
+    test('convierte booleanos del query a "1"/"0" (Laravel boolean)', () async {
+      final dio = Dio(BaseOptions(baseUrl: 'http://x'))
+        ..interceptors.add(const DateQueryInterceptor());
+      late RequestOptions sent;
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            sent = options;
+            handler.resolve(Response(requestOptions: options, statusCode: 200));
+          },
+        ),
+      );
+
+      await dio.get<void>(
+        '/app/fleet/drivers',
+        queryParameters: {'only_active': true, 'only_passed': false},
+      );
+
+      // "true"/"false" daba 422; con "1"/"0" el backend lo acepta.
+      expect(sent.queryParameters, {'only_active': '1', 'only_passed': '0'});
+    });
   });
 }

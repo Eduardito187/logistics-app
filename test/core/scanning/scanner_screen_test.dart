@@ -9,6 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // ScannerScreen envuelve MobileScanner: lee el PRIMER código no vacío y lo
 // devuelve con Navigator.pop; un escaneo ya manejado no se procesa dos veces.
@@ -89,8 +92,8 @@ void main() {
     await _openScanner(tester, onResult: (_) {});
 
     expect(find.text('Escanear'), findsOneWidget);
-    expect(find.byIcon(Icons.flash_on), findsOneWidget);
-    expect(find.byIcon(Icons.cameraswitch), findsOneWidget);
+    expect(findAppIcon(AppIcon.bolt), findsOneWidget);
+    expect(findAppIcon(AppIcon.cameraSwitch), findsOneWidget);
   });
 
   testWidgets('devuelve el primer código no vacío leído', (tester) async {

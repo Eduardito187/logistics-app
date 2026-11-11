@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../icons/icons.dart';
+
 import 'code_scanner.dart';
 import 'scan_feedback.dart';
 import 'scan_frame.dart';
@@ -138,12 +140,12 @@ class _ScannerScreenState extends State<ScannerScreen>
         actions: [
           IconButton(
             tooltip: 'Linterna',
-            icon: const Icon(Icons.flash_on),
+            icon: const AnimatedAppIcon(AppIcon.bolt),
             onPressed: () => _controller.toggleTorch(),
           ),
           IconButton(
             tooltip: 'Cambiar cámara',
-            icon: const Icon(Icons.cameraswitch),
+            icon: const AnimatedAppIcon(AppIcon.cameraSwitch),
             onPressed: () => _controller.switchCamera(),
           ),
         ],

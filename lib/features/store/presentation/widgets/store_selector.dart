@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/selected_store_node_notifier.dart';
 
@@ -16,7 +17,10 @@ class StoreSelector extends ConsumerWidget {
       title: 'Tu tienda',
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.storefront),
+        leading: const AnimatedAppIcon(
+          AppIcon.pickupStore,
+          excludeFromSemantics: true,
+        ),
         title: Text(node?.name ?? 'Sin tienda asignada'),
         subtitle: Text(
           node == null

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
+import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/store_controllers.dart';
@@ -66,7 +68,8 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                     value: _originId,
                     isExpanded: true,
                     decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.outbound_outlined),
+                      prefixIconConstraints: FieldIcon.prefixConstraints,
+                      prefixIcon: FieldIcon(icon: AppIcon.outbound),
                       labelText: 'Nodo de origen',
                     ),
                     items: [
@@ -99,7 +102,14 @@ class _OpenReceptionPanelState extends ConsumerState<OpenReceptionPanel> {
                             widget.onOpen(origin, expectedIds);
                           }
                         },
-                  icon: const Icon(Icons.play_circle_outline),
+                  // busy = abriendo la recepción.
+                  icon: AnimatedAppIcon(
+                    AppIcon.play,
+                    state: widget.busy
+                        ? AppIconState.loading
+                        : AppIconState.idle,
+                    excludeFromSemantics: true,
+                  ),
                   label: const Text('Abrir recepción'),
                 ),
               ),

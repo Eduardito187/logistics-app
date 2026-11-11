@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/plan.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -36,7 +37,7 @@ class SupervisorPlansScreen extends ConsumerWidget {
                       children: const [
                         SizedBox(height: 80),
                         EmptyState(
-                          icon: Icons.alt_route,
+                          icon: AppIcon.plans,
                           title: 'Sin planes para este día',
                           message:
                               'Elige otra fecha o espera a que se publique la planificación.',

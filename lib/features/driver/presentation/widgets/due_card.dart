@@ -61,7 +61,7 @@ class DueCard extends StatelessWidget {
           if (item.plate != null || item.vehicleId != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Vehículo: ${item.plate ?? item.vehicleId}',
+              'Vehículo: ${item.plate ?? 'sin placa'}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),

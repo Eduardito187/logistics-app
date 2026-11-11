@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/location/location_required_view.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Pantalla de bloqueo cuando falta el permiso "siempre". Es puramente
 // presentacional: muestra el mensaje y dos botones que disparan los callbacks.
@@ -30,7 +33,7 @@ void main() {
       find.text('La ubicación es obligatoria para operar el camión'),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.location_off), findsOneWidget);
+    expect(findAppIcon(AppIcon.gpsOff), findsOneWidget);
     expect(find.text('Abrir Ajustes'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
   });

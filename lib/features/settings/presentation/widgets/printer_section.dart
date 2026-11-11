@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/printing/label_printer.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/app_snack.dart';
@@ -66,7 +67,7 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
                   child: StatusPill(
                     'Activa: ${selected.label} (${selected.transport.label})',
                     tone: PillTone.success,
-                    icon: Icons.print,
+                    icon: AppIcon.printing,
                   ),
                 ),
               ),
@@ -92,21 +93,29 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
                   ),
                 ),
                 segments: [
-                  ButtonSegment(
-                    value: PrinterTransport.bluetooth,
-                    label: const _SegmentLabel('Bluetooth'),
-                    icon: withIcons ? const Icon(Icons.bluetooth) : null,
-                  ),
-                  ButtonSegment(
-                    value: PrinterTransport.wifi,
-                    label: const _SegmentLabel('WiFi'),
-                    icon: withIcons ? const Icon(Icons.wifi) : null,
-                  ),
-                  ButtonSegment(
-                    value: PrinterTransport.usb,
-                    label: const _SegmentLabel('USB'),
-                    icon: withIcons ? const Icon(Icons.usb) : null,
-                  ),
+                  for (final (transport, label, icon) in const [
+                    (
+                      PrinterTransport.bluetooth,
+                      'Bluetooth',
+                      AppIcon.bluetooth,
+                    ),
+                    (PrinterTransport.wifi, 'WiFi', AppIcon.wifi),
+                    (PrinterTransport.usb, 'USB', AppIcon.usb),
+                  ])
+                    ButtonSegment(
+                      value: transport,
+                      label: _SegmentLabel(label),
+                      // El transporte elegido queda "activo" (se rellena).
+                      icon: withIcons
+                          ? AnimatedAppIcon(
+                              icon,
+                              state: transport == _transport
+                                  ? AppIconState.active
+                                  : AppIconState.idle,
+                              excludeFromSemantics: true,
+                            )
+                          : null,
+                    ),
                 ],
                 selected: <PrinterTransport>{_transport},
                 onSelectionChanged: (value) =>
@@ -126,13 +135,12 @@ class _PrinterSectionState extends ConsumerState<PrinterSection> {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: widget.printing ? null : () => widget.onPrintTest(),
-            icon: widget.printing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.print),
+            // Mientras imprime, la hoja sale de la impresora (loop de loading).
+            icon: AnimatedAppIcon(
+              AppIcon.printing,
+              state: widget.printing ? AppIconState.loading : AppIconState.idle,
+              semanticLabel: widget.printing ? 'Imprimiendo' : 'Imprimir',
+            ),
             label: const Text('Imprimir prueba'),
           ),
         ],

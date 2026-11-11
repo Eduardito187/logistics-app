@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/features/store/presentation/widgets/pickup_card.dart';
 import 'package:logistics_app/features/store/presentation/widgets/shipment_status_pill.dart';
 
+import '../../../../support/app_icon_finders.dart';
 import '../../store_fixtures.dart';
 
 // Tarjeta de envío para entrega en mostrador: datos del cliente, pedido,
@@ -33,7 +35,7 @@ void main() {
     expect(find.text('Pedido DM-260012345'), findsOneWidget);
     expect(find.text('Doc: 12345678'), findsOneWidget);
     expect(find.byType(ShipmentStatusPill), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(findAppIcon(AppIcon.chevronRight), findsOneWidget);
   });
 
   testWidgets('sin documento omite esa línea', (tester) async {

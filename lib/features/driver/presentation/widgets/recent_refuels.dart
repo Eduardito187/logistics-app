@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -29,7 +30,7 @@ class RecentRefuels extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(
-              icon: Icons.local_gas_station,
+              icon: AppIcon.fuel,
               title: 'Sin cargas registradas',
               message: 'Las cargas que registres aparecerán aquí.',
             );
@@ -39,8 +40,8 @@ class RecentRefuels extends ConsumerWidget {
               for (final refuel in items.take(10))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.local_gas_station,
+                  leading: const AnimatedAppIcon(
+                    AppIcon.fuel,
                     color: AppColors.warning,
                   ),
                   title: Text(

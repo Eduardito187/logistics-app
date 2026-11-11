@@ -9,8 +9,10 @@ import 'package:logistics_app/core/navigation/role_task.dart';
 import 'package:logistics_app/core/widgets/floating_pill_nav_bar.dart';
 import 'package:logistics_app/features/home/presentation/role_home_screen.dart';
 import 'package:logistics_app/features/home/presentation/widgets/greeting_header.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/no_home_prefetch.dart';
+import '../../support/app_icon_finders.dart';
 
 // Regresiones del shell inferior (5 pestañas, la central incluida). El bug que
 // teníamos: la barra se estiraba a TODA la pantalla (un `Center` expandía en
@@ -21,7 +23,7 @@ import '../../support/no_home_prefetch.dart';
 const _driverTask = RoleTask(
   id: 'delivery',
   label: 'Entrega en curso',
-  icon: Icons.local_shipping,
+  appIcon: AppIcon.deliver,
   route: '/driver/delivery',
   roles: {UserRole.driver},
   accent: true,
@@ -48,7 +50,7 @@ Widget _shell({required int index, ValueChanged<int>? onTap}) {
       currentIndex: index,
       onTap: onTap ?? (_) {},
       centerLabel: 'Entrega',
-      centerIcon: Icons.local_shipping,
+      centerIcon: AppIcon.deliver,
     ),
   );
 }
@@ -151,7 +153,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(FloatingPillNavBar),
-        matching: find.byIcon(Icons.local_shipping),
+        matching: findAppIcon(AppIcon.deliver),
       ),
     );
     await tester.pump();

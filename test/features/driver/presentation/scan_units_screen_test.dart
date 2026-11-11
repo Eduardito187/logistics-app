@@ -60,7 +60,9 @@ const _unloadScreen = ScanUnitsScreen(
 Future<void> _scan(WidgetTester tester, {bool load = true}) async {
   await tester.tap(
     find.text(
-      load ? 'Escanear bulto para cargar' : 'Escanear bulto para descargar',
+      load
+          ? 'Escanear producto para cargar'
+          : 'Escanear producto para descargar',
     ),
   );
   await tester.pumpAndSettle();
@@ -87,10 +89,13 @@ void main() {
     );
 
     expect(find.text('Cargar envío'), findsOneWidget);
-    expect(find.text('Sin bultos'), findsOneWidget);
-    expect(find.text('Escanea el primer bulto para empezar.'), findsOneWidget);
-    expect(find.text('0 bulto(s) registrados'), findsOneWidget);
-    expect(find.text('Escanear bulto para cargar'), findsOneWidget);
+    expect(find.text('Sin productos'), findsOneWidget);
+    expect(
+      find.text('Escanea el primer producto para empezar.'),
+      findsOneWidget,
+    );
+    expect(find.text('0 producto(s) registrados'), findsOneWidget);
+    expect(find.text('Escanear producto para cargar'), findsOneWidget);
     // Al entrar se calienta el GPS (sin esperarlo).
     expect(location.prefetchCount, 1);
   });
@@ -106,51 +111,52 @@ void main() {
     );
 
     expect(find.text('Descargar parada 1'), findsOneWidget);
-    expect(find.text('Escanear bulto para descargar'), findsOneWidget);
+    expect(find.text('Escanear producto para descargar'), findsOneWidget);
   });
 
-  testWidgets('carga: bulto válido → recordLoadScan y "Bulto 1/2 cargado"', (
-    tester,
-  ) async {
-    final scanner = FakeContinuousScanner.single([validLabelQr()]);
-    final queue = FakeOfflineQueue(SubmitOutcome.sent);
-    await pumpScoped(
-      tester,
-      child: _loadScreen,
-      overrides: _overrides(
-        scanner,
-        queue,
-        units: {vectorUnitId, 'otro-bulto'},
-        location: FakeLocationService(
-          fix: const GpsFix(lat: -17.8, lng: -63.2),
+  testWidgets(
+    'carga: producto válido → recordLoadScan y "Producto 1/2 cargado"',
+    (tester) async {
+      final scanner = FakeContinuousScanner.single([validLabelQr()]);
+      final queue = FakeOfflineQueue(SubmitOutcome.sent);
+      await pumpScoped(
+        tester,
+        child: _loadScreen,
+        overrides: _overrides(
+          scanner,
+          queue,
+          units: {vectorUnitId, 'otro-producto'},
+          location: FakeLocationService(
+            fix: const GpsFix(lat: -17.8, lng: -63.2),
+          ),
         ),
-      ),
-    );
+      );
 
-    await _scan(tester);
+      await _scan(tester);
 
-    expect(scanner.titles, ['Cargar bultos']);
-    expect(scanner.formats.single, [BarcodeFormat.qrCode]);
-    expect(scanner.messages, ['Bulto 1/2 cargado']);
-    expect(scanner.feedbacks.single.ok, isTrue);
-    expect(queue.lastKind, 'recordLoadScan');
-    final payload = queue.submissions.single;
-    expect(payload['shipment_id'], 'ship-1');
-    expect(payload['unit_id'], vectorUnitId);
-    expect(payload['lat'], -17.8);
-    expect(payload['lng'], -63.2);
-    expect(payload.containsKey('node_id'), isFalse);
+      expect(scanner.titles, ['Cargar productos']);
+      expect(scanner.formats.single, [BarcodeFormat.qrCode]);
+      expect(scanner.messages, ['Producto 1/2 cargado']);
+      expect(scanner.feedbacks.single.ok, isTrue);
+      expect(queue.lastKind, 'recordLoadScan');
+      final payload = queue.submissions.single;
+      expect(payload['shipment_id'], 'ship-1');
+      expect(payload['unit_id'], vectorUnitId);
+      expect(payload['lat'], -17.8);
+      expect(payload['lng'], -63.2);
+      expect(payload.containsKey('node_id'), isFalse);
 
-    // Al volver: lista con el bulto, pastilla y contador.
-    expect(find.text(vectorUnitId), findsOneWidget);
-    expect(find.text('Registrado'), findsOneWidget);
-    expect(find.text('1 bulto(s) registrados'), findsOneWidget);
-    expect(find.text('Sin bultos'), findsNothing);
-    // La pantalla de Carga ya lo cuenta aunque siga en la cola.
-    expect(_localLoaded(tester)['ship-1'], {vectorUnitId});
-  });
+      // Al volver: lista con el bulto, pastilla y contador.
+      expect(find.text(vectorUnitId), findsOneWidget);
+      expect(find.text('Registrado'), findsOneWidget);
+      expect(find.text('1 producto(s) registrados'), findsOneWidget);
+      expect(find.text('Sin productos'), findsNothing);
+      // La pantalla de Carga ya lo cuenta aunque siga en la cola.
+      expect(_localLoaded(tester)['ship-1'], {vectorUnitId});
+    },
+  );
 
-  testWidgets('varios bultos en una sola sesión de cámara', (tester) async {
+  testWidgets('varios productos en una sola sesión de cámara', (tester) async {
     final scanner = FakeContinuousScanner.single([
       unsignedLabelQr('U-1'),
       unsignedLabelQr('U-2'),
@@ -173,12 +179,12 @@ void main() {
     // Una sola apertura de cámara para los tres bultos.
     expect(scanner.titles, hasLength(1));
     expect(scanner.messages, [
-      'Bulto 1/5 cargado',
-      'Bulto 2/5 cargado',
-      'Bulto 3/5 cargado',
+      'Producto 1/5 cargado',
+      'Producto 2/5 cargado',
+      'Producto 3/5 cargado',
     ]);
     expect(queue.submissions.map((p) => p['unit_id']), ['U-1', 'U-2', 'U-3']);
-    expect(find.text('3 bulto(s) registrados'), findsOneWidget);
+    expect(find.text('3 producto(s) registrados'), findsOneWidget);
     // El último escaneado arriba.
     expect(
       tester.getTopLeft(find.text('U-3')).dy,
@@ -207,16 +213,16 @@ void main() {
     await _scan(tester);
 
     expect(scanner.messages, [
-      'Bulto 1/1 cargado',
+      'Producto 1/1 cargado',
       'Ya registrado',
       'Ya registrado',
     ]);
     expect(scanner.feedbacks[1].ok, isFalse);
     expect(queue.submissions, hasLength(1));
-    expect(find.text('1 bulto(s) registrados'), findsOneWidget);
+    expect(find.text('1 producto(s) registrados'), findsOneWidget);
   });
 
-  testWidgets('bulto ajeno en carga: "Ese bulto no es de este camión"', (
+  testWidgets('producto ajeno en carga: "Ese producto no es de este camión"', (
     tester,
   ) async {
     final scanner = FakeContinuousScanner.single([
@@ -233,31 +239,32 @@ void main() {
     await _scan(tester);
 
     expect(scanner.messages, [
-      'Ese bulto no es de este camión',
-      'Bulto 1/1 cargado',
+      'Ese producto no es de este camión',
+      'Producto 1/1 cargado',
     ]);
     expect(scanner.feedbacks.first.ok, isFalse);
     expect(queue.submissions.map((p) => p['unit_id']), ['U-1']);
     expect(find.text('AJENO'), findsNothing);
   });
 
-  testWidgets('bulto ajeno en descarga: "Ese bulto no es de esta parada"', (
-    tester,
-  ) async {
-    final scanner = FakeContinuousScanner.single([unsignedLabelQr('AJENO')]);
-    final queue = FakeOfflineQueue(SubmitOutcome.sent);
-    await pumpScoped(
-      tester,
-      child: _unloadScreen,
-      overrides: _overrides(scanner, queue, units: {'U-1'}, withKeys: false),
-    );
+  testWidgets(
+    'producto ajeno en descarga: "Ese producto no es de esta parada"',
+    (tester) async {
+      final scanner = FakeContinuousScanner.single([unsignedLabelQr('AJENO')]);
+      final queue = FakeOfflineQueue(SubmitOutcome.sent);
+      await pumpScoped(
+        tester,
+        child: _unloadScreen,
+        overrides: _overrides(scanner, queue, units: {'U-1'}, withKeys: false),
+      );
 
-    await _scan(tester, load: false);
+      await _scan(tester, load: false);
 
-    expect(scanner.titles, ['Descargar bultos']);
-    expect(scanner.messages, ['Ese bulto no es de esta parada']);
-    expect(queue.submissions, isEmpty);
-  });
+      expect(scanner.titles, ['Descargar productos']);
+      expect(scanner.messages, ['Ese producto no es de esta parada']);
+      expect(queue.submissions, isEmpty);
+    },
+  );
 
   testWidgets('sin señal: no se valida pertenencia y se encola igual', (
     tester,
@@ -277,7 +284,7 @@ void main() {
     await _scan(tester);
 
     // Sin total conocido: el aviso muestra solo el conteo.
-    expect(scanner.messages, ['Bulto 1 cargado', 'Bulto 2 cargado']);
+    expect(scanner.messages, ['Producto 1 cargado', 'Producto 2 cargado']);
     expect(queue.submissions, hasLength(2));
     // Offline invisible: lo encolado se ve igual que lo enviado.
     expect(find.text('En cola'), findsNothing);
@@ -298,7 +305,7 @@ void main() {
 
     await _scan(tester, load: false);
 
-    expect(scanner.messages, ['Bulto 1/1 descargado']);
+    expect(scanner.messages, ['Producto 1/1 descargado']);
     expect(queue.lastKind, 'recordUnloadScan');
     final payload = queue.submissions.single;
     expect(payload['shipment_id'], 'ship-2');
@@ -352,7 +359,7 @@ void main() {
     expect(scanner.messages, ['Etiqueta inválida', 'Etiqueta inválida']);
     expect(scanner.feedbacks.every((f) => !f.ok), isTrue);
     expect(queue.submissions, isEmpty);
-    expect(find.text('0 bulto(s) registrados'), findsOneWidget);
+    expect(find.text('0 producto(s) registrados'), findsOneWidget);
   });
 
   testWidgets(
@@ -380,7 +387,7 @@ void main() {
       expect(queue.submissions, hasLength(2));
       // Una sola fila por bulto (el reintento reemplaza la anterior).
       expect(find.text('Error'), findsOneWidget);
-      expect(find.text('0 bulto(s) registrados'), findsOneWidget);
+      expect(find.text('0 producto(s) registrados'), findsOneWidget);
       expect(_localLoaded(tester), isEmpty);
     },
   );
@@ -396,8 +403,8 @@ void main() {
     await _scan(tester);
 
     expect(queue.submissions, isEmpty);
-    expect(find.text('Sin bultos'), findsOneWidget);
-    expect(find.text('0 bulto(s) registrados'), findsOneWidget);
+    expect(find.text('Sin productos'), findsOneWidget);
+    expect(find.text('0 producto(s) registrados'), findsOneWidget);
     final button = tester.widget<FilledButton>(findButton<FilledButton>());
     expect(button.onPressed, isNotNull);
   });
@@ -420,7 +427,7 @@ void main() {
 
     await _scan(tester);
 
-    expect(find.text('12 bulto(s) registrados'), findsOneWidget);
+    expect(find.text('12 producto(s) registrados'), findsOneWidget);
     final buttonRect = tester.getRect(findButton<FilledButton>());
     expect(buttonRect.bottom, lessThanOrEqualTo(screen.size.height));
     expect(buttonRect.height, greaterThanOrEqualTo(56));

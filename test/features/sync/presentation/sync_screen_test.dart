@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/core/widgets/brand_loader.dart';
 import 'package:logistics_app/features/sync/presentation/sync_screen.dart';
 import 'package:logistics_app/features/sync/presentation/widgets/sync_action_tile.dart';
+
+import '../../../support/app_icon_finders.dart';
 
 // Pantalla de sincronización: estados de la cola offline (cargando, error,
 // vacía, con pendientes) y banner de conectividad. Se override el stream de la
@@ -180,5 +183,28 @@ void main() {
     await tester.pump();
 
     expect(offline.drained, isTrue);
+  });
+
+  testWidgets('al terminar de drenar muestra la nube con tilde', (
+    tester,
+  ) async {
+    await _pump(tester, queue: Stream.value([_pending('a', label: 'Carga')]));
+    await tester.pumpAndSettle();
+
+    // Antes de reintentar: el ícono de sincronizar en reposo.
+    expect(
+      findAppIconInState(AppIcon.syncing, AppIconState.idle),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Reintentar ahora'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      findAppIconInState(AppIcon.cloudDone, AppIconState.success),
+      findsOneWidget,
+    );
+    expect(findAppIcon(AppIcon.syncing), findsNothing);
   });
 }

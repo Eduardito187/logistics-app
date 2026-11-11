@@ -25,14 +25,8 @@ void main() {
       ),
     );
 
-    final container = tester.widget<Container>(
-      find.descendant(
-        of: find.byType(StopPin),
-        matching: find.byType(Container),
-      ),
-    );
-    final decoration = container.decoration! as BoxDecoration;
-    expect(decoration.color, AppColors.danger);
-    expect(decoration.shape, BoxShape.circle);
+    // StopPin dibuja un pin "gota" (TeardropPin) coloreado por estado.
+    final pin = tester.widget<TeardropPin>(find.byType(TeardropPin));
+    expect(pin.color, AppColors.danger);
   });
 }

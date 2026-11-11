@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -28,7 +29,7 @@ class RecentReadings extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(
-              icon: Icons.speed,
+              icon: AppIcon.speed,
               title: 'Sin lecturas registradas',
               message: 'Las lecturas que registres aparecerán aquí.',
             );
@@ -38,7 +39,10 @@ class RecentReadings extends ConsumerWidget {
               for (final reading in items.take(10))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.speed, color: AppColors.info),
+                  leading: const AnimatedAppIcon(
+                    AppIcon.speed,
+                    color: AppColors.info,
+                  ),
                   title: Text(
                     '${_numberFormat.format(reading.km)} km',
                     style: const TextStyle(fontWeight: FontWeight.w700),

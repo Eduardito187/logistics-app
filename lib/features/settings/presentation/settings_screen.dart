@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/printing/label_printer.dart';
@@ -75,21 +76,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.shield_outlined),
+                    // 2FA = candado de seguridad (brief §4.3 `security`).
+                    leading: const AnimatedAppIcon(AppIcon.security),
                     title: const Text('Verificación en dos pasos'),
                     subtitle: const Text(
                       'Un código extra de tu teléfono al ingresar.',
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: const AnimatedAppIcon(AppIcon.chevronRight),
                     onTap: () => context.push('/settings/security'),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.devices),
+                    leading: const AnimatedAppIcon(AppIcon.devices),
                     title: const Text('Mis dispositivos'),
                     subtitle: const Text('Sesiones activas y revocar acceso.'),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: const AnimatedAppIcon(AppIcon.chevronRight),
                     onTap: () => context.push('/settings/devices'),
                   ),
                 ],

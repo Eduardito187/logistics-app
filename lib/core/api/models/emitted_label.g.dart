@@ -18,6 +18,14 @@ EmittedLabel _$EmittedLabelFromJson(Map<String, dynamic> json) => EmittedLabel(
   revoked: json['revoked'] as bool,
   revokedAt: (json['revoked_at'] as num?)?.toInt(),
   revokedReason: json['revoked_reason'] as String?,
+  productName: json['product_name'] as String?,
+  imageUrl: json['image_url'] as String?,
+  origin: json['origin'] == null
+      ? null
+      : Origin.fromJson(json['origin'] as Map<String, dynamic>),
+  destination: json['destination'] == null
+      ? null
+      : Destination.fromJson(json['destination'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$EmittedLabelToJson(EmittedLabel instance) =>
@@ -33,4 +41,8 @@ Map<String, dynamic> _$EmittedLabelToJson(EmittedLabel instance) =>
       'revoked': instance.revoked,
       'revoked_at': instance.revokedAt,
       'revoked_reason': instance.revokedReason,
+      'product_name': instance.productName,
+      'image_url': instance.imageUrl,
+      'origin': instance.origin,
+      'destination': instance.destination,
     };

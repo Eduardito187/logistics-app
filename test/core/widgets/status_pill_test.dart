@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/widgets/status_pill.dart';
+import 'package:logistics_app/core/icons/icons.dart';
+
+import '../../support/app_icon_finders.dart';
 
 // Chip de estado con color semántico según PillTone. Presentacional.
 Future<void> _pump(WidgetTester tester, Widget pill) {
@@ -25,16 +28,20 @@ void main() {
 
   testWidgets('sin icono no renderiza Icon', (tester) async {
     await _pump(tester, const StatusPill('Pendiente'));
-    expect(find.byType(Icon), findsNothing);
+    expect(find.byType(AnimatedAppIcon), findsNothing);
   });
 
   testWidgets('con icono lo renderiza junto a la etiqueta', (tester) async {
     await _pump(
       tester,
-      const StatusPill('Entregado', tone: PillTone.success, icon: Icons.check),
+      const StatusPill(
+        'Entregado',
+        tone: PillTone.success,
+        icon: AppIcon.check,
+      ),
     );
     expect(find.text('Entregado'), findsOneWidget);
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(findAppIcon(AppIcon.check), findsOneWidget);
   });
 
   testWidgets('cada tono se renderiza sin error', (tester) async {

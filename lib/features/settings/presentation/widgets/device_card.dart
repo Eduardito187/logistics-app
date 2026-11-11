@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/device_list_item.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../device_format.dart';
@@ -30,11 +31,11 @@ class DeviceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(switch (device.platform?.toLowerCase()) {
-                'android' => Icons.phone_android,
-                'ios' => Icons.phone_iphone,
-                'web' => Icons.computer,
-                _ => Icons.devices,
+              AnimatedAppIcon(switch (device.platform?.toLowerCase()) {
+                'android' => AppIcon.phone,
+                'ios' => AppIcon.phone,
+                'web' => AppIcon.devices,
+                _ => AppIcon.devices,
               }, color: theme.colorScheme.onSurface),
               const SizedBox(width: 12),
               Expanded(
@@ -72,7 +73,7 @@ class DeviceCard extends StatelessWidget {
                     ? const StatusPill(
                         'Este dispositivo',
                         tone: PillTone.info,
-                        icon: Icons.check_circle_outline,
+                        icon: AppIcon.success,
                       )
                     : const StatusPill('Revocado', tone: PillTone.danger),
               ),
@@ -81,7 +82,11 @@ class DeviceCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.schedule, size: 16, color: theme.colorScheme.outline),
+              AnimatedAppIcon(
+                AppIcon.pending,
+                size: 16,
+                color: theme.colorScheme.outline,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -104,7 +109,7 @@ class DeviceCard extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onRevoke,
-              icon: const Icon(Icons.logout),
+              icon: const AnimatedAppIcon(AppIcon.logout),
               label: Text(
                 isCurrent ? 'Revocar este dispositivo' : 'Revocar sesión',
               ),

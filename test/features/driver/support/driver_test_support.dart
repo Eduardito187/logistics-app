@@ -320,6 +320,7 @@ class FakeConductChecklist extends ConductChecklist {
   final Data5? result;
   final Object? error;
   Map<String, bool>? lastItems;
+  String? lastDriverId;
 
   @override
   Future<Data5?> call({
@@ -330,6 +331,7 @@ class FakeConductChecklist extends ConductChecklist {
     String? notes,
   }) async {
     lastItems = items;
+    lastDriverId = driverId;
     if (error != null) throw error!;
     return result;
   }

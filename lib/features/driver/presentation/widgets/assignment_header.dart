@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/icons/icons.dart';
 import '../driver_common.dart';
 
 /// Cabecera de solo lectura con la asignación del día: vehículo, chofer,
@@ -13,7 +14,8 @@ class AssignmentHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final plate = crew.vehicle.plate ?? crew.vehicle.id;
+    // Nunca mostrar el id/uuid del vehículo: si falta la placa, un texto legible.
+    final plate = crew.vehicle.plate ?? 'Vehículo asignado';
     final driverName = crew.driver.name ?? 'Chofer asignado';
     final helpers = crew.helpers
         .map((h) => h.name)
@@ -28,7 +30,10 @@ class AssignmentHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_shipping, color: theme.colorScheme.onSurface),
+            AnimatedAppIcon(
+              AppIcon.deliver,
+              color: theme.colorScheme.onSurface,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

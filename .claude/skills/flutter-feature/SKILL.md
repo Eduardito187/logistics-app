@@ -34,6 +34,12 @@ dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pant
 make apk ENV=staging                               # release --split-per-abi (necesita android/key.properties)
 ```
 
+**🛑 Quién ejecuta (regla del dueño, 2026-10-26):** NO correr ningún comando de arriba (ni `pub get`,
+`build_runner`, emulador, Docker o backend) salvo que el dueño lo pida en ese turno, y **nunca** desde
+subagentes/workflows: 8 agentes con `flutter test` a la vez colgaron WSL ~20 min. Por defecto: editar
+código, revisar estáticamente y entregarle los comandos, uno por bloque, para que los corra de a uno.
+Si él lo pide: UN proceso de Flutter a la vez en todo el equipo (`dart_test.yaml` ya limita a `concurrency: 2`).
+
 `flutter analyze`/`flutter test` corren en WSL sin más. **Correr/compilar la app también se puede en
 WSL**: ya está montado el toolchain Android (JDK 17 en `~/jdk`, SDK en `~/Android/Sdk`, NDK), con
 Flutter apuntado vía `flutter config --android-sdk ~/Android/Sdk --jdk-dir ~/jdk`. El APK sigue
@@ -125,6 +131,11 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   (sin datos personales), `VersionGate` ya cableado en `app.dart`.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
   `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`). Impresora: `labelPrinterProvider`.
+- **Íconos:** NUNCA `Icon(Icons.x)`. Siempre `AnimatedAppIcon(AppIcon.x, state: …)` (`lib/core/icons/icons.dart`):
+  `active` al seleccionar, `loading` mientras escanea/sincroniza/imprime/GPS, `success`/`error` como resultado.
+  `EmptyState`, `StatTile`, `StatusPill` y `UserRole.icon` reciben `AppIcon`; `NavTab`/`RoleTask` llevan `appIcon`.
+  En tests: `findAppIcon`/`findAppIconInState` (`test/support/app_icon_finders.dart`), no `find.byIcon`.
+  ¿Falta un ícono o hay que cambiar una animación? Usar el skill **animated-app-icons**.
 
 ## Reglas
 
@@ -152,6 +163,10 @@ comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
 `dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde (+ e2e si tocaste un flujo crítico),
 con números. Si cambió Android/iOS: una build (`make apk`). Reportar qué no se pudo probar (hardware real).
+**Quien lo corre es el dueño** (ver "Quién ejecuta"): si no pidió que lo corras, terminar con revisión estática
+(imports, nombres contra enums/catálogos, fin de línea conservado, sin duplicados), decir claramente "no compilado"
+y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutter analyze` → `flutter test <carpeta tocada>`
+→ `flutter test`.
 
 ## Gotchas ya vistos
 
@@ -194,3 +209,8 @@ con números. Si cambió Android/iOS: una build (`make apk`). Reportar qué no s
 | Script con `'\\n'`/rutas `C:\...` sale roto | La herramienta Bash colapsa `\\` en heredocs (`\f` → form feed) | Scripts/JSON con barras `/` o escribirlos con la herramienta Write |
 | PowerShell muestra "logÃ­stica" | `.ps1` en UTF-8 sin BOM lo lee como Windows-1252 | `.ps1` en ASCII; textos en archivos UTF-8 |
 | Muchos `ClientException … tile.openstreetmap.org` en tests | La capa de tiles intenta red en test | Ruido esperado; no falla el test |
+| `pumpAndSettle timed out` con un `AnimatedAppIcon` en pantalla | Ícono en `state: loading` (loop real) | `pump()` + `pump(Duration)`; el `ambient` del botón central respira solo 3 ciclos y se detiene |
+| `find.byIcon(Icons.x)` no encuentra nada | La app ya no usa `Icon` | `findAppIcon(AppIcon.x)` / `findAppIconInState(AppIcon.x, AppIconState.success)` |
+| `UnimplementedError` en `Matrix4.translate` | vector_math 2.1 no acepta `int` | `m.multiply(Matrix4.translationValues(x, y, 0))` |
+| El diff muestra el archivo entero tras un script/codemod | El repo mezcla CRLF y LF; el script normalizó | Leer/escribir en binario y conservar el fin de línea original de cada archivo |
+| WSL colgado, VS Code "Starting Linux Subsystem" | Varios `flutter test`/`analyze` en paralelo (agentes) | Matar `dart`/`flutter`; liberar RAM sin `wsl --shutdown`: `wsl -d Ubuntu-22.04 -u root -- sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"` |

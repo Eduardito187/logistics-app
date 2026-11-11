@@ -3,8 +3,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/api/export.dart';
-import '../../../../core/map/osm_tile_layer.dart';
+import '../../../../core/icons/icons.dart';
+import '../../../../core/map/dark_map_canvas.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'stop_pin.dart';
 
 /// Mapa a pantalla completa centrado en la parada (navegación de campo sin
 /// depender de una app externa).
@@ -23,17 +25,26 @@ class StopMapScreen extends StatelessWidget {
       body: FlutterMap(
         options: MapOptions(initialCenter: point, initialZoom: 15),
         children: [
-          const OsmTileLayer(),
+          const DarkMapTiles(),
+          const DarkMapScrim(),
           MarkerLayer(
             markers: [
               Marker(
                 point: point,
-                width: 48,
-                height: 48,
-                child: const Icon(
-                  Icons.place,
+                width: 52,
+                height: TeardropPin.heightFor(52),
+                // La punta del pin apunta a la coordenada.
+                alignment: Alignment.topCenter,
+                child: const TeardropPin(
                   color: AppColors.brand,
-                  size: 48,
+                  size: 52,
+                  glow: true,
+                  child: AnimatedAppIcon(
+                    AppIcon.place,
+                    color: Colors.white,
+                    size: 30,
+                    semanticLabel: 'Destino',
+                  ),
                 ),
               ),
             ],

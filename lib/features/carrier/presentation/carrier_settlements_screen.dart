@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/icons/icons.dart';
 import 'controllers/carrier_controllers.dart';
 import 'widgets/carrier_guard.dart';
 import 'widgets/settlements_list.dart';
@@ -24,12 +25,12 @@ class CarrierSettlementsScreen extends ConsumerWidget {
           if (hasCarrier) ...[
             IconButton(
               tooltip: 'Ver tarifas',
-              icon: const Icon(Icons.price_change_outlined),
+              icon: const AnimatedAppIcon(AppIcon.payments),
               onPressed: () => context.push('/carrier/tariff'),
             ),
             IconButton(
               tooltip: 'Cambiar transportista',
-              icon: const Icon(Icons.swap_horiz),
+              icon: const AnimatedAppIcon(AppIcon.swap),
               onPressed: () =>
                   ref.read(selectedCarrierProvider.notifier).clear(),
             ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -76,25 +77,25 @@ class _MyDayBody extends StatelessWidget {
                 StatTile(
                   value: '${stats.total}',
                   label: 'Totales',
-                  icon: Icons.route,
+                  icon: AppIcon.route,
                   color: AppColors.brand,
                 ),
                 StatTile(
                   value: '${stats.delivered}',
                   label: 'Entregadas',
-                  icon: Icons.task_alt,
+                  icon: AppIcon.deliverScan,
                   color: AppColors.success,
                 ),
                 StatTile(
                   value: '${stats.failed}',
                   label: 'No entregadas',
-                  icon: Icons.cancel_outlined,
+                  icon: AppIcon.cancel,
                   color: AppColors.danger,
                 ),
                 StatTile(
                   value: '${stats.pending}',
                   label: 'Pendientes',
-                  icon: Icons.pending_actions,
+                  icon: AppIcon.pending,
                   color: AppColors.hcWarning,
                 ),
               ],
@@ -108,19 +109,19 @@ class _MyDayBody extends StatelessWidget {
                 StatTile(
                   value: _hour(stats.firstSettledAt),
                   label: 'Primera entrega',
-                  icon: Icons.wb_sunny_outlined,
+                  icon: AppIcon.sun,
                   color: AppColors.info,
                 ),
                 StatTile(
                   value: _hour(stats.lastSettledAt),
                   label: 'Última entrega',
-                  icon: Icons.schedule,
+                  icon: AppIcon.pending,
                   color: AppColors.brandDark,
                 ),
                 StatTile(
                   value: formatAveragePerStop(stats.averagePerStop),
                   label: 'Promedio por parada',
-                  icon: Icons.timer_outlined,
+                  icon: AppIcon.pending,
                 ),
               ],
             ),
@@ -131,7 +132,7 @@ class _MyDayBody extends StatelessWidget {
               minimumSize: const Size.fromHeight(56),
             ),
             onPressed: () => context.push('/driver/route'),
-            icon: const Icon(Icons.map),
+            icon: const AnimatedAppIcon(AppIcon.map),
             label: const Text('Ver ruta del día'),
           ),
         ],

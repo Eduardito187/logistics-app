@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/notification_view.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../domain/notification_labels.dart';
@@ -16,8 +17,10 @@ class NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final reference =
-        notification.shipmentExternalId ?? notification.shipmentId;
+    // Nunca el uuid del envío: con referencia externa (código/pedido) se
+    // muestra "Envío <código>"; sin ella, solo "Envío" (no "Envío Envío").
+    final external = notification.shipmentExternalId;
+    final reference = external != null ? 'Envío $external' : 'Envío';
 
     return SectionCard(
       onTap: () => context.push('/notifications/${notification.id}'),
@@ -35,7 +38,7 @@ class NotificationTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Envío $reference',
+                  reference,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -48,7 +51,10 @@ class NotificationTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+          AnimatedAppIcon(
+            AppIcon.chevronRight,
+            color: theme.colorScheme.outline,
+          ),
         ],
       ),
     );

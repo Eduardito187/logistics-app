@@ -1,0 +1,4 @@
+# Tope de procesos de test en paralelo. Sin esto `flutter test` lanza la mitad de
+# los núcleos a la vez y, sumado al analizador de VS Code, lleva WSL a su tope de
+# memoria (10 GB en .wslconfig) y cuelga el equipo. 2 alcanza para la suite.
+concurrency: 2

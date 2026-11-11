@@ -48,11 +48,61 @@ class _AuthInterceptor extends Interceptor {
     // código fuerza logout.
     final statusCode = err.response?.statusCode;
     if (statusCode == 401 && !_isAuthEndpoint(err.requestOptions.path)) {
-      // `handleUnauthorized` es idempotente: si ya no hay sesión, no hace nada,
-      // así varios 401 en paralelo no reinician el cierre ni el aviso.
-      _ref.read(sessionProvider.notifier).handleUnauthorized();
+      // Solo desloguear si el 401 corresponde al TOKEN DE LA SESIÓN ACTUAL. Un
+      // request SIN token, o con un token VIEJO, que quedó en vuelo desde el
+      // arranque o la pantalla de login y cuyo 401 llega DESPUÉS de un login
+      // nuevo, NO debe tumbar la sesión recién abierta (era el bug intermitente
+      // "me logueé y al instante dijo que la sesión expiró"). También protege
+      // el desalojo de sesión por otro dispositivo: el 401 del token viejo no
+      // afecta a una sesión distinta y vigente.
+      if (_isCurrentSessionToken(err.requestOptions)) {
+        // `handleUnauthorized` es idempotente: si ya no hay sesión, no hace
+        // nada, así varios 401 en paralelo no reinician el cierre ni el aviso.
+        // El aviso depende del motivo que informa el backend (código RFC7807):
+        // desalojo por otro dispositivo, baja del dispositivo, o expiración.
+        _ref
+            .read(sessionProvider.notifier)
+            .handleUnauthorized(
+              reason: _unauthorizedReason(_errorCode(err.response?.data)),
+            );
+      }
     }
     handler.next(err);
+  }
+
+  /// Código de problema (RFC7807) del body del error, o `null`.
+  String? _errorCode(Object? data) {
+    if (data is Map) {
+      final code = data['code'];
+      if (code is String) return code;
+    }
+    return null;
+  }
+
+  /// Aviso para el usuario según el [code] del 401. `null` = usar el genérico de
+  /// expiración (token vencido/ausente, `unauthenticated`).
+  String? _unauthorizedReason(String? code) {
+    switch (code) {
+      case 'session_superseded':
+        return 'Iniciaste sesión en otro dispositivo.';
+      case 'device_revoked':
+        return 'Este dispositivo fue dado de baja. Volvé a ingresar.';
+      default:
+        return null;
+    }
+  }
+
+  /// `true` si el request que recibió el 401 se envió con el Bearer de la
+  /// sesión ACTUAL. Un request sin `Authorization`, o con un token distinto del
+  /// vigente (viejo o de otra sesión), devuelve `false`: su 401 no debe cerrar
+  /// la sesión actual.
+  bool _isCurrentSessionToken(RequestOptions options) {
+    final sent = options.headers['Authorization'];
+    if (sent is! String || !sent.startsWith('Bearer ')) return false;
+    final sentToken = sent.substring('Bearer '.length);
+    if (sentToken.isEmpty) return false;
+    final current = _ref.read(authHeadersProvider).bearerToken;
+    return current != null && current.isNotEmpty && sentToken == current;
   }
 
   /// Rutas de autenticación cuyo 401 NO debe disparar el logout global.

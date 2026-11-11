@@ -4,61 +4,64 @@ import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/driver/domain/usecases/conduct_checklist.dart';
 import 'package:logistics_app/features/driver/presentation/checklist_screen.dart';
-import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 
 import '../support/driver_test_support.dart';
 import '../../../support/button_finders.dart';
 
-// Checklist pre-salida: snackbar "apto" cuando pasa todo, "con observaciones"
-// cuando falta algún ítem, y error de API.
+// Checklist pre-salida: el chofer que firma es el ASIGNADO al camión (el del
+// crew), no se elige de una lista. Snackbars "apto"/"con observaciones"/error.
 
-Future<void> _pumpChecklist(
+Future<FakeConductChecklist> _pumpChecklist(
   WidgetTester tester, {
-  List<Driver> drivers = const [],
   Data5? result,
   Object? error,
 }) async {
+  final fake = FakeConductChecklist(result: result, error: error);
   await pumpScoped(
     tester,
     overrides: [
       ...gateBase(),
-      driversProvider.overrideWith((ref) async => drivers),
-      conductChecklistProvider.overrideWith(
-        (ref) => FakeConductChecklist(result: result, error: error),
-      ),
+      conductChecklistProvider.overrideWith((ref) => fake),
     ],
     child: const ChecklistScreen(),
     tall: true,
   );
-}
-
-Future<void> _selectDriver(WidgetTester tester, String name) async {
-  await tester.tap(find.byType(DropdownButtonFormField<String>));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text(name).last);
-  await tester.pumpAndSettle();
+  return fake;
 }
 
 void main() {
-  testWidgets('sin choferes activos bloquea con estado vacío', (tester) async {
-    await _pumpChecklist(tester, drivers: const []);
-    expect(find.text('Sin choferes'), findsOneWidget);
-    expect(
-      find.text('No hay choferes activos para firmar el checklist.'),
-      findsOneWidget,
+  testWidgets('no pide elegir chofer: el botón está habilitado de entrada', (
+    tester,
+  ) async {
+    await _pumpChecklist(tester, result: const Data5(status: 'ok'));
+
+    // Ya no hay dropdown de "Selecciona el chofer".
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    final button = tester.widget<FilledButton>(
+      findButtonWithText<FilledButton>('Registrar checklist'),
     );
+    expect(button.onPressed, isNotNull);
   });
 
-  testWidgets('todo marcado => "apto para salir" (verde)', (tester) async {
-    await _pumpChecklist(
+  testWidgets('firma con el chofer ASIGNADO del crew (no se elige)', (
+    tester,
+  ) async {
+    final fake = await _pumpChecklist(
       tester,
-      drivers: [buildDriver(name: 'Juan Pérez')],
       result: const Data5(status: 'ok'),
     );
 
-    await _selectDriver(tester, 'Juan Pérez');
+    await tester.tap(find.text('Registrar checklist'));
+    await tester.pump();
+    await tester.pump();
 
-    // Marcar todos los ítems del checklist.
+    // El crew por defecto tiene el chofer con id 'd1' (buildDriver).
+    expect(fake.lastDriverId, 'd1');
+  });
+
+  testWidgets('todo marcado => "apto para salir" (verde)', (tester) async {
+    await _pumpChecklist(tester, result: const Data5(status: 'ok'));
+
     final switches = find.byType(SwitchListTile);
     for (var i = 0; i < switches.evaluate().length; i++) {
       await tester.tap(switches.at(i));
@@ -66,8 +69,8 @@ void main() {
     }
 
     await tester.tap(find.text('Registrar checklist'));
-    await tester.pump(); // ejecuta el submit async
-    await tester.pump(); // renderiza el snackbar
+    await tester.pump();
+    await tester.pump();
     await tester.pump();
 
     expect(find.text('Checklist registrado: apto para salir.'), findsOneWidget);
@@ -76,15 +79,8 @@ void main() {
   testWidgets('con ítems sin marcar => "con observaciones" y el status', (
     tester,
   ) async {
-    await _pumpChecklist(
-      tester,
-      drivers: [buildDriver(name: 'Ana Gómez')],
-      result: const Data5(status: 'needs_review'),
-    );
+    await _pumpChecklist(tester, result: const Data5(status: 'needs_review'));
 
-    await _selectDriver(tester, 'Ana Gómez');
-
-    // No se marca ningún ítem (quedan observaciones).
     await tester.tap(find.text('Registrar checklist'));
     await tester.pump();
     await tester.pump();
@@ -101,11 +97,9 @@ void main() {
   ) async {
     await _pumpChecklist(
       tester,
-      drivers: [buildDriver(name: 'Ana Gómez')],
       error: const ApiException(status: 500, title: 'x'),
     );
 
-    await _selectDriver(tester, 'Ana Gómez');
     await tester.tap(find.text('Registrar checklist'));
     await tester.pump();
     await tester.pump();
@@ -115,25 +109,5 @@ void main() {
       find.text('Error del servidor. Probá de nuevo en un momento.'),
       findsOneWidget,
     );
-  });
-
-  testWidgets('el botón se habilita solo tras elegir chofer', (tester) async {
-    await _pumpChecklist(
-      tester,
-      drivers: [buildDriver(name: 'Juan Pérez')],
-      result: const Data5(status: 'ok'),
-    );
-
-    // Sin chofer elegido el botón está deshabilitado.
-    final button = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Registrar checklist'),
-    );
-    expect(button.onPressed, isNull);
-
-    await _selectDriver(tester, 'Juan Pérez');
-    final enabled = tester.widget<FilledButton>(
-      findButtonWithText<FilledButton>('Registrar checklist'),
-    );
-    expect(enabled.onPressed, isNotNull);
   });
 }

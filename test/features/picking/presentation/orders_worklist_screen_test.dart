@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/shipment_status.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/widgets/empty_state.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/orders_worklist_controller.dart';
 import 'package:logistics_app/features/picking/presentation/orders_worklist_screen.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/order_card.dart';
 
+import '../../../support/app_icon_finders.dart';
 import '../picking_test_harness.dart';
 
 // Worklist del preparador. Se override el provider de datos (ordersToPrepare)
@@ -105,7 +107,7 @@ void main() {
   testWidgets('el ícono de teclado abre el ingreso manual', (tester) async {
     await _pump(tester, () async => const <Shipment>[]);
 
-    await tester.tap(find.byIcon(Icons.keyboard));
+    await tester.tap(findAppIcon(AppIcon.keyboard));
     await tester.pumpAndSettle();
 
     expect(find.text('INGRESO MANUAL'), findsOneWidget);

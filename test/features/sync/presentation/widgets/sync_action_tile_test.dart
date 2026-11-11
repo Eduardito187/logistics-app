@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/features/sync/presentation/widgets/sync_action_tile.dart';
+
+import '../../../../support/app_icon_finders.dart';
 
 // Fila de una acción de la cola: pendiente (hora, sin botón) o fallida (motivo y
 // botón de reintento, que llama a retryFailed con el id).
@@ -79,7 +82,7 @@ void main() {
     expect(find.text('Carga · pedido 123'), findsOneWidget);
     expect(find.textContaining('En cola · '), findsOneWidget);
     expect(find.text('Pendiente'), findsOneWidget);
-    expect(find.byIcon(Icons.schedule), findsOneWidget);
+    expect(findAppIcon(AppIcon.pending), findsOneWidget);
     expect(find.text('Reintentar'), findsNothing);
   });
 
@@ -104,7 +107,10 @@ void main() {
 
     expect(find.text('Rechazada por el servidor'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
-    expect(find.byIcon(Icons.error), findsOneWidget);
+    expect(
+      findAppIconInState(AppIcon.error, AppIconState.error),
+      findsOneWidget,
+    );
   });
 
   testWidgets('fallida sin motivo: muestra "Rechazada"', (tester) async {

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../icons/icons.dart';
+
 import 'scan_feedback.dart';
 import 'scan_frame.dart';
 import 'scanner_screen.dart' show createScannerController;
@@ -235,7 +237,7 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
         actions: [
           IconButton(
             tooltip: 'Linterna',
-            icon: const Icon(Icons.flash_on),
+            icon: const AnimatedAppIcon(AppIcon.bolt),
             onPressed: () => _controller.toggleTorch(),
           ),
         ],
@@ -270,7 +272,7 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
                 height: 64,
                 child: FilledButton.icon(
                   onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.check, size: 28),
+                  icon: const AnimatedAppIcon(AppIcon.check, size: 28),
                   label: const Text(
                     'Terminar',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
@@ -332,8 +334,12 @@ class _FeedbackBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Icon(
-                feedback.ok ? Icons.check_circle : Icons.error,
+              // Resultado del escaneo "en acción": el check se dibuja con pop o
+              // el error se sacude (cada lectura nueva remonta el ícono).
+              AnimatedAppIcon(
+                feedback.ok ? AppIcon.success : AppIcon.error,
+                key: ValueKey(feedback),
+                state: feedback.ok ? AppIconState.success : AppIconState.error,
                 color: Colors.white,
                 size: 32,
               ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/vehicle_live.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/supervisor_controllers.dart';
@@ -114,7 +115,12 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
         actions: [
           IconButton(
             tooltip: 'Actualizar',
-            icon: const Icon(Icons.refresh),
+            // Gira mientras se piden las posiciones (manual o automático).
+            icon: AnimatedAppIcon(
+              AppIcon.refresh,
+              state: fleet.isLoading ? AppIconState.loading : AppIconState.idle,
+              excludeFromSemantics: true,
+            ),
             onPressed: () => ref.invalidate(fleetLiveProvider),
           ),
         ],
@@ -125,7 +131,7 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
         data: (vehicles) {
           if (vehicles.isEmpty) {
             return const EmptyState(
-              icon: Icons.map_outlined,
+              icon: AppIcon.map,
               title: 'Sin camiones en vivo',
               message: 'No hay posiciones de telemetría por ahora.',
             );

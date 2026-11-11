@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
+
 /// Ancho de decodificación de la vista previa de la foto (px). La vista previa
 /// mide 180 dp de alto; 800 px alcanza con nitidez sin cargar la foto entera.
 const int kEvidencePreviewCacheWidth = 800;
@@ -118,9 +120,10 @@ class _PreviewError extends StatelessWidget {
     return SizedBox(
       height: height,
       child: Center(
-        child: Icon(
-          Icons.broken_image_outlined,
+        child: AnimatedAppIcon(
+          AppIcon.image,
           size: 48,
+          state: AppIconState.error,
           color: Theme.of(context).colorScheme.outline,
           semanticLabel: 'No se pudo mostrar la imagen',
         ),

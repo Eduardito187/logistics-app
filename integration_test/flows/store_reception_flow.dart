@@ -37,7 +37,7 @@ void storeReceptionFlowTests() {
       // --- Abrir la recepción ------------------------------------------------
       await pumpUntilFound(
         tester,
-        find.textContaining('tiene 2 bulto(s) esperado(s)'),
+        find.textContaining('tiene 2 producto(s) esperado(s)'),
       );
       await tapVisible(tester, find.text('Nodo de origen'));
       await tapVisible(tester, find.text('CD Santa Cruz · CD-SCZ').last);
@@ -53,13 +53,21 @@ void storeReceptionFlowTests() {
         FakeBackend.storeExpectedUnits,
       );
 
-      Finder scanButton() => findButtonWithText<FilledButton>('Escanear bulto');
+      Finder scanButton() =>
+          findButtonWithText<FilledButton>('Escanear producto');
 
       // --- Etiqueta adulterada: se avisa y no se recibe ------------------------
+      // El aviso "Firma inválida…" se muestra sobre el escáner continuo (overlay
+      // que el fake no dibuja), así que se verifica por el feedback del escaneo.
       await tapVisible(tester, scanButton());
-      await pumpUntilFound(
+      await pumpUntil(
         tester,
-        find.text('Firma inválida: etiqueta editada o falsa.'),
+        () => h.scanner.continuousMessages.isNotEmpty,
+        reason: 'El escaneo de la etiqueta adulterada debería dar feedback',
+      );
+      expect(
+        h.scanner.continuousMessages,
+        contains('Etiqueta inválida: editada o falsa'),
       );
       expect(find.text('Ubicación en estante'), findsNothing);
       expect(find.text('0/2'), findsOneWidget);

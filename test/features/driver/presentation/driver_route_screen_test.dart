@@ -1,15 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/features/driver/presentation/driver_route_screen.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/route_list.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/route_summary.dart';
-import 'package:logistics_app/features/driver/presentation/widgets/stop_card.dart';
 
+import '../../../support/app_icon_finders.dart';
 import '../support/driver_test_support.dart';
 
 // Pantalla "Mi ruta de hoy": resumen + mapa/lista de paradas y estados.
@@ -61,14 +61,18 @@ void main() {
     );
 
     expect(find.byType(RouteSummary), findsOneWidget);
-    expect(find.text('1/2 entregadas · 1 por hacer'), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget); // avance en el anillo
+    expect(find.text('1 entregadas'), findsOneWidget);
 
     // Alternar a la vista de lista.
-    await tester.tap(find.byIcon(Icons.list));
+    await tester.tap(findAppIcon(AppIcon.orders));
     await tester.pumpAndSettle();
 
+    // La lista muestra las dos paradas (en teléfono como timeline, en tablet
+    // como tarjetas en grilla): se verifican por su contenido.
     expect(find.byType(RouteList), findsOneWidget);
-    expect(find.byType(StopCard), findsNWidgets(2));
+    expect(find.text('Uno'), findsOneWidget);
+    expect(find.text('Dos'), findsOneWidget);
   });
 
   testWidgets('en error muestra el estado de carga con reintento', (

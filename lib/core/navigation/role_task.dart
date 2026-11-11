@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/user_role.dart';
+import '../icons/icons.dart';
 
 /// Una tarjeta de acción en el inicio del rol. Cada feature aporta las suyas y
 /// el inicio las filtra por el rol de la sesión.
@@ -9,7 +10,7 @@ class RoleTask {
   const RoleTask({
     required this.id,
     required this.label,
-    required this.icon,
+    required this.appIcon,
     required this.route,
     required this.roles,
     this.subtitle,
@@ -20,7 +21,9 @@ class RoleTask {
   final String id;
   final String label;
   final String? subtitle;
-  final IconData icon;
+
+  /// Ícono animado DisTrack de la acción (botón central, tarjeta héroe, tiles).
+  final AppIcon appIcon;
 
   /// Ruta go_router a la que navega la tarjeta.
   final String route;

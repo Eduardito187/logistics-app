@@ -114,7 +114,7 @@ void main() {
     final box = <Object?>[#pending];
     await _open(tester, box);
 
-    expect(find.text('Carril / vehículo'), findsOneWidget); // título
+    expect(find.text('Vehículo de reparto'), findsOneWidget); // título
     expect(find.text('Guardar'), findsOneWidget);
     expect(find.text('Cancelar'), findsOneWidget);
     expect(find.text('Escanear'), findsOneWidget);

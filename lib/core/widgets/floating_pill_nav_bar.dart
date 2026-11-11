@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../icons/icons.dart';
 import '../navigation/app_nav.dart';
 import '../theme/app_colors.dart';
 
@@ -30,7 +31,9 @@ class FloatingPillNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   final String centerLabel;
-  final IconData centerIcon;
+
+  /// Ícono animado de la acción estrella del rol (cambia según el rol).
+  final AppIcon centerIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +126,9 @@ class FloatingPillNavBar extends StatelessWidget {
 }
 
 /// Una pestaña lateral: ícono (con onda circular sobre el ícono) + etiqueta.
-class _NavItem extends StatelessWidget {
+/// Al tocar da un REBOTE de escala (además de la metáfora del ícono), así se
+/// nota la reacción en cada click aunque la metáfora sea sutil a 22 dp.
+class _NavItem extends StatefulWidget {
   const _NavItem({
     required this.tab,
     required this.selected,
@@ -135,10 +140,34 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem>
+    with SingleTickerProviderStateMixin {
+  // Rebote al tocar: sube y baja (pico ~+22 %) en 220 ms.
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  );
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    if (!MediaQuery.disableAnimationsOf(context)) _pop.forward(from: 0);
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     const activeColor = AppColors.brand;
+    final selected = widget.selected;
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 220);
@@ -146,33 +175,45 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: _handleTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            InkResponse(
-              onTap: onTap,
-              radius: 24,
-              containedInkWell: false,
-              highlightShape: BoxShape.circle,
-              customBorder: const CircleBorder(),
-              child: AnimatedContainer(
-                duration: duration,
-                curve: Curves.easeOut,
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? activeColor.withValues(alpha: 0.14)
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  selected ? tab.activeIcon : tab.icon,
-                  size: 22,
-                  color: selected ? activeColor : muted,
+            AnimatedBuilder(
+              animation: _pop,
+              builder: (context, child) {
+                // Pico triangular suave: 0 → 1 → 0 escalado a +22 %.
+                final lift = 1 - (2 * _pop.value - 1).abs();
+                return Transform.scale(scale: 1 + 0.22 * lift, child: child);
+              },
+              child: InkResponse(
+                onTap: _handleTap,
+                radius: 24,
+                containedInkWell: false,
+                highlightShape: BoxShape.circle,
+                customBorder: const CircleBorder(),
+                child: AnimatedContainer(
+                  duration: duration,
+                  curve: Curves.easeOut,
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? activeColor.withValues(alpha: 0.14)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  // Ícono DisTrack animado: al seleccionarse se dibuja y rellena
+                  // con su metáfora (techo, celdas, campana, persona).
+                  child: AnimatedAppIcon(
+                    widget.tab.appIcon,
+                    state: selected ? AppIconState.active : AppIconState.idle,
+                    size: 22,
+                    color: selected ? activeColor : muted,
+                    excludeFromSemantics: true,
+                  ),
                 ),
               ),
             ),
@@ -180,7 +221,7 @@ class _NavItem extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                tab.label,
+                widget.tab.label,
                 maxLines: 1,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: selected ? activeColor : muted,
@@ -207,7 +248,7 @@ class _CenterButton extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final AppIcon icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -251,7 +292,22 @@ class _CenterButton extends StatelessWidget {
               child: SizedBox(
                 width: 56,
                 height: 56,
-                child: Icon(icon, color: Colors.white, size: 28),
+                // Acción estrella del rol: respira en reposo (invita al toque)
+                // y ejecuta su metáfora al seleccionarse.
+                child: Center(
+                  child: AnimatedAppIcon(
+                    icon,
+                    state: selected ? AppIconState.active : AppIconState.idle,
+                    size: 28,
+                    color: Colors.white,
+                    // Sobre el rojo del botón, el resalte al tocar es ÁMBAR (no
+                    // Noche/negro: en tema oscuro el negro hacía desaparecer el
+                    // ícono a mitad de la animación).
+                    highlightColor: AppColors.accent,
+                    ambient: true,
+                    excludeFromSemantics: true,
+                  ),
+                ),
               ),
             ),
           ),

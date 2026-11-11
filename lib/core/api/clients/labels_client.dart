@@ -5,6 +5,7 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
+import '../models/dispatch_lines_response.dart';
 import '../models/emit_labels_request.dart';
 import '../models/get_app_labels_public_keys_response.dart';
 import '../models/label_collection.dart';
@@ -61,6 +62,19 @@ abstract class LabelsClient {
   /// [orderNumber] - Número de pedido.
   @GET('/app/orders/{orderNumber}/labels/zpl')
   Future<String> getShipmentLabelsZpl({
+    @Path('orderNumber') required String orderNumber,
+  });
+
+  /// Dispatch lines of an order (per-product labeling screen).
+  ///
+  /// Líneas de despacho de la orden para la pantalla de etiquetado por producto: cada producto con.
+  /// nombre + imagen servible, origen y destino humanos (cero uuid), el envío al que pertenece.
+  /// (shipment_id opaco para agrupar + shipment_reference legible), si está AUTORIZADA (plan publicado).
+  /// y el estado de su etiqueta. Forma n-a-n (destino por línea).
+  ///
+  /// [orderNumber] - Número de pedido.
+  @GET('/app/orders/{orderNumber}/dispatch-lines')
+  Future<DispatchLinesResponse> getOrderDispatchLines({
     @Path('orderNumber') required String orderNumber,
   });
 

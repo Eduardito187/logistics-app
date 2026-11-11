@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ds-p-frame" d="M3 9.5a2 2 0 0 1 2-2h2.4L9 5h6l1.6 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+  <circle class="ds-accent ds-p-lens" cx="12" cy="13.5" r="3.4"/>
+  <circle class="ds-p-flash" cx="17.6" cy="10.6" r="1.1" fill="currentColor" stroke="none"/>
+</svg>

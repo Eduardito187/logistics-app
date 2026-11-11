@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/export.dart';
+import '../../../core/icons/icons.dart';
+import '../../../core/navigation/app_nav.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/driver_controllers.dart';
@@ -11,17 +13,30 @@ import 'driver_vehicle_gate.dart';
 import 'widgets/active_delivery/delivery_actions_bar.dart';
 import 'widgets/active_delivery/delivery_help_sheet.dart';
 import 'widgets/active_delivery/delivery_map.dart';
-import 'widgets/active_delivery/delivery_sheet.dart';
 import 'widgets/active_delivery/delivery_status_card.dart';
 import 'widgets/active_delivery/map_round_button.dart';
 
 export 'controllers/locally_settled_stops.dart' show currentStopOf;
 
-/// Entrega en curso: el mapa ocupa la pantalla; arriba el estado (parada N de
-/// M, hora estimada, progreso), abajo una hoja deslizable con los datos de la
-/// entrega (cliente, teléfono, dirección) y el pedido (productos con SKU), y al
-/// pie los botones del paso que corresponde (escanear bultos, entregar con foto,
-/// no se pudo entregar). "Ayuda" reúne llamar, navegar y reportar problemas.
+/// Cierra la entrega: si se abrió EMPUJADA desde otra sección, vuelve atrás; si
+/// es la pestaña central del shell (no hay nada que cerrar), va al Inicio. Así
+/// la "X" SIEMPRE está y SIEMPRE hace algo (antes a veces quedaba muerta o no
+/// aparecía, y confundía).
+void _closeOrHome(BuildContext context, WidgetRef ref) {
+  final nav = Navigator.of(context);
+  if (nav.canPop()) {
+    nav.pop();
+  } else {
+    ref.read(homeTabProvider.notifier).set(0);
+  }
+}
+
+/// Entrega en curso: el MAPA ocupa casi toda la pantalla. Arriba, la "X" (izq)
+/// y "Ayuda" (der) y el estado (parada N de M, hora estimada, progreso). Al
+/// pie, una barra compacta con el cliente + "Ver pedido" (abre los datos y el
+/// pedido en un modal BAJO DEMANDA, no una hoja siempre abierta que tapaba el
+/// mapa) y los botones del paso: entregar con foto, escanear bultos, no se pudo.
+/// "Ayuda" reúne llamar, navegar y reportar problemas.
 class ActiveDeliveryScreen extends ConsumerWidget {
   const ActiveDeliveryScreen({super.key});
 
@@ -83,14 +98,16 @@ class _ActiveDelivery extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
+                        // "X" SIEMPRE visible (cierra o vuelve al Inicio).
                         MapRoundButton(
                           tooltip: 'Cerrar',
-                          icon: Icons.close,
-                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: AppIcon.close,
+                          onPressed: () => _closeOrHome(context, ref),
                         ),
                         const Spacer(),
+                        // "Ayuda" a la DERECHA (llamar, navegar, reportar).
                         MapPillButton(
-                          icon: Icons.support_agent,
+                          icon: AppIcon.support,
                           label: 'Ayuda',
                           onPressed: () =>
                               showDeliveryHelpSheet(context, ref, stop: stop),
@@ -104,7 +121,6 @@ class _ActiveDelivery extends ConsumerWidget {
                   ],
                 ),
               ),
-              DeliverySheet(stop: stop),
             ],
           ),
         ),
@@ -132,30 +148,31 @@ class _LiveStatusCard extends ConsumerWidget {
 }
 
 /// Sin paradas pendientes: ruta del día terminada.
-class _RouteFinished extends StatelessWidget {
+class _RouteFinished extends ConsumerWidget {
   const _RouteFinished({required this.route});
 
   final DriverRoute route;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SafeArea(
       child: Column(
         children: [
+          // "X" SIEMPRE visible, consistente con la entrega en curso.
           Align(
             alignment: Alignment.topLeft,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: MapRoundButton(
                 tooltip: 'Cerrar',
-                icon: Icons.close,
-                onPressed: () => Navigator.of(context).maybePop(),
+                icon: AppIcon.close,
+                onPressed: () => _closeOrHome(context, ref),
               ),
             ),
           ),
           Expanded(
             child: EmptyState(
-              icon: Icons.task_alt,
+              icon: AppIcon.deliverScan,
               title: route.stops.isEmpty
                   ? 'Sin entregas asignadas'
                   : 'Ruta completada',
@@ -164,7 +181,7 @@ class _RouteFinished extends StatelessWidget {
                   : 'Atendiste las ${route.totalStops} paradas del día.',
               action: OutlinedButton.icon(
                 onPressed: () => context.push('/driver/route'),
-                icon: const Icon(Icons.map),
+                icon: const AnimatedAppIcon(AppIcon.map),
                 label: const Text('Ver ruta del día'),
               ),
             ),

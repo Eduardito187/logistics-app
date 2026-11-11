@@ -115,6 +115,11 @@ dependencies:
   # - Firma del cliente en pantalla para la prueba de entrega.
   signature: ^6.0.0
 
+  # Compartir por el menú nativo del móvil (WhatsApp, correo, etc.): etiquetas,
+  # firmas y fotos de evidencia. 10.x usa la API Share.shareXFiles (estable con
+  # Flutter 3.32 / Dart 3.8).
+  share_plus: ^10.1.4
+
   # Marca DisTrack: logo/isotipo vectorial (SVG) y splash animado (Lottie).
   flutter_svg: ^2.0.17
   lottie: ^3.1.3

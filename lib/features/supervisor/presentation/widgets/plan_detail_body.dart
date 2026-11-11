@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/plan.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -59,7 +60,7 @@ class PlanDetailBody extends StatelessWidget {
           child: StatTile(
             value: '${stops.length}',
             label: 'Paradas',
-            icon: Icons.pin_drop,
+            icon: AppIcon.place,
           ),
         ),
         const SizedBox(width: 12),
@@ -67,12 +68,17 @@ class PlanDetailBody extends StatelessWidget {
           child: StatTile(
             value: finalEta == null ? '—' : formatHour(finalEta),
             label: 'ETA final',
-            icon: Icons.schedule,
+            icon: AppIcon.pending,
             color: AppColors.info,
           ),
         ),
       ],
     );
+    // Nota (512 MB): esta es la ÚNICA lista que se arma eager (Column), pero es
+    // una pantalla de SUPERVISOR (tablet/oficina), no del personal de terreno
+    // con teléfonos de 512 MB. Con ~20-60 StopTile livianos en tablet es
+    // aceptable; virtualizar exigiría CustomScrollView/slivers (romper el
+    // SectionCard) sin beneficio en el equipo objetivo. Se deja a propósito.
     final stopsCard = SectionCard(
       title: 'Secuencia de paradas',
       child: stops.isEmpty

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/session.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -24,7 +25,7 @@ class SessionSection extends ConsumerWidget {
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(session?.role.icon ?? Icons.person_outline),
+            leading: AnimatedAppIcon(session?.role.icon ?? AppIcon.profile),
             title: Text(session?.userName ?? 'Sin sesión'),
             subtitle: Text(session?.role.label ?? '—'),
           ),
@@ -44,7 +45,7 @@ class SessionSection extends ConsumerWidget {
                       if (context.mounted) showErrorSnack(context, e);
                     }
                   },
-            icon: const Icon(Icons.autorenew),
+            icon: const AnimatedAppIcon(AppIcon.syncing),
             label: const Text('Renovar sesión'),
           ),
           const SizedBox(height: 8),
@@ -52,7 +53,7 @@ class SessionSection extends ConsumerWidget {
             onPressed: session == null
                 ? null
                 : () => ref.read(sessionProvider.notifier).signOut(),
-            icon: const Icon(Icons.logout),
+            icon: const AnimatedAppIcon(AppIcon.logout),
             label: const Text('Cerrar sesión'),
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,

@@ -18,12 +18,12 @@ import '../../../core/widgets/app_snack.dart';
 Future<String?> scanVerifiedUnit(
   BuildContext context,
   WidgetRef ref, {
-  String helper = 'Apunta al QR del bulto',
+  String helper = 'Apunta al QR del producto',
   double? bottomClearance,
 }) async {
   final qr = await scanCode(
     context,
-    title: 'Escanear bulto',
+    title: 'Escanear producto',
     helper: helper,
     formats: const [BarcodeFormat.qrCode],
   );

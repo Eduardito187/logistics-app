@@ -22,8 +22,10 @@ void main() {
       final memory = await DeviceMemory.load(channel: channel);
 
       expect(memory.totalMb, 980);
+      expect(memory.memoryClassMb, 96);
       expect(memory.lowRam, isTrue);
       expect(memory.isLowEnd, isTrue);
+      expect(memory.isVeryLowEnd, isFalse); // 980 MB / heap 96 MB: no es Go 512
     });
 
     test(
@@ -43,7 +45,47 @@ void main() {
     );
   });
 
+  group('DeviceMemory.isVeryLowEnd (512 MB / Android Go real)', () {
+    test('≤768 MB de RAM total cuenta como gama extrema', () {
+      expect(const DeviceMemory(totalMb: 512).isVeryLowEnd, isTrue);
+      expect(const DeviceMemory(totalMb: 768).isVeryLowEnd, isTrue);
+      expect(const DeviceMemory(totalMb: 1024).isVeryLowEnd, isFalse);
+    });
+
+    test('heap Java (memoryClass) ≤24 MB cuenta como gama extrema', () {
+      // Aunque el equipo reporte más RAM total, un heap chico delata el Go.
+      expect(
+        const DeviceMemory(totalMb: 1024, memoryClassMb: 24).isVeryLowEnd,
+        isTrue,
+      );
+      expect(
+        const DeviceMemory(totalMb: 1024, memoryClassMb: 32).isVeryLowEnd,
+        isFalse,
+      );
+    });
+
+    test('equipo desconocido NO es gama extrema (se asume gama media)', () {
+      expect(DeviceMemory.unknown.isVeryLowEnd, isFalse);
+    });
+  });
+
   group('MemoryBudget.forDevice', () {
+    test(
+      '512 MB (gama extrema): caché mínima y trim, antes del tier de 1 GB',
+      () {
+        final b = MemoryBudget.forDevice(const DeviceMemory(totalMb: 512));
+        expect(b.imageCacheBytes, 10 << 20);
+        expect(b.imageCacheCount, 24);
+        expect(b.trimOnBackground, isTrue);
+
+        // El tier extremo gana aunque también sea isLowEnd (heap chico).
+        final byHeap = MemoryBudget.forDevice(
+          const DeviceMemory(totalMb: 1024, memoryClassMb: 20),
+        );
+        expect(byHeap.imageCacheBytes, 10 << 20);
+      },
+    );
+
     test('1 GB: caché chica y se libera al ir a segundo plano', () {
       final b = MemoryBudget.forDevice(const DeviceMemory(totalMb: 1024));
       expect(b.imageCacheBytes, 24 << 20);

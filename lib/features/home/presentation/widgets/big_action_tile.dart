@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Tile de acción grande y amable para la grilla del inicio.
@@ -13,14 +14,16 @@ class BigActionTile extends StatelessWidget {
     super.key,
     required this.label,
     this.subtitle,
-    required this.icon,
+    required this.appIcon,
     required this.onTap,
     this.accent = false,
   });
 
   final String label;
   final String? subtitle;
-  final IconData icon;
+
+  /// Ícono animado DisTrack de la tarea.
+  final AppIcon appIcon;
   final VoidCallback onTap;
 
   /// Variante de acento ámbar (alertas / en-curso); por defecto, rojo de marca.
@@ -60,7 +63,13 @@ class BigActionTile extends StatelessWidget {
                     color: boxColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(icon, size: 28, color: iconColor),
+                  // Decorativo: la etiqueta ya la anuncia el texto del tile.
+                  child: AnimatedAppIcon(
+                    appIcon,
+                    size: 28,
+                    color: iconColor,
+                    excludeFromSemantics: true,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -89,9 +98,10 @@ class BigActionTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
+                AnimatedAppIcon(
+                  AppIcon.chevronRight,
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  excludeFromSemantics: true,
                 ),
               ],
             ),

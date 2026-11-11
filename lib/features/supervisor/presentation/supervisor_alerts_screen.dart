@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/alert.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -59,7 +60,7 @@ class SupervisorAlertsScreen extends ConsumerWidget {
                       children: const [
                         SizedBox(height: 80),
                         EmptyState(
-                          icon: Icons.notifications_off,
+                          icon: AppIcon.alertsOff,
                           title: 'Sin alertas',
                           message: 'No hay alertas que reconocer por ahora.',
                         ),

@@ -43,9 +43,9 @@ void main() {
       child: const LoadScanScreen(),
     );
 
-    expect(find.text('Envío ship-1'), findsOneWidget);
+    expect(find.text('Envío 1'), findsOneWidget);
     expect(find.text('Cargado'), findsOneWidget);
-    expect(find.text('Envío ship-2'), findsOneWidget);
+    expect(find.text('Envío 2'), findsOneWidget);
     expect(find.text('Entregado'), findsOneWidget);
     expect(find.text('0 escaneo(s)'), findsNWidgets(2));
   });

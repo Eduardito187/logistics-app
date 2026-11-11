@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/notification_view.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -46,7 +47,7 @@ class NotificationsListScreen extends ConsumerWidget {
                           SliverFillRemaining(
                             hasScrollBody: false,
                             child: EmptyState(
-                              icon: Icons.notifications_off_outlined,
+                              icon: AppIcon.alertsOff,
                               title: 'Sin notificaciones',
                               message:
                                   'No hay notificaciones en la operación por '
@@ -135,7 +136,7 @@ class _MoreFooter extends StatelessWidget {
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.expand_more),
+          : const AnimatedAppIcon(AppIcon.expandMore),
       label: const Text('Ver más notificaciones'),
     );
   }

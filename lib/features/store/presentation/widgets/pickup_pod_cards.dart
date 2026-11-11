@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
+import '../../../../core/icons/icons.dart';
+import '../../../../core/widgets/field_icon.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -82,7 +84,8 @@ class PickupConfirmationCard extends StatelessWidget {
             controller: controller,
             onChanged: onChanged,
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.badge_outlined),
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(icon: AppIcon.badge),
               labelText: 'QR del cliente o documento',
               hintText: 'Escanea o escribe la confirmación',
             ),
@@ -90,7 +93,10 @@ class PickupConfirmationCard extends StatelessWidget {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: onScan,
-            icon: const Icon(Icons.qr_code_scanner),
+            icon: const AnimatedAppIcon(
+              AppIcon.scan,
+              excludeFromSemantics: true,
+            ),
             label: const Text('Escanear QR del cliente'),
           ),
         ],
@@ -106,11 +112,15 @@ class PickupPhotoCard extends StatelessWidget {
     required this.photo,
     required this.busy,
     required this.onTakePhoto,
+    this.onShare,
   });
 
   final File? photo;
   final bool busy;
   final VoidCallback onTakePhoto;
+
+  /// Comparte la foto por el menú nativo (WhatsApp, etc.). `null` = sin botón.
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -134,27 +144,46 @@ class PickupPhotoCard extends StatelessWidget {
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => const SizedBox(
                   height: 160,
-                  child: Center(child: Icon(Icons.image_outlined, size: 48)),
+                  child: Center(
+                    child: AnimatedAppIcon(
+                      AppIcon.image,
+                      size: 48,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 8),
             // Offline invisible: la foto queda guardada y se sube sola.
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: StatusPill(
-                  'Foto guardada',
-                  tone: PillTone.success,
-                  icon: Icons.check_circle,
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const StatusPill(
+                    'Foto guardada',
+                    tone: PillTone.success,
+                    icon: AppIcon.success,
+                    // El check se dibuja con pop cuando la foto queda guardada.
+                    iconState: AppIconState.success,
+                  ),
+                  const Spacer(),
+                  if (onShare != null)
+                    TextButton.icon(
+                      onPressed: busy ? null : onShare,
+                      icon: const AnimatedAppIcon(AppIcon.send, size: 18),
+                      label: const Text('Compartir'),
+                    ),
+                ],
               ),
             ),
           ],
           OutlinedButton.icon(
             onPressed: busy ? null : onTakePhoto,
-            icon: const Icon(Icons.photo_camera),
+            icon: const AnimatedAppIcon(
+              AppIcon.capture,
+              excludeFromSemantics: true,
+            ),
             label: Text(photo == null ? 'Tomar foto' : 'Volver a tomar'),
           ),
         ],

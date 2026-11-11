@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/logistics_api.dart';
+import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/reprint_labels_request.dart';
@@ -15,9 +16,14 @@ import '../../../../core/network/dio_client.dart';
 /// Cada método espeja un endpoint, devuelve el modelo del contrato (`.data`) y
 /// convierte el error de Dio en [ApiException] (el *Failure* del dominio).
 class PickingRemoteDataSource {
-  const PickingRemoteDataSource(this._api);
+  const PickingRemoteDataSource(this._api, this._dio);
 
   final LogisticsApi _api;
+
+  /// Dio crudo (mismo cliente autenticado) para el emit POR ORDEN con body
+  /// vacío: el cliente generado exige `EmitLabelsRequest` con campos, pero el
+  /// modo por orden manda `{}` y el backend deriva todo.
+  final Dio _dio;
 
   /// GET `/app/shipments`: pedidos recibidos (worklist del preparador/andén).
   /// Con [status] el filtro va en el servidor (`status`); el endpoint admite
@@ -39,6 +45,39 @@ class PickingRemoteDataSource {
         orderNumber: orderNumber,
       );
       return collection.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// GET `/app/orders/{orderNumber}/dispatch-lines`: los productos a etiquetar
+  /// del pedido ya resueltos (nombre, SKU, foto, origen/destino por línea,
+  /// autorización y estado de etiqueta). Base de la lista simple de etiquetado.
+  Future<DispatchLinesResponse> getOrderDispatchLines(
+    String orderNumber,
+  ) async {
+    try {
+      return await _api.labels.getOrderDispatchLines(orderNumber: orderNumber);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// POST `/app/orders/{orderNumber}/labels` con body VACÍO: emisión POR ORDEN.
+  /// El backend recorre los envíos del pedido, deriva origen/destino/líneas del
+  /// plan publicado y emite SOLO las líneas autorizadas y aún pendientes. Es
+  /// idempotente: reabrir la pantalla emite lo que falte, sin duplicar (201 con
+  /// la colección completa). No pide nada al usuario (sin form de origen/destino).
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber) async {
+    try {
+      final res = await _dio.post<Map<String, Object?>>(
+        '/app/orders/$orderNumber/labels',
+        data: const <String, Object?>{},
+      );
+      final data = (res.data?['data'] as List<Object?>?) ?? const [];
+      return data
+          .map((e) => EmittedLabel.fromJson((e as Map).cast<String, Object?>()))
+          .toList(growable: false);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
@@ -91,5 +130,8 @@ class PickingRemoteDataSource {
 
 /// Proveedor de la fuente de datos remota de preparación.
 final pickingRemoteDataSourceProvider = Provider<PickingRemoteDataSource>(
-  (ref) => PickingRemoteDataSource(ref.watch(logisticsApiProvider)),
+  (ref) => PickingRemoteDataSource(
+    ref.watch(logisticsApiProvider),
+    ref.watch(dioProvider),
+  ),
 );

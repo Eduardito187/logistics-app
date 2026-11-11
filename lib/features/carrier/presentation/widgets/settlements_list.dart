@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/carrier.dart';
 import '../../../../core/api/models/settlement.dart';
+import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/responsive_body.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -35,7 +36,7 @@ class SettlementsList extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   EmptyState(
-                    icon: Icons.receipt_long,
+                    icon: AppIcon.settle,
                     title: 'Sin liquidaciones',
                     message: 'Aquí verás las liquidaciones de tus corredores.',
                   ),

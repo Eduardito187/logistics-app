@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/api/export.dart';
+import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/map/map_launcher.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/status_pill.dart';
+import '../../../../../core/widgets/tap_outside_to_dismiss.dart';
+import '../../../data/datasources/delivery_evidence_data_source.dart';
+import '../../../domain/entities/delivery_evidence.dart';
 import '../../../../../core/widgets/brand_loader.dart';
 import '../../../domain/entities/street_address.dart';
 import '../../controllers/driver_controllers.dart';
@@ -18,47 +24,51 @@ bool stopNeedsShipmentDetail(DriverRouteStop stop) =>
     (stop.address?.isEmpty ?? true) ||
     stop.items.isEmpty;
 
-/// Hoja deslizable sobre el mapa con los datos de la entrega (cliente,
-/// teléfono, dirección, referencia del pedido) y el pedido (productos con SKU y
-/// cantidad). Arranca a media altura; se arrastra para ver todo.
-class DeliverySheet extends StatelessWidget {
-  const DeliverySheet({super.key, required this.stop});
-
-  final DriverRouteStop stop;
-
-  static const double minSize = 0.30;
-  static const double initialSize = 0.42;
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      minChildSize: minSize,
-      initialChildSize: initialSize,
-      maxChildSize: 0.92,
-      snap: true,
-      snapSizes: const [initialSize],
-      builder: (context, controller) {
-        final theme = Theme.of(context);
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppBreakpoints.maxContentWidth,
-            ),
-            child: Material(
-              color: theme.colorScheme.surface,
-              elevation: 8,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: CustomScrollView(
-                controller: controller,
-                slivers: [
-                  const SliverToBoxAdapter(child: _Grabber()),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                    sliver: SliverList.list(
+/// Abre los DATOS de la entrega (cliente, teléfono y dirección como enlaces
+/// tocables, referencia del pedido y los productos con SKU/cantidad) en un
+/// modal BAJO DEMANDA. Antes esto vivía como una hoja SIEMPRE visible que
+/// tapaba medio mapa; ahora el mapa manda y el detalle se abre solo cuando el
+/// chofer lo pide (desde "Ver pedido" en la barra de acciones) y se cierra
+/// deslizando hacia abajo o tocando fuera.
+///
+/// La altura es DINÁMICA: el modal mide lo que mide su contenido (pocos
+/// productos → bajo, sin espacio vacío; muchos → crece hasta 90% y recién ahí
+/// hace scroll interno). Así se adapta a 1 o a varios ítems.
+Future<void> showDeliveryDetailsSheet(
+  BuildContext context,
+  DriverRouteStop stop,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      final theme = Theme.of(context);
+      final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+      return TapOutsideToDismiss(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: AppBreakpoints.maxContentWidth,
+            maxHeight: maxHeight,
+          ),
+          child: Material(
+            color: theme.colorScheme.surface,
+            elevation: 8,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _Grabber(),
+                // Flexible + SingleChildScrollView: el contenido define el alto
+                // (ajuste exacto) y, si supera el tope, recién ahí hay scroll.
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'Entrega',
@@ -69,21 +79,19 @@ class DeliverySheet extends StatelessWidget {
                         const SizedBox(height: 8),
                         _DeliveryDetails(stop: stop),
                         const SizedBox(height: 20),
+                        _OrderSection(stop: stop),
+                        _EvidenceSection(stop: stop),
                       ],
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    sliver: _OrderSection(stop: stop),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 }
 
 class _Grabber extends StatelessWidget {
@@ -103,6 +111,76 @@ class _Grabber extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Evidencia del cliente (firma / documento / foto) con su estado de validación
+/// anti-fraude. Solo aparece si el envío ya tiene evidencia subida. Para el
+/// chofer: si el documento "No coincide", conviene volver a tomarlo.
+class _EvidenceSection extends ConsumerWidget {
+  const _EvidenceSection({required this.stop});
+
+  final DriverRouteStop stop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items =
+        ref.watch(deliveryEvidenceProvider(stop.shipmentId)).value ??
+        const <DeliveryEvidenceItem>[];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Evidencia del cliente',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final e in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(child: Text(_kindLabel(e.kind))),
+                  const SizedBox(width: 12),
+                  _validationPill(e.status),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static String _kindLabel(String kind) => switch (kind) {
+    'signature' => 'Firma del cliente',
+    'id_document' => 'Documento del cliente',
+    'damage' => 'Foto de daño',
+    _ => 'Foto de entrega',
+  };
+
+  static Widget _validationPill(EvidenceValidation status) => switch (status) {
+    EvidenceValidation.ok => const StatusPill(
+      'Validado',
+      tone: PillTone.success,
+      icon: AppIcon.check,
+    ),
+    EvidenceValidation.review => const StatusPill(
+      'Revisar',
+      tone: PillTone.warning,
+      icon: AppIcon.pending,
+    ),
+    EvidenceValidation.mismatch => const StatusPill(
+      'No coincide',
+      tone: PillTone.danger,
+      icon: AppIcon.cancel,
+    ),
+    _ => const StatusPill('Validando…', icon: AppIcon.pending),
+  };
 }
 
 /// Cliente, teléfono (con llamar) y dirección (con navegar). El teléfono sale
@@ -142,30 +220,27 @@ class _DeliveryDetails extends ConsumerWidget {
           value: name,
         ),
         if (phone != null && phone.isNotEmpty)
+          // El teléfono ES el enlace (tocar = llamar): sin botón "Llamar"
+          // aparte, el número ocupa todo el ancho y se lee mejor.
           _DetailRow(
-            leading: const Icon(Icons.phone, size: 28),
-            label: 'Teléfono',
+            leading: const AnimatedAppIcon(AppIcon.call, size: 26),
+            label: 'Teléfono · toca para llamar',
             value: phone,
-            action: _RowAction(
-              label: 'Llamar',
-              icon: Icons.call,
-              onPressed: () => unawaited(dialPhone(phone)),
-            ),
+            onTap: () => unawaited(dialPhone(phone)),
           ),
         if (address != null && address.isNotEmpty)
+          // La dirección ES el enlace (tocar = navegar): sin botón "Navegar"
+          // al lado, usa todo el ancho y se corta en menos líneas.
           _DetailRow(
-            leading: const Icon(Icons.location_on_outlined, size: 28),
-            label: 'Entregar en',
+            leading: const AnimatedAppIcon(AppIcon.place, size: 26),
+            label: stop.lat != null && stop.lng != null
+                ? 'Entregar en · toca para navegar'
+                : 'Entregar en',
             value: note == null || note.isEmpty ? address : '$address\n$note',
-            // La dirección es lo más largo de la hoja: letra más chica.
             dense: true,
-            action: stop.lat != null && stop.lng != null
-                ? _RowAction(
-                    label: 'Navegar',
-                    icon: Icons.navigation,
-                    onPressed: () => unawaited(
-                      openExternalNavigation(stop.lat!, stop.lng!, label: name),
-                    ),
+            onTap: stop.lat != null && stop.lng != null
+                ? () => unawaited(
+                    openExternalNavigation(stop.lat!, stop.lng!, label: name),
                   )
                 : null,
           ),
@@ -182,31 +257,23 @@ class _DeliveryDetails extends ConsumerWidget {
   }
 }
 
-class _RowAction {
-  const _RowAction({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-}
-
+/// Fila de dato de la entrega: ícono + etiqueta + valor. Si [onTap] no es nulo,
+/// el VALOR es un enlace (color de marca, tocable): el teléfono llama y la
+/// dirección navega, sin botones aparte (así el valor usa todo el ancho). Toda
+/// la fila es tocable para un objetivo cómodo.
 class _DetailRow extends StatelessWidget {
   const _DetailRow({
     required this.leading,
     required this.label,
     required this.value,
-    this.action,
+    this.onTap,
     this.dense = false,
   });
 
   final Widget leading;
   final String label;
   final String value;
-  final _RowAction? action;
+  final VoidCallback? onTap;
 
   /// Texto del valor más chico (filas largas como la dirección).
   final bool dense;
@@ -214,12 +281,21 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
+    final link = onTap != null;
+    final valueStyle =
+        (dense ? theme.textTheme.bodyMedium : theme.textTheme.titleMedium)
+            ?.copyWith(
+              fontWeight: FontWeight.w700,
+              // Enlace: color de marca (no el ámbar, reservado a alertas).
+              color: link ? AppColors.brand : null,
+            );
+
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(width: 52, child: Center(child: leading)),
+          SizedBox(width: 48, child: Center(child: leading)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -232,24 +308,23 @@ class _DetailRow extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  value,
-                  style:
-                      (dense
-                              ? theme.textTheme.bodyMedium
-                              : theme.textTheme.titleMedium)
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                ),
+                const SizedBox(height: 2),
+                Text(value, style: valueStyle),
               ],
             ),
           ),
-          if (action != null)
-            TextButton.icon(
-              onPressed: action!.onPressed,
-              icon: Icon(action!.icon),
-              label: Text(action!.label),
-            ),
         ],
+      ),
+    );
+
+    if (!link) return content;
+    return Semantics(
+      button: true,
+      label: '$label: $value',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: content,
       ),
     );
   }
@@ -258,9 +333,10 @@ class _DetailRow extends StatelessWidget {
 /// Productos del pedido: foto, nombre, SKU y cantidad. Salen de la parada
 /// (`items`); si vienen vacíos, del detalle del envío.
 ///
-/// Es un sliver: los productos van en una lista perezosa (`SliverList.builder`)
-/// y solo se construyen (y se descargan sus fotos) los que entran en pantalla,
-/// aunque el pedido traiga decenas de líneas.
+/// Va como una COLUMNA (no sliver) para que el modal mida exactamente lo que
+/// mide el pedido: un envío típico tiene pocos productos, así que no vale la
+/// pena una lista perezosa con alto fijo (dejaba espacio vacío); si llegara a
+/// traer muchos, el scroll del modal los contiene.
 class _OrderSection extends ConsumerWidget {
   const _OrderSection({required this.stop});
 
@@ -298,62 +374,56 @@ class _OrderSection extends ConsumerWidget {
 
     final Widget body;
     if (items.isEmpty && detail != null && detail.isLoading) {
-      body = const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(child: BrandLoader()),
-        ),
+      body = const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: BrandLoader()),
       );
     } else if (items.isEmpty && detail != null && detail.hasError) {
-      body = SliverToBoxAdapter(
-        child: Row(
-          children: [
-            const Expanded(
-              child: Text('No se pudo cargar el detalle del pedido.'),
-            ),
-            TextButton(
-              onPressed: () =>
-                  ref.invalidate(shipmentDetailProvider(stop.shipmentId)),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
+      body = Row(
+        children: [
+          const Expanded(
+            child: Text('No se pudo cargar el detalle del pedido.'),
+          ),
+          TextButton(
+            onPressed: () =>
+                ref.invalidate(shipmentDetailProvider(stop.shipmentId)),
+            child: const Text('Reintentar'),
+          ),
+        ],
       );
     } else if (items.isEmpty) {
-      body = const SliverToBoxAdapter(
-        child: Text('El pedido no tiene productos detallados.'),
-      );
+      body = const Text('El pedido no tiene productos detallados.');
     } else {
-      body = SliverList.builder(
-        itemCount: items.length,
-        itemBuilder: (context, i) => ProductTile(item: items[i]),
+      body = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [for (final item in items) ProductTile(item: item)],
       );
     }
 
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Pedido',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Pedido',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (items.isNotEmpty)
-                  Text(
-                    units == 1 ? '1 producto' : '$units productos',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
+              ),
+              if (items.isNotEmpty)
+                Text(
+                  units == 1 ? '1 producto' : '$units productos',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.outline,
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
         body,
@@ -389,13 +459,16 @@ class ProductTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final placeholder = Icon(
-      Icons.inventory_2_outlined,
+    final placeholder = AnimatedAppIcon(
+      AppIcon.receive,
       color: theme.colorScheme.outline,
     );
     final url = item.imageUrl;
-    // ~3x el tamaño lógico alcanza para pantallas de alta densidad.
-    final cache = (_size * 3).round();
+    // Se decodifica al tamaño físico real del thumb (lógico × DPR del equipo,
+    // acotado 1–3). En los Go de 512 MB (DPR 1.5–2) esto decodifica ~1,5× menos
+    // que el ×3 fijo anterior, sin verse borroso en pantallas de alta densidad.
+    final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    final cache = (_size * dpr).round();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

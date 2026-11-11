@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -258,4 +259,74 @@ void main() {
       expect(left.every((r) => r.status == 'pending'), isTrue);
     });
   });
+
+  group('evidencia anti-fraude', () {
+    test(
+      'firma/documento van al endpoint de evidencia con Idempotency-Key',
+      () async {
+        final adapter = _CaptureAdapter();
+        final dio = Dio(BaseOptions(baseUrl: 'http://x'))
+          ..httpClientAdapter = adapter;
+        exec = ScriptedExecution([]);
+        container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            logisticsApiProvider.overrideWithValue(FakeSyncApi(exec)),
+            failureReporterProvider.overrideWithValue(reporter),
+            syncSchedulerProvider.overrideWithValue(scheduler),
+            pendingPhotosDirectoryProvider.overrideWithValue(
+              () async => photosDir,
+            ),
+            dioProvider.overrideWithValue(dio),
+          ],
+        );
+        queue = container.read(photoUploadQueueProvider);
+
+        // Siembra una firma pendiente + su sidecar (snapshot del cliente).
+        final photo = makeFile('S1.png');
+        File(
+          p.join(photosDir.path, 'S1.snapshot.json'),
+        ).writeAsStringSync('{"customer_name":"Ana","captured_at":"now"}');
+        await db.enqueuePhoto(
+          PendingPhotosCompanion.insert(
+            id: 'S1',
+            shipmentId: 'ship-9',
+            filePath: photo.path,
+            kind: const Value('signature'),
+          ),
+        );
+
+        await queue.drain();
+
+        final req = adapter.last!;
+        expect(req.method, 'POST');
+        expect(req.uri.path, '/app/deliveries/evidence');
+        expect(req.headers['Idempotency-Key'], isNotNull);
+        // La subida OK borra la fila y el archivo.
+        expect(await rows(), isEmpty);
+      },
+    );
+  });
+}
+
+/// Adapter de transporte que captura el request y responde 201.
+class _CaptureAdapter implements HttpClientAdapter {
+  RequestOptions? last;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    last = options;
+    // Consumir el stream del multipart para no dejarlo colgado.
+    if (requestStream != null) {
+      await requestStream.drain<void>();
+    }
+    return ResponseBody.fromString('{"data":[]}', 201);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

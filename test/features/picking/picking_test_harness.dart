@@ -1,9 +1,16 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logistics_app/core/api/models/address_confidence_level.dart';
+import 'package:logistics_app/core/api/models/dispatch_destination.dart';
+import 'package:logistics_app/core/api/models/dispatch_destination_type.dart';
+import 'package:logistics_app/core/api/models/dispatch_line.dart';
+import 'package:logistics_app/core/api/models/dispatch_line_label_status.dart';
+import 'package:logistics_app/core/api/models/dispatch_lines_response.dart';
+import 'package:logistics_app/core/api/models/destinations.dart';
 import 'package:logistics_app/core/api/models/emit_labels_request.dart';
 import 'package:logistics_app/core/api/models/emitted_label.dart';
 import 'package:logistics_app/core/api/models/order_source.dart';
+import 'package:logistics_app/core/api/models/origin2.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
 import 'package:logistics_app/core/api/models/reprint_labels_request.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
@@ -25,6 +32,8 @@ class FakePickingRepository implements PickingRepository {
   FakePickingRepository({
     this.onListShipments,
     this.onGetOrderLabels,
+    this.onGetOrderDispatchLines,
+    this.onEmitOrderLabels,
     this.onEmitLabels,
     this.onReprintLabels,
     this.onGetSignedZpl,
@@ -33,6 +42,9 @@ class FakePickingRepository implements PickingRepository {
 
   Future<List<Shipment>> Function()? onListShipments;
   Future<List<EmittedLabel>> Function(String orderNumber)? onGetOrderLabels;
+  Future<DispatchLinesResponse> Function(String orderNumber)?
+  onGetOrderDispatchLines;
+  Future<List<EmittedLabel>> Function(String orderNumber)? onEmitOrderLabels;
   Future<List<EmittedLabel>> Function(
     String orderNumber,
     EmitLabelsRequest body,
@@ -48,9 +60,11 @@ class FakePickingRepository implements PickingRepository {
 
   // Espías de las escrituras.
   int emitCalls = 0;
+  int emitOrderCalls = 0;
   int reprintCalls = 0;
   int recordScanCalls = 0;
   String? lastEmitOrder;
+  String? lastEmitOrderNumber;
   EmitLabelsRequest? lastEmitBody;
   String? lastReprintOrder;
   ReprintLabelsRequest? lastReprintBody;
@@ -68,6 +82,22 @@ class FakePickingRepository implements PickingRepository {
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) =>
       (onGetOrderLabels ?? ((_) async => <EmittedLabel>[]))(orderNumber);
+
+  @override
+  Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber) =>
+      (onGetOrderDispatchLines ??
+      ((o) async => DispatchLinesResponse(
+        orderReference: o,
+        destinations: const [],
+        data: const [],
+      )))(orderNumber);
+
+  @override
+  Future<List<EmittedLabel>> emitOrderLabels(String orderNumber) {
+    emitOrderCalls++;
+    lastEmitOrderNumber = orderNumber;
+    return (onEmitOrderLabels ?? ((_) async => <EmittedLabel>[]))(orderNumber);
+  }
 
   @override
   Future<List<EmittedLabel>> emitLabels(
@@ -203,5 +233,68 @@ EmittedLabel buildLabel({
     zpl: zpl,
     emittedAt: 1700000000,
     revoked: revoked,
+  );
+}
+
+/// Línea de dispatch-lines de ejemplo (producto a etiquetar ya resuelto).
+DispatchLine buildDispatchLine({
+  String sku = 'SKU1',
+  String? productName = 'Producto 1',
+  String? imageUrl,
+  int quantity = 1,
+  int piecesPerUnit = 1,
+  int lineNumber = 1,
+  String originCode = 'CD-SCZ',
+  DispatchDestinationType? destinationType = DispatchDestinationType.store,
+  String? destinationName = 'Tienda Centro',
+  String? destinationAddress,
+  String? shipmentId = 'ship-1',
+  String? shipmentReference = '100000001',
+  bool authorized = true,
+  String? authorizedReason,
+  DispatchLineLabelStatus labelStatus = DispatchLineLabelStatus.pending,
+}) {
+  return DispatchLine(
+    sku: sku,
+    productName: productName,
+    imageUrl: imageUrl,
+    quantity: quantity,
+    piecesPerUnit: piecesPerUnit,
+    lineNumber: lineNumber,
+    origin: Origin2(code: originCode, name: null),
+    destination: DispatchDestination(
+      type: destinationType,
+      name: destinationName,
+      address: destinationAddress,
+    ),
+    shipmentId: shipmentId,
+    shipmentReference: shipmentReference,
+    authorized: authorized,
+    authorizedReason: authorizedReason,
+    labelStatus: labelStatus,
+  );
+}
+
+/// Respuesta de dispatch-lines de ejemplo (arma destinations[] desde las líneas).
+DispatchLinesResponse buildDispatchLines({
+  String orderReference = 'EXT-1',
+  List<DispatchLine>? lines,
+}) {
+  final data = lines ?? [buildDispatchLine()];
+  final byShipment = <String?, List<DispatchLine>>{};
+  for (final l in data) {
+    byShipment.putIfAbsent(l.shipmentId, () => []).add(l);
+  }
+  return DispatchLinesResponse(
+    orderReference: orderReference,
+    destinations: [
+      for (final e in byShipment.entries)
+        Destinations(
+          shipmentReference: e.value.first.shipmentReference,
+          destination: e.value.first.destination,
+          lineCount: e.value.length,
+        ),
+    ],
+    data: data,
   );
 }

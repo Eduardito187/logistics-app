@@ -55,7 +55,7 @@ void main() {
     expect(find.textContaining('Producto '), findsNWidgets(3));
   });
 
-  testWidgets('muestra la ubicación en estante capturada para el bulto', (
+  testWidgets('muestra la ubicación en estante capturada para el producto', (
     tester,
   ) async {
     final container = await _pump(

@@ -56,7 +56,7 @@ void main() {
   });
 
   group('lectura del QR', () {
-    test('expone los datos del bulto', () {
+    test('expone los datos del producto', () {
       final label = SignedLabel.fromQrContent(
         _vector()['qr_content'] as String,
       );

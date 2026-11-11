@@ -34,7 +34,7 @@ FilledButton _registerButton(WidgetTester tester) =>
     );
 
 void main() {
-  testWidgets('render con los motivos y botón deshabilitado sin bulto', (
+  testWidgets('render con los motivos y botón deshabilitado sin producto', (
     tester,
   ) async {
     await pumpScoped(
@@ -44,8 +44,8 @@ void main() {
     );
 
     expect(find.text('Entrega fallida'), findsWidgets);
-    expect(find.text('1. Bulto'), findsOneWidget);
-    expect(find.text('Escanea el bulto.'), findsOneWidget);
+    expect(find.text('1. Producto'), findsOneWidget);
+    expect(find.text('Escanea el producto.'), findsOneWidget);
 
     // Motivos tipados (FailureReason) en español.
     expect(find.text('Cliente ausente'), findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
   });
 
   testWidgets(
-    'camino feliz: escanea el bulto, elige motivo, registra y vuelve',
+    'camino feliz: escanea el producto, elige motivo, registra y vuelve',
     (tester) async {
       final fake = FakeCodeScanner([validLabelQr()]);
       final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -98,11 +98,11 @@ void main() {
         tall: true,
       );
 
-      await tester.tap(find.text('Escanear bulto'));
+      await tester.tap(find.text('Escanear producto'));
       await tester.pumpAndSettle();
-      expect(find.text('Bulto: $vectorUnitId'), findsOneWidget);
+      expect(find.text('Producto: $vectorUnitId'), findsOneWidget);
       expect(find.text('Reescanear'), findsOneWidget);
-      expect(fake.requestedTitles, ['Escanear bulto']);
+      expect(fake.requestedTitles, ['Escanear producto']);
       expect(find.byType(ScannerScreen), findsNothing);
 
       await tester.tap(find.text('Producto dañado'));
@@ -136,7 +136,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Registrar entrega fallida'));
     await tester.pumpAndSettle();
@@ -160,7 +160,7 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Registrar entrega fallida'));
     await tester.pumpAndSettle();
@@ -174,7 +174,7 @@ void main() {
     expect(_registerButton(tester).onPressed, isNotNull);
   });
 
-  testWidgets('cancelar el escaneo no toma bulto ni envía', (tester) async {
+  testWidgets('cancelar el escaneo no toma producto ni envía', (tester) async {
     final queue = FakeOfflineQueue(SubmitOutcome.sent);
     await pumpScoped(
       tester,
@@ -183,16 +183,16 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escanea el bulto.'), findsOneWidget);
+    expect(find.text('Escanea el producto.'), findsOneWidget);
     expect(find.text('Etiqueta no válida'), findsNothing);
     expect(_registerButton(tester).onPressed, isNull);
     expect(queue.submissions, isEmpty);
   });
 
-  testWidgets('etiqueta con firma inválida: avisa y no toma el bulto', (
+  testWidgets('etiqueta con firma inválida: avisa y no toma el producto', (
     tester,
   ) async {
     final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -203,11 +203,11 @@ void main() {
       tall: true,
     );
 
-    await tester.tap(find.text('Escanear bulto'));
+    await tester.tap(find.text('Escanear producto'));
     await tester.pumpAndSettle();
 
     expect(find.text('Etiqueta no válida'), findsOneWidget);
-    expect(find.text('Escanea el bulto.'), findsOneWidget);
+    expect(find.text('Escanea el producto.'), findsOneWidget);
     expect(_registerButton(tester).onPressed, isNull);
     expect(queue.submissions, isEmpty);
   });

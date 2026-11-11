@@ -26,7 +26,6 @@ void main() {
       'driver-my-day': '/driver/my-day',
       'driver-checklist': '/driver/checklist',
       'driver-load': '/driver/load',
-      'driver-gps': '/driver/gps',
       'driver-incident': '/driver/incident',
       'driver-summary': '/driver/summary',
       'driver-fuel': '/driver/fuel',

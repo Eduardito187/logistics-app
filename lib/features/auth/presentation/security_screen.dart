@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/icons/icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../domain/entities/two_factor_enrollment.dart';
 import 'controllers/security_controller.dart';
+import '../../../core/widgets/field_icon.dart';
 import 'controllers/two_factor_status.dart';
 
 /// Pantalla de Seguridad (Ajustes): activar o desactivar la verificación en dos
@@ -24,6 +26,7 @@ class SecurityScreen extends ConsumerStatefulWidget {
 
 class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   final _confirmCodeController = TextEditingController();
+  final _confirmCodeFocus = FocusNode();
 
   /// Datos del enrolamiento en curso (QR, secreto, recovery codes). Null cuando
   /// no hay activación en progreso.
@@ -32,6 +35,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   @override
   void dispose() {
     _confirmCodeController.dispose();
+    _confirmCodeFocus.dispose();
     super.dispose();
   }
 
@@ -115,7 +119,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           const StatusPill(
             'Activada',
             tone: PillTone.success,
-            icon: Icons.verified_user_outlined,
+            icon: AppIcon.verified,
           ),
           const SizedBox(height: 16),
           Text(
@@ -218,7 +222,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   ),
                   IconButton(
                     tooltip: 'Copiar clave',
-                    icon: const Icon(Icons.copy_outlined),
+                    icon: const AnimatedAppIcon(AppIcon.copy),
                     onPressed: () => _copy(enrollment.secret, 'Clave copiada.'),
                   ),
                 ],
@@ -234,8 +238,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
+                  const AnimatedAppIcon(
+                    AppIcon.incident,
                     color: AppColors.accent,
                   ),
                   const SizedBox(width: 8),
@@ -272,7 +276,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   enrollment.recoveryCodes.join('\n'),
                   'Códigos copiados.',
                 ),
-                icon: const Icon(Icons.copy_outlined),
+                icon: const AnimatedAppIcon(AppIcon.copy),
                 label: const Text('Copiar códigos'),
               ),
             ],
@@ -286,16 +290,21 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             children: [
               TextField(
                 controller: _confirmCodeController,
+                focusNode: _confirmCodeFocus,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onSubmitted: (_) => _onConfirmPressed(),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Código del autenticador',
                   counterText: '',
-                  prefixIcon: Icon(Icons.pin_outlined),
+                  prefixIconConstraints: FieldIcon.prefixConstraints,
+                  prefixIcon: FieldIcon(
+                    icon: AppIcon.pin,
+                    focusNode: _confirmCodeFocus,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -333,6 +342,7 @@ class _DisableTwoFactorSheet extends ConsumerStatefulWidget {
 class _DisableTwoFactorSheetState
     extends ConsumerState<_DisableTwoFactorSheet> {
   final _controller = TextEditingController();
+  final _focus = FocusNode();
 
   /// true = pedir código del autenticador; false = pedir contraseña.
   bool _useCode = true;
@@ -341,6 +351,7 @@ class _DisableTwoFactorSheetState
   @override
   void dispose() {
     _controller.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -396,6 +407,7 @@ class _DisableTwoFactorSheetState
           const SizedBox(height: 20),
           TextField(
             controller: _controller,
+            focusNode: _focus,
             obscureText: !_useCode && _obscurePassword,
             keyboardType: _useCode ? TextInputType.number : TextInputType.text,
             autocorrect: false,
@@ -406,8 +418,10 @@ class _DisableTwoFactorSheetState
             decoration: InputDecoration(
               labelText: _useCode ? 'Código del autenticador' : 'Contraseña',
               counterText: '',
-              prefixIcon: Icon(
-                _useCode ? Icons.pin_outlined : Icons.lock_outline,
+              prefixIconConstraints: FieldIcon.prefixConstraints,
+              prefixIcon: FieldIcon(
+                icon: _useCode ? AppIcon.pin : AppIcon.security,
+                focusNode: _focus,
               ),
               suffixIcon: _useCode
                   ? null
@@ -415,10 +429,14 @@ class _DisableTwoFactorSheetState
                       tooltip: _obscurePassword
                           ? 'Mostrar contraseña'
                           : 'Ocultar contraseña',
-                      icon: Icon(
+                      icon: AnimatedAppIcon(
                         _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+                            ? AppIcon.visibility
+                            : AppIcon.visibilityOff,
+                        state: _obscurePassword
+                            ? AppIconState.idle
+                            : AppIconState.active,
+                        size: 20,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -459,7 +477,13 @@ class _ButtonSpinner extends StatelessWidget {
     return const SizedBox(
       height: 24,
       width: 24,
-      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+      child: AnimatedAppIcon(
+        AppIcon.syncing,
+        state: AppIconState.loading,
+        size: 22,
+        color: Colors.white,
+        excludeFromSemantics: true,
+      ),
     );
   }
 }
