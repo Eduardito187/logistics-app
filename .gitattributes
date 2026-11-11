@@ -1,0 +1,67 @@
+# Finales de línea del repo. Evita las advertencias "LF will be replaced by
+# CRLF" y los diffs del archivo entero al trabajar en Windows + WSL/CI (Linux).
+#
+# Regla: todo el texto se guarda y se saca en LF (lo que esperan Flutter, Dart,
+# Gradle, Xcode y la CI de Linux). Git deja de convertir a CRLF en Windows.
+
+# Por defecto: autodetecta texto vs binario y normaliza a LF.
+* text=auto eol=lf
+
+# Código y config: LF explícito (por si la autodetección duda).
+*.dart    text eol=lf
+*.kt      text eol=lf
+*.kts     text eol=lf
+*.java    text eol=lf
+*.swift   text eol=lf
+*.gradle  text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.json    text eol=lf
+*.xml     text eol=lf
+*.plist   text eol=lf
+*.properties text eol=lf
+*.pro     text eol=lf
+*.cfg     text eol=lf
+*.md      text eol=lf
+*.sh      text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+*.js      text eol=lf
+*.entitlements text eol=lf
+*.xcconfig text eol=lf
+*.pbxproj text eol=lf
+Makefile  text eol=lf
+
+# Scripts de Windows que SÍ necesitan CRLF para funcionar.
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+# PowerShell funciona con LF; se deja LF (coherente con el resto).
+*.ps1     text eol=lf
+
+# Binarios: Git nunca los toca (sin conversión, sin diffs de texto).
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.webp    binary
+*.bmp     binary
+*.pdf     binary
+*.woff    binary
+*.woff2   binary
+*.ttf     binary
+*.otf     binary
+*.eot     binary
+*.jar     binary
+*.aar     binary
+*.so      binary
+*.dylib   binary
+*.a       binary
+*.keystore binary
+*.jks     binary
+*.p12     binary
+*.mp3     binary
+*.mp4     binary
+*.zip     binary
+*.lottie  binary
+*.riv     binary
