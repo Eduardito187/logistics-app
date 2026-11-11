@@ -34,6 +34,18 @@ class LogisticsApp extends ConsumerWidget {
       }
     });
 
+    // Al abrir sesión (login exitoso) se descartan los avisos que hayan quedado
+    // en el messenger RAÍZ de un intento anterior en el login (p. ej. el error
+    // "sin rol de terreno" de otro usuario): ese snackbar vive a nivel app y, si
+    // no se limpia, se arrastra a la pantalla de inicio del nuevo usuario al que
+    // NO le corresponde. Solo al entrar (null -> sesión); el cierre de sesión y
+    // su aviso de "sesión expirada" van por otro camino.
+    ref.listen(sessionProvider, (previous, next) {
+      if (previous == null && next != null) {
+        messengerKey.currentState?.clearSnackBars();
+      }
+    });
+
     // Aviso de sesión expirada (401 global): el router ya llevó al login.
     ref.listen(sessionExpiredProvider, (_, message) {
       if (message != null) {

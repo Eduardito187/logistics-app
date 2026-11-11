@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/labels/label_format_exception.dart';
+import '../../../../core/labels/label_resolver.dart';
 import '../../../../core/labels/label_scanner.dart';
 import '../../../../core/labels/label_verifier.dart';
+import '../../../../core/labels/signed_label.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/widgets/app_snack.dart';
 import 'signed_label_result.dart';
@@ -12,31 +14,65 @@ import 'signed_label_result.dart';
 /// (corto, para el aviso sobre la cámara del escaneo continuo).
 typedef LabelCheck = ({SignedLabelResult? label, String? error});
 
-/// Verifica la firma Ed25519 de un QR de bulto SIN red. Nunca lanza: devuelve
-/// la etiqueta solo si es válida; si no, el motivo en español.
+/// Verifica una etiqueta escaneada. Un QR firmado se verifica OFFLINE (Ed25519);
+/// un Code128 (el valor ES el `label_id`, sin firma) se resuelve ONLINE contra
+/// el backend. Nunca lanza: devuelve la etiqueta solo si es válida; si no, el
+/// motivo en español.
 Future<LabelCheck> verifyLabelQr(WidgetRef ref, String qr) async {
   final scanner = ref.read(labelScannerProvider);
+  // ¿El contenido es una etiqueta QR (estructura válida)? Un QR se verifica
+  // offline; un QR sin claves o con firma mala se avisa, NO se resuelve online.
+  // Solo un valor que NO es QR (Code128) va a la resolución online.
+  var isQrLabel = true;
   try {
-    final result = await scanner.scanAndReport(qr);
-    if (!result.isValid) {
-      return (
-        label: null,
-        error: result.verification == VerificationResult.unknownKey
-            ? 'Etiqueta inválida: clave desconocida'
-            : 'Etiqueta inválida: editada o falsa',
-      );
-    }
-    return (
-      label: SignedLabelResult(
-        unitId: result.label.payload.id,
-        shipmentId: result.label.payload.orderNumber,
-        sku: result.label.payload.sku,
-      ),
-      error: null,
-    );
-  } on LabelFormatException catch (e) {
-    return (label: null, error: e.reason);
+    SignedLabel.fromQrContent(qr);
+  } on LabelFormatException {
+    isQrLabel = false;
   }
+  if (isQrLabel) {
+    try {
+      final result = await scanner.scanAndReport(qr);
+      if (!result.isValid) {
+        return (
+          label: null,
+          error: result.verification == VerificationResult.unknownKey
+              ? 'Etiqueta inválida: clave desconocida'
+              : 'Etiqueta inválida: editada o falsa',
+        );
+      }
+      return (
+        label: SignedLabelResult(
+          unitId: result.label.payload.id,
+          shipmentId: result.label.payload.orderNumber,
+          sku: result.label.payload.sku,
+        ),
+        error: null,
+      );
+    } on LabelFormatException catch (e) {
+      // QR válido pero no verificable (sin claves configuradas): se avisa.
+      return (label: null, error: e.reason);
+    }
+  }
+  // No es un QR → Code128 (el valor ES el `label_id`): se resuelve ONLINE. Sin
+  // red no es validable; no reconocida o anulada → se rechaza.
+  final res = await resolveLabelId(ref, qr);
+  if (res == null) {
+    return (label: null, error: 'Sin señal para validar la etiqueta');
+  }
+  if (!res.accepted) {
+    return (
+      label: null,
+      error: res.revoked ? 'Etiqueta anulada' : 'Etiqueta no reconocida',
+    );
+  }
+  return (
+    label: SignedLabelResult(
+      unitId: res.unitId!,
+      shipmentId: res.orderNumber ?? res.shipmentId ?? '',
+      sku: res.sku ?? '',
+    ),
+    error: null,
+  );
 }
 
 /// Calienta el GPS al abrir la cámara (sin esperar, nunca lanza): al leer cada

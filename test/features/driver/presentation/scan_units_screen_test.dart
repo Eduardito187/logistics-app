@@ -135,7 +135,10 @@ void main() {
       await _scan(tester);
 
       expect(scanner.titles, ['Cargar productos']);
-      expect(scanner.formats.single, [BarcodeFormat.qrCode]);
+      expect(scanner.formats.single, [
+        BarcodeFormat.qrCode,
+        BarcodeFormat.code128,
+      ]);
       expect(scanner.messages, ['Producto 1/2 cargado']);
       expect(scanner.feedbacks.single.ok, isTrue);
       expect(queue.lastKind, 'recordLoadScan');

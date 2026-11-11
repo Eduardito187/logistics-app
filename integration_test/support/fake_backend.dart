@@ -157,6 +157,17 @@ class FakeBackend {
   List<RecordedRequest> requestsTo(String path) =>
       requests.where((r) => r.path == path).toList(growable: false);
 
+  /// Respuestas sembradas de `GET /app/labels/{labelId}/resolve` por label_id
+  /// (para casos no reconocidos/anulados). Si no hay una, [resolveLabel] echo.
+  final Map<String, Map<String, Object?>> labelResolutions = {};
+
+  /// Resuelve un `label_id` (Code128). Por defecto ECHO: reconoce la etiqueta y
+  /// usa el label_id como `unit_id` (igual que antes el código escaneado
+  /// representaba el bulto). Los tests pueden sembrar [labelResolutions].
+  Map<String, Object?> resolveLabel(String labelId) =>
+      labelResolutions[labelId] ??
+      {'label_id': labelId, 'resolved': true, 'unit_id': labelId};
+
   void _handle(RequestOptions options, RequestInterceptorHandler handler) {
     final data = options.data;
     final body = data is Map
@@ -165,6 +176,21 @@ class FakeBackend {
     final key = options.headers['Idempotency-Key'] as String?;
     final path = options.path;
     requests.add(RecordedRequest(options.method, path, body, key));
+
+    // GET /app/labels/{labelId}/resolve — resolución ONLINE de un Code128 por su
+    // `label_id` (ver `LabelResolver`). Responde SIEMPRE 200 con `resolved`.
+    final resolveMatch = RegExp(r'^/app/labels/(.+)/resolve$').firstMatch(path);
+    if (options.method == 'GET' && resolveMatch != null) {
+      final labelId = Uri.decodeComponent(resolveMatch.group(1)!);
+      handler.resolve(
+        Response<Object?>(
+          requestOptions: options,
+          statusCode: 200,
+          data: resolveLabel(labelId),
+        ),
+      );
+      return;
+    }
 
     final Object? response = switch ((options.method, path)) {
       ('POST', '/app/auth/logout') => {'message': 'Sesión cerrada.'},

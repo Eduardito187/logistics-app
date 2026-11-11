@@ -29,7 +29,7 @@ dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pant
 ```bash
 /c/flutter/bin/dart.bat format lib test integration_test
 /c/flutter/bin/flutter.bat analyze
-/c/flutter/bin/flutter.bat test                    # ~1726 tests
+/c/flutter/bin/flutter.bat test                    # ~1978 tests
 /c/flutter/bin/flutter.bat test integration_test -d flutter-tester   # e2e en host (6)
 make apk ENV=staging                               # release --split-per-abi (necesita android/key.properties)
 ```
@@ -187,6 +187,8 @@ y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutt
 | `'bash\r': No such file or directory`, exited 127, consola de play se cierra al segundo | VS Code usa `C:\flutter` (CRLF) en vez del Flutter de WSL | `.vscode/settings.json` → `dart.flutterSdkPath=~/sdk/flutter` + Reload Window |
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |
 | `flutter test`: `Failed to load dynamic library 'libsqlite3.so'` (tests Drift) | WSL/Linux solo trae `libsqlite3.so.0`, no el symlink sin versión | Ya resuelto: `test/flutter_test_config.dart` redirige la carga a `.so.0` (no borrarlo). No requiere root |
+| `flutter test integration_test`: mismo `libsqlite3.so` que arriba, solo en e2e | `flutter_test_config.dart` NO se hereda entre carpetas: el de `test/` no cubre `integration_test/` | Ya resuelto: `integration_test/flutter_test_config.dart` (copia del de `test/`). No borrarlo |
+| e2e: `MissingPluginException(... mobile_scanner ...)` al escanear | La pantalla usa `scanContinuous` (`continuousScannerProvider`) y el e2e solo overrideaba `codeScannerProvider` → abre el escáner REAL | `e2e_app.dart` cablea `continuousScannerProvider.overrideWithValue(h.scanner.callContinuous)`; el texto de `ScanFeedback` NO aparece en pantalla (vive en el overlay) → verificar por `h.scanner.continuousMessages`. Ver `.claude/memory/test-battery-and-infra.md` |
 | Widget test de pantalla con providers: `Tried to modify a provider while the widget tree was building` | El harness/override modifica un provider dentro de build/initState, o un widget llama `.notifier.metodo()` en `build` | Mover la mutación fuera del ciclo de vida (p. ej. a `onPressed`) o arreglar el override del harness de test |
 | APK no compila por CameraX 1.6.1 / AGP 8.9.1, o CocoaPods choca con `GoogleDataTransport` | `mobile_scanner` > 7.2.0 (7.2.1+ sube CameraX; en iOS vuelve a MLKit) | Fijar `mobile_scanner: 7.2.0` EXACTO (ni `^` ni rango). No subirlo sin subir Flutter/AGP. Commit 9fdce63 |
 | "Tu sesión expiró" apenas se inicia sesión y vuelve al login | El 401-logout global (`_AuthInterceptor.onError` en `dio_client.dart`) se disparaba con el 401 de `/app/auth/me` que pide el login (degradación segura) | `_isAuthEndpoint` excluye `/login`, `/token` **y** `/auth/me`. Si "sesión expiró" sale al ABRIR la app, es token viejo restaurado (otro tema) |

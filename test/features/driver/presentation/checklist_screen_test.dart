@@ -76,10 +76,20 @@ void main() {
     expect(find.text('Checklist registrado: apto para salir.'), findsOneWidget);
   });
 
-  testWidgets('con ítems sin marcar => "con observaciones" y el status', (
+  testWidgets('observación NO crítica => "con observaciones" y el status', (
     tester,
   ) async {
     await _pumpChecklist(tester, result: const Data5(status: 'needs_review'));
+
+    // Se marca todo y se desmarca un ítem NO crítico (extintor): queda "con
+    // observaciones", no "no apto".
+    final switches = find.byType(SwitchListTile);
+    for (var i = 0; i < switches.evaluate().length; i++) {
+      await tester.tap(switches.at(i));
+      await tester.pump();
+    }
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Extintor'));
+    await tester.pump();
 
     await tester.tap(find.text('Registrar checklist'));
     await tester.pump();
@@ -90,6 +100,29 @@ void main() {
       find.text('Checklist registrado con observaciones (needs_review).'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('ítem CRÍTICO falla (frenos) => "NO apto para salir" en rojo', (
+    tester,
+  ) async {
+    await _pumpChecklist(tester, result: const Data5(status: 'needs_review'));
+
+    // Todo marcado menos FRENOS (crítico) → no apto.
+    final switches = find.byType(SwitchListTile);
+    for (var i = 0; i < switches.evaluate().length; i++) {
+      await tester.tap(switches.at(i));
+      await tester.pump();
+    }
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Frenos'));
+    await tester.pump();
+
+    await tester.tap(find.text('Registrar checklist'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('NO apto para salir'), findsOneWidget);
+    expect(find.textContaining('Frenos'), findsWidgets);
   });
 
   testWidgets('error de API muestra el mensaje de la excepción', (

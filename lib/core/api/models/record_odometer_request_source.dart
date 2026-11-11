@@ -16,6 +16,8 @@ enum RecordOdometerRequestSource {
   maintenance('maintenance'),
   @JsonValue('departure')
   departure('departure'),
+  @JsonValue('arrival')
+  arrival('arrival'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

@@ -26,6 +26,10 @@ class AnimatedMapMover {
   final AnimationController _anim;
   late final CurvedAnimation _curve;
 
+  /// `true` mientras hay una animación de cámara en curso: el auto-enfoque no
+  /// debe pisar un acercar/alejar o un seguimiento que recién arrancó.
+  bool get isAnimating => _anim.isAnimating;
+
   LatLng _fromCenter = const LatLng(0, 0);
   LatLng _toCenter = const LatLng(0, 0);
   double _fromZoom = 0;

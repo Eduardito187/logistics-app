@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/node.dart';
 import '../../../core/api/models/node_reception_view.dart';
@@ -308,7 +307,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
         context,
         title: 'Escanear producto',
         helper: 'Apunta al QR de la etiqueta del producto.',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: (qr) => _receiveCode(qr, registered),
       );
     } finally {

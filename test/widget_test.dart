@@ -29,6 +29,33 @@ void main() {
     expect(find.text('Ingresar'), findsOneWidget);
   });
 
+  testWidgets('al iniciar sesión se descartan los avisos que quedaron del '
+      'login (no se filtran al inicio del nuevo usuario)', (tester) async {
+    _reduceMotion(tester);
+    await tester.pumpWidget(const ProviderScope(child: LogisticsApp()));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+
+    // Simula el error de un intento previo en el login (p. ej. un admin sin rol
+    // de terreno): el aviso vive en el ScaffoldMessenger RAÍZ de la app.
+    const staleError = 'Tu usuario no tiene un rol de terreno asignado.';
+    tester
+        .firstState<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .showSnackBar(const SnackBar(content: Text(staleError)));
+    await tester.pump();
+    expect(find.text(staleError), findsOneWidget);
+
+    // Otro usuario (chofer) inicia sesión: el aviso ajeno NO debe seguir visible.
+    container.read(sessionProvider.notifier).devSignIn(UserRole.driver);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ingresar'), findsNothing); // ya está en el inicio
+    expect(find.text(staleError), findsNothing);
+  });
+
   testWidgets('cada rol entra a su propia pantalla de inicio y puede salir', (
     tester,
   ) async {

@@ -58,6 +58,16 @@ const List<BarcodeFormat> kDefaultScannerFormats = [
   BarcodeFormat.upcA,
 ];
 
+/// Formatos aceptados al escanear una ETIQUETA de bulto: el QR firmado (se
+/// verifica offline Ed25519) o el Code128 cuyo valor ES el `label_id` (se
+/// resuelve online, ver `LabelResolver`). Un único punto para todos los
+/// escaneos de etiqueta (chofer, tienda, transportista). NO usar para el QR de
+/// confirmación del cliente ni para el EAN de productos (tienen sus formatos).
+const List<BarcodeFormat> kLabelScanFormats = [
+  BarcodeFormat.qrCode,
+  BarcodeFormat.code128,
+];
+
 /// Controller del escáner afinado para gama baja (ver constantes arriba).
 /// Sin imagen de retorno (`returnImage: false`): no copia cada cuadro a Dart.
 ///

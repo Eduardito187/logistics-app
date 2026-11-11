@@ -55,7 +55,7 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
         context,
         title: 'Entregar productos',
         helper: 'Apunta al QR de la etiqueta de cada producto',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: (qr) async {
           final check = await verifyLabelQr(ref, qr);
           final label = check.label;

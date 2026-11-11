@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/icons/icons.dart';
@@ -49,6 +50,10 @@ ProviderContainer _session(UserRole role, {List<String>? abilities}) {
   final container = ProviderContainer(
     overrides: [
       noHomePrefetchOverride,
+      // El inicio del chofer muestra el recordatorio de inspección, que mira el
+      // camión asignado (crew). En estos tests del home no se ejercita ese
+      // flujo: se fija sin vehículo para no disparar la red.
+      assignedVehicleIdProvider.overrideWithValue(null),
       featureTasksProvider.overrideWithValue(const [
         _needsAbility,
         _noAbility,

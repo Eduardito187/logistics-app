@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/navigation/app_nav.dart';
@@ -59,6 +60,7 @@ ProviderContainer _container() {
   final container = ProviderContainer(
     overrides: [
       noHomePrefetchOverride,
+      assignedVehicleIdProvider.overrideWithValue(null),
       featureTasksProvider.overrideWithValue(const [_driverTask]),
     ],
   );

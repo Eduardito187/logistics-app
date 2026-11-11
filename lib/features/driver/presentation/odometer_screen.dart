@@ -10,6 +10,7 @@ import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/section_card.dart';
+import '../domain/odometer_check.dart';
 import '../domain/usecases/record_odometer.dart';
 import 'controllers/fleet_ops_controllers.dart';
 import 'driver_vehicle_gate.dart';
@@ -17,8 +18,33 @@ import 'widgets/recent_readings.dart';
 
 /// Registro de odómetro del vehículo del chofer. Lectura simple (km actual),
 /// escritura con red. Lista las lecturas recientes.
+///
+/// El odómetro solo se pide en dos momentos de la ruta (decisión del dueño): al
+/// SALIR (va en el checklist pre-salida, `source: departure`) y al LLEGAR al
+/// centro de distribución. Esta pantalla sirve para la lectura de LLEGADA: se
+/// abre al finalizar la ruta con [source]/[title]/[intro]/[initialNote]
+/// preseteados. Los valores por defecto mantienen el comportamiento genérico
+/// para los tests existentes.
 class OdometerScreen extends ConsumerStatefulWidget {
-  const OdometerScreen({super.key});
+  const OdometerScreen({
+    super.key,
+    this.source = RecordOdometerRequestSource.manual,
+    this.title = 'Odómetro',
+    this.intro,
+    this.initialNote,
+  });
+
+  /// Origen de la lectura que viaja al backend (p. ej. `departure`/`manual`).
+  final RecordOdometerRequestSource source;
+
+  /// Título de la barra superior.
+  final String title;
+
+  /// Texto guía opcional sobre el campo (p. ej. "al llegar al CD").
+  final String? intro;
+
+  /// Nota precargada (p. ej. "Llegada al CD").
+  final String? initialNote;
 
   @override
   ConsumerState<OdometerScreen> createState() => _OdometerScreenState();
@@ -26,7 +52,9 @@ class OdometerScreen extends ConsumerStatefulWidget {
 
 class _OdometerScreenState extends ConsumerState<OdometerScreen> {
   final TextEditingController _km = TextEditingController();
-  final TextEditingController _note = TextEditingController();
+  late final TextEditingController _note = TextEditingController(
+    text: widget.initialNote ?? '',
+  );
   bool _busy = false;
 
   @override
@@ -39,7 +67,7 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
   @override
   Widget build(BuildContext context) {
     return DriverVehicleGate(
-      title: 'Odómetro',
+      title: widget.title,
       builder: (context, vehicleId) {
         return ResponsiveBody(
           maxWidth: AppBreakpoints.maxFormWidth,
@@ -51,6 +79,13 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.intro != null) ...[
+                      Text(
+                        widget.intro!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextField(
                       controller: _km,
                       keyboardType: TextInputType.number,
@@ -99,6 +134,19 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
       showErrorSnack(context, 'Ingresa los kilómetros actuales.');
       return;
     }
+    // El odómetro solo avanza: se avisa en el acto si retrocede (mismo guard
+    // del backend, adelantado para no pagar el viaje de red ni confundir).
+    final lastKm = odometerBelowLast(
+      km,
+      ref.read(vehicleOdometerReadingsProvider).value ?? const [],
+    );
+    if (lastKm != null) {
+      showErrorSnack(
+        context,
+        'No puede ser menor al último registro ($lastKm km).',
+      );
+      return;
+    }
     final note = _note.text.trim();
 
     setState(() => _busy = true);
@@ -110,7 +158,7 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
           .call(
             vehicleId: vehicleId,
             km: km,
-            source: RecordOdometerRequestSource.manual,
+            source: widget.source,
             readAt: DateTime.now(),
             note: note.isEmpty ? null : note,
           );

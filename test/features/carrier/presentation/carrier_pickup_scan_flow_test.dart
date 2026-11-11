@@ -57,7 +57,10 @@ void main() {
     await _tapScan(tester);
 
     expect(scanner.requestedTitles, ['Recoger carga']);
-    expect(scanner.requestedFormats.single, [BarcodeFormat.qrCode]);
+    expect(scanner.requestedFormats.single, [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+    ]);
     final request = loadScan.requests.single;
     expect(request.shipmentId, vectorOrder);
     expect(request.unitId, vectorUnitId);
@@ -300,7 +303,9 @@ void main() {
     await _tapScan(tester);
 
     expect(loadScan.requests, isEmpty);
-    expect(scanner.messages, ['el contenido del QR no es JSON']);
+    // Un valor que no es QR se trata como Code128 (label_id): el backend falso
+    // no lo reconoce (resolved:false) → se rechaza.
+    expect(scanner.messages, ['Etiqueta no reconocida']);
   });
 
   testWidgets('sin claves públicas configuradas: avisa y no registra', (
