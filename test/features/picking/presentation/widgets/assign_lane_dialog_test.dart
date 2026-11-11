@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/assign_lane_dialog.dart';
 
 // Diálogo de asignación de carril/vehículo. Devuelve el texto por Navigator.pop
-// (o null si se cancela). El botón "Escanear" abre la cámara (no se prueba acá).
+// (o null si se cancela). Sin escaneo: la placa se escribe a mano (los camiones
+// y puertas de Dismac no tienen etiqueta de código).
 
 /// Abre el diálogo y deja su resultado en `box` (un [List] de un solo hueco)
 /// cuando se cierra. `box[0]` vale `#pending` hasta que el diálogo se resuelve.
@@ -108,7 +109,7 @@ void main() {
     expect(find.text('ABC-123'), findsOneWidget);
   });
 
-  testWidgets('tiene título y acciones Guardar, Cancelar y Escanear', (
+  testWidgets('tiene título y acciones Guardar y Cancelar, sin Escanear', (
     tester,
   ) async {
     final box = <Object?>[#pending];
@@ -117,6 +118,6 @@ void main() {
     expect(find.text('Vehículo de reparto'), findsOneWidget); // título
     expect(find.text('Guardar'), findsOneWidget);
     expect(find.text('Cancelar'), findsOneWidget);
-    expect(find.text('Escanear'), findsOneWidget);
+    expect(find.text('Escanear'), findsNothing);
   });
 }

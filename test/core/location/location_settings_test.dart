@@ -18,8 +18,8 @@ void main() {
     expect(android.accuracy, LocationAccuracy.high);
   });
 
-  test('el intervalo es de 10 s', () {
-    expect(LocationService.streamInterval, const Duration(seconds: 10));
+  test('el intervalo es de 15 s (perfil en marcha, batería)', () {
+    expect(LocationService.streamInterval, const Duration(seconds: 15));
   });
 
   test('otras plataformas: LocationSettings genérico con el filtro', () {

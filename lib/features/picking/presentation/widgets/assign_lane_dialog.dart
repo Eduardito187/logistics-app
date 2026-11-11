@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/field_icon.dart';
-import '../../../../core/scanning/scanner_screen.dart';
 
-/// Diálogo para asignar/cambiar el carril o vehículo de carga. Devuelve el valor
-/// ingresado sin espacios (o null si se cancela o se guarda vacío) mediante
-/// `Navigator.pop`.
+/// Diálogo para asignar/cambiar el vehículo de reparto de un pedido preparado.
+/// Devuelve la placa/puerta ingresada sin espacios (o null si se cancela o se
+/// guarda vacío) mediante `Navigator.pop`.
+///
+/// Sin escaneo a propósito: los camiones y las puertas de carga de Dismac NO
+/// tienen etiqueta de código, así que la placa se escribe a mano.
 class AssignLaneDialog extends StatefulWidget {
   const AssignLaneDialog({super.key, this.initial});
 
@@ -28,20 +29,6 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
     super.dispose();
   }
 
-  Future<void> _scan() async {
-    final code = await scanCode(
-      context,
-      title: 'Escanear vehículo',
-      helper: 'Apuntá al código del vehículo o de la puerta de carga.',
-      formats: const <BarcodeFormat>[
-        BarcodeFormat.code128,
-        BarcodeFormat.qrCode,
-      ],
-    );
-    if (!mounted || code == null) return;
-    _controller.text = code;
-  }
-
   void _save() {
     final value = _controller.text.trim();
     Navigator.of(context).pop(value.isEmpty ? null : value);
@@ -51,28 +38,17 @@ class _AssignLaneDialogState extends State<AssignLaneDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Vehículo de reparto'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              hintText: 'Placa o puerta de carga',
-              prefixIconConstraints: FieldIcon.prefixConstraints,
-              prefixIcon: FieldIcon(icon: AppIcon.plans),
-            ),
-            onSubmitted: (_) => _save(),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _scan,
-            icon: const AnimatedAppIcon(AppIcon.scan),
-            label: const Text('Escanear'),
-          ),
-        ],
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.characters,
+        decoration: const InputDecoration(
+          labelText: 'Placa o puerta de carga',
+          hintText: 'Ej. 1234-ABC',
+          prefixIconConstraints: FieldIcon.prefixConstraints,
+          prefixIcon: FieldIcon(icon: AppIcon.plans),
+        ),
+        onSubmitted: (_) => _save(),
       ),
       actions: [
         TextButton(

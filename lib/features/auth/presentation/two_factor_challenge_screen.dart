@@ -9,6 +9,7 @@ import '../../../core/layout/breakpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../domain/entities/two_factor_challenge.dart';
+import 'controllers/biometric_offer_controller.dart';
 import 'controllers/two_factor_challenge_controller.dart';
 
 /// Pantalla del reto de doble factor que aparece después del login cuando el
@@ -85,13 +86,18 @@ class _TwoFactorChallengeScreenState
       showInfoSnack(context, 'Ingresá el código para continuar.');
       return;
     }
+    // Se toma antes de esperar: si entra, esta pantalla se descarta.
+    final biometricOffer = ref.read(biometricOfferControllerProvider);
     final entered = await ref
         .read(twoFactorChallengeControllerProvider.notifier)
         .verify(challengeId: widget.challenge.challengeId, code: code);
-    if (!mounted || entered) {
+    if (entered) {
       // Si entró NO navegamos: el router redirige solo al abrirse la sesión.
+      // Con la contraseña del login previo se ofrece la biometría.
+      unawaited(biometricOffer.offerPending());
       return;
     }
+    if (!mounted) return;
     final error = ref.read(twoFactorChallengeControllerProvider).error;
     if (error is ApiException && error.isValidation) {
       showErrorSnack(context, 'Código inválido o expirado');

@@ -19,6 +19,7 @@ import 'package:logistics_app/features/picking/presentation/widgets/order_card.d
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
+import '../../../support/button_finders.dart';
 import '../../../support/screen_sizes.dart';
 import '../picking_test_harness.dart';
 
@@ -94,7 +95,73 @@ void main() {
 
     final field = tester.getRect(find.byType(TextField));
     expect(field.width, lessThanOrEqualTo(AppBreakpoints.maxFormWidth));
-    expect(find.text('Escanear pedido'), findsOneWidget);
+    // Acción principal: escanear la etiqueta de un producto.
+    final scan = findButtonWithText<FilledButton>('Escanear producto');
+    expect(scan, findsOneWidget);
+    final scanRect = tester.getRect(scan);
+    expect(scanRect.width, lessThanOrEqualTo(AppBreakpoints.maxFormWidth));
+    expect(scanRect.right, lessThanOrEqualTo(screen.size.width));
+    // Alternativa: escribir el número y "Abrir pedido" (alcanzable scrolleando
+    // en el teléfono chico con letra grande).
+    final open = findButtonWithText<OutlinedButton>('Abrir pedido');
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
+    expect(open, findsOneWidget);
+    expect(tester.getRect(open).right, lessThanOrEqualTo(screen.size.width));
+    expect(find.text('Escanear pedido'), findsNothing);
+    expect(find.text('Ver etiquetas'), findsNothing);
+  });
+
+  testOnScreens('preparar por código: aviso de número inválido sin desbordes', (
+    tester,
+    screen,
+  ) async {
+    await tester.pumpWidget(_app(const PrepareOrderScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '{"v":1,"t":"PKG"}');
+    final open = findButtonWithText<OutlinedButton>('Abrir pedido');
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Ese no es un número de pedido válido (ej. DIS-123456).'),
+      findsOneWidget,
+    );
+  });
+
+  testOnScreens('pedido con código que no es un número: aviso sin desbordes', (
+    tester,
+    screen,
+  ) async {
+    var repoCalls = 0;
+    await tester.pumpWidget(
+      _app(
+        const OrderPreparationScreen(orderNumber: '{"v":1,"t":"PKG"}'),
+        overrides: [
+          pickingRepositoryProvider.overrideWithValue(
+            FakePickingRepository(
+              onGetOrderLabels: (_) async {
+                repoCalls++;
+                return const [];
+              },
+              onGetOrderDispatchLines: (_) async {
+                repoCalls++;
+                return buildDispatchLines();
+              },
+            ),
+          ),
+          labelPrinterProvider.overrideWithValue(FakeLabelPrinter()),
+          locationServiceProvider.overrideWithValue(FakeLocationService()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pedido'), findsOneWidget);
+    expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+    expect(repoCalls, 0);
   });
 
   testOnScreens('preparación del pedido con muchas unidades', (

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Radios de los widgets. Android 12+ (values-v31) usa los del sistema para
+     que el widget calce con el resto de la pantalla de inicio. -->
+<resources>
+    <dimen name="widget_radius">16dp</dimen>
+    <dimen name="widget_inner_radius">10dp</dimen>
+</resources>

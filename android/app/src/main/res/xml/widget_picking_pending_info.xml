@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Proveedor del widget "picking_pending" (WidgetKind en el paquete widgets).
+     updatePeriodMillis="0": sin refresco periódico (batería); el widget solo
+     cambia cuando la app manda datos por el canal bo.com.dismac/widgets.
+     targetCellWidth/Height, previewLayout y description son de API 31+ y
+     las versiones anteriores los ignoran (usan minWidth/minHeight y
+     previewImage). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_picking_pending_description"
+    android:initialLayout="@layout/widget_picking_pending"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:previewImage="@drawable/widget_preview_picking_pending"
+    android:previewLayout="@layout/widget_picking_pending"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

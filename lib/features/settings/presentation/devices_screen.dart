@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/device_list_item.dart';
+import '../../../core/auth/biometric/biometric_auto_prompt_gate.dart';
 import '../../../core/auth/session.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
@@ -50,7 +51,11 @@ class DevicesScreen extends ConsumerWidget {
       // a que el próximo 401 lo haga. Para otros dispositivos, solo se refresca
       // la lista.
       onSuccess: isCurrent
-          ? () => unawaited(ref.read(sessionProvider.notifier).signOut())
+          ? () {
+              // Salida a propósito: el login no lanza la biometría solo.
+              ref.read(biometricAutoPromptGateProvider).suppress();
+              unawaited(ref.read(sessionProvider.notifier).signOut());
+            }
           : () => ref.invalidate(devicesProvider),
     );
   }

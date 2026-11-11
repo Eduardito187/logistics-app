@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/power/motion_budget.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Radar/pulso reutilizable: anillos concéntricos que se expanden y se
@@ -9,8 +10,13 @@ import '../../../../core/theme/app_colors.dart';
 /// Rendimiento (teléfonos de gama baja, en campo): un ÚNICO
 /// `AnimationController` lento (2,5 s) alimenta los tres anillos escalonados;
 /// el `CustomPainter` solo traza círculos. Con reduce-motion
-/// (`MediaQuery.disableAnimationsOf`) queda ESTÁTICO: dos anillos tenues fijos,
-/// sin controlador en marcha.
+/// (`MediaQuery.disableAnimationsOf`) o con ahorro de energía / batería baja
+/// ([MotionBudget]) queda ESTÁTICO: dos anillos tenues fijos, sin controlador
+/// en marcha. El pulso es decorativo y, sobre el mapa oscuro (capa con filtro
+/// de color), cada cuadro animado obliga a recomponer la pantalla entera.
+///
+/// Pulso de 1,2 s (antes 2,5 s): con una lectura de GPS cada 15 s el radar
+/// anima ~8 % del tiempo en vez de ~25 %.
 class RadarPulse extends StatefulWidget {
   const RadarPulse({
     super.key,
@@ -40,18 +46,35 @@ class _RadarPulseState extends State<RadarPulse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2500),
+    duration: const Duration(milliseconds: 1200),
   );
 
   bool _reduce = false;
+  bool _systemReduce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    MotionBudget.powerSaving.addListener(_onPowerChanged);
+  }
+
+  /// Ahorro de energía activado/desactivado en caliente.
+  void _onPowerChanged() {
+    if (!mounted) return;
+    setState(_syncReduce);
+  }
+
+  void _syncReduce() {
+    _reduce = _systemReduce || !MotionBudget.decorativeAllowed;
+    if (_reduce) _controller.stop();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reduce = MediaQuery.disableAnimationsOf(context);
-    if (_reduce) {
-      _controller.stop();
-    } else if (!_controller.isAnimating && _controller.value == 0) {
+    _systemReduce = MediaQuery.disableAnimationsOf(context);
+    _syncReduce();
+    if (!_reduce && !_controller.isAnimating && _controller.value == 0) {
       // Primer ping al aparecer el camión.
       _controller.forward();
     }
@@ -68,6 +91,7 @@ class _RadarPulseState extends State<RadarPulse>
 
   @override
   void dispose() {
+    MotionBudget.powerSaving.removeListener(_onPowerChanged);
     _controller.dispose();
     super.dispose();
   }

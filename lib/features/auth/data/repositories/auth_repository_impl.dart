@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/auth/device_fingerprint.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/auth/token_store.dart';
 import '../../../../core/auth/user_role.dart';
@@ -31,7 +32,13 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final deviceId = await _ref.read(tokenStoreProvider).deviceId();
+    final installId = await _ref.read(tokenStoreProvider).deviceId();
+    // Una huella por instalación + usuario (ver `userDeviceFingerprint`): evita
+    // el "dispositivo dado de baja" al cambiar de usuario en el mismo teléfono.
+    final fingerprint = await userDeviceFingerprint(
+      installId: installId,
+      email: email,
+    );
     // Token FCM si ya se registró; viaja como device.push_token para que el
     // backend sepa a dónde notificar.
     final pushToken = _ref.read(pushTokenProvider);
@@ -43,7 +50,7 @@ class AuthRepositoryImpl implements AuthRepository {
           email: email.trim(),
           password: password,
           device: Device(
-            fingerprint: deviceId,
+            fingerprint: fingerprint,
             platform: defaultTargetPlatform.name,
             name: 'App interna',
             pushToken: pushToken,

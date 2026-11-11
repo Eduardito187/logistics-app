@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colores de marca DisTrack para los widgets (modo claro). El modo oscuro
+     redefine los mismos nombres en values-night/widget_colors.xml. -->
+<resources>
+    <color name="widget_background">#F3F3F1</color>
+    <color name="widget_text_primary">#141414</color>
+    <color name="widget_text_secondary">#5C5C58</color>
+    <!-- Ámbar de marca oscurecido: #FFB000 sobre gris claro no se lee al sol. -->
+    <color name="widget_highlight">#A86F00</color>
+    <color name="widget_divider">#DCDCD7</color>
+    <color name="widget_track">#DCDCD7</color>
+    <!-- Fijos en ambos modos. -->
+    <color name="widget_accent">#E30613</color>
+    <color name="widget_on_accent">#FFFFFF</color>
+</resources>

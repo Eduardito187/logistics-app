@@ -9,10 +9,12 @@ import '../icons/icons.dart';
 import 'code_scanner.dart';
 import 'scan_feedback.dart';
 import 'scan_frame.dart';
+import 'scanner_paused_overlay.dart';
 
 export 'code_scanner.dart';
 export 'continuous_scanner.dart';
 export 'scan_feedback.dart';
+export 'scanner_paused_overlay.dart';
 
 /// Pantalla de escaneo a pantalla completa (EAN o QR). Devuelve el primer
 /// código leído con `Navigator.pop`. Botones grandes, overlay de guía y
@@ -93,10 +95,34 @@ class _ScannerScreenState extends State<ScannerScreen>
   );
   bool _handled = false;
 
+  /// Pausa por inactividad (ver [kScannerIdlePause]): cámara abierta sin leer
+  /// nada = batería tirada.
+  Timer? _idleTimer;
+  bool _idlePaused = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _armIdle();
+  }
+
+  void _armIdle() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(kScannerIdlePause, _pauseForIdle);
+  }
+
+  void _pauseForIdle() {
+    _idleTimer = null;
+    if (!mounted || _idlePaused || _handled) return;
+    setState(() => _idlePaused = true);
+    unawaited(_controller.stop().catchError((Object _) {}));
+  }
+
+  void _resumeFromIdle() {
+    setState(() => _idlePaused = false);
+    unawaited(_controller.start().catchError((Object _) {}));
+    _armIdle();
   }
 
   @override
@@ -107,7 +133,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (!_controller.value.isInitialized) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        if (!_handled) unawaited(_controller.start());
+        if (!_handled && !_idlePaused) unawaited(_controller.start());
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
@@ -120,6 +146,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _idleTimer?.cancel();
     unawaited(_controller.dispose());
     super.dispose();
   }
@@ -165,6 +192,10 @@ class _ScannerScreenState extends State<ScannerScreen>
         children: [
           MobileScanner(controller: _controller, onDetect: _onDetect),
           ScanFrame(helper: widget.helper),
+          if (_idlePaused)
+            Positioned.fill(
+              child: ScannerPausedOverlay(onResume: _resumeFromIdle),
+            ),
         ],
       ),
     );

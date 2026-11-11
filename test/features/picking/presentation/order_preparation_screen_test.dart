@@ -5,6 +5,8 @@ import 'package:logistics_app/core/api/models/emitted_label.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
+import 'package:logistics_app/core/printing/printer_config.dart';
+import 'package:logistics_app/core/widgets/empty_state.dart';
 import 'package:logistics_app/features/picking/data/repositories/picking_repository_impl.dart';
 import 'package:logistics_app/features/picking/domain/entities/preparation_state.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/preparation_controller.dart';
@@ -328,4 +330,143 @@ void main() {
     expect(printer.printed, ['ZPL_L1']);
     expect(find.text('Etiqueta enviada a la impresora.'), findsOneWidget);
   });
+
+  testWidgets('impresión sin confirmación (9100): mensaje veraz', (
+    tester,
+  ) async {
+    final labels = <EmittedLabel>[buildLabel(labelId: 'L1', zpl: 'ZPL_L1')];
+    final printer = FakeLabelPrinter()
+      ..outcome = const PrintOutcome.sentUnconfirmed();
+    await _pump(
+      tester,
+      printer: printer,
+      repo: FakePickingRepository(onGetOrderLabels: (_) async => labels),
+      seedState: const PreparationState(
+        preparedUnitIds: {'L1'},
+        vehicleId: 'V1',
+        lane: 'A1',
+      ),
+    );
+
+    final btn = find.text('Imprimir de nuevo');
+    await tester.ensureVisible(btn);
+    await tester.pump();
+    await tester.tap(btn);
+    await tester.pumpAndSettle();
+
+    expect(printer.printed, ['ZPL_L1']);
+    // Viaja el dibujo de la etiqueta por si la impresora es de oficina.
+    expect(printer.renders.single, isNotNull);
+    expect(
+      find.text(
+        'Enviado. Esta impresora no confirma la impresión; revisá que haya '
+        'salido.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Etiqueta enviada a la impresora.'), findsNothing);
+  });
+
+  testWidgets('la impresora rechaza: se muestra el motivo, no "Ajustes"', (
+    tester,
+  ) async {
+    final labels = <EmittedLabel>[buildLabel(labelId: 'L1', zpl: 'ZPL_L1')];
+    final printer = _RejectingPrinter();
+    await _pump(
+      tester,
+      printer: printer,
+      repo: FakePickingRepository(onGetOrderLabels: (_) async => labels),
+      seedState: const PreparationState(
+        preparedUnitIds: {'L1'},
+        vehicleId: 'V1',
+        lane: 'A1',
+      ),
+    );
+
+    final btn = find.text('Imprimir de nuevo');
+    await tester.ensureVisible(btn);
+    await tester.pump();
+    await tester.tap(btn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('La impresora está ocupada.'), findsOneWidget);
+    expect(find.text('Seleccioná una impresora en Ajustes.'), findsNothing);
+  });
+
+  group('código que no es un número de pedido', () {
+    // Bug: el QR de una etiqueta llegaba como número y el header mostraba
+    // `Pedido {"v":1,…}` con "El pedido no tiene productos".
+    Future<List<String>> pumpInvalid(
+      WidgetTester tester,
+      String orderNumber,
+    ) async {
+      final calls = <String>[];
+      await _pump(
+        tester,
+        orderNumber: orderNumber,
+        repo: FakePickingRepository(
+          onGetOrderLabels: (o) async {
+            calls.add('labels:$o');
+            return const [];
+          },
+          onGetOrderDispatchLines: (o) async {
+            calls.add('lines:$o');
+            return buildDispatchLines(orderReference: o);
+          },
+        ),
+      );
+      return calls;
+    }
+
+    testWidgets('JSON de etiqueta: título "Pedido" y aviso, sin repositorio', (
+      tester,
+    ) async {
+      final calls = await pumpInvalid(tester, '{"v":1}');
+
+      expect(find.text('Pedido'), findsOneWidget);
+      expect(find.textContaining('{"v"'), findsNothing);
+      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+      expect(
+        find.text(
+          'Volvé atrás y escaneá la etiqueta de un producto del pedido.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('El pedido no tiene productos'), findsNothing);
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('texto con espacios: mismo aviso, sin repositorio', (
+      tester,
+    ) async {
+      final calls = await pumpInvalid(tester, 'hola mundo');
+
+      expect(find.text('Pedido'), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('un número válido SÍ consulta el pedido', (tester) async {
+      final calls = await pumpInvalid(tester, 'DIS-123456');
+
+      expect(find.text('Pedido DIS-123456'), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsNothing);
+      expect(calls, contains('labels:DIS-123456'));
+    });
+  });
+}
+
+/// Impresora que rechaza el trabajo con un motivo propio.
+class _RejectingPrinter extends FakeLabelPrinter {
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async {
+    printed.add(zpl);
+    throw const PrinterException('La impresora está ocupada.');
+  }
 }

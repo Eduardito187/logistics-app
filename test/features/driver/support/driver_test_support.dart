@@ -212,8 +212,10 @@ class FakeLocationService extends LocationService {
   void prefetch() => prefetchCount++;
 
   @override
-  Stream<GpsFix> stream({int distanceFilterMeters = 20}) =>
-      const Stream.empty();
+  Stream<GpsFix> stream({
+    int distanceFilterMeters = 20,
+    TrackingProfile? profile,
+  }) => const Stream.empty();
 }
 
 /// Rastreo del camión falso: no levanta el foreground service ni Geolocator.

@@ -23,6 +23,18 @@ void main() {
       expect(next.lastFix, isNull);
     });
 
+    test('foregroundServiceRunning: false por defecto y se conserva', () {
+      const state = TruckTrackingState();
+      expect(state.foregroundServiceRunning, isFalse);
+      final up = state.copyWith(foregroundServiceRunning: true);
+      expect(up.foregroundServiceRunning, isTrue);
+      expect(up.copyWith(sent: 2).foregroundServiceRunning, isTrue);
+      expect(
+        up.copyWith(foregroundServiceRunning: false).foregroundServiceRunning,
+        isFalse,
+      );
+    });
+
     test('copyWith sin argumentos conserva todos los campos', () {
       const fix = GpsFix(lat: 1, lng: 2, accuracy: 3);
       const state = TruckTrackingState(

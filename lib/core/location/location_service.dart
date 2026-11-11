@@ -6,10 +6,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'gps_fix.dart';
+import 'tracking_profile.dart';
 
 // Se reexporta [GpsFix] (movido a su propio archivo por SRP) para no romper a
 // quienes importan `location/location_service.dart`.
 export 'gps_fix.dart';
+export 'tracking_profile.dart';
 
 /// Acceso al GPS del dispositivo. Pide permiso una vez y entrega la posición.
 /// En terreno un escaneo no debe trabarse si el GPS tarda: devuelve `null` si
@@ -221,42 +223,49 @@ class LocationService {
     }
   }
 
-  /// Intervalo mínimo que se le pide al GPS de Android entre lecturas.
+  /// Intervalo mínimo que se le pide al GPS de Android entre lecturas (perfil
+  /// "en marcha"; ver [TrackingProfile]).
   ///
   /// Sin esto el FusedLocationProvider entrega ~1 lectura/seg con el camión en
-  /// movimiento: batería, CPU y una fila en la cola por segundo. Junto con el
-  /// filtro de distancia, alcanza para seguir un camión en ciudad.
-  static const Duration streamInterval = Duration(seconds: 10);
+  /// movimiento: batería, CPU y una fila en la cola por segundo. 15 s alcanza
+  /// para seguir un camión en ciudad (a 40 km/h son ~170 m entre lecturas).
+  static const Duration streamInterval = Duration(seconds: 15);
 
   /// Ajustes del flujo de posiciones (expuestos para test).
   ///
   /// [highAccuracy] `true` (GPS) solo con ruta activa; en `false` se pide
   /// precisión balanceada (red/Wi-Fi, ~100 m), que gasta mucha menos batería.
+  /// [accuracy] e [interval], si vienen, mandan (los fija el
+  /// [TrackingProfile] adaptativo del rastreo).
   ///
-  /// - Android: intervalo mínimo [streamInterval] (FusedLocationProvider).
+  /// - Android: intervalo mínimo [interval] o [streamInterval]
+  ///   (FusedLocationProvider).
   /// - iOS: `automotiveNavigation` (iOS ajusta el GPS a un vehículo en ruta) y
   ///   SIN pausa automática: con la pausa, iOS corta las posiciones en una
   ///   parada larga y en segundo plano no las retoma solo, y el camión
-  ///   "desaparece" del seguimiento. La batería la cuida el filtro de distancia.
+  ///   "desaparece" del seguimiento. La batería la cuida el filtro de distancia
+  ///   y el perfil "detenido" (precisión baja).
   @visibleForTesting
   static LocationSettings streamSettings({
     required int distanceFilterMeters,
     TargetPlatform? platform,
     bool highAccuracy = true,
+    LocationAccuracy? accuracy,
+    Duration? interval,
   }) {
-    final accuracy = highAccuracy
-        ? LocationAccuracy.high
-        : LocationAccuracy.medium;
+    final resolvedAccuracy =
+        accuracy ??
+        (highAccuracy ? LocationAccuracy.high : LocationAccuracy.medium);
     switch (platform ?? defaultTargetPlatform) {
       case TargetPlatform.android:
         return AndroidSettings(
-          accuracy: accuracy,
+          accuracy: resolvedAccuracy,
           distanceFilter: distanceFilterMeters,
-          intervalDuration: streamInterval,
+          intervalDuration: interval ?? streamInterval,
         );
       case TargetPlatform.iOS:
         return AppleSettings(
-          accuracy: accuracy,
+          accuracy: resolvedAccuracy,
           distanceFilter: distanceFilterMeters,
           activityType: ActivityType.automotiveNavigation,
           pauseLocationUpdatesAutomatically: false,
@@ -265,20 +274,43 @@ class LocationService {
         );
       default:
         return LocationSettings(
-          accuracy: accuracy,
+          accuracy: resolvedAccuracy,
           distanceFilter: distanceFilterMeters,
         );
     }
   }
 
-  /// Flujo de posiciones para la telemetría en vivo del camión (chofer en ruta,
-  /// por eso precisión alta). Filtra por distancia ([distanceFilterMeters]) y,
-  /// en Android, por intervalo ([streamInterval]).
-  Stream<GpsFix> stream({int distanceFilterMeters = 20}) {
+  /// Ajustes del flujo para un [TrackingProfile] en [platform] (expuesto para
+  /// test): filtro de distancia propio de cada plataforma, precisión e
+  /// intervalo del perfil.
+  @visibleForTesting
+  static LocationSettings settingsForProfile(
+    TrackingProfile profile, {
+    TargetPlatform? platform,
+  }) {
+    final target = platform ?? defaultTargetPlatform;
+    return streamSettings(
+      distanceFilterMeters: target == TargetPlatform.iOS
+          ? profile.iosDistanceFilterMeters
+          : profile.androidDistanceFilterMeters,
+      platform: target,
+      accuracy: profile.accuracy,
+      interval: profile.interval,
+    );
+  }
+
+  /// Flujo de posiciones para la telemetría en vivo del camión. Con [profile]
+  /// (lo pasa el rastreo adaptativo) usa su precisión, filtro e intervalo; sin
+  /// él, precisión alta con filtro [distanceFilterMeters] y, en Android,
+  /// intervalo [streamInterval].
+  Stream<GpsFix> stream({
+    int distanceFilterMeters = 20,
+    TrackingProfile? profile,
+  }) {
     return Geolocator.getPositionStream(
-      locationSettings: streamSettings(
-        distanceFilterMeters: distanceFilterMeters,
-      ),
+      locationSettings: profile != null
+          ? settingsForProfile(profile)
+          : streamSettings(distanceFilterMeters: distanceFilterMeters),
     ).map((p) {
       final fix = _toFix(p);
       // El rastreo en vivo deja su último fix para [current]: el escaneo del

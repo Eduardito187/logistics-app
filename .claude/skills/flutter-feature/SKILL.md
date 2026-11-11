@@ -23,8 +23,9 @@ dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pant
   Si aparece con rutas `/home/...` es un **VS Code abierto en modo WSL** sobre la carpeta (corre `pub get`
   con el Flutter de WSL y pisa `.dart_tool`, `pubspec.lock` y `local.properties`): reescribirlo y correr
   `C:\flutter\bin\flutter.bat pub get`; pedir al usuario cerrar esa ventana.
-- El backend vive en WSL: `\\wsl.localhost\Ubuntu-22.04\dismac\logistics` (puede tener cambios sin push;
-  GitHub puede ir atrasado). Grep pesado ahí: correr DENTRO de WSL con un `.sh` (`wsl.exe -d Ubuntu-22.04 -- bash /mnt/c/...sh`).
+- El backend vigente vive en Windows: `C:\Users\ehhuallata\Documents\APP\logistics` (spec:
+  `openapi\v1.yaml`; puede tener cambios sin commit de la sesión del backend → SOLO LECTURA). El
+  `~/dismac/logistics` de WSL es una copia VIEJA (13-oct): no usarla. Staging corre en OCI (`ssh oci`).
 
 ```bash
 /c/flutter/bin/dart.bat format lib test integration_test
@@ -130,7 +131,12 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 - **Push/monitoreo/versión:** `pushRegistrationProvider`, `pushTokenProvider`, `crashReporterProvider.breadcrumb('x.y')`
   (sin datos personales), `VersionGate` ya cableado en `app.dart`.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
-  `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`). Impresora: `labelPrinterProvider`.
+  `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`).
+- **Impresión:** `labelPrinterProvider.printLabel({zpl, render, jobName, to}) → PrintOutcome` (texto VERAZ; "aceptado"
+  nunca = éxito). **Zebra** = ZPL por Bluetooth/USB/WiFi-9100 (+`~HS`). **Oficina (Ricoh/láser)** = `OfficePrinter`:
+  Ricoh se detecta y va por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + código de
+  usuario en texto claro (`USERCODE`); el PCL5 crudo le sale EN BLANCO e IPP lo cancela. Búsqueda WiFi y credenciales
+  por impresora en `lib/core/printing/`. Ver `.claude/memory/wifi-printer-discovery.md`.
 - **Íconos:** NUNCA `Icon(Icons.x)`. Siempre `AnimatedAppIcon(AppIcon.x, state: …)` (`lib/core/icons/icons.dart`):
   `active` al seleccionar, `loading` mientras escanea/sincroniza/imprime/GPS, `success`/`error` como resultado.
   `EmptyState`, `StatTile`, `StatusPill` y `UserRole.icon` reciben `AppIcon`; `NavTab`/`RoleTask` llevan `appIcon`.
@@ -220,3 +226,7 @@ y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutt
 | `SendMessage` al backend falla ("No agent named …") | La sesión del backend ROTA de nombre (logistics-8e → 4c → 1a → 68…) | Antes de mensajear, `ListAgents` y usar el nombre vigente; el pedido igual queda en `docs/backend-requests/` para quien lo tome |
 | Escanear una etiqueta Zebra/Code128 no la reconoce, o un test de escaneo rompe al leer un código plano | La etiqueta acepta QR (offline Ed25519) **y Code128** (el valor ES el `label_id` → se resuelve online por `/app/labels/{id}/resolve`); `kLabelScanFormats=[qrCode,code128]` | En lib ya está cableado (`label_resolver.dart`); en tests que escanean códigos PLANOS pasar `labelResolverProvider.overrideWithValue(FakeLabelResolver(echo:true))`. Detectar QR con `SignedLabel.fromQrContent` ANTES de resolver (un QR sin claves NO va a `/resolve`). Ver `.claude/memory/code128-label-scanning.md` |
 | Un agente dejó un archivo roto / se colgó sin terminar | Los agentes NO corren flutter; a veces dejan sintaxis rota o se cuelgan | Correr `getDiagnostics` sobre CADA archivo que tocó el agente apenas cierra; lo interconectado (mapa/GPS, pantallas compartidas) hacerlo el coordinador, no repartirlo. Ver `.claude/memory/parallel-agents-method.md` |
+| La app muestra **"Error del servidor"** (login u otra pantalla) | Ese texto sale de `api_exception.dart` SOLO con **HTTP ≥ 500**: es un 5xx REAL del backend, NO bug de la app | Aislar con `curl` directo al endpoint por rol (`curl -X POST http://137.131.245.152:8110/api/v1/app/auth/login -d '{"email":…,"password":"password123","device":{"fingerprint":"x","platform":"android","name":"x"}}'`). Si da 500, leer el log del contenedor (`ssh oci 'docker logs --since 10m logistics-staging-app-1'`). Caso real: 2FA cifrado con APP_KEY viejo → `DecryptException`. Ver `.claude/memory/staging-login-500-2fa-appkey.md` y `staging-server-access.md` |
+| Compilar **staging** en el teléfono por USB desde WSL ("no sale en la lista de dispositivos") | El picker de VS Code corre en WSL y NO ve el USB de Windows; usbipd se cae con el OnePlus | Build en WSL `flutter build apk --profile --dart-define-from-file=config/staging.json` + instalar con el **adb de Windows** (`adb.exe install -r -d`); staging es **profile** (release bloquea el http en claro). Fix del driver y pasos: `.claude/memory/device-run-usb-wsl.md` |
+| Impresora de oficina (Ricoh/láser) "dice que imprimió pero no sale nada" o "sale en blanco" | Ricoh exige autenticación de usuario: por IPP CANCELA todo (`job-canceled-at-device`); el PCL5 crudo le sale EN BLANCO (su driver usa PCLXL) | Imprimir por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + **código de usuario en texto claro** (`USERCODE`, el operario lo carga en avanzado). La detección ya manda Ricoh por 9100. Diagnosticar desde una PC en la red de la impresora (IPP solo-lectura + capturar la salida del driver con `PrintDocument.PrintToFile`). NUNCA credenciales reales en repo/tests. Ver `.claude/memory/wifi-printer-discovery.md` |
+| Emitir etiquetas tira **"Error del servidor"** (500) | Backend sin `LABELS_SIGNING_KEY` en el env (clave Ed25519 de firma) → `RuntimeException` en `LabelsServiceProvider`. NO es la app | Es backend/ops: `php artisan logistics:labels:keygen` + setear la env. La app verifica con las públicas de `GET /app/labels/public-keys` (no fija ninguna). Derivar por `docs/backend-requests/` + a la sesión del backend. Ver `.claude/memory/staging-login-500-2fa-appkey.md` |

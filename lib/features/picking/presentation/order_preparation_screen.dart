@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -15,7 +17,10 @@ import '../../../core/printing/label_printer.dart';
 import '../../../core/printing/printer_config.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/widgets/async_value_view.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../domain/order_number.dart';
 import '../domain/usecases/emit_labels.dart';
 import '../domain/usecases/get_signed_zpl.dart';
 import '../domain/usecases/record_preparation_scan.dart';
@@ -27,6 +32,7 @@ import 'widgets/dispatch_lines_body.dart';
 import 'widgets/label_batch_sheet.dart';
 import 'widgets/label_preview_sheet.dart';
 import 'widgets/preparation_units_layout.dart';
+import 'widgets/printable_label_renderer.dart';
 import 'widgets/progress_card.dart';
 import 'widgets/unit_tile.dart';
 
@@ -138,9 +144,24 @@ class _OrderPreparationScreenState
     // última etiqueta para avisar una sola vez.
     await session.printing;
     if (!mounted) return;
-    if (session.printerMissing) {
-      // Sin impresora: no se anuncia "impresa" en falso.
-      showInfoSnack(context, 'Seleccioná una impresora en Ajustes.');
+    final printError = session.printError;
+    if (printError != null) {
+      // Sin impresora o la impresora rechazó: no se anuncia "impresa" en
+      // falso; se dice el motivo.
+      showInfoSnack(context, printError);
+      return;
+    }
+    if (session.unconfirmed) {
+      // 9100 sin confirmación: veraz, se pide revisar que hayan salido.
+      showSuccessSnack(
+        context,
+        session.prepared == 1
+            ? 'Producto preparado. Etiqueta enviada; la impresora no '
+                  'confirma, revisá que haya salido.'
+            : '${session.prepared} productos preparados. Etiquetas '
+                  'enviadas; la impresora no confirma, revisá que hayan '
+                  'salido.',
+      );
       return;
     }
     // Offline invisible: encolado o enviado, para el usuario es lo mismo.
@@ -186,6 +207,8 @@ class _OrderPreparationScreenState
         .read(preparationControllerProvider(_orderNumber))
         .vehicleId!;
     final record = ref.read(recordPreparationScanProvider);
+    // Vista para dibujar la etiqueta si la impresora es de oficina.
+    final view = View.of(context);
     setState(() => _busyUnitId = label.labelId);
     try {
       // El GPS no debe trabar el escaneo: si no hay fix a tiempo, va en cero.
@@ -207,7 +230,7 @@ class _OrderPreparationScreenState
       session.prepared++;
       // Impresión en cola, en orden de escaneo: la Zebra puede tardar y la
       // cámara no espera a que salga cada etiqueta.
-      session.enqueuePrint(() => _printQuietly(label));
+      session.enqueuePrint(() => _send(label, view));
       final state = ref.read(preparationControllerProvider(_orderNumber));
       final done = _activeUnits.where((l) => state.isPrepared(l.labelId));
       return ScanFeedback.ok(
@@ -239,39 +262,48 @@ class _OrderPreparationScreenState
     }
   }
 
-  /// Imprime sin avisos (la ráfaga avisa al final); `false` = sin impresora.
-  Future<bool> _printQuietly(EmittedLabel label) async {
-    try {
-      await ref.read(labelPrinterProvider).printZpl(label.zpl);
-      return true;
-    } on PrinterException {
-      return false;
-    }
+  /// Manda una etiqueta a la impresora activa: el ZPL a las Zebra o la
+  /// etiqueta dibujada (fuera de pantalla) a las de oficina.
+  Future<PrintOutcome> _send(EmittedLabel label, ui.FlutterView view) {
+    return ref
+        .read(labelPrinterProvider)
+        .printLabel(
+          zpl: label.zpl,
+          render: printableLabelRenderer(label, view: view),
+          jobName: 'Etiqueta ${label.orderNumber} L${label.lineNumber}',
+        );
   }
 
-  /// Imprime la etiqueta de un producto (acción principal del tile).
+  /// Texto del error de impresión para el operario.
+  static String _printerErrorText(PrinterException e) =>
+      e.message == PrinterException.notSelected.message
+      ? 'Seleccioná una impresora en Ajustes.'
+      : e.message;
+
+  /// Imprime la etiqueta de un producto (acción principal del tile y de la
+  /// vista previa) y dice, veraz, qué pasó.
   Future<void> _printUnit(EmittedLabel label) async {
     setState(() => _busyUnitId = label.labelId);
     try {
-      final printed = await _printLabel(label);
-      if (!mounted || !printed) return;
-      showSuccessSnack(context, 'Etiqueta enviada a la impresora.');
+      final outcome = await _printLabel(label);
+      if (!mounted || outcome == null) return;
+      if (outcome.kind == PrintOutcomeKind.sentUnconfirmed) {
+        showInfoSnack(context, outcome.message);
+      } else {
+        showSuccessSnack(context, outcome.message);
+      }
     } finally {
       if (mounted) setState(() => _busyUnitId = null);
     }
   }
 
-  /// Imprime la etiqueta; devuelve false si no hay impresora utilizable (ya
-  /// avisó al usuario).
-  Future<bool> _printLabel(EmittedLabel label) async {
+  /// Imprime la etiqueta; `null` si falló (ya avisó el motivo al usuario).
+  Future<PrintOutcome?> _printLabel(EmittedLabel label) async {
     try {
-      await ref.read(labelPrinterProvider).printZpl(label.zpl);
-      return true;
-    } on PrinterException {
-      if (mounted) {
-        showInfoSnack(context, 'Seleccioná una impresora en Ajustes.');
-      }
-      return false;
+      return await _send(label, View.of(context));
+    } on PrinterException catch (e) {
+      if (mounted) showInfoSnack(context, _printerErrorText(e));
+      return null;
     }
   }
 
@@ -288,16 +320,38 @@ class _OrderPreparationScreenState
         zpl = labels.map((l) => l.zpl).join('\n');
       }
       if (!mounted) return;
+      final printer = ref.read(labelPrinterProvider);
+      final view = View.of(context);
+      PrinterConfig? target;
       try {
-        await ref.read(labelPrinterProvider).printZpl(zpl);
+        target = await printer.selectedPrinter();
+      } on Object {
+        target = null;
+      }
+      try {
+        PrintOutcome outcome;
+        if (target != null && target.isOffice) {
+          // Oficina: no entiende ZPL; una hoja por etiqueta, dibujada.
+          outcome = const PrintOutcome.sent();
+          for (final label in labels) {
+            outcome = await _send(label, view);
+          }
+        } else {
+          outcome = await printer.printLabel(
+            zpl: zpl,
+            jobName: 'Etiquetas $_orderNumber',
+          );
+        }
         if (!mounted) return;
         showSuccessSnack(
           context,
-          'Enviadas ${labels.length} etiquetas a la impresora.',
+          outcome.kind == PrintOutcomeKind.sent
+              ? 'Enviadas ${labels.length} etiquetas a la impresora.'
+              : 'Enviadas ${labels.length} etiquetas. ${outcome.message}',
         );
-      } on PrinterException {
+      } on PrinterException catch (e) {
         if (!mounted) return;
-        showInfoSnack(context, 'Seleccioná una impresora en Ajustes.');
+        showInfoSnack(context, _printerErrorText(e));
       }
     } finally {
       if (mounted) setState(() => _orderBusy = false);
@@ -399,6 +453,19 @@ class _OrderPreparationScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Defensa: un código que no es un pedido (p. ej. el JSON de una etiqueta QR
+    // llegado por un link viejo) nunca va al título ni se consulta al backend.
+    if (!isPlausibleOrderNumber(_orderNumber)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Pedido')),
+        body: const EmptyState(
+          icon: AppIcon.error,
+          title: 'Ese código no es un número de pedido',
+          message:
+              'Volvé atrás y escaneá la etiqueta de un producto del pedido.',
+        ),
+      );
+    }
     final labelsAsync = ref.watch(orderLabelsProvider(_orderNumber));
     return Scaffold(
       appBar: AppBar(title: Text('Pedido $_orderNumber')),
@@ -469,7 +536,7 @@ class _OrderPreparationScreenState
             productName: label.productName,
             imageUrl: label.imageUrl,
             destination: labelDestinationText(label.destination),
-            onPrint: () => _printLabel(label),
+            onPrint: () => _printUnit(label),
           ),
         );
       },
@@ -493,7 +560,12 @@ class _PrepSession {
 
   EmittedLabel? _first;
   int prepared = 0;
-  bool printerMissing = false;
+
+  /// Primer error de impresión de la ráfaga (texto para el operario).
+  String? printError;
+
+  /// Alguna etiqueta salió por 9100 sin confirmación de la impresora.
+  bool unconfirmed = false;
 
   /// Cola serial de impresión: cada etiqueta sale cuando terminó la anterior.
   Future<void> printing = Future<void>.value();
@@ -505,9 +577,16 @@ class _PrepSession {
     return first;
   }
 
-  void enqueuePrint(Future<bool> Function() print) {
+  void enqueuePrint(Future<PrintOutcome> Function() print) {
     printing = printing.then((_) async {
-      if (!await print()) printerMissing = true;
+      try {
+        final outcome = await print();
+        if (outcome.kind == PrintOutcomeKind.sentUnconfirmed) {
+          unconfirmed = true;
+        }
+      } on PrinterException catch (e) {
+        printError ??= _OrderPreparationScreenState._printerErrorText(e);
+      }
     });
   }
 }

@@ -31,6 +31,16 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- Notificaciones (Android 13+): push y servicio en primer plano. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Android 16+: notificación de ruta "promovida" (chip en la barra de
+         estado / Now Bar), el equivalente Android a la isla dinámica. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
+    <!-- Isla de ruta propia (pastilla flotante arriba al centro) para Android
+         8–15 y equipos sin Live Updates: requiere "Mostrar sobre otras apps",
+         que el chofer activa desde Ajustes. Sin el permiso no se muestra. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <!-- Inicio de sesión con huella / rostro (BiometricPrompt). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false"/>
 
     <!-- Seguridad: sin backup (cola offline, tokens y fotos no salen del equipo) y
          solo HTTPS en release (network_security_config; debug/profile permiten
@@ -70,6 +80,78 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="location"
             android:exported="false" />
+
+        <!-- Widgets de la pantalla de inicio (WidgetsChannel + paquete widgets).
+             exported="false" como en la guía oficial de App Widgets: el sistema
+             (AppWidgetService, uid del sistema) entrega APPWIDGET_UPDATE igual a
+             receivers no exportados, y así ninguna otra app puede mandarles
+             broadcasts. Sin refresco periódico (updatePeriodMillis="0"). -->
+        <receiver
+            android:name=".widgets.NextDeliveryWidget"
+            android:exported="false"
+            android:label="@string/widget_next_delivery_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_delivery_info"/>
+        </receiver>
+        <receiver
+            android:name=".widgets.RouteDayWidget"
+            android:exported="false"
+            android:label="@string/widget_route_day_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_route_day_info"/>
+        </receiver>
+        <receiver
+            android:name=".widgets.PickingPendingWidget"
+            android:exported="false"
+            android:label="@string/widget_picking_pending_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_picking_pending_info"/>
+        </receiver>
+        <receiver
+            android:name=".widgets.StoreReceptionsWidget"
+            android:exported="false"
+            android:label="@string/widget_store_receptions_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_store_receptions_info"/>
+        </receiver>
+        <receiver
+            android:name=".widgets.SupervisorSummaryWidget"
+            android:exported="false"
+            android:label="@string/widget_supervisor_summary_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_supervisor_summary_info"/>
+        </receiver>
+        <receiver
+            android:name=".widgets.QuickScanWidget"
+            android:exported="false"
+            android:label="@string/widget_quick_scan_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_scan_info"/>
+        </receiver>
 
         <!-- Render con Skia (OpenGL) en Android en vez de Impeller. Los teléfonos
              de 1 GB (Android Go, GPUs Mali/PowerVR de gama baja) tienen drivers

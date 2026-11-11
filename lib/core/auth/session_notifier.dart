@@ -29,6 +29,13 @@ class SessionNotifier extends Notifier<Session?> {
   /// revocación. Con ella, un solo cierre corre aunque lleguen N 401.
   bool _closing = false;
 
+  /// Momento del último login REAL (credenciales contra el backend) en este
+  /// arranque. `null` tras [restore], [signOut] o sin login. Lo usa el
+  /// interceptor de Dio para no confundir el desfase del caché del backend
+  /// (dispositivo recién re-asignado a otro usuario) con una baja real.
+  DateTime? _freshSignInAt;
+  DateTime? get freshSignInAt => _freshSignInAt;
+
   TokenStore get _store => ref.read(tokenStoreProvider);
   AuthHeadersNotifier get _headers => ref.read(authHeadersProvider.notifier);
 
@@ -76,6 +83,7 @@ class SessionNotifier extends Notifier<Session?> {
   }) async {
     await _store.writeToken(token);
     _headers.setToken(token);
+    _freshSignInAt = DateTime.now();
     final session = Session(
       userName: userName,
       role: role,
@@ -191,6 +199,7 @@ class SessionNotifier extends Notifier<Session?> {
     final bool hadToken;
     try {
       hadToken = state?.token != null;
+      _freshSignInAt = null;
       // Primero lo que ve el usuario: sin sesión → el router lleva al login AL
       // INSTANTE (antes esperaba hasta 3 s de drenado + 4 s de revocación).
       // El Bearer sigue en las cabeceras para el trabajo de abajo.

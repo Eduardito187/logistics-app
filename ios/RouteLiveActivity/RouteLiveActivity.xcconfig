@@ -1,0 +1,7 @@
+// Configuración base del target "RouteLiveActivity" (Live Activity de la ruta).
+// Trae FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER para que la versión de la
+// extensión sea SIEMPRE la misma que la de la app (App Store lo exige).
+// NO incluir los xcconfig de Pods-Runner: la extensión no usa pods.
+#include "../Flutter/Generated.xcconfig"
+
+IPHONEOS_DEPLOYMENT_TARGET = 16.1

@@ -15,6 +15,9 @@
 - [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
 - [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
 - [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
+- [Correr en teléfono por USB desde WSL](device-run-usb-wsl.md) — usbipd se cae (OnePlus 15 CPH2749); fix = registrar GUID de interfaz ADB en Windows; WSL es NAT → build APK en WSL + install/launch con adb.exe de Windows
+- [Acceso al servidor de staging](staging-server-access.md) — backend staging en OCI vía `ssh oci`; stack Docker (app/web/worker/postgres…); leer logs por `docker logs`, artisan/psql en contenedores
+- [500 en login staging (2FA/APP_KEY)](staging-login-500-2fa-appkey.md) — "Error del servidor" = 5xx real del backend; chofer/supervisor 500 por secreto 2FA con APP_KEY viejo (DecryptException); diagnóstico por curl+roles+logs y fix
 - [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
 - [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
 - [Perfil del dueño](user-profile.md) — dueño del producto Dismac (Santa Cruz, Bolivia); español informal, decide rápido, pide cerrar todo al 100%
@@ -26,3 +29,7 @@
 - [Compartir evidencia por share nativo](native-share-evidence.md) — nov 2026: share_plus; botón Compartir en etiqueta (captura PNG), firma y fotos de POD (chofer + tienda); servicio core/sharing con seam para tests
 - [Escaneo Code128 + QR](code128-label-scanning.md) — nov 2026: etiqueta QR (offline Ed25519) o Code128 (label_id → resuelve online /app/labels/{id}/resolve); seams, enums parchados, detectar QR antes de resolver
 - [Ciclo de operación del chofer](driver-fleet-ops-cycle.md) — nov 2026: auto-enfoque mapa en reposo, geocerca llegada, odómetro salida/llegada, inspección diaria diésel + historial + recordatorio + bloqueo crítico, km recorridos, fixes UI
+- [Login otro usuario → "dado de baja"](device-revoked-other-user-cache.md) — caché 30 s de EnsureDeviceToken sin invalidar en bindDevice; fix backend (sin deploy) + reintento app 35 s
+- [Impresora WiFi: búsqueda + oficina](wifi-printer-discovery.md) — búsqueda tipo Windows (máscara real/mDNS/WSD); Ricoh/láser = **PDF directo por 9100 + código de usuario en texto claro** (PCL salía en blanco, IPP cancela); cómo diagnosticar una Ricoh desde la PC
+- [Funciones nativas del teléfono + batería](device-features-native.md) — biometría, Live Updates/Dynamic Island, accesos directos, modo ahorro; canales propios sin pub; target iOS pendiente
+- [Ruta del backend vigente](backend-repo-path.md) — C:\Users\ehhuallata\Documents\APP\logistics (solo lectura); ~/dismac/logistics de WSL es viejo

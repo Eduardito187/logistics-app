@@ -160,12 +160,31 @@ class FakeLabelPrinter extends LabelPrinter {
   bool throwOnPrint;
   final List<String> printed = <String>[];
 
+  /// Cada pedido de impresión trae su dibujo para impresoras de oficina.
+  final List<LabelRenderer?> renders = <LabelRenderer?>[];
+
+  /// Resultado que devuelve cada impresión (por defecto: enviado).
+  PrintOutcome outcome = const PrintOutcome.sent();
+
+  @override
+  Future<PrinterConfig?> selectedPrinter() async => null;
+
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async {
+    printed.add(zpl);
+    renders.add(render);
+    if (throwOnPrint) throw PrinterException.notSelected;
+    return outcome;
+  }
+
   @override
   Future<void> printZpl(String zpl, {PrinterConfig? to}) async {
-    printed.add(zpl);
-    if (throwOnPrint) {
-      throw const PrinterException('No hay impresora seleccionada.');
-    }
+    await printLabel(zpl: zpl, to: to);
   }
 }
 

@@ -92,8 +92,11 @@ else
 fi
 
 echo "==> [3/7] pub get con tool/api_gen ($GEN_DART)"
-cp "$APP_ROOT/tool/api_gen/pubspec.yaml" "$APP_ROOT/tool/api_gen/pubspec.lock" \
-  "$APP_ROOT/swagger_parser.yaml" "$WORK/"
+# Se guardan como pubspec.gen.* para que VS Code / flutter pub get NO los tomen
+# como proyecto anidado (exigen Dart 3.13 y fallaban con el Dart 3.8 del app).
+cp "$APP_ROOT/tool/api_gen/pubspec.gen.yaml" "$WORK/pubspec.yaml"
+cp "$APP_ROOT/tool/api_gen/pubspec.gen.lock" "$WORK/pubspec.lock"
+cp "$APP_ROOT/swagger_parser.yaml" "$WORK/"
 cd "$WORK"
 "$GEN_DART" pub get --enforce-lockfile
 
