@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/export.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/offline/offline_queue.dart';
-import '../../../core/scanning/continuous_scanner.dart';
+import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/theme/code_text.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_pill.dart';
@@ -155,7 +154,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
         context,
         title: _isLoad ? 'Cargar productos' : 'Descargar productos',
         helper: 'Apunta al QR de cada producto',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: _onCode,
       );
     } finally {

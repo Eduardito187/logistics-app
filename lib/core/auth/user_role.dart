@@ -10,7 +10,7 @@ enum UserRole {
       'Checklist pre-salida del camión',
       'Ruta del día y navegación con un toque',
       'Descarga guiada por parada',
-      'Prueba de entrega con QR del cliente y foto',
+      'Entrega con QR del cliente y foto',
       'Entregas fallidas con motivo y foto',
     ],
   ),

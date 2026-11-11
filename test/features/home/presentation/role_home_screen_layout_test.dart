@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
@@ -23,7 +24,12 @@ Future<void> _pump(
   UserRole role, {
   double textScale = 1.0,
 }) async {
-  final container = ProviderContainer(overrides: [noHomePrefetchOverride]);
+  final container = ProviderContainer(
+    overrides: [
+      noHomePrefetchOverride,
+      assignedVehicleIdProvider.overrideWithValue(null),
+    ],
+  );
   addTearDown(container.dispose);
   container.read(sessionProvider.notifier).devSignIn(role);
   await tester.pumpWidget(

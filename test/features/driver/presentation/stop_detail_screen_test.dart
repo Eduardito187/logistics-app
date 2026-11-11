@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Navegar'), findsOneWidget);
     expect(find.text('Ver en el mapa'), findsOneWidget);
     expect(find.text('Descargar productos'), findsOneWidget);
-    expect(find.text('Entregado (prueba de entrega)'), findsOneWidget);
+    expect(find.text('Entregar'), findsOneWidget);
     expect(find.text('Entrega fallida'), findsOneWidget);
   });
 

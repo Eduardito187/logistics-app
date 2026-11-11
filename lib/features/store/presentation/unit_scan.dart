@@ -1,16 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/labels/label_format_exception.dart';
+import '../../../core/labels/label_resolver.dart';
 import '../../../core/labels/label_scanner.dart';
 import '../../../core/labels/signed_label.dart';
 import '../../../core/labels/verification_result.dart';
 import '../../../core/location/location_service.dart';
 
-/// Resultado de resolver un QR a un bulto: el id de la unidad y si la firma
-/// Ed25519 pudo verificarse offline (`null` = no se verificó: sin claves o el
-/// QR no es una etiqueta firmada).
+/// Resultado de resolver una etiqueta escaneada a un bulto.
+///
+/// Dos simbologías: el **QR** firmado (se verifica offline Ed25519; [verified] =
+/// resultado de la firma) y el **Code128** cuyo valor ES el `label_id` (se
+/// resuelve ONLINE contra el backend; [online] = `true`, sin firma). [verified]
+/// es `null` cuando no hubo verificación offline (QR sin claves, o un Code128
+/// aceptado por el servidor).
 class UnitScan {
-  const UnitScan({required this.unitId, required this.verified, this.result});
+  const UnitScan({
+    required this.unitId,
+    required this.verified,
+    this.result,
+    this.online = false,
+    this.revoked = false,
+    this.unreachable = false,
+  });
 
   final String unitId;
   final bool? verified;
@@ -18,13 +30,26 @@ class UnitScan {
   /// Detalle de la verificación offline cuando se pudo verificar: permite
   /// distinguir una firma inválida (etiqueta editada/falsa) de una clave
   /// desconocida (no sincronizada), como ya hace la app de transportista.
-  /// `null` cuando no se verificó (sin claves o QR no firmado).
+  /// `null` cuando no se verificó (sin claves, QR no firmado o Code128 online).
   final VerificationResult? result;
+
+  /// La etiqueta se resolvió ONLINE (Code128, sin firma). Con `verified == false`
+  /// significa que el backend la rechazó (no reconocida, anulada o sin señal).
+  final bool online;
+
+  /// Etiqueta anulada (reimpresa/dada de baja): el backend la resolvió pero no
+  /// debe aceptarse. Solo aplica al camino online (Code128).
+  final bool revoked;
+
+  /// No se pudo consultar al backend (sin señal): un Code128 no es validable sin
+  /// red, así que se rechaza. Solo aplica al camino online.
+  final bool unreachable;
 }
 
-/// Extrae el id del bulto de un QR y verifica su firma offline cuando hay claves
-/// configuradas. Nunca lanza: si el QR no es una etiqueta firmada, usa su texto
-/// crudo como id para no bloquear el flujo en terreno.
+/// Resuelve una etiqueta escaneada a un bulto. QR firmado → verificación offline
+/// (sin red); Code128 (`label_id` sin firma) → resolución ONLINE contra el
+/// backend. Nunca lanza. Un Code128 que el backend no reconoce, anula o que no
+/// se pudo consultar (sin señal) vuelve con `verified == false` (se rechaza).
 Future<UnitScan> resolveUnitScan(WidgetRef ref, String qr) async {
   final scanner = ref.read(labelScannerProvider);
   if (scanner.canVerify) {
@@ -36,30 +61,60 @@ Future<UnitScan> resolveUnitScan(WidgetRef ref, String qr) async {
         result: result.verification,
       );
     } on LabelFormatException {
-      return UnitScan(unitId: qr, verified: null);
+      // No es un QR firmado → se intenta como Code128 (abajo).
+    }
+  } else {
+    // Sin claves: si es un QR firmado se lee el id sin verificar; si no, Code128.
+    try {
+      final label = SignedLabel.fromQrContent(qr);
+      return UnitScan(unitId: label.payload.id, verified: null);
+    } on LabelFormatException {
+      // No es un QR firmado → se intenta como Code128 (abajo).
     }
   }
-  try {
-    final label = SignedLabel.fromQrContent(qr);
-    return UnitScan(unitId: label.payload.id, verified: null);
-  } on LabelFormatException {
-    return UnitScan(unitId: qr, verified: null);
+  // Code128: el valor escaneado ES el `label_id` → se resuelve ONLINE.
+  final res = await resolveLabelId(ref, qr);
+  if (res == null) {
+    return UnitScan(
+      unitId: qr,
+      verified: false,
+      online: true,
+      unreachable: true,
+    );
   }
+  if (res.accepted) {
+    return UnitScan(unitId: res.unitId!, verified: null, online: true);
+  }
+  return UnitScan(
+    unitId: qr,
+    verified: false,
+    online: true,
+    revoked: res.revoked,
+  );
 }
 
-/// Mensaje en español para una etiqueta que no verificó, distinguiendo clave
-/// desconocida de firma inválida (mismo criterio que la app de transportista).
-String unitScanErrorMessage(UnitScan scan) =>
-    scan.result == VerificationResult.unknownKey
-    ? 'Etiqueta de una clave desconocida: no se puede verificar.'
-    : 'Firma inválida: etiqueta editada o falsa.';
+/// Mensaje en español para una etiqueta que no verificó/ no se aceptó.
+String unitScanErrorMessage(UnitScan scan) {
+  if (scan.unreachable) {
+    return 'Sin señal para validar la etiqueta. Intentá de nuevo.';
+  }
+  if (scan.revoked) return 'Etiqueta anulada: ya no es válida.';
+  if (scan.online) return 'Etiqueta no reconocida por el sistema.';
+  return scan.result == VerificationResult.unknownKey
+      ? 'Etiqueta de una clave desconocida: no se puede verificar.'
+      : 'Firma inválida: etiqueta editada o falsa.';
+}
 
 /// Mensaje corto (cabe en el aviso sobre la cámara del escaneo continuo) para
-/// una etiqueta que no verificó.
-String unitScanShortError(UnitScan scan) =>
-    scan.result == VerificationResult.unknownKey
-    ? 'Etiqueta inválida: clave desconocida'
-    : 'Etiqueta inválida: editada o falsa';
+/// una etiqueta que no verificó/ no se aceptó.
+String unitScanShortError(UnitScan scan) {
+  if (scan.unreachable) return 'Sin señal para validar';
+  if (scan.revoked) return 'Etiqueta anulada';
+  if (scan.online) return 'Etiqueta no reconocida';
+  return scan.result == VerificationResult.unknownKey
+      ? 'Etiqueta inválida: clave desconocida'
+      : 'Etiqueta inválida: editada o falsa';
+}
 
 /// Calienta el GPS al abrir la cámara (sin esperar, nunca lanza): al leer cada
 /// código [prefetchFix] ya encuentra una posición fresca en caché.

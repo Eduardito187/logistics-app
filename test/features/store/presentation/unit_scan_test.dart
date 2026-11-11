@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/features/store/presentation/unit_scan.dart';
+
+import '../../../support/fake_label_resolver.dart';
 
 // `resolveUnitScan` convierte un QR en un `UnitScan` (id del bulto + si la firma
 // se verificó offline). Nunca lanza: cae al texto crudo si el QR no es una
@@ -114,32 +117,99 @@ void main() {
   });
 
   testWidgets(
-    'QR que no es etiqueta: usa el texto crudo como id, verified=null',
+    'Code128 (no es QR firmado): resuelve el label_id ONLINE y devuelve el '
+    'unit_id del backend, verified=null (sin firma)',
     (tester) async {
+      final resolver = FakeLabelResolver(
+        resolutions: {
+          'LBL-001': const LabelResolution(
+            labelId: 'LBL-001',
+            resolved: true,
+            unitId: 'U-REAL-9',
+          ),
+        },
+      );
       await _withRef(
         tester,
-        [labelScannerProvider.overrideWithValue(LabelScanner(null))],
+        [
+          labelScannerProvider.overrideWithValue(_scannerWithKey(1)),
+          labelResolverProvider.overrideWithValue(resolver),
+        ],
         (ref) async {
-          final scan = await resolveUnitScan(ref, 'TEXTO-LIBRE-123');
-          expect(scan.unitId, 'TEXTO-LIBRE-123');
-          expect(scan.verified, isNull);
+          final scan = await resolveUnitScan(ref, 'LBL-001');
+          expect(scan.unitId, 'U-REAL-9'); // el unit_id real, no el label_id
+          expect(scan.verified, isNull); // sin firma (resuelto por servidor)
+          expect(scan.online, isTrue);
+          expect(resolver.requested, ['LBL-001']);
         },
       );
     },
   );
 
-  testWidgets(
-    'con claves pero QR no-etiqueta: cae al texto crudo, verified=null',
-    (tester) async {
-      await _withRef(
-        tester,
-        [labelScannerProvider.overrideWithValue(_scannerWithKey(1))],
-        (ref) async {
-          final scan = await resolveUnitScan(ref, 'no-es-json');
-          expect(scan.unitId, 'no-es-json');
-          expect(scan.verified, isNull);
-        },
-      );
-    },
-  );
+  testWidgets('Code128 no reconocido (resolved:false): verified=false', (
+    tester,
+  ) async {
+    final resolver = FakeLabelResolver(); // nada sembrado → resolved:false
+    await _withRef(
+      tester,
+      [
+        labelScannerProvider.overrideWithValue(_scannerWithKey(1)),
+        labelResolverProvider.overrideWithValue(resolver),
+      ],
+      (ref) async {
+        final scan = await resolveUnitScan(ref, 'DESCONOCIDO');
+        expect(scan.verified, isFalse);
+        expect(scan.online, isTrue);
+        expect(scan.revoked, isFalse);
+        expect(unitScanShortError(scan), 'Etiqueta no reconocida');
+      },
+    );
+  });
+
+  testWidgets('Code128 anulado (revoked): verified=false y revoked', (
+    tester,
+  ) async {
+    final resolver = FakeLabelResolver(
+      resolutions: {
+        'LBL-ANULADA': const LabelResolution(
+          labelId: 'LBL-ANULADA',
+          resolved: true,
+          unitId: 'U-7',
+          revoked: true,
+        ),
+      },
+    );
+    await _withRef(
+      tester,
+      [
+        labelScannerProvider.overrideWithValue(_scannerWithKey(1)),
+        labelResolverProvider.overrideWithValue(resolver),
+      ],
+      (ref) async {
+        final scan = await resolveUnitScan(ref, 'LBL-ANULADA');
+        expect(scan.verified, isFalse);
+        expect(scan.revoked, isTrue);
+        expect(unitScanShortError(scan), 'Etiqueta anulada');
+      },
+    );
+  });
+
+  testWidgets('Code128 sin señal: no validable → verified=false, unreachable', (
+    tester,
+  ) async {
+    final resolver = FakeLabelResolver(offline: true);
+    await _withRef(
+      tester,
+      [
+        labelScannerProvider.overrideWithValue(_scannerWithKey(1)),
+        labelResolverProvider.overrideWithValue(resolver),
+      ],
+      (ref) async {
+        final scan = await resolveUnitScan(ref, 'LBL-SIN-RED');
+        expect(scan.verified, isFalse);
+        expect(scan.unreachable, isTrue);
+        expect(unitScanShortError(scan), 'Sin señal para validar');
+      },
+    );
+  });
 }

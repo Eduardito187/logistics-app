@@ -62,7 +62,10 @@ void main() {
       [BarcodeFormat.qrCode],
     ]);
     expect(units.requestedTitles, ['Entregar productos']);
-    expect(units.requestedFormats.single, [BarcodeFormat.qrCode]);
+    expect(units.requestedFormats.single, [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+    ]);
     final request = pod.requests.single;
     expect(request.shipmentId, vectorOrder);
     expect(request.unitId, vectorUnitId);
@@ -264,7 +267,9 @@ void main() {
     await _tapDeliver(tester);
 
     expect(pod.requests, isEmpty);
-    expect(units.messages, ['el contenido del QR no es JSON']);
+    // Un valor que no es QR se trata como Code128 (label_id): el backend falso
+    // no lo reconoce (resolved:false) → se rechaza.
+    expect(units.messages, ['Etiqueta no reconocida']);
   });
 
   testWidgets('dos entregas seguidas: el resumen no tapa el botón del pie', (

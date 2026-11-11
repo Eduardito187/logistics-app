@@ -50,20 +50,22 @@ void main() {
     expect(find.text('Entregada'), findsOneWidget);
   });
 
-  testWidgets('en error muestra el estado de carga con reintento', (
+  testWidgets('sin datos (o no se pudo leer): estado neutro, sin alarma', (
     tester,
   ) async {
     await pumpScoped(
       tester,
       overrides: [
         deliveryStateProvider('ship-err').overrideWith(
-          (ref) async => throw const ApiException(status: 500, title: 'x'),
+          (ref) async => throw const ApiException(status: 404, title: 'x'),
         ),
       ],
       child: const Scaffold(body: DeliveryStateCard(shipmentId: 'ship-err')),
     );
 
-    expect(find.text('No se pudo cargar'), findsOneWidget);
-    expect(find.text('Reintentar'), findsOneWidget);
+    // Info complementaria: una parada sin movimientos no es un error de terreno.
+    expect(find.text('No se pudo cargar'), findsNothing);
+    expect(find.text('Reintentar'), findsNothing);
+    expect(find.text('Sin movimientos registrados todavía.'), findsOneWidget);
   });
 }

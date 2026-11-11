@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/scan_request.dart';
 import '../../../core/icons/icons.dart';
@@ -44,7 +43,7 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
         context,
         title: 'Recoger carga',
         helper: 'Apunta al QR de la etiqueta de cada producto',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: (qr) async {
           final feedback = await _pickupCode(qr);
           if (feedback.ok) count++;

@@ -119,7 +119,7 @@ class StopDetailScreen extends ConsumerWidget {
                 );
               },
               icon: const AnimatedAppIcon(AppIcon.success),
-              label: const Text('Entregado (prueba de entrega)'),
+              label: const Text('Entregar'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(

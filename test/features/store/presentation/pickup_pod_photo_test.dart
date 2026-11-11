@@ -5,6 +5,7 @@ import 'package:logistics_app/core/location/gps_fix.dart';
 import 'package:logistics_app/core/media/photo_picker.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/widgets/app_snack.dart';
 import 'package:logistics_app/features/store/domain/usecases/enqueue_delivery_photo.dart';
@@ -13,6 +14,7 @@ import 'package:logistics_app/features/store/presentation/controllers/store_cont
 import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart';
 
 import '../../../support/button_finders.dart';
+import '../../../support/fake_label_resolver.dart';
 import '../../../support/fake_photo_picker.dart';
 import '../fake_continuous_scanner.dart';
 import '../store_fixtures.dart';
@@ -97,6 +99,9 @@ Future<_Harness> _pump(
         ),
         continuousScannerProvider.overrideWithValue(h.scanner.call),
         labelScannerProvider.overrideWithValue(LabelScanner(null)),
+        // El código escaneado representa al bulto (Code128): se echo-ea a su
+        // propio valor como unit_id.
+        labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
       ],
       child: MaterialApp(home: PickupPodScreen(shipment: _shipment)),
     ),

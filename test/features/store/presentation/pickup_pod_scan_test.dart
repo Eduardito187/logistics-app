@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/gps_fix.dart';
@@ -16,6 +17,7 @@ import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../support/fake_code_scanner.dart';
+import '../../../support/fake_label_resolver.dart';
 import '../fake_continuous_scanner.dart';
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
@@ -108,6 +110,9 @@ Future<_Harness> _pump(
         labelScannerProvider.overrideWithValue(
           labelScanner ?? LabelScanner(null),
         ),
+        // El código escaneado representa al bulto (Code128): se resuelve con su
+        // propio valor como unit_id (el backend real lo mapea; acá se echo-ea).
+        labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
         recordPodProvider.overrideWith(
           (ref) => _FakeRecordPod(ref, h.calls, outcome),
         ),
@@ -209,7 +214,10 @@ void main() {
         await _tapDeliver(tester);
 
         expect(h.products.requestedTitles, ['Escanear producto']);
-        expect(h.products.requestedFormats.single, [BarcodeFormat.qrCode]);
+        expect(h.products.requestedFormats.single, [
+          BarcodeFormat.qrCode,
+          BarcodeFormat.code128,
+        ]);
         expect(h.calls, [
           {
             'shipmentId': _shipment.id,

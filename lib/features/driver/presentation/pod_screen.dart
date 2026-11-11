@@ -74,7 +74,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
     // La foto de la entrega es obligatoria (evidencia ante reclamos).
     final ready = _unitId != null && _confirmation != null && _photo != null;
     return Scaffold(
-      appBar: AppBar(title: const Text('Prueba de entrega')),
+      appBar: AppBar(title: const Text('Comprobante de entrega')),
       body: ResponsiveBody(
         maxWidth: AppBreakpoints.maxFormWidth,
         child: ListView(

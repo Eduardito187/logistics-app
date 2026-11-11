@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/labels/label_format_exception.dart';
+import '../../../core/labels/label_resolver.dart';
 import '../../../core/labels/label_scanner.dart';
 import '../../../core/labels/signed_label.dart';
 import '../../../core/location/location_service.dart';
@@ -25,7 +25,7 @@ Future<String?> scanVerifiedUnit(
     context,
     title: 'Escanear producto',
     helper: helper,
-    formats: const [BarcodeFormat.qrCode],
+    formats: kLabelScanFormats,
   );
   if (qr == null || !context.mounted) return null;
 
@@ -47,19 +47,26 @@ Future<String?> scanVerifiedUnit(
 /// continuo de carga/descarga (que avisa sobre la cámara).
 Future<String?> verifyUnitLabel(WidgetRef ref, String qr) async {
   final scanner = ref.read(labelScannerProvider);
-  try {
-    final result = await scanner.scanAndReport(qr);
-    return result.isValid ? result.label.payload.id : null;
-  } on LabelFormatException {
-    // Con claves configuradas, un formato inválido es una etiqueta no válida.
-    if (scanner.canVerify) return null;
-    // Sin claves (app sin configurar): se lee el id sin poder verificar firma.
+  if (scanner.canVerify) {
+    try {
+      final result = await scanner.scanAndReport(qr);
+      return result.isValid ? result.label.payload.id : null;
+    } on LabelFormatException {
+      // No es un QR firmado → se intenta como Code128 (abajo).
+    }
+  } else {
+    // Sin claves (app sin configurar): un QR firmado da su id sin poder
+    // verificar la firma; si no es QR, se intenta como Code128 (abajo).
     try {
       return SignedLabel.fromQrContent(qr).payload.id;
     } on LabelFormatException {
-      return null;
+      // No es un QR firmado → se intenta como Code128 (abajo).
     }
   }
+  // Code128: el valor escaneado ES el `label_id` → se resuelve ONLINE. Sin red,
+  // no reconocida o anulada → se rechaza (null).
+  final res = await resolveLabelId(ref, qr);
+  return res != null && res.accepted ? res.unitId : null;
 }
 
 /// Toma el fix GPS actual (o `null` si no hay señal/permiso a tiempo). Un
