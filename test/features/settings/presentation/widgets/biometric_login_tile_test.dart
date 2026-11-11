@@ -210,9 +210,9 @@ void main() {
 
   testWidgets('desactivar borra la credencial', (tester) async {
     final storage = FakeSecureStorage();
-    await BiometricCredentialStore(storage).save(
-      const BiometricCredential(email: _email, password: 'secreta'),
-    );
+    await BiometricCredentialStore(
+      storage,
+    ).save(const BiometricCredential(email: _email, password: 'secreta'));
     final auth = FakeBiometricAuthenticator();
     await _pump(tester, auth, storage: storage);
     expect(_switch(tester).value, isTrue);

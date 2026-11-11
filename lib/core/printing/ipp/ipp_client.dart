@@ -222,8 +222,7 @@ class IppClient {
         );
       }
       final isLast = i == plans.length - 1;
-      if (response.code ==
-              IppStatus.clientErrorDocumentFormatNotSupported &&
+      if (response.code == IppStatus.clientErrorDocumentFormatNotSupported &&
           !isLast) {
         continue;
       }

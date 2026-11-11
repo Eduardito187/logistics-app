@@ -119,10 +119,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: WifiPrinterForm(
-              initial: null,
-              onSave: (_) => pending.future,
-            ),
+            body: WifiPrinterForm(initial: null, onSave: (_) => pending.future),
           ),
         ),
       );
@@ -317,10 +314,7 @@ void main() {
         tester,
         result: PrinterReachability.noRoute,
         ip: '192.168.2.154',
-        phoneNetworks: [
-          _net('10.168.50.17', 23),
-          _net('172.30.220.5', 20),
-        ],
+        phoneNetworks: [_net('10.168.50.17', 23), _net('172.30.220.5', 20)],
       );
 
       expect(

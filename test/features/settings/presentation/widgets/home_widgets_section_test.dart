@@ -103,10 +103,7 @@ void main() {
     expect(find.text(HomeWidgetsSection.disableWarning), findsOneWidget);
     await tester.tap(find.byKey(const Key('homeWidgetDisableCancel')));
     await tester.pumpAndSettle();
-    expect(
-      container.read(homeWidgetsPrefsProvider)!.disabledKinds,
-      isEmpty,
-    );
+    expect(container.read(homeWidgetsPrefsProvider)!.disabledKinds, isEmpty);
     expect(service.enabledCalls.length, calls);
   });
 
@@ -127,9 +124,7 @@ void main() {
       HomeWidgetKind.quickScan,
     ]);
     expect(
-      tester
-          .widget<SwitchListTile>(_switchOf(HomeWidgetKind.routeDay))
-          .value,
+      tester.widget<SwitchListTile>(_switchOf(HomeWidgetKind.routeDay)).value,
       isFalse,
     );
     expect(_pinOf(HomeWidgetKind.routeDay), findsNothing);

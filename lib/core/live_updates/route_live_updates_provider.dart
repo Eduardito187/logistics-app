@@ -73,46 +73,47 @@ final routeLiveStatusProvider =
 /// quita la notificación con la app en pantalla y la vuelve a poner al pasar a
 /// segundo plano). Seam para tests: `overrideWithValue` con un controller
 /// armado con un servicio falso y un reloj inyectado.
-final routeLiveUpdatesControllerProvider =
-    Provider<RouteLiveUpdatesController>((ref) {
-      final android = defaultTargetPlatform == TargetPlatform.android;
-      final controller = RouteLiveUpdatesController(
-        service: ref.watch(liveUpdatesServiceProvider),
-        hideInForeground: android,
-        foreground: _isForegroundNow(),
-        onArrived: () => unawaited(_arrivalHaptic()),
+final routeLiveUpdatesControllerProvider = Provider<RouteLiveUpdatesController>(
+  (ref) {
+    final android = defaultTargetPlatform == TargetPlatform.android;
+    final controller = RouteLiveUpdatesController(
+      service: ref.watch(liveUpdatesServiceProvider),
+      hideInForeground: android,
+      foreground: _isForegroundNow(),
+      onArrived: () => unawaited(_arrivalHaptic()),
+    );
+    AppLifecycleListener? listener;
+    try {
+      listener = AppLifecycleListener(
+        onStateChange: (state) {
+          switch (state) {
+            case AppLifecycleState.resumed:
+              controller.setForeground(true);
+              // Pudo dar el permiso de la isla o activar "Live updates" en
+              // los ajustes del sistema: se vuelve a consultar.
+              if (android) ref.invalidate(routeIslandAvailabilityProvider);
+            case AppLifecycleState.paused:
+              controller.setForeground(false);
+            // hidden/inactive/detached: transiciones intermedias, nada (no
+            // parpadear la notificación al bajar la cortina).
+            case AppLifecycleState.inactive:
+            case AppLifecycleState.hidden:
+            case AppLifecycleState.detached:
+              break;
+          }
+        },
       );
-      AppLifecycleListener? listener;
-      try {
-        listener = AppLifecycleListener(
-          onStateChange: (state) {
-            switch (state) {
-              case AppLifecycleState.resumed:
-                controller.setForeground(true);
-                // Pudo dar el permiso de la isla o activar "Live updates" en
-                // los ajustes del sistema: se vuelve a consultar.
-                if (android) ref.invalidate(routeIslandAvailabilityProvider);
-              case AppLifecycleState.paused:
-                controller.setForeground(false);
-              // hidden/inactive/detached: transiciones intermedias, nada (no
-              // parpadear la notificación al bajar la cortina).
-              case AppLifecycleState.inactive:
-              case AppLifecycleState.hidden:
-              case AppLifecycleState.detached:
-                break;
-            }
-          },
-        );
-      } on Object {
-        // Sin binding (tests unitarios puros): sin escucha del ciclo de vida.
-        listener = null;
-      }
-      ref.onDispose(() {
-        listener?.dispose();
-        controller.dispose();
-      });
-      return controller;
+    } on Object {
+      // Sin binding (tests unitarios puros): sin escucha del ciclo de vida.
+      listener = null;
+    }
+    ref.onDispose(() {
+      listener?.dispose();
+      controller.dispose();
     });
+    return controller;
+  },
+);
 
 /// ARRANQUE de la ruta en vivo (Live Updates de Android 16 / Live Activity +
 /// Dynamic Island de iOS). Se activa UNA vez desde `LogisticsApp.build`:

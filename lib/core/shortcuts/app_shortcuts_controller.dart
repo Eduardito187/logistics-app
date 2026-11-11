@@ -56,9 +56,7 @@ class AppShortcutsController {
     }
     final shortcuts = _shortcutsOf(session);
     if (!listEquals(shortcuts, _published)) {
-      unawaited(
-        shortcuts.isEmpty ? _service.clear() : _service.set(shortcuts),
-      );
+      unawaited(shortcuts.isEmpty ? _service.clear() : _service.set(shortcuts));
       _published = shortcuts;
     }
     _flush();

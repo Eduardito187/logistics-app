@@ -61,12 +61,11 @@ void main() {
     addTearDown(sub.cancel);
     addTearDown(service.dispose);
 
-    Future<void> send(Object? route) =>
-        messenger.handlePlatformMessage(
-          channel.name,
-          channel.codec.encodeMethodCall(MethodCall('launch', route)),
-          (_) {},
-        );
+    Future<void> send(Object? route) => messenger.handlePlatformMessage(
+      channel.name,
+      channel.codec.encodeMethodCall(MethodCall('launch', route)),
+      (_) {},
+    );
 
     await send('/store/reception');
     await send('no-es-ruta');

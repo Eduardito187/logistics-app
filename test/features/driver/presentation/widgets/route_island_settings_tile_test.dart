@@ -84,7 +84,9 @@ Future<FakeSecureStorage> _pump(
         secureStorageProvider.overrideWithValue(storage),
       ],
       child: const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: RouteIslandSettingsTile())),
+        home: Scaffold(
+          body: SingleChildScrollView(child: RouteIslandSettingsTile()),
+        ),
       ),
     ),
   );

@@ -83,10 +83,7 @@ class HomeWidgetsSection extends ConsumerWidget {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      iosHint,
-                      key: const Key('homeWidgetsIosHint'),
-                    ),
+                    child: Text(iosHint, key: const Key('homeWidgetsIosHint')),
                   ),
                 ],
               ),

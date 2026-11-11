@@ -8,8 +8,9 @@ import 'package:logistics_app/features/driver/presentation/widgets/radar_pulse.d
 // Batería: los loops de animación tienen tope y las animaciones decorativas se
 // apagan con ahorro de energía / batería baja (MotionBudget).
 
-Widget _host(Widget child) =>
-    MaterialApp(home: Scaffold(body: Center(child: child)));
+Widget _host(Widget child) => MaterialApp(
+  home: Scaffold(body: Center(child: child)),
+);
 
 void main() {
   tearDown(MotionBudget.reset);

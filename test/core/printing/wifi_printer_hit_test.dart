@@ -149,10 +149,7 @@ void main() {
         ).isKnownNonZebra,
         isFalse,
       );
-      expect(
-        const WifiPrinterHit(host: 'a', port: 1).isKnownNonZebra,
-        isFalse,
-      );
+      expect(const WifiPrinterHit(host: 'a', port: 1).isKnownNonZebra, isFalse);
     });
 
     test('origen por defecto: barrido', () {

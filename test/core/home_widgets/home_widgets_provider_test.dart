@@ -82,8 +82,7 @@ void main() {
 
   Iterable<MethodCall> updatesOf(HomeWidgetKind kind) => calls.where(
     (c) =>
-        c.method == 'update' &&
-        (c.arguments as Map)['kind'] == kind.backendKey,
+        c.method == 'update' && (c.arguments as Map)['kind'] == kind.backendKey,
   );
 
   Map<Object?, Object?> lastPayload(HomeWidgetKind kind) =>

@@ -56,13 +56,12 @@ void main() {
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     final calls = <String>[];
-    messenger.setMockMethodCallHandler(
-      ScreenBrightnessService.defaultChannel,
-      (call) async {
-        calls.add(call.method);
-        return true;
-      },
-    );
+    messenger.setMockMethodCallHandler(ScreenBrightnessService.defaultChannel, (
+      call,
+    ) async {
+      calls.add(call.method);
+      return true;
+    });
     addTearDown(
       () => messenger.setMockMethodCallHandler(
         ScreenBrightnessService.defaultChannel,

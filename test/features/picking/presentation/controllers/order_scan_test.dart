@@ -23,8 +23,7 @@ String _validQr() => _vector()['qr_content'] as String;
 
 /// QR del vector con el campo `o` (pedido) reemplazado por [orderNumber].
 String _qrWithOrder(String orderNumber) {
-  final map =
-      jsonDecode(_validQr()) as Map<String, dynamic>; // copia mutable
+  final map = jsonDecode(_validQr()) as Map<String, dynamic>; // copia mutable
   map['o'] = orderNumber;
   return jsonEncode(map);
 }

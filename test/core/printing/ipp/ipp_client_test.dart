@@ -173,7 +173,7 @@ void main() {
     expect(
       outcome.message,
       'La impresora recibió el trabajo (#123) pero no confirmó si lo imprimió. '
-        'Revisá que haya salido.',
+      'Revisá que haya salido.',
     );
     // GPA sin auth (401) + GPA con auth + Print-Job + Get-Job-Attributes.
     expect(printer.requests, hasLength(4));
@@ -182,10 +182,7 @@ void main() {
     expect(job.operation, IppOperation.printJob);
     expect(job.authorization, _expectedBasic);
     expect(job.format, 'application/pdf');
-    expect(
-      job.message.attribute('requesting-user-name')!.string,
-      'jperez',
-    );
+    expect(job.message.attribute('requesting-user-name')!.string, 'jperez');
     expect(job.message.attribute('job-name')!.string, 'Etiqueta 1234');
     expect(ascii.decode(job.message.data.sublist(0, 5)), '%PDF-');
   });
@@ -424,21 +421,24 @@ void main() {
       );
     });
 
-    test('con IPP Basic: cancelado en la impresora → revisar credenciales', () async {
-      await expectLater(
-        printWith(
-          ricohAttributesResponse,
-          () => jobAttrs(7, reason: 'job-canceled-at-device'),
-        ),
-        throwsA(
-          isA<PrinterException>().having(
-            (e) => e.message,
-            'message',
-            contains('no aceptó tu usuario o contraseña'),
+    test(
+      'con IPP Basic: cancelado en la impresora → revisar credenciales',
+      () async {
+        await expectLater(
+          printWith(
+            ricohAttributesResponse,
+            () => jobAttrs(7, reason: 'job-canceled-at-device'),
           ),
-        ),
-      );
-    });
+          throwsA(
+            isA<PrinterException>().having(
+              (e) => e.message,
+              'message',
+              contains('no aceptó tu usuario o contraseña'),
+            ),
+          ),
+        );
+      },
+    );
 
     test('estado 4 → retenido: liberar en el panel', () async {
       final outcome = await printWith(

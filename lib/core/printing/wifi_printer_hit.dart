@@ -56,10 +56,9 @@ class WifiPrinterHit {
   );
 
   /// IP como número (para ordenar 192.168.1.9 antes que 192.168.1.10).
-  int get _numericHost => host.split('.').fold(
-    0,
-    (acc, part) => acc * 256 + (int.tryParse(part) ?? 0),
-  );
+  int get _numericHost => host
+      .split('.')
+      .fold(0, (acc, part) => acc * 256 + (int.tryParse(part) ?? 0));
 
   /// Orden de la lista: primero Zebra, luego identificadas, luego por IP.
   static int compare(WifiPrinterHit a, WifiPrinterHit b) {

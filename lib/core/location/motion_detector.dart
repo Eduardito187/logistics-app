@@ -97,7 +97,10 @@ class MotionDetector {
     final dLng = (b.lng - a.lng) * math.pi / 180;
     final h =
         math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * math.sin(dLng / 2) * math.sin(dLng / 2);
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
     return 2 * earthRadius * math.asin(math.min(1.0, math.sqrt(h)));
   }
 }

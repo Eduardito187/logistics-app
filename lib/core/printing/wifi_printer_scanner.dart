@@ -200,9 +200,7 @@ class WifiPrinterScanner {
         return;
       }
       final extras = await _safeExtraNetworks();
-      final ownIps = <int>{
-        for (final n in networks) ?Ipv4.parse(n.ownIp),
-      };
+      final ownIps = <int>{for (final n in networks) ?Ipv4.parse(n.ownIp)};
 
       // Redes a barrer: las del teléfono y luego las agregadas (sin repetir).
       final swept = <Ipv4Subnet>{};

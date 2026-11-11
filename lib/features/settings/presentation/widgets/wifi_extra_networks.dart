@@ -106,9 +106,8 @@ class _WifiExtraNetworksState extends ConsumerState<WifiExtraNetworks> {
                     excludeFromSemantics: true,
                   ),
                   deleteButtonTooltipMessage: 'Quitar ${network.label}',
-                  onDeleted: () => ref
-                      .read(extraNetworksProvider.notifier)
-                      .remove(network),
+                  onDeleted: () =>
+                      ref.read(extraNetworksProvider.notifier).remove(network),
                 ),
             ],
           ),

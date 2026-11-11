@@ -19,8 +19,7 @@ abstract final class Md5 {
 
   static const int _mask = 0xFFFFFFFF;
 
-  static int _rotl(int x, int c) =>
-      ((x << c) | (x >> (32 - c))) & _mask;
+  static int _rotl(int x, int c) => ((x << c) | (x >> (32 - c))) & _mask;
 
   /// Digest de 16 bytes.
   static Uint8List hash(List<int> input) {

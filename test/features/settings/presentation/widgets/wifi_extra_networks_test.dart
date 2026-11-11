@@ -20,9 +20,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        secureStorageProvider.overrideWithValue(
-          storage ?? FakeSecureStorage(),
-        ),
+        secureStorageProvider.overrideWithValue(storage ?? FakeSecureStorage()),
       ],
       child: MaterialApp(
         home: withTextScale(

@@ -42,9 +42,8 @@ class AppShortcutsService {
     return controller.stream;
   }
 
-  Future<void> set(List<AppShortcut> shortcuts) => _invoke('set', [
-    for (final s in shortcuts) s.toMap(),
-  ]);
+  Future<void> set(List<AppShortcut> shortcuts) =>
+      _invoke('set', [for (final s in shortcuts) s.toMap()]);
 
   Future<void> clear() => _invoke('clear');
 

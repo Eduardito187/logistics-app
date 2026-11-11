@@ -46,7 +46,9 @@ abstract final class OfficePjl {
       text('@PJL SET BILLINGCODE="$code"\r\n');
     }
     if (secure) {
-      text('@PJL SET JOBPASSWORD5="${sanitize(credentials!.secureToken!)}"\r\n');
+      text(
+        '@PJL SET JOBPASSWORD5="${sanitize(credentials!.secureToken!)}"\r\n',
+      );
     }
     text('@PJL ENTER LANGUAGE=$language\r\n');
     return out.takeBytes();

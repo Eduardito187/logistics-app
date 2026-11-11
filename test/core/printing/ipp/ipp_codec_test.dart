@@ -32,9 +32,7 @@ void main() {
               IppTag.naturalLanguage,
               ['es'],
             ),
-            IppAttribute('printer-uri', IppTag.uri, [
-              'ipp://h:631/ipp/print',
-            ]),
+            IppAttribute('printer-uri', IppTag.uri, ['ipp://h:631/ipp/print']),
             IppAttribute('requested-attributes', IppTag.keyword, [
               'printer-state',
               'document-format-supported',
@@ -105,16 +103,10 @@ void main() {
       expect(decoded.code, IppOperation.printJob);
       expect(decoded.attribute('attributes-charset')!.string, 'utf-8');
       expect(decoded.attribute('attributes-natural-language')!.string, 'es');
-      expect(
-        decoded.attribute('printer-uri')!.string,
-        'ipp://h:631/ipp/print',
-      );
+      expect(decoded.attribute('printer-uri')!.string, 'ipp://h:631/ipp/print');
       expect(decoded.attribute('requesting-user-name')!.string, 'jperez');
       expect(decoded.attribute('job-name')!.string, 'Etiqueta 1234');
-      expect(
-        decoded.attribute('document-format')!.string,
-        'application/pdf',
-      );
+      expect(decoded.attribute('document-format')!.string, 'application/pdf');
       expect(decoded.data, [1, 2, 3]);
     });
   });
@@ -183,10 +175,7 @@ void main() {
         IppStatus.message(IppStatus.clientErrorDocumentFormatNotSupported),
         'La impresora no acepta el formato del documento.',
       );
-      expect(
-        IppStatus.message(IppStatus.serverErrorBusy),
-        contains('ocupada'),
-      );
+      expect(IppStatus.message(IppStatus.serverErrorBusy), contains('ocupada'));
       expect(
         IppStatus.message(IppStatus.clientErrorNotAuthenticated),
         contains('usuario de dominio'),

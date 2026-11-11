@@ -102,10 +102,9 @@ void main() {
       await store.markDeclined(' JUAN@x.com');
       expect(await store.hasDeclined('juan@x.com'), isTrue);
       expect(await store.hasDeclined('ana@x.com'), isFalse);
-      expect(
-        jsonDecode(storage.data[BiometricCredentialStore.declinedKey]!),
-        ['juan@x.com'],
-      );
+      expect(jsonDecode(storage.data[BiometricCredentialStore.declinedKey]!), [
+        'juan@x.com',
+      ]);
 
       await store.clearDeclined('juan@x.com');
       expect(await store.hasDeclined('juan@x.com'), isFalse);

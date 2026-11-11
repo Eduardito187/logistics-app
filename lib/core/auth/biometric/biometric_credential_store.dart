@@ -35,8 +35,10 @@ class BiometricCredentialStore {
   }
 
   /// Guarda [credential] reemplazando la de cualquier otra cuenta.
-  Future<void> save(BiometricCredential credential) =>
-      _storage.write(key: credentialKey, value: jsonEncode(credential.toJson()));
+  Future<void> save(BiometricCredential credential) => _storage.write(
+    key: credentialKey,
+    value: jsonEncode(credential.toJson()),
+  );
 
   Future<void> clear() async {
     try {
@@ -52,7 +54,8 @@ class BiometricCredentialStore {
 
   /// Recuerda el "Ahora no" de esta cuenta (no se vuelve a ofrecer).
   Future<void> markDeclined(String email) async {
-    final declined = await _declined()..add(_normalize(email));
+    final declined = await _declined()
+      ..add(_normalize(email));
     await _writeDeclined(declined);
   }
 

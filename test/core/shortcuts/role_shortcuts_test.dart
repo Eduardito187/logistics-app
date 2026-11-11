@@ -40,10 +40,7 @@ void main() {
   });
 
   test('cada rol recibe SOLO sus accesos', () {
-    expect(routesFor(UserRole.picker), [
-      '/picking/orders',
-      '/picking/prepare',
-    ]);
+    expect(routesFor(UserRole.picker), ['/picking/orders', '/picking/prepare']);
     expect(routesFor(UserRole.store), ['/store/reception', '/store/pickup']);
     expect(routesFor(UserRole.carrier), [
       '/carrier/pickup',
@@ -58,10 +55,7 @@ void main() {
 
   test('textos cortos entran en el launcher (≤ 10 caracteres)', () {
     for (final role in UserRole.values) {
-      for (final s in shortcutsFor(
-        Session(userName: 'u', role: role),
-        tasks,
-      )) {
+      for (final s in shortcutsFor(Session(userName: 'u', role: role), tasks)) {
         expect(s.shortTitle.length, lessThanOrEqualTo(10), reason: s.id);
         expect(s.title.length, lessThanOrEqualTo(25), reason: s.id);
       }
@@ -85,10 +79,7 @@ void main() {
       ...supervisorRoutes,
     ]);
     for (final role in UserRole.values) {
-      for (final s in shortcutsFor(
-        Session(userName: 'u', role: role),
-        tasks,
-      )) {
+      for (final s in shortcutsFor(Session(userName: 'u', role: role), tasks)) {
         expect(paths, contains(s.route), reason: s.id);
       }
     }

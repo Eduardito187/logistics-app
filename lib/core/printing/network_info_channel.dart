@@ -59,13 +59,12 @@ class NetworkInfoChannel {
     Duration timeout,
   ) async {
     try {
-      final raw = await _channel.invokeListMethod<Object?>(
-        'discoverServices',
-        {'types': types, 'timeoutMs': timeout.inMilliseconds},
-      );
+      final raw = await _channel.invokeListMethod<Object?>('discoverServices', {
+        'types': types,
+        'timeoutMs': timeout.inMilliseconds,
+      });
       return [
-        for (final item in raw ?? const <Object?>[])
-          ?MdnsService.fromMap(item),
+        for (final item in raw ?? const <Object?>[]) ?MdnsService.fromMap(item),
       ];
     } on Object {
       return const [];

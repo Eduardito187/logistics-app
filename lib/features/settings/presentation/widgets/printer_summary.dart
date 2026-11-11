@@ -17,9 +17,8 @@ String printerSummary(PrinterConfig printer) {
 }
 
 /// Ícono del transporte de la impresora.
-AppIcon printerTransportIcon(PrinterTransport transport) =>
-    switch (transport) {
-      PrinterTransport.bluetooth => AppIcon.bluetooth,
-      PrinterTransport.wifi => AppIcon.wifi,
-      PrinterTransport.usb => AppIcon.usb,
-    };
+AppIcon printerTransportIcon(PrinterTransport transport) => switch (transport) {
+  PrinterTransport.bluetooth => AppIcon.bluetooth,
+  PrinterTransport.wifi => AppIcon.wifi,
+  PrinterTransport.usb => AppIcon.usb,
+};

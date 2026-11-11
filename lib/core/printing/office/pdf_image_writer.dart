@@ -36,9 +36,7 @@ abstract final class PdfImageWriter {
     final content = latin1.encode(
       'q ${_n(w)} 0 0 ${_n(h)} ${_n(x)} ${_n(y)} cm /Im1 Do Q\n',
     );
-    final image = Uint8List.fromList(
-      ZLibCodec(level: 6).encode(raster.pixels),
-    );
+    final image = Uint8List.fromList(ZLibCodec(level: 6).encode(raster.pixels));
 
     final out = BytesBuilder(copy: false);
     final offsets = <int>[];

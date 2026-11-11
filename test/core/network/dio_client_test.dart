@@ -250,42 +250,46 @@ void main() {
       expect(authClient.logoutCalls, 0);
     });
 
-    test('401 session_superseded tras login reciente también se reintenta',
-        () async {
-      grace = const Duration(milliseconds: 150);
-      await signedIn();
-      adapter.queue
-        ..add((401, superseded))
-        ..add((200, '{}'));
+    test(
+      '401 session_superseded tras login reciente también se reintenta',
+      () async {
+        grace = const Duration(milliseconds: 150);
+        await signedIn();
+        adapter.queue
+          ..add((401, superseded))
+          ..add((200, '{}'));
 
-      final res = await dio.get<dynamic>('/app/shipments');
+        final res = await dio.get<dynamic>('/app/shipments');
 
-      expect(res.statusCode, 200);
-      expect(session(), isNotNull);
-      expect(expiredMsg(), isNull);
-    });
+        expect(res.statusCode, 200);
+        expect(session(), isNotNull);
+        expect(expiredMsg(), isNull);
+      },
+    );
 
-    test('si el reintento vuelve a dar 401 es una baja real: cierra con aviso',
-        () async {
-      grace = const Duration(milliseconds: 100);
-      await signedIn();
-      adapter
-        ..statusCode = 401
-        ..body = revoked;
+    test(
+      'si el reintento vuelve a dar 401 es una baja real: cierra con aviso',
+      () async {
+        grace = const Duration(milliseconds: 100);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = revoked;
 
-      await expectLater(
-        dio.get<dynamic>('/app/shipments'),
-        throwsA(isA<DioException>()),
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      expect(adapter.calls, 2); // un solo reintento, nunca más
-      expect(
-        expiredMsg(),
-        'Este dispositivo fue dado de baja. Volvé a ingresar.',
-      );
-      expect(session(), isNull);
-    });
+        expect(adapter.calls, 2); // un solo reintento, nunca más
+        expect(
+          expiredMsg(),
+          'Este dispositivo fue dado de baja. Volvé a ingresar.',
+        );
+        expect(session(), isNull);
+      },
+    );
 
     test('fuera de la ventana (sesión vieja) cierra sin reintentar', () async {
       await signedIn(); // grace = 0 → ya fuera de la ventana
@@ -307,41 +311,45 @@ void main() {
       expect(container.read(sessionProvider.notifier).freshSignInAt, isNull);
     });
 
-    test('un 401 genérico (token vencido) tras login NO se reintenta',
-        () async {
-      grace = const Duration(seconds: 5);
-      await signedIn();
-      adapter
-        ..statusCode = 401
-        ..body = '{"code":"unauthenticated"}';
+    test(
+      'un 401 genérico (token vencido) tras login NO se reintenta',
+      () async {
+        grace = const Duration(seconds: 5);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = '{"code":"unauthenticated"}';
 
-      await expectLater(
-        dio.get<dynamic>('/app/shipments'),
-        throwsA(isA<DioException>()),
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      expect(adapter.calls, 1);
-      expect(expiredMsg(), 'Tu sesión expiró, volvé a ingresar.');
-      expect(session(), isNull);
-    });
+        expect(adapter.calls, 1);
+        expect(expiredMsg(), 'Tu sesión expiró, volvé a ingresar.');
+        expect(session(), isNull);
+      },
+    );
 
-    test('si se cierra la sesión durante la espera, no reintenta ni avisa',
-        () async {
-      grace = const Duration(milliseconds: 150);
-      await signedIn();
-      adapter
-        ..statusCode = 401
-        ..body = revoked;
+    test(
+      'si se cierra la sesión durante la espera, no reintenta ni avisa',
+      () async {
+        grace = const Duration(milliseconds: 150);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = revoked;
 
-      final pending = dio.get<dynamic>('/app/shipments');
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      await container.read(sessionProvider.notifier).signOut();
+        final pending = dio.get<dynamic>('/app/shipments');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        await container.read(sessionProvider.notifier).signOut();
 
-      await expectLater(pending, throwsA(isA<DioException>()));
-      expect(adapter.calls, 1);
-      expect(expiredMsg(), isNull);
-    });
+        await expectLater(pending, throwsA(isA<DioException>()));
+        expect(adapter.calls, 1);
+        expect(expiredMsg(), isNull);
+      },
+    );
   });
 
   group('onError: 401 en endpoints de autenticación NO desloguea', () {

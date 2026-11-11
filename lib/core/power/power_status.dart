@@ -5,7 +5,11 @@
 /// Con [shouldSaveEnergy] la app gasta menos: GPS más espaciado, sin
 /// animaciones decorativas y menos consultas periódicas.
 class PowerStatus {
-  const PowerStatus({this.level, this.charging = false, this.powerSave = false});
+  const PowerStatus({
+    this.level,
+    this.charging = false,
+    this.powerSave = false,
+  });
 
   /// Estado desconocido (tests, escritorio, canal nativo ausente): la app se
   /// comporta normal, sin recortes.

@@ -27,12 +27,11 @@ void main() {
       final m = MotionDetector();
       expect(m.motion, TruckMotion.moving);
       expect(m.onFix(_a, t0), isFalse);
+      expect(m.onFix(_aJitter, t0.add(const Duration(minutes: 1))), isFalse);
       expect(
-        m.onFix(_aJitter, t0.add(const Duration(minutes: 1))),
-        isFalse,
+        m.timeUntilStill(t0.add(const Duration(minutes: 1))),
+        const Duration(minutes: 2),
       );
-      expect(m.timeUntilStill(t0.add(const Duration(minutes: 1))),
-          const Duration(minutes: 2));
       expect(m.evaluate(t0.add(const Duration(minutes: 3))), isTrue);
       expect(m.motion, TruckMotion.stationary);
       expect(m.timeUntilStill(t0.add(const Duration(minutes: 4))), isNull);
@@ -129,17 +128,20 @@ void main() {
       );
     });
 
-    test('Android: perfil en marcha sin filtro de distancia, intervalo 15 s', () {
-      final s = LocationService.settingsForProfile(
-        TrackingProfile.moving,
-        platform: TargetPlatform.android,
-      );
-      expect(s, isA<AndroidSettings>());
-      final android = s as AndroidSettings;
-      expect(android.distanceFilter, 0);
-      expect(android.intervalDuration, const Duration(seconds: 15));
-      expect(android.accuracy, LocationAccuracy.high);
-    });
+    test(
+      'Android: perfil en marcha sin filtro de distancia, intervalo 15 s',
+      () {
+        final s = LocationService.settingsForProfile(
+          TrackingProfile.moving,
+          platform: TargetPlatform.android,
+        );
+        expect(s, isA<AndroidSettings>());
+        final android = s as AndroidSettings;
+        expect(android.distanceFilter, 0);
+        expect(android.intervalDuration, const Duration(seconds: 15));
+        expect(android.accuracy, LocationAccuracy.high);
+      },
+    );
 
     test('Android: detenido → precisión media, 50 m, 60 s', () {
       final s =

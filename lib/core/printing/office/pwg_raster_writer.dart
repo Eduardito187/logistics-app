@@ -107,11 +107,7 @@ abstract final class PwgRasterWriter {
     }
 
     void pixel(int i) => out.add(
-      Uint8List.sublistView(
-        line,
-        i * bytesPerPixel,
-        (i + 1) * bytesPerPixel,
-      ),
+      Uint8List.sublistView(line, i * bytesPerPixel, (i + 1) * bytesPerPixel),
     );
 
     var i = 0;

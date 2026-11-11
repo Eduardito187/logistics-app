@@ -13,8 +13,7 @@ abstract final class BiometricMessages {
         BiometricResult.cancelled => null,
         BiometricResult.lockout => 'Demasiados intentos. Probá más tarde.',
         BiometricResult.notEnrolled => caps.setupHint,
-        BiometricResult.notAvailable ||
-        BiometricResult.failed =>
+        BiometricResult.notAvailable || BiometricResult.failed =>
           'No se pudo activar ${caps.labelWithArticle}. Probá de nuevo.',
       };
 
@@ -25,8 +24,7 @@ abstract final class BiometricMessages {
         BiometricResult.success || BiometricResult.cancelled => null,
         BiometricResult.lockout => 'Demasiados intentos. Usá tu contraseña.',
         BiometricResult.notEnrolled => caps.setupHint,
-        BiometricResult.notAvailable ||
-        BiometricResult.failed =>
+        BiometricResult.notAvailable || BiometricResult.failed =>
           'No se pudo usar ${caps.labelWithArticle}. Ingresá con tu '
               'contraseña.',
       };

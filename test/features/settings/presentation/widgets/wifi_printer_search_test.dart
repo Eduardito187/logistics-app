@@ -82,9 +82,7 @@ Future<List<PrinterConfig>> _pump(
     ProviderScope(
       overrides: [
         wifiPrinterScannerProvider.overrideWithValue(scanner),
-        secureStorageProvider.overrideWithValue(
-          storage ?? FakeSecureStorage(),
-        ),
+        secureStorageProvider.overrideWithValue(storage ?? FakeSecureStorage()),
       ],
       child: MaterialApp(
         home: withTextScale(
@@ -169,10 +167,7 @@ void main() {
     );
 
     expect(find.text('Buscando impresoras… 40%'), findsOneWidget);
-    expect(
-      find.text(WifiPrinterSearch.searchingAnnouncedText),
-      findsOneWidget,
-    );
+    expect(find.text(WifiPrinterSearch.searchingAnnouncedText), findsOneWidget);
     expect(find.textContaining('Bonjour'), findsNothing);
   });
 
@@ -255,10 +250,7 @@ void main() {
       _progress(found: const [_other], done: true),
     );
 
-    expect(
-      find.text('192.168.1.77:9100 · Modelo desconocido'),
-      findsOneWidget,
-    );
+    expect(find.text('192.168.1.77:9100 · Modelo desconocido'), findsOneWidget);
     expect(find.text('Zebra'), findsNothing);
     expect(find.text('No es Zebra'), findsNothing);
 
@@ -345,9 +337,7 @@ void main() {
     expect(cards.where((c) => c.selected), hasLength(1));
   });
 
-  testWidgets('sin resultados: red buscada y qué hacer', (
-    tester,
-  ) async {
+  testWidgets('sin resultados: red buscada y qué hacer', (tester) async {
     final scanner = _FakeScanner();
     await _pump(tester, scanner);
     await _startAndEmit(tester, scanner, _progress(scanned: 253, done: true));
@@ -403,9 +393,7 @@ void main() {
     expect(find.text('Buscar de nuevo'), findsOneWidget);
   });
 
-  testWidgets('error del stream: aviso genérico, sin colgarse', (
-    tester,
-  ) async {
+  testWidgets('error del stream: aviso genérico, sin colgarse', (tester) async {
     final scanner = _FakeScanner();
     await _pump(tester, scanner);
     await tester.tap(find.text('Buscar impresoras'));

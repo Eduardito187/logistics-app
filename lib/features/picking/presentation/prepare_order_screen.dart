@@ -105,7 +105,9 @@ class _PrepareOrderScreenState extends ConsumerState<PrepareOrderScreen> {
                         excludeFromSemantics: true,
                       ),
                       label: Text(
-                        _resolving ? 'Buscando el pedido…' : 'Escanear producto',
+                        _resolving
+                            ? 'Buscando el pedido…'
+                            : 'Escanear producto',
                       ),
                     ),
                   ],

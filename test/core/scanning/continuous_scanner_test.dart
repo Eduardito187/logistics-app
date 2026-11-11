@@ -351,10 +351,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 11));
       expect(find.byType(ScannerPausedOverlay), findsOneWidget);
-      expect(
-        find.text('Cámara en pausa para ahorrar batería'),
-        findsOneWidget,
-      );
+      expect(find.text('Cámara en pausa para ahorrar batería'), findsOneWidget);
       // El contador sigue en pantalla debajo de la pausa.
       expect(find.byType(ContinuousScannerScreen), findsOneWidget);
 

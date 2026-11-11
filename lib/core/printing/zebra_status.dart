@@ -44,10 +44,9 @@ class ZebraStatus {
   }
 
   static ZebraStatus? _parseHs(String raw) {
-    final lines = RegExp('\x02([^\x03]*)\x03')
-        .allMatches(raw)
-        .map((m) => m.group(1)!.split(','))
-        .toList();
+    final lines = RegExp(
+      '\x02([^\x03]*)\x03',
+    ).allMatches(raw).map((m) => m.group(1)!.split(',')).toList();
     if (lines.isEmpty || lines.first.length < 3) return null;
     bool flag(int line, int index) =>
         lines.length > line &&

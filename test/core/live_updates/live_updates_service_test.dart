@@ -108,45 +108,48 @@ void main() {
     expect(support.androidSdk, 0);
   });
 
-  test('promotionStatus: activo, apagado por el usuario, no disponible', () async {
-    answer(
-      (_) => {
+  test(
+    'promotionStatus: activo, apagado por el usuario, no disponible',
+    () async {
+      answer(
+        (_) => {
+          'sdk': 36,
+          'canPostPromoted': true,
+          'promotable': true,
+          'reasons': <String>[],
+        },
+      );
+      final active = await const LiveUpdatesService().promotionStatus();
+      expect(calls.single.method, 'promotionStatus');
+      expect(active.state, LiveUpdatesPromotionState.active);
+
+      final denied = LiveUpdatesPromotionStatus.fromMap({
+        'sdk': 36,
+        'canPostPromoted': false,
+        'promotable': true,
+        'reasons': ['promotionDenied'],
+      });
+      expect(denied.state, LiveUpdatesPromotionState.disabledBySystem);
+
+      final oem = LiveUpdatesPromotionStatus.fromMap({
         'sdk': 36,
         'canPostPromoted': true,
-        'promotable': true,
-        'reasons': <String>[],
-      },
-    );
-    final active = await const LiveUpdatesService().promotionStatus();
-    expect(calls.single.method, 'promotionStatus');
-    expect(active.state, LiveUpdatesPromotionState.active);
+        'promotable': false,
+        'reasons': ['notPromotable'],
+      });
+      expect(oem.state, LiveUpdatesPromotionState.unavailable);
 
-    final denied = LiveUpdatesPromotionStatus.fromMap({
-      'sdk': 36,
-      'canPostPromoted': false,
-      'promotable': true,
-      'reasons': ['promotionDenied'],
-    });
-    expect(denied.state, LiveUpdatesPromotionState.disabledBySystem);
-
-    final oem = LiveUpdatesPromotionStatus.fromMap({
-      'sdk': 36,
-      'canPostPromoted': true,
-      'promotable': false,
-      'reasons': ['notPromotable'],
-    });
-    expect(oem.state, LiveUpdatesPromotionState.unavailable);
-
-    final old = LiveUpdatesPromotionStatus.fromMap({
-      'sdk': 34,
-      'reasons': ['sdk'],
-    });
-    expect(old.state, LiveUpdatesPromotionState.unsupported);
-    expect(
-      LiveUpdatesPromotionStatus.fromMap({'sdk': 'x', 'reasons': 'y'}).state,
-      LiveUpdatesPromotionState.unsupported,
-    );
-  });
+      final old = LiveUpdatesPromotionStatus.fromMap({
+        'sdk': 34,
+        'reasons': ['sdk'],
+      });
+      expect(old.state, LiveUpdatesPromotionState.unsupported);
+      expect(
+        LiveUpdatesPromotionStatus.fromMap({'sdk': 'x', 'reasons': 'y'}).state,
+        LiveUpdatesPromotionState.unsupported,
+      );
+    },
+  );
 
   test('isla de DisTrack y promoción usan sus métodos del canal', () async {
     answer((call) {

@@ -29,12 +29,8 @@ const _office = PrinterConfig(
   protocol: PrinterProtocol.ipp,
 );
 
-Future<LabelRaster> _render() async => LabelRaster(
-  width: 4,
-  height: 4,
-  dpi: 100,
-  pixels: Uint8List(16),
-);
+Future<LabelRaster> _render() async =>
+    LabelRaster(width: 4, height: 4, dpi: 100, pixels: Uint8List(16));
 
 /// Zebra falsa: guarda lo recibido y, si llega `~HS`, contesta [reply].
 class _Zebra {
@@ -48,10 +44,8 @@ class _Zebra {
     });
   }
 
-  static Future<_Zebra> start([String? reply]) async => _Zebra._(
-    await ServerSocket.bind(InternetAddress.loopbackIPv4, 0),
-    reply,
-  );
+  static Future<_Zebra> start([String? reply]) async =>
+      _Zebra._(await ServerSocket.bind(InternetAddress.loopbackIPv4, 0), reply);
 
   final ServerSocket _server;
   final String? reply;
@@ -136,60 +130,65 @@ void main() {
       );
     });
 
-    test('9100: PDF directo con PJL del usuario de la sesión, sin confirmación',
-        () async {
-      final sent = <(String, int, Uint8List)>[];
-      final printer = LabelPrinter(
-        storage,
-        officePrinter: OfficePrinter(
-          raw: (host, port, bytes) async => sent.add((host, port, bytes)),
-        ),
-        currentUser: () => 'jperez@dismac.com.bo',
-      );
+    test(
+      '9100: PDF directo con PJL del usuario de la sesión, sin confirmación',
+      () async {
+        final sent = <(String, int, Uint8List)>[];
+        final printer = LabelPrinter(
+          storage,
+          officePrinter: OfficePrinter(
+            raw: (host, port, bytes) async => sent.add((host, port, bytes)),
+          ),
+          currentUser: () => 'jperez@dismac.com.bo',
+        );
 
-      final outcome = await printer.printLabel(
-        zpl: '^XA^XZ',
-        render: _render,
-        jobName: 'Etiqueta 1234',
-        to: _office.copyWith(protocol: PrinterProtocol.raw9100),
-      );
+        final outcome = await printer.printLabel(
+          zpl: '^XA^XZ',
+          render: _render,
+          jobName: 'Etiqueta 1234',
+          to: _office.copyWith(protocol: PrinterProtocol.raw9100),
+        );
 
-      expect(outcome, const PrintOutcome.sentUnconfirmed());
-      final (host, port, bytes) = sent.single;
-      expect((host, port), ('192.168.2.154', 9100));
-      final text = latin1.decode(bytes);
-      expect(text, contains('@PJL SET USERID="jperez"'));
-      expect(text, contains('@PJL SET JOBNAME="Etiqueta 1234"'));
-      // PDF directo: entra en lenguaje PDF y el cuerpo es un PDF, NO PCL.
-      expect(text, contains('@PJL ENTER LANGUAGE=PDF'));
-      expect(text, contains('%PDF-'));
-      expect(text, isNot(contains('^XA')));
-      expect(text, isNot(contains('ENTER LANGUAGE=PCL')));
-    });
+        expect(outcome, const PrintOutcome.sentUnconfirmed());
+        final (host, port, bytes) = sent.single;
+        expect((host, port), ('192.168.2.154', 9100));
+        final text = latin1.decode(bytes);
+        expect(text, contains('@PJL SET USERID="jperez"'));
+        expect(text, contains('@PJL SET JOBNAME="Etiqueta 1234"'));
+        // PDF directo: entra en lenguaje PDF y el cuerpo es un PDF, NO PCL.
+        expect(text, contains('@PJL ENTER LANGUAGE=PDF'));
+        expect(text, contains('%PDF-'));
+        expect(text, isNot(contains('^XA')));
+        expect(text, isNot(contains('ENTER LANGUAGE=PCL')));
+      },
+    );
 
-    test('9100: el código de usuario guardado va por PJL (PDF directo)', () async {
-      await PrinterCredentialsStore(storage).write(
-        _office.address,
-        const PrinterCredentials(username: 'ana', userCode: '4321'),
-      );
-      final sent = <Uint8List>[];
-      final printer = LabelPrinter(
-        storage,
-        officePrinter: OfficePrinter(raw: (h, p, b) async => sent.add(b)),
-      );
+    test(
+      '9100: el código de usuario guardado va por PJL (PDF directo)',
+      () async {
+        await PrinterCredentialsStore(storage).write(
+          _office.address,
+          const PrinterCredentials(username: 'ana', userCode: '4321'),
+        );
+        final sent = <Uint8List>[];
+        final printer = LabelPrinter(
+          storage,
+          officePrinter: OfficePrinter(raw: (h, p, b) async => sent.add(b)),
+        );
 
-      await printer.printLabel(
-        zpl: '',
-        render: _render,
-        to: _office.copyWith(protocol: PrinterProtocol.raw9100),
-      );
+        await printer.printLabel(
+          zpl: '',
+          render: _render,
+          to: _office.copyWith(protocol: PrinterProtocol.raw9100),
+        );
 
-      final text = latin1.decode(sent.single);
-      expect(text, contains('@PJL SET USERID="ana"'));
-      expect(text, contains('@PJL SET USERCODE="4321"'));
-      expect(text, contains('@PJL SET BILLINGCODE="4321"'));
-      expect(text, contains('%PDF-'));
-    });
+        final text = latin1.decode(sent.single);
+        expect(text, contains('@PJL SET USERID="ana"'));
+        expect(text, contains('@PJL SET USERCODE="4321"'));
+        expect(text, contains('@PJL SET BILLINGCODE="4321"'));
+        expect(text, contains('%PDF-'));
+      },
+    );
 
     test('IPP: usa las credenciales guardadas y confirma el trabajo', () async {
       await PrinterCredentialsStore(storage).write(
@@ -208,7 +207,12 @@ void main() {
         jobPollInterval: Duration.zero,
         jobTrackTimeout: Duration.zero,
         transport:
-            (uri, body, {String? authorization, required Duration timeout}) async {
+            (
+              uri,
+              body, {
+              String? authorization,
+              required Duration timeout,
+            }) async {
               seen.add(authorization);
               if (authorization == null) {
                 return IppHttpResponse(
@@ -275,7 +279,12 @@ void main() {
         jobPollInterval: Duration.zero,
         jobTrackTimeout: Duration.zero,
         transport:
-            (uri, body, {String? authorization, required Duration timeout}) async {
+            (
+              uri,
+              body, {
+              String? authorization,
+              required Duration timeout,
+            }) async {
               final request = IppCodec.decode(body);
               if (request.code == IppOperation.getPrinterAttributes) {
                 return IppHttpResponse(
@@ -334,7 +343,12 @@ void main() {
         jobPollInterval: Duration.zero,
         jobTrackTimeout: Duration.zero,
         transport:
-            (uri, body, {String? authorization, required Duration timeout}) async {
+            (
+              uri,
+              body, {
+              String? authorization,
+              required Duration timeout,
+            }) async {
               final request = IppCodec.decode(body);
               if (request.code == IppOperation.getPrinterAttributes) {
                 return IppHttpResponse(
@@ -395,10 +409,7 @@ void main() {
     test('contesta sin errores → lista', () async {
       zebra = await _Zebra.start(_hs('0', '0'));
 
-      final outcome = await quick().printLabel(
-        zpl: '^XA^XZ',
-        to: zebra.config,
-      );
+      final outcome = await quick().printLabel(zpl: '^XA^XZ', to: zebra.config);
 
       expect(outcome, const PrintOutcome.ready());
       expect(latin1.decode(zebra.received), '^XA^XZ~HS');
@@ -422,10 +433,7 @@ void main() {
     test('no contesta → enviado sin confirmación', () async {
       zebra = await _Zebra.start();
 
-      final outcome = await quick().printLabel(
-        zpl: '^XA^XZ',
-        to: zebra.config,
-      );
+      final outcome = await quick().printLabel(zpl: '^XA^XZ', to: zebra.config);
 
       expect(outcome, const PrintOutcome.sentUnconfirmed());
       expect(

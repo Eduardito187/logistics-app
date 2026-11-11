@@ -42,8 +42,9 @@ abstract final class IppStatus {
       clientErrorNotAuthorized =>
         'Tu usuario no está autorizado para imprimir en esta impresora.',
       clientErrorNotPossible => 'La impresora no puede hacer este trabajo.',
-      clientErrorTimeout => 'La impresora tardó demasiado en recibir el '
-          'documento.',
+      clientErrorTimeout =>
+        'La impresora tardó demasiado en recibir el '
+            'documento.',
       clientErrorNotFound => 'No se encontró la impresora en esa ruta IPP.',
       clientErrorGone => 'La impresora ya no existe en esa dirección.',
       clientErrorRequestEntityTooLarge =>

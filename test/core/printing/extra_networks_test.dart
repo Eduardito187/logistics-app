@@ -131,18 +131,21 @@ void main() {
       expect(storage.data[ExtraNetworksNotifier.storageKey], '[]');
     });
 
-    test('lo guardado sobrevive a un contenedor nuevo (reabrir la app)', () async {
-      final storage = FakeSecureStorage();
-      await _container(
-        storage,
-      ).read(extraNetworksProvider.notifier).add('192.168.2');
+    test(
+      'lo guardado sobrevive a un contenedor nuevo (reabrir la app)',
+      () async {
+        final storage = FakeSecureStorage();
+        await _container(
+          storage,
+        ).read(extraNetworksProvider.notifier).add('192.168.2');
 
-      final reopened = await _container(
-        storage,
-      ).read(extraNetworksProvider.notifier).current();
+        final reopened = await _container(
+          storage,
+        ).read(extraNetworksProvider.notifier).current();
 
-      expect(reopened.single.label, '192.168.2.0/24');
-    });
+        expect(reopened.single.label, '192.168.2.0/24');
+      },
+    );
 
     test('almacén roto: queda vacío y add igual rige en memoria', () async {
       final container = _container(_BrokenStorage());

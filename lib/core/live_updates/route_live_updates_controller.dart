@@ -228,8 +228,7 @@ class RouteLiveUpdatesController {
     if (last != null && status.sameContentAs(last)) return;
     final major = last == null || status.majorChangeFrom(last);
     final lastAt = _lastSentAt;
-    final due =
-        lastAt == null || now.difference(lastAt) >= minUpdateInterval;
+    final due = lastAt == null || now.difference(lastAt) >= minUpdateInterval;
     if (major || due) _send(status, now, start: false);
   }
 

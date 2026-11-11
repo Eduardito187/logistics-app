@@ -20,10 +20,7 @@ void main() {
 
     test('usuario de autenticación con dominio', () {
       expect(full.authUser, r'DISMAC\jperez');
-      expect(
-        const PrinterCredentials(username: ' ana ').authUser,
-        'ana',
-      );
+      expect(const PrinterCredentials(username: ' ana ').authUser, 'ana');
     });
 
     test('toString nunca muestra la contraseña ni el código', () {
@@ -52,10 +49,7 @@ void main() {
 
       expect(await store.read('192.168.2.154:9100'), creds);
       expect(await store.read('192.168.2.155:9100'), isNull);
-      expect(
-        storage.data.keys,
-        ['printer_credentials_192.168.2.154:9100'],
-      );
+      expect(storage.data.keys, ['printer_credentials_192.168.2.154:9100']);
     });
 
     test('usuario vacío o null borra', () async {

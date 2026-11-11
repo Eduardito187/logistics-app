@@ -51,7 +51,8 @@ class LiveUpdatesService {
 
   /// Abre los ajustes del sistema donde se activa "Live updates" para la app
   /// (o, si el teléfono no los tiene, los de notificaciones de la app).
-  Future<bool> openPromotionSettings() => _invoke('openPromotionSettings', null);
+  Future<bool> openPromotionSettings() =>
+      _invoke('openPromotionSettings', null);
 
   /// Isla de DisTrack (Android): ¿existe en este teléfono y está concedido el
   /// permiso "Mostrar sobre otras apps"? Sin canal → `(false, false)`.

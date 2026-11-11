@@ -60,28 +60,30 @@ void main() {
     expect(applied.address, config.address);
   });
 
-  test('Ricoh con código de usuario (requesting-user-name) → 9100 + USERCODE',
-      () async {
-    // IPP de esta Ricoh solo admite requesting-user-name: el equipo cancela los
-    // trabajos IPP. Se imprime por 9100 con el código (verificado con la IM 550).
-    final detector = PrinterProfileDetector(
-      ipp: _ipp((_) => _ok(ricohUserNameOnlyResponse())),
-      identify: (host, timeout) async => null,
-    );
+  test(
+    'Ricoh con código de usuario (requesting-user-name) → 9100 + USERCODE',
+    () async {
+      // IPP de esta Ricoh solo admite requesting-user-name: el equipo cancela los
+      // trabajos IPP. Se imprime por 9100 con el código (verificado con la IM 550).
+      final detector = PrinterProfileDetector(
+        ipp: _ipp((_) => _ok(ricohUserNameOnlyResponse())),
+        identify: (host, timeout) async => null,
+      );
 
-    final d = await detector.detect('192.168.2.154');
+      final d = await detector.detect('192.168.2.154');
 
-    expect(d.makeAndModel, 'RICOH IM 550 PS3');
-    expect(d.requiresCredentials, isFalse);
-    expect(d.needsUserCode, isTrue);
-    expect(d.language, PrinterLanguage.office);
-    expect(d.protocol, PrinterProtocol.raw9100);
-    expect(d.summary, contains('código de usuario'));
-    final applied = d.applyTo(config);
-    expect(applied.protocol, PrinterProtocol.raw9100);
-    // Sin datos IPP en una config de 9100.
-    expect(applied.ippPort, isNull);
-  });
+      expect(d.makeAndModel, 'RICOH IM 550 PS3');
+      expect(d.requiresCredentials, isFalse);
+      expect(d.needsUserCode, isTrue);
+      expect(d.language, PrinterLanguage.office);
+      expect(d.protocol, PrinterProtocol.raw9100);
+      expect(d.summary, contains('código de usuario'));
+      final applied = d.applyTo(config);
+      expect(applied.protocol, PrinterProtocol.raw9100);
+      // Sin datos IPP en una config de 9100.
+      expect(applied.ippPort, isNull);
+    },
+  );
 
   test('IPP responde 401 → oficina por IPP con credenciales', () async {
     final detector = PrinterProfileDetector(

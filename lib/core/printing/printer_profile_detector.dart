@@ -85,9 +85,7 @@ class PrinterProfileDetector {
     return PrinterDetection(
       makeAndModel: identity.name,
       isZebra: identity.isZebra,
-      language: identity.isZebra
-          ? PrinterLanguage.zpl
-          : PrinterLanguage.office,
+      language: identity.isZebra ? PrinterLanguage.zpl : PrinterLanguage.office,
       protocol: PrinterProtocol.raw9100,
     );
   }

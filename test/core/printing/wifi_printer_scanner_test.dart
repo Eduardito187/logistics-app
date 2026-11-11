@@ -493,10 +493,7 @@ void main() {
 
       expect(last.total, 1021);
       final cable = Ipv4Subnet.containing(Ipv4.parse('10.168.48.0')!, 22);
-      expect(
-        probe.hosts.every((h) => cable.contains(Ipv4.parse(h)!)),
-        isTrue,
-      );
+      expect(probe.hosts.every((h) => cable.contains(Ipv4.parse(h)!)), isTrue);
       expect(probe.hosts, isNot(contains('10.168.0.1')));
       final net = last.networks.single;
       expect(net.label, '10.168.48.0/22');
@@ -547,23 +544,26 @@ void main() {
       expect(hit.isKnownNonZebra, isTrue);
     });
 
-    test('red agregada igual a la del teléfono no se barre dos veces', () async {
-      final probe = _FakeProbe();
-      final scanner = WifiPrinterScanner(
-        listInterfaces: _wlan,
-        probe: probe.call,
-        identify: _identifyFrom(const {}),
-        extraNetworks: () async => [
-          Ipv4Subnet.containing(Ipv4.parse(_ownIp)!, 24),
-        ],
-      );
+    test(
+      'red agregada igual a la del teléfono no se barre dos veces',
+      () async {
+        final probe = _FakeProbe();
+        final scanner = WifiPrinterScanner(
+          listInterfaces: _wlan,
+          probe: probe.call,
+          identify: _identifyFrom(const {}),
+          extraNetworks: () async => [
+            Ipv4Subnet.containing(Ipv4.parse(_ownIp)!, 24),
+          ],
+        );
 
-      final last = await scanner.scan().last;
+        final last = await scanner.scan().last;
 
-      expect(last.total, 253);
-      expect(probe.hosts.toSet(), hasLength(253));
-      expect(last.networkLabels, ['192.168.1.0/24']);
-    });
+        expect(last.total, 253);
+        expect(probe.hosts.toSet(), hasLength(253));
+        expect(last.networkLabels, ['192.168.1.0/24']);
+      },
+    );
 
     test('red agregada que se solapa: cada host una sola vez', () async {
       final probe = _FakeProbe();
@@ -608,33 +608,36 @@ void main() {
       txt: {'product': '(RICOH IM 550)'},
     );
 
-    test('servicio en otra subred con 9100 abierto -> hit con su nombre', () async {
-      final calls = <(List<String>, Duration)>[];
-      final probe = _FakeProbe({'192.168.2.154'});
-      final scanner = WifiPrinterScanner(
-        listInterfaces: _wlan,
-        probe: probe.call,
-        identify: _identifyFrom(const {}),
-        discoverServices: (types, timeout) async {
-          calls.add((types, timeout));
-          return const [ricoh];
-        },
-      );
+    test(
+      'servicio en otra subred con 9100 abierto -> hit con su nombre',
+      () async {
+        final calls = <(List<String>, Duration)>[];
+        final probe = _FakeProbe({'192.168.2.154'});
+        final scanner = WifiPrinterScanner(
+          listInterfaces: _wlan,
+          probe: probe.call,
+          identify: _identifyFrom(const {}),
+          discoverServices: (types, timeout) async {
+            calls.add((types, timeout));
+            return const [ricoh];
+          },
+        );
 
-      final last = await scanner.scan().last;
+        final last = await scanner.scan().last;
 
-      expect(calls.single.$1, [
-        '_pdl-datastream._tcp',
-        '_printer._tcp',
-        '_ipp._tcp',
-      ]);
-      expect(calls.single.$2, const Duration(seconds: 4));
-      final hit = last.found.single;
-      expect(hit.address, '192.168.2.154:9100');
-      expect(hit.name, 'RICOH IM 550 [A1B2C3]');
-      expect(hit.isZebra, isFalse);
-      expect(hit.source, WifiHitSource.mdns);
-    });
+        expect(calls.single.$1, [
+          '_pdl-datastream._tcp',
+          '_printer._tcp',
+          '_ipp._tcp',
+        ]);
+        expect(calls.single.$2, const Duration(seconds: 4));
+        final hit = last.found.single;
+        expect(hit.address, '192.168.2.154:9100');
+        expect(hit.name, 'RICOH IM 550 [A1B2C3]');
+        expect(hit.isZebra, isFalse);
+        expect(hit.source, WifiHitSource.mdns);
+      },
+    );
 
     test('Zebra por TXT con el puerto anunciado de _pdl-datastream', () async {
       final scanner = WifiPrinterScanner(
@@ -675,32 +678,35 @@ void main() {
       expect(last.error, isNull);
     });
 
-    test('mismo host por barrido y mDNS: un hit, gana el nombre mDNS', () async {
-      final scanner = WifiPrinterScanner(
-        listInterfaces: _wlan,
-        probe: _FakeProbe({'192.168.1.9'}).call,
-        identify: _identifyFrom(const {
-          '192.168.1.9': NetworkPrinterIdentity(
-            name: 'Web Image Monitor',
-            isZebra: false,
-          ),
-        }),
-        discoverServices: (types, timeout) async => const [
-          MdnsService(
-            name: 'RICOH IM 550',
-            type: '_ipp._tcp',
-            host: '192.168.1.9',
-            port: 631,
-          ),
-        ],
-      );
+    test(
+      'mismo host por barrido y mDNS: un hit, gana el nombre mDNS',
+      () async {
+        final scanner = WifiPrinterScanner(
+          listInterfaces: _wlan,
+          probe: _FakeProbe({'192.168.1.9'}).call,
+          identify: _identifyFrom(const {
+            '192.168.1.9': NetworkPrinterIdentity(
+              name: 'Web Image Monitor',
+              isZebra: false,
+            ),
+          }),
+          discoverServices: (types, timeout) async => const [
+            MdnsService(
+              name: 'RICOH IM 550',
+              type: '_ipp._tcp',
+              host: '192.168.1.9',
+              port: 631,
+            ),
+          ],
+        );
 
-      final last = await scanner.scan().last;
+        final last = await scanner.scan().last;
 
-      final hit = last.found.single;
-      expect(hit.address, '192.168.1.9:9100');
-      expect(hit.name, 'RICOH IM 550');
-    });
+        final hit = last.found.single;
+        expect(hit.address, '192.168.1.9:9100');
+        expect(hit.name, 'RICOH IM 550');
+      },
+    );
 
     test('hosts IPv6 se omiten', () async {
       final probe = _FakeProbe({'fe80::1'});
@@ -881,11 +887,7 @@ void main() {
         await scanner.diagnose(' 192.168.2.154 ', port: 9100),
         PrinterReachability.refused,
       );
-      expect(calls.single, (
-        '192.168.2.154',
-        9100,
-        const Duration(seconds: 3),
-      ));
+      expect(calls.single, ('192.168.2.154', 9100, const Duration(seconds: 3)));
     });
 
     test('seam que lanza SocketException -> se clasifica', () async {
@@ -900,26 +902,29 @@ void main() {
       );
     });
 
-    test('host vacío o puerto fuera de rango -> invalid sin conectar', () async {
-      var called = false;
-      final scanner = WifiPrinterScanner(
-        listInterfaces: _wlan,
-        diagnoser: (host, port, timeout) async {
-          called = true;
-          return PrinterReachability.reachable;
-        },
-      );
+    test(
+      'host vacío o puerto fuera de rango -> invalid sin conectar',
+      () async {
+        var called = false;
+        final scanner = WifiPrinterScanner(
+          listInterfaces: _wlan,
+          diagnoser: (host, port, timeout) async {
+            called = true;
+            return PrinterReachability.reachable;
+          },
+        );
 
-      expect(await scanner.diagnose(' '), PrinterReachability.invalid);
-      expect(
-        await scanner.diagnose('10.0.0.1', port: 0),
-        PrinterReachability.invalid,
-      );
-      expect(
-        await scanner.diagnose('10.0.0.1', port: 70000),
-        PrinterReachability.invalid,
-      );
-      expect(called, isFalse);
-    });
+        expect(await scanner.diagnose(' '), PrinterReachability.invalid);
+        expect(
+          await scanner.diagnose('10.0.0.1', port: 0),
+          PrinterReachability.invalid,
+        );
+        expect(
+          await scanner.diagnose('10.0.0.1', port: 70000),
+          PrinterReachability.invalid,
+        );
+        expect(called, isFalse);
+      },
+    );
   });
 }

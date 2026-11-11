@@ -55,10 +55,7 @@ class PrintableLabel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                label.sku,
-                style: const TextStyle(color: ink, fontSize: 16),
-              ),
+              Text(label.sku, style: const TextStyle(color: ink, fontSize: 16)),
               const Spacer(),
               Center(
                 child: QrImageView(

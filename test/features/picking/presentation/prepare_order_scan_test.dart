@@ -73,8 +73,7 @@ Future<List<String>> _pump(
   return opened;
 }
 
-Finder _scanButton() =>
-    findButtonWithText<FilledButton>('Escanear producto');
+Finder _scanButton() => findButtonWithText<FilledButton>('Escanear producto');
 
 Future<void> _tapScan(WidgetTester tester) async {
   await tester.tap(_scanButton());
@@ -104,9 +103,7 @@ void main() {
     expect(resolver.requested, isEmpty); // QR: offline, sin /resolve
   });
 
-  testWidgets('Code128 resuelto por el backend abre su pedido', (
-    tester,
-  ) async {
+  testWidgets('Code128 resuelto por el backend abre su pedido', (tester) async {
     final resolver = FakeLabelResolver(
       resolutions: {
         'LBL-01JB8': const LabelResolution(
@@ -135,10 +132,7 @@ void main() {
   });
 
   testWidgets('QR dañado: aviso y NO navega', (tester) async {
-    final opened = await _pump(
-      tester,
-      FakeCodeScanner(['{"v":1,"t":"PKG",']),
-    );
+    final opened = await _pump(tester, FakeCodeScanner(['{"v":1,"t":"PKG",']));
 
     await _tapScan(tester);
 
@@ -225,10 +219,7 @@ void main() {
   });
 
   testWidgets('al volver del pedido se puede escanear otro', (tester) async {
-    final opened = await _pump(
-      tester,
-      FakeCodeScanner([_validQr(), 'DIS-2']),
-    );
+    final opened = await _pump(tester, FakeCodeScanner([_validQr(), 'DIS-2']));
 
     await _tapScan(tester);
     expect(find.text('ORDEN DM-260012345'), findsOneWidget);

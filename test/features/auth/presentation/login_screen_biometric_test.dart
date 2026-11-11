@@ -225,7 +225,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.loginCalls, 0);
-    expect(find.text('Demasiados intentos. Usá tu contraseña.'), findsOneWidget);
+    expect(
+      find.text('Demasiados intentos. Usá tu contraseña.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('contraseña guardada vencida: se borra la credencial y avisa', (

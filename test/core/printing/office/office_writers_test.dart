@@ -143,10 +143,7 @@ void main() {
       final bytes = PwgRasterWriter.build(_label(), dpi: 150);
       expect(ascii.decode(bytes.sublist(0, 4)), 'RaS2');
       final header = ByteData.sublistView(bytes, 4, 4 + 1796);
-      expect(
-        ascii.decode(bytes.sublist(4, 13)),
-        'PwgRaster',
-      );
+      expect(ascii.decode(bytes.sublist(4, 13)), 'PwgRaster');
       expect(header.getUint32(276), 150); // HWResolution
       expect(header.getUint32(372), 1240); // Width (A4 a 150 dpi)
       expect(header.getUint32(376), 1754); // Height
@@ -195,7 +192,10 @@ void main() {
         ),
       );
       final text = latin1.decode(job);
-      expect(text, startsWith('\x1B%-12345X@PJL JOB NAME="Etiqueta _1234_"\r\n'));
+      expect(
+        text,
+        startsWith('\x1B%-12345X@PJL JOB NAME="Etiqueta _1234_"\r\n'),
+      );
       expect(text, contains('@PJL SET USERNAME="jperez"\r\n'));
       expect(text, contains('@PJL SET JOBNAME="Etiqueta _1234_"\r\n'));
       expect(text, contains('@PJL SET DOCPRINTMENUUSER=HOSTLOGINNAME\r\n'));
@@ -215,43 +215,48 @@ void main() {
       expect(RegExp('\x1B\\*b\\d+W').allMatches(text), hasLength(600));
     });
 
-    test('USERID se trunca a 8 (como el driver Ricoh), HOSTLOGINNAME completo', () {
-      final text = latin1.decode(
-        PclJobWriter.build(
-          _label(),
-          jobName: 'J',
-          userName: 'sesion',
-          credentials: const PrinterCredentials(username: 'ehhuallata'),
-        ),
-      );
-      expect(text, contains('@PJL SET USERID="ehhualla"\r\n'));
-      expect(text, contains('@PJL SET HOSTLOGINNAME="ehhuallata"\r\n'));
-    });
-
-    test('con token de bloqueo: SECUREJOB + JOBPASSWORD5 (impresión retenida)',
-        () {
-      // Token de EJEMPLO (no una credencial real).
-      const fakeToken = 'TOKEN_DE_EJEMPLO_NO_REAL';
-      final text = latin1.decode(
-        PclJobWriter.build(
-          _label(),
-          jobName: 'J',
-          userName: 'ehhuallata',
-          credentials: const PrinterCredentials(
-            username: 'ehhuallata',
-            userCode: '2468',
-            secureToken: fakeToken,
+    test(
+      'USERID se trunca a 8 (como el driver Ricoh), HOSTLOGINNAME completo',
+      () {
+        final text = latin1.decode(
+          PclJobWriter.build(
+            _label(),
+            jobName: 'J',
+            userName: 'sesion',
+            credentials: const PrinterCredentials(username: 'ehhuallata'),
           ),
-        ),
-      );
-      // SECUREJOB va ANTES del resto de la cabecera (como el driver real).
-      expect(
-        text.indexOf('@PJL SECUREJOB'),
-        lessThan(text.indexOf('@PJL SET USERID')),
-      );
-      expect(text, contains('@PJL SET JOBPASSWORD5="$fakeToken"\r\n'));
-      expect(text, contains('@PJL SET USERCODE="2468"\r\n'));
-    });
+        );
+        expect(text, contains('@PJL SET USERID="ehhualla"\r\n'));
+        expect(text, contains('@PJL SET HOSTLOGINNAME="ehhuallata"\r\n'));
+      },
+    );
+
+    test(
+      'con token de bloqueo: SECUREJOB + JOBPASSWORD5 (impresión retenida)',
+      () {
+        // Token de EJEMPLO (no una credencial real).
+        const fakeToken = 'TOKEN_DE_EJEMPLO_NO_REAL';
+        final text = latin1.decode(
+          PclJobWriter.build(
+            _label(),
+            jobName: 'J',
+            userName: 'ehhuallata',
+            credentials: const PrinterCredentials(
+              username: 'ehhuallata',
+              userCode: '2468',
+              secureToken: fakeToken,
+            ),
+          ),
+        );
+        // SECUREJOB va ANTES del resto de la cabecera (como el driver real).
+        expect(
+          text.indexOf('@PJL SECUREJOB'),
+          lessThan(text.indexOf('@PJL SET USERID')),
+        );
+        expect(text, contains('@PJL SET JOBPASSWORD5="$fakeToken"\r\n'));
+        expect(text, contains('@PJL SET USERCODE="2468"\r\n'));
+      },
+    );
 
     test('sin código de usuario no manda USERCODE; usa el de la sesión', () {
       final text = latin1.decode(

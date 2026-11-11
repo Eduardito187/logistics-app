@@ -304,7 +304,10 @@ void main() {
     );
 
     test('resolver: una sola isla; con las dos manda la preferencia', () {
-      expect(resolveRouteIslandMode(availability(), null), RouteIslandMode.none);
+      expect(
+        resolveRouteIslandMode(availability(), null),
+        RouteIslandMode.none,
+      );
       expect(
         resolveRouteIslandMode(availability(system: true), null),
         RouteIslandMode.system,
@@ -389,14 +392,22 @@ void main() {
       expect(c.isOverlayShown, isFalse);
     });
 
-    test('de DisTrack a sistema: re-publica con promoción y quita la pastilla', () {
-      final c = build(hideInForeground: true, foreground: false);
-      c.setIslandMode(RouteIslandMode.overlay);
-      c.onStatus(_status());
-      c.setIslandMode(RouteIslandMode.system);
-      expect(service.island, ['promote:false', 'show', 'promote:true', 'hide']);
-      expect(service.calls, ['start', 'update']);
-    });
+    test(
+      'de DisTrack a sistema: re-publica con promoción y quita la pastilla',
+      () {
+        final c = build(hideInForeground: true, foreground: false);
+        c.setIslandMode(RouteIslandMode.overlay);
+        c.onStatus(_status());
+        c.setIslandMode(RouteIslandMode.system);
+        expect(service.island, [
+          'promote:false',
+          'show',
+          'promote:true',
+          'hide',
+        ]);
+        expect(service.calls, ['start', 'update']);
+      },
+    );
 
     test('iOS (sin hideInForeground): la pastilla nunca aparece', () {
       final c = build(foreground: false);

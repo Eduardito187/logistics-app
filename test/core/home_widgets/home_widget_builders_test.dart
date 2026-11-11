@@ -216,7 +216,10 @@ void main() {
     test('tablero + flota: camiones con ruta', () {
       final p = supervisorSummaryPayloadFor(
         metrics: metrics,
-        fleet: [_truck('v1', routeId: 'r1'), _truck('v2')],
+        fleet: [
+          _truck('v1', routeId: 'r1'),
+          _truck('v2'),
+        ],
       );
       expect(p!.toMap(updatedAt: _updatedAt), {
         'state': 'ok',

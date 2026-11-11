@@ -105,9 +105,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    final stored = await PrinterCredentialsStore(h.storage).read(
-      _office.address,
-    );
+    final stored = await PrinterCredentialsStore(
+      h.storage,
+    ).read(_office.address);
     expect(
       stored,
       const PrinterCredentials(
@@ -125,9 +125,8 @@ void main() {
   testWidgets('la contraseña va oculta y se puede mostrar', (tester) async {
     await _pump(tester);
 
-    TextField password() => tester.widget<TextField>(
-      _field('Contraseña (opcional)'),
-    );
+    TextField password() =>
+        tester.widget<TextField>(_field('Contraseña (opcional)'));
     expect(password().obscureText, isTrue);
 
     await tester.tap(find.byTooltip('Mostrar contraseña'));

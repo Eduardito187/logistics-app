@@ -13,12 +13,8 @@ class IppEndpoint {
   final bool tls;
 
   /// URL HTTP(S) a la que se hace el POST.
-  Uri get httpUri => Uri(
-    scheme: tls ? 'https' : 'http',
-    host: host,
-    port: port,
-    path: path,
-  );
+  Uri get httpUri =>
+      Uri(scheme: tls ? 'https' : 'http', host: host, port: port, path: path);
 
   /// `printer-uri` que va dentro del pedido (`ipp://` o `ipps://`).
   String get printerUri => '${tls ? 'ipps' : 'ipp'}://$host:$port$path';

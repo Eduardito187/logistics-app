@@ -120,9 +120,7 @@ void main() {
     });
 
     test('preparador: "Escanear" del widget abre ingresar pedido', () {
-      controller.onSession(
-        const Session(userName: 'p', role: UserRole.picker),
-      );
+      controller.onSession(const Session(userName: 'p', role: UserRole.picker));
       controller.onLaunch('/picking/prepare');
       expect(navigated, ['/picking/prepare']);
     });
@@ -136,9 +134,7 @@ void main() {
     });
 
     test('ruta de otro rol, /home o /login no navegan', () {
-      controller.onSession(
-        const Session(userName: 'p', role: UserRole.picker),
-      );
+      controller.onSession(const Session(userName: 'p', role: UserRole.picker));
       controller.onLaunch('/driver/delivery');
       controller.onLaunch('/home');
       controller.onLaunch('/login');
