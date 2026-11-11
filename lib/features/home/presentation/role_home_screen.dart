@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/auth/user_role.dart';
 import '../../../core/brand/distrack_app_bar_logo.dart';
+import '../../driver/presentation/widgets/driver_home_inspection_reminder.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/layout/nav_clearance.dart';
@@ -111,6 +113,10 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
                     roleIcon: role.icon,
                   ),
                   const SizedBox(height: 20),
+                  // Chofer: recordatorio de la inspección diaria del camión si
+                  // hoy falta (agua/frenos/motor). Se oculta solo si ya se hizo.
+                  if (role == UserRole.driver)
+                    const DriverHomeInspectionReminder(),
                   if (hero != null) ...[
                     HeroTaskCard(
                       title: hero.label,

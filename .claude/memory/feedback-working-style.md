@@ -11,8 +11,6 @@ metadata:
 - **Reportar con números** (tests, tamaños, analyze) y ser honesto con lo no verificado (hardware real, push sin credenciales).
 - **No inventar valores** de URLs/credenciales: dejar claves vacías y avisar.
 - Cuando corrige algo ("te dije eliminar eso por completo"), hacerlo exhaustivo (grep de todo el repo + memorias) y verificar con números.
-- **"Solo trabaja" (2026-10-26):** NO ejecutar Flutter (`analyze`, `test`, `format`, `pub`, `build`), Docker ni el backend sin que lo pida en ese turno, ni dejar que los agentes lo hagan. Editar código y entregar los comandos de verificación, uno por bloque, para que él los corra de a uno. Ver [[wsl-gradle-memory-hang]].
-- **Íconos y animaciones "al 100%":** animar el ícono COMPLETO (color + brillo, todos los trazos, movimiento del conjunto, pop del acento), nunca una sola pieza. Ver [[custom-animated-icons]].
 
 **Why:** lo pidió repetidamente a lo largo de la sesión del 2026-10-16 y validó los resultados así entregados.
 **How to apply:** en tareas grandes planificar reparto por carpetas, instalar dependencias primero, integrar y verificar al final; en el reporte, decisiones tomadas + pendientes que son suyos.

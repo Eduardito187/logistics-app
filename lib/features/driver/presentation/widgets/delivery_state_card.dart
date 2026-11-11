@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/icons/icons.dart';
 
 import '../../../../core/api/export.dart';
-import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../controllers/driver_controllers.dart';
@@ -11,6 +10,11 @@ import 'info_row.dart';
 
 /// Estado detallado de la entrega del envío (status real + escaneos), leído del
 /// backend. Complementa el estado de la parada con lo que ya se registró.
+///
+/// Es información COMPLEMENTARIA: una parada pendiente todavía no tiene actividad
+/// de entrega y el backend puede no devolver nada. En ese caso (o si no se pudo
+/// leer) se muestra un estado neutro "Sin movimientos…", NUNCA un error con
+/// "Reintentar": no es una falla que el chofer deba resolver en terreno.
 class DeliveryStateCard extends ConsumerWidget {
   const DeliveryStateCard({super.key, required this.shipmentId});
 
@@ -21,9 +25,18 @@ class DeliveryStateCard extends ConsumerWidget {
     final state = ref.watch(deliveryStateProvider(shipmentId));
     return SectionCard(
       title: 'Estado de la entrega',
-      child: AsyncValueView<Delivery>(
-        value: state,
-        onRetry: () => ref.invalidate(deliveryStateProvider(shipmentId)),
+      child: state.when(
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
+        // Sin datos aún (o no se pudo leer): neutro, sin alarmar.
+        error: (_, _) => const InfoRow(
+          icon: AppIcon.pending,
+          text: 'Sin movimientos registrados todavía.',
+        ),
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: InfoRow(icon: AppIcon.pending, text: 'Cargando…'),
+        ),
         data: (delivery) {
           final reason = delivery.failureReason;
           return Column(

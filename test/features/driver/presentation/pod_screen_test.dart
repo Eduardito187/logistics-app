@@ -77,7 +77,7 @@ void main() {
   ) async {
     await pumpScoped(tester, child: PodScreen(stop: buildStop()), tall: true);
 
-    expect(find.text('Prueba de entrega'), findsOneWidget);
+    expect(find.text('Comprobante de entrega'), findsOneWidget);
     expect(find.text('1. Producto entregado'), findsOneWidget);
     expect(find.text('2. Confirmación del cliente'), findsOneWidget);
     expect(find.text('3. Foto de entrega (obligatoria)'), findsOneWidget);

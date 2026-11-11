@@ -11,7 +11,9 @@ import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/stat_tile.dart';
 import '../domain/entities/my_day_stats.dart';
+import '../domain/route_km_today.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/fleet_ops_controllers.dart';
 import 'driver_vehicle_gate.dart';
 import 'widgets/active_delivery/delivery_status_card.dart';
 
@@ -126,6 +128,8 @@ class _MyDayBody extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          const _RouteKmCard(),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
@@ -153,6 +157,91 @@ String formatAveragePerStop(Duration? d) {
   final minutes = (d.inSeconds / 60).round();
   if (minutes < 60) return '$minutes min';
   return '${minutes ~/ 60} h ${(minutes % 60).toString().padLeft(2, '0')} min';
+}
+
+/// Tarjeta complementaria "Kilómetros de hoy": km recorridos de la ruta del día
+/// = odómetro de llegada − odómetro de salida (ver [routeKmToday]).
+///
+/// Es información de apoyo: en carga o error no muestra nada (sin "Reintentar"),
+/// y tampoco aparece si no hay ninguna lectura de odómetro del día.
+class _RouteKmCard extends ConsumerWidget {
+  const _RouteKmCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final readings = ref.watch(vehicleOdometerReadingsProvider);
+    return readings.maybeWhen(
+      data: (data) {
+        final km = routeKmToday(data, DateTime.now());
+        if (km.departureKm == null && km.arrivalKm == null) {
+          // Sin lecturas del día: no mostramos la tarjeta.
+          return const SizedBox.shrink();
+        }
+        return SectionCard(
+          title: 'Kilómetros de hoy',
+          child: _RouteKmBody(km: km),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _RouteKmBody extends StatelessWidget {
+  const _RouteKmBody({required this.km});
+
+  final RouteKmToday km;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final traveled = km.traveledKm;
+
+    if (traveled != null) {
+      return Row(
+        children: [
+          const AnimatedAppIcon(AppIcon.speed, color: AppColors.brand),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$traveled km recorridos',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Salida ${km.departureKm} km · Llegada ${km.arrivalKm} km',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Falta la llegada: hay salida pero no recorrido calculable (tono neutro).
+    final departure = km.departureKm;
+    final text = departure != null
+        ? 'Salida registrada: $departure km. Falta el odómetro de llegada.'
+        : 'Falta el odómetro de salida de hoy.';
+    return Row(
+      children: [
+        AnimatedAppIcon(
+          AppIcon.speed,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+      ],
+    );
+  }
 }
 
 /// Rejilla de mosaicos: columnas según el ancho (1 en teléfono chico, 2 en uno

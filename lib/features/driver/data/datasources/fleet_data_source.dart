@@ -55,6 +55,32 @@ class FleetDataSource {
     }
   }
 
+  /// Historial de inspecciones (checklists pre-salida) de un vehículo, más
+  /// reciente primero. El backend no garantiza orden, así que se ordena acá por
+  /// `performedOn` DESC dejando los nulos al final.
+  Future<List<PreTripChecklist>> listVehicleChecklists({
+    required String vehicleId,
+  }) async {
+    final api = _ref.read(logisticsApiProvider);
+    try {
+      final response = await api.fleet.fleetListPreTripChecklists(
+        vehicleId: vehicleId,
+      );
+      final items = [...?response.data];
+      items.sort((a, b) {
+        final da = a.performedOn;
+        final db = b.performedOn;
+        if (da == null && db == null) return 0;
+        if (da == null) return 1; // nulos al final
+        if (db == null) return -1;
+        return db.compareTo(da); // DESC
+      });
+      return items;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {

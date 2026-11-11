@@ -61,7 +61,10 @@ void main() {
     expect(find.text('Etiqueta no válida'), findsNothing);
     // Pide un QR con el título y la ayuda por defecto del bulto.
     expect(fake.requestedTitles, ['Escanear producto']);
-    expect(fake.requestedFormats.single, [BarcodeFormat.qrCode]);
+    expect(fake.requestedFormats.single, [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+    ]);
     expect(find.byType(ScannerScreen), findsNothing);
   });
 

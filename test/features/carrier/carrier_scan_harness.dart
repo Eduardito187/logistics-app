@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/proof_of_delivery_request.dart';
 import 'package:logistics_app/core/api/models/scan_request.dart';
 import 'package:logistics_app/core/labels/label_payload.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
@@ -17,6 +18,7 @@ import 'package:logistics_app/features/carrier/domain/usecases/record_load_scan.
 import 'package:logistics_app/features/carrier/domain/usecases/record_proof_of_delivery.dart';
 
 import '../../support/fake_code_scanner.dart';
+import '../../support/fake_label_resolver.dart';
 import '../store/fake_continuous_scanner.dart';
 import 'carrier_test_harness.dart';
 
@@ -179,6 +181,7 @@ Future<void> pumpCarrierScanScreen(
   FakeCodeScanner? scanner,
   FakeContinuousScanner? continuous,
   LabelScanner? labelScanner,
+  LabelResolver? labelResolver,
   FakeRecordLoadScan? loadScan,
   FakeRecordProofOfDelivery? proofOfDelivery,
   GpsFix? fix,
@@ -195,6 +198,12 @@ Future<void> pumpCarrierScanScreen(
         ),
         labelScannerProvider.overrideWithValue(
           labelScanner ?? vectorLabelScanner(),
+        ),
+        // Code128: un valor no-QR se resuelve online. Por defecto el backend no
+        // lo reconoce (resolved:false → "Etiqueta no reconocida"); los tests que
+        // necesiten otra cosa pasan su propio `labelResolver`.
+        labelResolverProvider.overrideWithValue(
+          labelResolver ?? FakeLabelResolver(),
         ),
         locationServiceProvider.overrideWithValue(FixedLocationService(fix)),
         recordLoadScanProvider.overrideWithValue(

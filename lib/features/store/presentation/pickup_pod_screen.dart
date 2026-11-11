@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/shipment.dart';
 import '../../../core/icons/icons.dart';
@@ -207,7 +206,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
         context,
         title: 'Escanear producto',
         helper: 'Apunta al QR de la etiqueta del producto.',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: _deliverCode,
       );
     } finally {

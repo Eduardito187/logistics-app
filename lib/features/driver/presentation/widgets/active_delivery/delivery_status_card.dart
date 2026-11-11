@@ -96,7 +96,18 @@ class DeliveryStatusCard extends StatelessWidget {
   }
 }
 
-/// "Faltan 4,2 km · 12 min" y, si corresponde, la pastilla "Fuera de ruta".
+/// Metros a la parada por debajo de los cuales se considera que el camión YA
+/// llegó (geocerca): a esa distancia el GPS urbano no distingue mejor y mostrar
+/// "Faltan 30 m" confunde. Se muestra "Llegaste a destino".
+const double kArrivalMeters = 60;
+
+/// `true` si el camión está prácticamente en la parada (dentro de la geocerca y
+/// sin estar fuera de ruta).
+bool arrivedAtStop(RemainingEstimate estimate) =>
+    !estimate.offRoute && estimate.meters <= kArrivalMeters;
+
+/// "Faltan 4,2 km · 12 min" (o "Llegaste a destino" al entrar en la geocerca) y,
+/// si corresponde, la pastilla "Fuera de ruta".
 class _RemainingRow extends StatelessWidget {
   const _RemainingRow({required this.estimate});
 
@@ -105,18 +116,39 @@ class _RemainingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final arrived = arrivedAtStop(estimate);
     return Wrap(
       spacing: 8,
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          'Faltan ${formatDistance(estimate.meters)} · '
-          '${formatRemainingTime(estimate.duration)}',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+        if (arrived)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AnimatedAppIcon(
+                AppIcon.place,
+                size: 18,
+                color: AppColors.success,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Llegaste a destino',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            'Faltan ${formatDistance(estimate.meters)} · '
+            '${formatRemainingTime(estimate.duration)}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
         if (estimate.offRoute)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
