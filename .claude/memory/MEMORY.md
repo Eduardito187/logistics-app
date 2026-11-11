@@ -7,7 +7,7 @@
 - [Entornos dev/staging/production](run-environments-config.md) — claves vigentes de config/*.json (FIREBASE_*, APP_UPDATE_URL…), release bloquea http, valores reales pendientes
 - [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
 - [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
-- [Batería de tests e infra](test-battery-and-infra.md) — 1726 + e2e 6/6; cómo correr en Windows; seams/fakes compartidos (scanner, fotos, tamaños, finders de botones) y trampas
+- [Batería de tests e infra](test-battery-and-infra.md) — 2026 unit + e2e 6/6; seams (scanner puntual/continuo/resolver); `flutter run` queda adjunto (≠ tarea colgada); verificar salida de agentes
 - [Portabilidad de memorias/skills](portable-memory-skills.md) — skills viajan con el repo; memorias no → espejo en .claude/memory/ + instalador para Windows/otras rutas
 - [Toolchain Windows nativo](windows-native-toolchain.md) — proyecto bajado a Flutter 3.32.0 / Dart 3.8 (C:/flutter) a pedido del usuario; deps, Gradle 8.12/AGP 8.7.3, trampas
 - [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
@@ -24,3 +24,5 @@
 - [Consolidación Windows→WSL](windows-wsl-consolidation.md) — oct 2026: merge-unión de las 2 copias en WSL (8b4c04a), checkout de Windows borrado, trabajar solo en /dismac/logistics-app
 - [Etiquetado por orden + multishipping](labeling-order-multishipping.md) — nov 2026: lista producto foto/SKU + preview + multishipping; EMIT-por-orden = bloqueo del BACKEND (deriva origen/destino), coordinado con logistics-8e; fix overflow 21px en dispatch-lines
 - [Compartir evidencia por share nativo](native-share-evidence.md) — nov 2026: share_plus; botón Compartir en etiqueta (captura PNG), firma y fotos de POD (chofer + tienda); servicio core/sharing con seam para tests
+- [Escaneo Code128 + QR](code128-label-scanning.md) — nov 2026: etiqueta QR (offline Ed25519) o Code128 (label_id → resuelve online /app/labels/{id}/resolve); seams, enums parchados, detectar QR antes de resolver
+- [Ciclo de operación del chofer](driver-fleet-ops-cycle.md) — nov 2026: auto-enfoque mapa en reposo, geocerca llegada, odómetro salida/llegada, inspección diaria diésel + historial + recordatorio + bloqueo crítico, km recorridos, fixes UI

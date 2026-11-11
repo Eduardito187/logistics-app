@@ -47,6 +47,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _onSignInPressed() async {
     final email = _userController.text.trim();
     final password = _passwordController.text;
+    // Limpiar cualquier aviso anterior AL TOCAR, no al llegar la respuesta: si no,
+    // el error viejo (dura 4 s) queda visible mientras vuela el request y recién
+    // se reemplaza al volver → se ven "dos errores". Al tocar, borrón y cuenta nueva.
+    ScaffoldMessenger.of(context).clearSnackBars();
     if (email.isEmpty || password.isEmpty) {
       showInfoSnack(context, 'Ingresá tu usuario y contraseña.');
       return;

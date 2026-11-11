@@ -29,7 +29,7 @@ dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pant
 ```bash
 /c/flutter/bin/dart.bat format lib test integration_test
 /c/flutter/bin/flutter.bat analyze
-/c/flutter/bin/flutter.bat test                    # ~1978 tests
+/c/flutter/bin/flutter.bat test                    # ~2026 tests
 /c/flutter/bin/flutter.bat test integration_test -d flutter-tester   # e2e en host (6)
 make apk ENV=staging                               # release --split-per-abi (necesita android/key.properties)
 ```
@@ -216,3 +216,7 @@ y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutt
 | `UnimplementedError` en `Matrix4.translate` | vector_math 2.1 no acepta `int` | `m.multiply(Matrix4.translationValues(x, y, 0))` |
 | El diff muestra el archivo entero tras un script/codemod | El repo mezcla CRLF y LF; el script normalizó | Leer/escribir en binario y conservar el fin de línea original de cada archivo |
 | WSL colgado, VS Code "Starting Linux Subsystem" | Varios `flutter test`/`analyze` en paralelo (agentes) | Matar `dart`/`flutter`; liberar RAM sin `wsl --shutdown`: `wsl -d Ubuntu-22.04 -u root -- sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"` |
+| "Tengo una tarea ejecutando hace N min" / un `flutter run` que nunca termina | `flutter run` queda ADJUNTO para siempre (hot-reload + logs del device); no es un cuelgue | `TaskStop <id>` + `pkill -9 -f 'flutter.*run -d <ip>'` (y su `frontend_server_aot`/`dds_aot`). NO matar `dart language-server`/`devtools`/`dart_tooling_daemon`/`flutter daemon --show-web-server-device`: son de la extensión de VS Code |
+| `SendMessage` al backend falla ("No agent named …") | La sesión del backend ROTA de nombre (logistics-8e → 4c → 1a → 68…) | Antes de mensajear, `ListAgents` y usar el nombre vigente; el pedido igual queda en `docs/backend-requests/` para quien lo tome |
+| Escanear una etiqueta Zebra/Code128 no la reconoce, o un test de escaneo rompe al leer un código plano | La etiqueta acepta QR (offline Ed25519) **y Code128** (el valor ES el `label_id` → se resuelve online por `/app/labels/{id}/resolve`); `kLabelScanFormats=[qrCode,code128]` | En lib ya está cableado (`label_resolver.dart`); en tests que escanean códigos PLANOS pasar `labelResolverProvider.overrideWithValue(FakeLabelResolver(echo:true))`. Detectar QR con `SignedLabel.fromQrContent` ANTES de resolver (un QR sin claves NO va a `/resolve`). Ver `.claude/memory/code128-label-scanning.md` |
+| Un agente dejó un archivo roto / se colgó sin terminar | Los agentes NO corren flutter; a veces dejan sintaxis rota o se cuelgan | Correr `getDiagnostics` sobre CADA archivo que tocó el agente apenas cierra; lo interconectado (mapa/GPS, pantallas compartidas) hacerlo el coordinador, no repartirlo. Ver `.claude/memory/parallel-agents-method.md` |
