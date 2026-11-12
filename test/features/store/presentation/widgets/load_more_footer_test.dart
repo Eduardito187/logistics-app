@@ -24,7 +24,14 @@ Future<void> _pump(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  // Con `loading` hay una animación en loop (spinner): `pumpAndSettle` nunca
+  // termina. Se avanza el reloj a mano (gotcha conocido del repo).
+  if (loading) {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+  } else {
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
