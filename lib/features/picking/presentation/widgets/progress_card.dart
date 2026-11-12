@@ -6,7 +6,11 @@ import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
 
 /// Tarjeta de progreso del armado: preparadas/pendientes, carril asignado y las
-/// acciones a nivel pedido (asignar carril, imprimir todas, reimprimir lote).
+/// acciones a nivel pedido (asignar carril, imprimir todas).
+///
+/// Etiquetas GLOBALES y PERMANENTES (decisión del dueño, nov 2026): NO existe
+/// "reemitir/anular" — una etiqueta nunca se invalida ni se regenera. Si se
+/// dañó, se vuelve a imprimir la MISMA ("Imprimir todas").
 class ProgressCard extends StatelessWidget {
   const ProgressCard({
     super.key,
@@ -14,11 +18,9 @@ class ProgressCard extends StatelessWidget {
     required this.total,
     required this.lane,
     required this.busy,
-    this.reprinting = false,
     required this.onAssign,
     required this.onPrintAll,
-    required this.onReprintBatch,
-    this.onVerify,
+    this.onMarkPrepared,
   });
 
   final int prepared;
@@ -27,17 +29,13 @@ class ProgressCard extends StatelessWidget {
 
   /// Hay una operación a nivel pedido en curso: deshabilita las acciones.
   final bool busy;
-
-  /// La operación en curso es "Reimprimir lote": el spinner va en ese botón y
-  /// no en "Imprimir todas".
-  final bool reprinting;
   final VoidCallback onAssign;
   final VoidCallback onPrintAll;
-  final VoidCallback onReprintBatch;
 
-  /// Verificación OPCIONAL por escaneo del pedido entero (un solo botón, no por
-  /// ítem). `null` = no quedan productos por verificar y no se muestra.
-  final VoidCallback? onVerify;
+  /// Marca a mano como preparadas las etiquetas que falten. `null` cuando ya
+  /// están todas preparadas (el botón no se muestra). Exige vehículo asignado:
+  /// esa validación la hace la pantalla.
+  final VoidCallback? onMarkPrepared;
 
   @override
   Widget build(BuildContext context) {
@@ -77,34 +75,20 @@ class ProgressCard extends StatelessWidget {
             // Mientras imprime, la hoja sale de la impresora (loop de impresión).
             icon: AnimatedAppIcon(
               AppIcon.printing,
-              state: busy && !reprinting
-                  ? AppIconState.loading
-                  : AppIconState.idle,
+              state: busy ? AppIconState.loading : AppIconState.idle,
             ),
             label: const Text('Imprimir todas las etiquetas'),
           ),
-          // Verificación por escaneo del pedido entero: un solo botón (no por
-          // ítem). Solo aparece si quedan productos por verificar.
-          if (onVerify != null) ...[
+          // Quedan etiquetas sin preparar: se pueden marcar a mano (requiere
+          // vehículo asignado; si falta, la pantalla lo pide primero).
+          if (onMarkPrepared != null) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: busy ? null : onVerify,
-              icon: const AnimatedAppIcon(AppIcon.scan),
-              label: const Text('Verificar productos con escaneo'),
+              onPressed: busy ? null : onMarkPrepared,
+              icon: const AnimatedAppIcon(AppIcon.success),
+              label: const Text('Marcar como preparadas'),
             ),
           ],
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: busy ? null : onReprintBatch,
-            // Mientras se reemite el lote, las flechas giran.
-            icon: AnimatedAppIcon(
-              AppIcon.refresh,
-              state: reprinting ? AppIconState.loading : AppIconState.idle,
-            ),
-            // "Reemitir" (no "reimprimir"): anula las etiquetas actuales y emite
-            // nuevas (ADR 004). El texto lo deja claro para no confundir.
-            label: const Text('Anular y emitir de nuevo'),
-          ),
         ],
       ),
     );

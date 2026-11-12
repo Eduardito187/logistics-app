@@ -12,6 +12,7 @@ import '../network/dio_client.dart';
 import 'label_format_exception.dart';
 import 'label_keys_notifier.dart';
 import 'label_scan_result.dart';
+import 'labels_open_mode.dart';
 import 'label_verifier.dart';
 import 'signed_label.dart';
 
@@ -32,10 +33,18 @@ class LabelScanner {
   // Un formal de inicialización con nombre no puede ser un campo privado
   // (`this._api` no es un parámetro con nombre válido), por eso se asigna a mano.
   // ignore: prefer_initializing_formals
-  LabelScanner(this._verifier, {LogisticsApi? api}) : _api = api;
+  LabelScanner(this._verifier, {LogisticsApi? api, bool openMode = false})
+    : _api = api,
+      _openMode = openMode;
 
   final LabelVerifier? _verifier;
   final LogisticsApi? _api;
+
+  /// Modo ABIERTO: el backend opera sin firma (`open:true`). En este modo NO se
+  /// verifica Ed25519 de NINGUNA etiqueta (ni `k:0` nueva ni `k:1` ya impresa);
+  /// se acepta en la capa de firma y la pertenencia la deciden los flujos de
+  /// campo (por orden). Así una etiqueta impresa nunca se descarta por claves.
+  final bool _openMode;
 
   /// `true` si la app tiene claves públicas configuradas para verificar.
   bool get canVerify => _verifier != null;
@@ -44,9 +53,21 @@ class LabelScanner {
   /// [LabelFormatException] si el QR no es una etiqueta válida.
   ///
   /// No toca la red: este es el camino que usa el escaneo en terreno y el que
-  /// decide la aceptación del bulto. Los llamadores existentes siguen igual.
+  /// decide la aceptación del producto. Los llamadores existentes siguen igual.
   Future<LabelScanResult> scan(String qrContent) async {
     final label = SignedLabel.fromQrContent(qrContent);
+    // MODO ABIERTO (backend `open:true`) o etiqueta ABIERTA individual (`k:0`):
+    // NO se verifica Ed25519 y NO se necesitan claves públicas. No se rechaza por
+    // firma; su autenticidad la deciden el registro/pertenencia aguas abajo (que
+    // el `id` pertenezca al envío/ruta). En modo abierto esto cubre TAMBIÉN las
+    // etiquetas firmadas viejas (`k:1`) ya impresas: nunca se descartan por un
+    // tema de claves (offline-first, decisión del dueño).
+    if (_openMode || label.payload.isOpen) {
+      return LabelScanResult(
+        label: label,
+        verification: VerificationResult.open,
+      );
+    }
     final verifier = _verifier;
     if (verifier == null) {
       // Sin claves (ni embebidas, ni en caché, ni traídas): no se puede verificar.
@@ -115,6 +136,7 @@ class LabelScanner {
 /// (embebidas + caché + backend). Solo se consideran claves de 32 bytes.
 final labelScannerProvider = Provider<LabelScanner>((ref) {
   final keys = ref.watch(labelKeysProvider);
+  final openMode = ref.watch(labelsOpenModeProvider);
   final valid = <int, List<int>>{
     for (final entry in keys.entries)
       if (entry.value.length == 32) entry.key: entry.value,
@@ -122,6 +144,8 @@ final labelScannerProvider = Provider<LabelScanner>((ref) {
   // El cliente API viaja por ref: habilita el reporte best-effort al backend sin
   // romper la API pública `labelScannerProvider.scan`.
   final api = ref.watch(logisticsApiProvider);
-  if (valid.isEmpty) return LabelScanner(null, api: api);
-  return LabelScanner(LabelVerifier(valid), api: api);
+  if (valid.isEmpty) {
+    return LabelScanner(null, api: api, openMode: openMode);
+  }
+  return LabelScanner(LabelVerifier(valid), api: api, openMode: openMode);
 });

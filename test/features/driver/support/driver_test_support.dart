@@ -63,6 +63,7 @@ DriverRouteStop buildStop({
   String? customerPhone,
   String? addressReference,
   List<Items3> items = const [],
+  List<String>? unitIds,
   DateTime? settledAt,
 }) => DriverRouteStop(
   id: id,
@@ -78,6 +79,7 @@ DriverRouteStop buildStop({
   customerPhone: customerPhone,
   addressReference: addressReference,
   items: items,
+  unitIds: unitIds,
   settledAt: settledAt,
 );
 

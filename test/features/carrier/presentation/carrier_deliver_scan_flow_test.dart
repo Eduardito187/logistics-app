@@ -12,10 +12,10 @@ import '../carrier_scan_harness.dart';
 import '../../../support/button_finders.dart';
 
 // Flujo ENTREGAR: primero el QR de confirmación del cliente (un código, una vez
-// por entrega) y después escaneo CONTINUO de sus bultos: cada QR firmado se
+// por entrega) y después escaneo CONTINUO de sus productos: cada QR firmado se
 // verifica offline y registra su prueba de entrega en la cola. Todos los
-// bultos de la tanda deben ser del mismo pedido. Cámaras falsas:
-// FakeCodeScanner (confirmación) y FakeContinuousScanner (bultos).
+// productos de la tanda deben ser del mismo pedido. Cámaras falsas:
+// FakeCodeScanner (confirmación) y FakeContinuousScanner (productos).
 
 Future<void> _tapDeliver(WidgetTester tester) async {
   await tester.tap(findButtonWithText<FilledButton>('Registrar entrega'));

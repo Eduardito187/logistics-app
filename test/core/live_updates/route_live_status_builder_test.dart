@@ -61,7 +61,7 @@ void main() {
     expect(status.customer.endsWith('…'), isTrue);
     expect(status.title, 'Parada 2 de 3 · Llega 09:05');
     expect(status.subText, 'A 2,3 km');
-    expect(status.chipText, '09:05');
+    expect(status.chipText, '2/3 · 09:05');
     expect(status.lat, -17.7);
   });
 
@@ -72,7 +72,7 @@ void main() {
     )!;
     expect(status.state, RouteLiveState.arriving);
     expect(status.title, 'Llegaste · Parada 2 de 3');
-    expect(status.chipText, 'Llegó');
+    expect(status.chipText, '2/3 · Llegó');
     expect(status.subText, isNull);
   });
 

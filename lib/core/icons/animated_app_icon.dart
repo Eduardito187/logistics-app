@@ -198,13 +198,19 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
       // de energía). Antes era `repeat()` infinito: un ícono que quedaba en
       // `loading` (pedido colgado, pantalla olvidada abierta) mantenía la GPU
       // dibujando a 60 fps sin fin. Pasado el tope queda quieto, en su estado.
+      //
+      // El tope va con `repeat(count:)` y NO re-lanzando `forward(from: 0)` en
+      // cada `completed`: re-lanzar descarta el sobrante del frame en que
+      // terminó la vuelta, así cada vuelta dura "ciclo + lo que tarde el
+      // frame". Con frames lentos (gama baja con jank, o pumps de 1 s en test)
+      // el tope de ~30 s se estiraba hasta ~2x. `repeat` calcula la fase con el
+      // tiempo TOTAL transcurrido: el tope es de reloj, no de frames.
       _breaths = 0;
-      _loadingCycles = 0;
       final loop = _ensureLoop();
       final cycle = _loopDuration(_spec.loop);
       loop.duration = cycle;
-      _maxLoadingCycles = MotionBudget.loadingCyclesFor(cycle);
-      loop.forward(from: 0);
+      loop.value = 0;
+      loop.repeat(count: MotionBudget.loadingCyclesFor(cycle));
     } else if (from == null || from == AppIconState.loading || from != to) {
       // Respiración del botón central: unas pocas veces al quedar en reposo y
       // después quieto (invita al toque sin gastar batería en gama baja ni
@@ -261,20 +267,11 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
   static const int _kBreathCycles = 3;
   int _breaths = 0;
 
-  /// Vueltas hechas por el loop de `loading` y su tope (ver [_enter]).
-  int _loadingCycles = 0;
-  int _maxLoadingCycles = 1;
-
   void _onLoopStatus(AnimationStatus status) {
     if (status != AnimationStatus.completed) return;
     if (widget.state == AppIconState.loading) {
-      _loadingCycles++;
-      if (_loadingCycles < _maxLoadingCycles && !_reduce) {
-        _loop?.forward(from: 0);
-      } else {
-        // Tope alcanzado: quieto en la pose de reposo del loop.
-        _loop?.value = 0;
-      }
+      // `repeat(count:)` llegó al tope: quieto en la pose de reposo del loop.
+      _loop?.value = 0;
       return;
     }
     _breaths++;

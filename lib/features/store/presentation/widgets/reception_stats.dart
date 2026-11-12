@@ -5,7 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/stat_tile.dart';
 
 /// Contadores de la recepción: recibidos/esperados, faltantes y, si hay,
-/// sobrantes (bultos que no estaban en el manifiesto).
+/// sobrantes (productos que no estaban en el manifiesto).
 class ReceptionStats extends StatelessWidget {
   const ReceptionStats({
     super.key,

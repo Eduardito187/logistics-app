@@ -202,6 +202,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Muestra el error del login (credenciales, sin rol, servidor) en un aviso.
     ref.listen(loginControllerProvider, (_, next) {
+      // Solo al TERMINAR el intento, nunca durante la carga: al reintentar,
+      // `state = AsyncLoading()` conserva el error previo (copyWithPrevious de
+      // Riverpod), así que la transición a "cargando" reaparecería el aviso
+      // viejo en el siguiente tap (gane o pierda el nuevo intento). Ese era el
+      // bug de "se ve el fallo anterior al volver a ingresar".
+      if (next.isLoading) return;
       final error = next.error;
       if (error == null) return;
       // Credencial biométrica vencida: lo avisa `_onBiometricPressed`.

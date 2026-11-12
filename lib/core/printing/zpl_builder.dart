@@ -48,7 +48,7 @@ abstract final class ZplBuilder {
       '^FO30,330^A0N,40,40^FD${payload.origin} -> $destination^FS',
       // Id corto para lectura humana
       '^FO30,400^A0N,28,28^FDID ${payload.id}^FS',
-      // Code128 secundario con el id corto del bulto (legible por lector 1D)
+      // Code128 secundario con el id corto del producto (legible por lector 1D)
       if (includeBarcode) '^FO30,450^BCN,80,Y,N,N^FD${payload.id}^FS',
       '^XZ',
     ].join('\n');

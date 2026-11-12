@@ -20,7 +20,11 @@ class EmittedLabel {
     required this.qrContent,
     required this.zpl,
     required this.emittedAt,
-    required this.revoked,
+    // Etiquetas PERMANENTES: el backend ya NO manda `revoked` (nada se anula).
+    // Queda opcional con default `false` para que la respuesta SIN el campo
+    // deserialice (si no, el pedido no carga). Al regenerar el cliente desde el
+    // openapi nuevo el campo desaparece solo.
+    this.revoked = false,
     this.revokedAt,
     this.revokedReason,
     this.productName,

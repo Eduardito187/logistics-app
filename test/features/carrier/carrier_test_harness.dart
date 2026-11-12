@@ -5,6 +5,8 @@ import 'package:logistics_app/core/api/models/corridor_type.dart';
 import 'package:logistics_app/core/api/models/settlement.dart';
 import 'package:logistics_app/core/api/models/tariff.dart';
 import 'package:logistics_app/core/api/models/vehicle_class.dart';
+import 'package:logistics_app/core/auth/session.dart';
+import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
 import 'package:logistics_app/core/offline/connectivity_notifier.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
@@ -22,6 +24,38 @@ List<Override> syncBadgeOverrides() => [
   syncQueueProvider.overrideWith((ref) => Stream.value(<OutboxAction>[])),
   connectivityProvider.overrideWith(_StubConnectivity.new),
 ];
+
+/// Sesión fija (rol + abilities) sin pasar por el login real.
+class StubSessionNotifier extends SessionNotifier {
+  StubSessionNotifier(this.session);
+
+  final Session? session;
+
+  @override
+  Session? build() => session;
+}
+
+/// Override de la sesión con el rol y las abilities dados.
+Override sessionOverride({
+  required UserRole role,
+  List<String> abilities = const [],
+}) => sessionProvider.overrideWith(
+  () => StubSessionNotifier(
+    Session(userName: 'test.${role.name}', role: role, abilities: abilities),
+  ),
+);
+
+/// Sesión de OFICINA: puede aprobar y marcar como pagada (`planning:write`).
+Override officeSessionOverride() => sessionOverride(
+  role: UserRole.supervisor,
+  abilities: const ['planning:write', 'carriers:read', 'execution:read'],
+);
+
+/// Sesión del TRANSPORTISTA: solo puede disputar (`carriers:write`).
+Override carrierSessionOverride() => sessionOverride(
+  role: UserRole.carrier,
+  abilities: const ['carriers:write', 'execution:read', 'tracking:read'],
+);
 
 /// Repositorio del transportista controlable por los tests (sin Dio).
 class FakeCarrierRepository implements CarrierRepository {

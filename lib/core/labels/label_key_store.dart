@@ -16,6 +16,7 @@ class LabelKeyStore {
   final FlutterSecureStorage _storage;
 
   static const String _cacheKey = 'label_public_keys';
+  static const String _openKey = 'label_open_mode';
 
   /// Lee las claves cacheadas como `{id: base64}`. Si no hay nada o la caché
   /// quedó corrupta, devuelve un mapa vacío (nunca rompe el escaneo).
@@ -49,6 +50,19 @@ class LabelKeyStore {
     };
     return _storage.write(key: _cacheKey, value: jsonEncode(json));
   }
+
+  /// Lee el último "modo abierto" conocido (del último fetch). `false` si no hay
+  /// nada guardado: el escaneo offline arranca en modo FIRMADO hasta saber otra
+  /// cosa (nunca rompe el escaneo).
+  Future<bool> readOpen() async {
+    final raw = await _storage.read(key: _openKey);
+    return raw == '1';
+  }
+
+  /// Persiste el "modo abierto" para que el escaneo offline lo recuerde entre
+  /// sesiones (p. ej. al restaurar sesión sin red).
+  Future<void> writeOpen(bool open) =>
+      _storage.write(key: _openKey, value: open ? '1' : '0');
 }
 
 final labelKeyStoreProvider = Provider<LabelKeyStore>(

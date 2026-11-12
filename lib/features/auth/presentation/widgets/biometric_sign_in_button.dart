@@ -56,20 +56,32 @@ class BiometricSignInButton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                'o con tu contraseña',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
+        // El texto se limita al 70 % del ancho: en teléfonos chicos (320 dp)
+        // o con letra grande del sistema baja a dos líneas en vez de
+        // desbordar, y las líneas laterales siguen viéndose.
+        LayoutBuilder(
+          builder: (context, constraints) => Row(
+            children: [
+              const Expanded(child: Divider()),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * 0.7,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'o con tu contraseña',
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const Expanded(child: Divider()),
-          ],
+              const Expanded(child: Divider()),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
       ],

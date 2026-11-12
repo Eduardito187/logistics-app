@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../network/dio_client.dart';
 import 'label_key_store.dart';
+import 'labels_open_mode.dart';
 
 /// Fuente de claves públicas de etiquetas (id → bytes), combinando tres orígenes
 /// con ROTACIÓN (se conservan todas las claves conocidas; la anterior sigue
@@ -27,24 +29,46 @@ class LabelKeysNotifier extends Notifier<Map<int, List<int>>> {
     _mergeBase64(cached);
   }
 
-  /// Trae las claves del backend y las fusiona con las que ya hay (unión), y las
-  /// persiste en caché. Pensado para llamarse al iniciar sesión o desde Ajustes.
-  /// Requiere sesión (el endpoint va por la puerta /app/*); sin red se ignora.
+  /// Trae el bundle de claves del backend y lo fusiona con lo que ya hay (unión),
+  /// lo persiste y además fija el MODO ABIERTO (señal `open`). Pensado para
+  /// llamarse al iniciar sesión o desde Ajustes. Requiere sesión (el endpoint va
+  /// por la puerta /app/*); sin red se ignora.
+  ///
+  /// Se lee por Dio crudo (no por el cliente generado) porque el campo `open`
+  /// del bundle todavía no está en el modelo generado (`PublicKeyBundle`); así se
+  /// evita regenerar el cliente solo por un campo aditivo.
   Future<void> refresh() async {
     try {
-      final response = await ref
-          .read(logisticsApiProvider)
-          .labels
-          .getLabelPublicKeys();
-      final fetched = <int, String>{
-        for (final key in response.data.keys) key.id: key.publicKey,
-      };
-      if (fetched.isEmpty) return;
+      final res = await ref
+          .read(dioProvider)
+          .get<Object?>('/app/labels/public-keys');
+      final body = res.data;
+      if (body is! Map<String, Object?>) return;
+      final data = body['data'];
+      if (data is! Map<String, Object?>) return;
+
+      // Señal autoritativa de modo abierto: `open == true`, o (defensivo) el id
+      // de clave activa en 0. En abierto el escaneo NO verifica firma.
+      final open = data['open'] == true || data['active_key_id'] == 0;
+      await ref.read(labelsOpenModeProvider.notifier).set(open);
+
+      final fetched = <int, String>{};
+      final keys = data['keys'];
+      if (keys is List) {
+        for (final entry in keys) {
+          if (entry is Map<String, Object?>) {
+            final id = entry['id'];
+            final pub = entry['public_key'];
+            if (id is int && pub is String) fetched[id] = pub;
+          }
+        }
+      }
+      if (fetched.isEmpty) return; // en abierto puede no haber claves: ok
       final store = ref.read(labelKeyStoreProvider);
       final merged = <int, String>{...await store.read(), ...fetched};
       await store.write(merged);
       _mergeBase64(fetched);
-    } on Exception {
+    } on DioException {
       // Sin red o error: se conserva lo embebido/cacheado. El escaneo sigue.
     }
   }

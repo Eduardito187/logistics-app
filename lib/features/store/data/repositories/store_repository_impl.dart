@@ -8,12 +8,14 @@ import '../../../../core/api/models/reconcile_node_reception_request.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../domain/entities/shipment_page.dart';
 import '../../domain/repositories/store_repository.dart';
+import '../../domain/repositories/store_shipments_pager.dart';
 import '../datasources/store_remote_data_source.dart';
 
 /// Implementación del contrato de Tienda: delega en el data source remoto, que
 /// es quien habla con el cliente API.
-class StoreRepositoryImpl implements StoreRepository {
+class StoreRepositoryImpl implements StoreRepository, StoreShipmentsPager {
   StoreRepositoryImpl(this._remote);
 
   final StoreRemoteDataSource _remote;
@@ -24,6 +26,17 @@ class StoreRepositoryImpl implements StoreRepository {
   @override
   Future<List<Shipment>> listShipments({String? destinationNodeId}) =>
       _remote.listShipments(destinationNodeId: destinationNodeId);
+
+  @override
+  Future<ShipmentPage> listShipmentsPage({
+    String? destinationNodeId,
+    required int page,
+    required int perPage,
+  }) => _remote.listShipmentsPage(
+    destinationNodeId: destinationNodeId,
+    page: page,
+    perPage: perPage,
+  );
 
   @override
   Future<NodeReceptionView?> getNodeReception({

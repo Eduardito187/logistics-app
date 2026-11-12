@@ -333,7 +333,13 @@ void main() {
         'juan.perez@dismac.com',
       );
       await tester.enterText(find.byType(TextField).last, 'secreta');
-      await tester.tap(findButtonWithText<FilledButton>('Ingresar'));
+      // Con el botón de biometría visible el formulario es más alto que la
+      // vista del test (800x600) y "Ingresar" queda abajo: el login es una
+      // lista desplazable, así que se lleva a la vista antes de tocarlo.
+      final signIn = findButtonWithText<FilledButton>('Ingresar');
+      await tester.ensureVisible(signIn);
+      await tester.pumpAndSettle();
+      await tester.tap(signIn);
       await tester.pumpAndSettle();
     }
 

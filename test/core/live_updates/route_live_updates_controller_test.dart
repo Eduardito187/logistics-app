@@ -303,38 +303,51 @@ void main() {
       overlayGranted: overlay,
     );
 
-    test('resolver: una sola isla; con las dos manda la preferencia', () {
-      expect(
-        resolveRouteIslandMode(availability(), null),
-        RouteIslandMode.none,
-      );
-      expect(
-        resolveRouteIslandMode(availability(system: true), null),
-        RouteIslandMode.system,
-      );
-      expect(
-        resolveRouteIslandMode(availability(overlay: true), null),
-        RouteIslandMode.overlay,
-      );
-      final both = availability(system: true, overlay: true);
-      expect(resolveRouteIslandMode(both, null), RouteIslandMode.system);
-      expect(
-        resolveRouteIslandMode(both, RouteIslandPreference.overlay),
-        RouteIslandMode.overlay,
-      );
-      expect(
-        resolveRouteIslandMode(both, RouteIslandPreference.system),
-        RouteIslandMode.system,
-      );
-      // Preferencia "DisTrack" sin permiso → la del sistema.
-      expect(
-        resolveRouteIslandMode(
-          availability(system: true),
-          RouteIslandPreference.overlay,
-        ),
-        RouteIslandMode.system,
-      );
-    });
+    test(
+      'resolver: el overlay flotante NUNCA es default; manda la preferencia',
+      () {
+        expect(
+          resolveRouteIslandMode(availability(), null),
+          RouteIslandMode.none,
+        );
+        expect(
+          resolveRouteIslandMode(availability(system: true), null),
+          RouteIslandMode.system,
+        );
+        // Overlay disponible pero SIN preferencia explícita → NO se usa el overlay
+        // flotante (es intrusivo): queda la notificación (none).
+        expect(
+          resolveRouteIslandMode(availability(overlay: true), null),
+          RouteIslandMode.none,
+        );
+        // Overlay solo si el chofer lo eligió explícitamente.
+        expect(
+          resolveRouteIslandMode(
+            availability(overlay: true),
+            RouteIslandPreference.overlay,
+          ),
+          RouteIslandMode.overlay,
+        );
+        final both = availability(system: true, overlay: true);
+        expect(resolveRouteIslandMode(both, null), RouteIslandMode.system);
+        expect(
+          resolveRouteIslandMode(both, RouteIslandPreference.overlay),
+          RouteIslandMode.overlay,
+        );
+        expect(
+          resolveRouteIslandMode(both, RouteIslandPreference.system),
+          RouteIslandMode.system,
+        );
+        // Preferencia "DisTrack" sin permiso → la del sistema.
+        expect(
+          resolveRouteIslandMode(
+            availability(system: true),
+            RouteIslandPreference.overlay,
+          ),
+          RouteIslandMode.system,
+        );
+      },
+    );
 
     test('isla de DisTrack: solo en segundo plano, sin promoción', () {
       final c = build(hideInForeground: true);

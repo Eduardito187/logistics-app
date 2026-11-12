@@ -117,17 +117,18 @@ class RouteLiveStatus {
     return remaining == null ? null : 'A $remaining';
   }
 
-  /// Texto cortísimo del chip de la barra de estado (Android 16) o de la
-  /// Dynamic Island compacta: la hora de llegada mientras va en camino, o el
-  /// avance "3/8".
+  /// Texto corto del chip de la barra de estado (Android 16) / Dynamic Island
+  /// compacta. Lleva avance + hora ("1/7 · 08:15") para que el chip muestre
+  /// CONTENIDO (no solo la hora): es lo que se ve en la isla del sistema.
   String get chipText {
     switch (state) {
       case RouteLiveState.onTheWay:
-        return etaText ?? counterText;
+        final eta = etaText;
+        return eta == null ? counterText : '$counterText · $eta';
       case RouteLiveState.arriving:
-        return 'Llegó';
+        return '$counterText · Llegó';
       case RouteLiveState.delivering:
-        return counterText;
+        return '$counterText · Entrega';
       case RouteLiveState.finished:
         return 'Listo';
     }

@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/models/emit_label_line.dart';
 import 'package:logistics_app/core/layout/breakpoints.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
 import 'package:logistics_app/features/picking/data/repositories/picking_repository_impl.dart';
 import 'package:logistics_app/features/picking/domain/entities/preparation_state.dart';
-import 'package:logistics_app/features/picking/presentation/controllers/orders_worklist_controller.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/preparation_controller.dart';
 import 'package:logistics_app/features/picking/presentation/order_preparation_screen.dart';
 import 'package:logistics_app/features/picking/presentation/orders_worklist_screen.dart';
 import 'package:logistics_app/features/picking/presentation/prepare_order_screen.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/order_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
@@ -62,7 +59,11 @@ void main() {
       _app(
         const OrdersWorklistScreen(),
         overrides: [
-          ordersToPrepareProvider.overrideWith((ref) async => orders),
+          // La pantalla usa `ordersWorklistProvider`, armado desde el caso de
+          // uso: se siembra el repositorio.
+          pickingRepositoryProvider.overrideWithValue(
+            FakePickingRepository(onListShipments: () async => orders),
+          ),
         ],
       ),
     );
@@ -271,55 +272,5 @@ void main() {
     expect(find.text('Televisor 55"'), findsOneWidget); // producto del pedido
     final button = tester.getRect(find.text('Emitir etiquetas del pedido'));
     expect(button.right, lessThanOrEqualTo(screen.size.width));
-  });
-
-  testOnScreens('hoja de etiquetas (reimpresión) sin desbordes', (
-    tester,
-    screen,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: withTextScale(
-          Scaffold(
-            body: Builder(
-              builder: (context) => Center(
-                child: TextButton(
-                  onPressed: () => showLabelBatchSheet(
-                    context,
-                    title: 'Reimprimir etiquetas',
-                    submitLabel: 'Reimprimir',
-                    requireReason: true,
-                    initialLines: const [
-                      EmitLabelLine(
-                        sku: 'SKU-1',
-                        name: 'Heladera',
-                        quantity: 2,
-                      ),
-                      EmitLabelLine(sku: 'SKU-2', name: 'Cocina', quantity: 1),
-                      EmitLabelLine(
-                        sku: 'SKU-3',
-                        name: 'Lavadora',
-                        quantity: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Text('abrir'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('abrir'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(LabelBatchSheet), findsOneWidget);
-    expect(find.text('Líneas (3)'), findsOneWidget);
-    final submit = find.text('Reimprimir');
-    await tester.ensureVisible(submit);
-    await tester.pumpAndSettle();
-    expect(submit, findsOneWidget);
   });
 }

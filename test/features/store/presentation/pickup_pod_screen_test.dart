@@ -10,7 +10,7 @@ import '../store_test_harness.dart';
 import '../../../support/button_finders.dart';
 
 // Prueba de entrega en mostrador (POD): gating por confirmación del cliente y la
-// lista de bultos. Los flujos escaneo -> entrega (con `FakeCodeScanner`) están
+// lista de productos. Los flujos escaneo -> entrega (con `FakeCodeScanner`) están
 // en pickup_pod_scan_test.dart.
 
 final _shipment = shipment(
@@ -23,7 +23,7 @@ Future<void> _pump(
   WidgetTester tester, {
   List<UnitTracking> units = const [],
 }) async {
-  // Superficie alta: la lista es perezosa y la lista de bultos queda debajo
+  // Superficie alta: la lista es perezosa y la lista de productos queda debajo
   // del pie fijo en 800x600.
   tester.view.physicalSize = const Size(1200, 3600);
   tester.view.devicePixelRatio = 1;

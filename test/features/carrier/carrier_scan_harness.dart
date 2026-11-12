@@ -36,7 +36,7 @@ String validLabelQr() => _vector()['qr_content'] as String;
 /// Mismo QR con el pedido editado: la firma ya no corresponde.
 String tamperedLabelQr() => _vector()['tampered_qr_content'] as String;
 
-/// Datos esperados del vector (id del bulto, pedido y SKU).
+/// Datos esperados del vector (id del producto, pedido y SKU).
 const vectorUnitId = '01JB8ZQ4X7K2M9N5P6R7S8T9VW';
 const vectorOrder = 'DM-260012345';
 const vectorSku = 'LG-GT32WPP';
@@ -62,7 +62,8 @@ LabelScanner unknownKeyLabelScanner() {
 }
 
 /// Firma etiquetas de prueba con una clave Ed25519 propia: el vector del
-/// backend trae un solo bulto y el escaneo continuo necesita varios distintos.
+/// backend trae un solo producto y el escaneo continuo necesita varios
+/// distintos.
 /// Crear en `setUpAll` (fuera del reloj falso de testWidgets).
 class TestLabelSigner {
   TestLabelSigner._(this._keyPair, this._publicKey);
@@ -81,7 +82,7 @@ class TestLabelSigner {
   /// Scanner que verifica las etiquetas de este firmante.
   LabelScanner scanner() => LabelScanner(LabelVerifier({keyId: _publicKey}));
 
-  /// Contenido del QR firmado de un bulto.
+  /// Contenido del QR firmado de un producto.
   Future<String> qr({
     required String id,
     String order = 'DM-1',
@@ -174,7 +175,7 @@ class FakeRecordProofOfDelivery implements RecordProofOfDelivery {
 }
 
 /// Monta [screen] con los escáneres falsos (un código: confirmación del
-/// cliente; continuo: bultos) y los dobles de verificación/GPS/cola.
+/// cliente; continuo: productos) y los dobles de verificación/GPS/cola.
 Future<void> pumpCarrierScanScreen(
   WidgetTester tester,
   Widget screen, {

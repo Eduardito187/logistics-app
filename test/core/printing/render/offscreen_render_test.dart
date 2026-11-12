@@ -47,8 +47,13 @@ void main() {
 
     expect(raster!.width, 400);
     expect(raster.height, 300);
-    // Hay trazo (borde/texto) y fondo blanco.
+    // Hay trazo (borde/texto) y fondo blanco. No se mira el centro: en tests
+    // el texto usa la fuente Ahem (cada glifo es un bloque negro) y la última
+    // línea, al partirse en dos, cae justo sobre el centro.
     expect(raster.pixels.any((v) => v < 100), isTrue);
-    expect(raster.at(200, 150), greaterThan(0));
+    expect(raster.pixels.any((v) => v > 225), isTrue);
+    expect(raster.at(2, 2), greaterThan(225)); // margen fuera del borde
+    expect(raster.at(6, 150), lessThan(100)); // borde izquierdo (x 4.5–7.5)
+    expect(raster.at(200, 15), greaterThan(225)); // entre borde y título
   });
 }

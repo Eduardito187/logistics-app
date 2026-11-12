@@ -579,8 +579,11 @@ void main() {
       final last = await scanner.scan().last;
 
       expect(probe.hosts.length, probe.hosts.toSet().length);
-      // 253 del /24 + 192.168.0.1–.255 (el 192.168.1.x ya estaba).
-      expect(last.total, 253 + 255);
+      // 253 del /24 + 192.168.0.1–.255 + 192.168.1.0: en el /23 la .1.0 es
+      // un host válido (solo 192.168.0.0 y 192.168.1.255 son red/broadcast).
+      // El resto de 192.168.1.x ya estaba.
+      expect(last.total, 253 + 255 + 1);
+      expect(probe.hosts, contains('192.168.1.0'));
       expect(probe.hosts, isNot(contains(_ownIp)));
     });
 

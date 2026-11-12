@@ -4,8 +4,9 @@ import '../../../../core/api/export.dart';
 import '../../../../core/offline/offline_queue.dart';
 
 /// Command (CQRS) offline-first: registra la prueba de entrega (POD) de un
-/// bulto. Pasa por la cola offline (`recordProofOfDelivery`). La foto se encola
-/// aparte (ver [EnqueueDeliveryPhoto]); acá `photoPath` sólo marca su presencia.
+/// producto. Pasa por la cola offline (`recordProofOfDelivery`). La foto se
+/// encola aparte (ver [EnqueueDeliveryPhoto]); acá `photoPath` sólo marca su
+/// presencia.
 class RecordProofOfDelivery {
   const RecordProofOfDelivery(this._queue);
 

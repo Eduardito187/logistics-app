@@ -12,7 +12,7 @@ import 'widgets/carrier_scan_record.dart';
 import 'widgets/carrier_scan_session_view.dart';
 import 'widgets/carrier_scan_support.dart';
 
-/// Escaneo del transportista al RECOGER la carga: registra cada bulto como
+/// Escaneo del transportista al RECOGER la carga: registra cada producto como
 /// escaneo de carga (offline-first). Un escaneo nunca espera a la red.
 class CarrierPickupScreen extends ConsumerStatefulWidget {
   const CarrierPickupScreen({super.key});
@@ -26,11 +26,11 @@ class _CarrierPickupScreenState extends ConsumerState<CarrierPickupScreen> {
   final List<CarrierScanRecord> _records = [];
   bool _busy = false;
 
-  /// Bultos ya recogidos (no rechazados) en esta pantalla: un segundo escaneo
-  /// del mismo no encola otro registro.
+  /// Productos ya recogidos (no rechazados) en esta pantalla: un segundo
+  /// escaneo del mismo no encola otro registro.
   final Set<String> _picked = <String>{};
 
-  /// Escaneo CONTINUO: la cámara queda abierta y cada bulto se registra al
+  /// Escaneo CONTINUO: la cámara queda abierta y cada producto se registra al
   /// leerlo, con aviso verde/rojo sobre la cámara.
   Future<void> _scan() async {
     if (_busy) return;

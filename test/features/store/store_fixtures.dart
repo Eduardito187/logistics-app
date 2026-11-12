@@ -77,7 +77,7 @@ Shipment shipment({
   ],
 );
 
-/// Bulto esperado del envío.
+/// Producto esperado del envío.
 UnitTracking unit({
   String unitId = 'unit-1',
   String shipmentId = 'ship-1',

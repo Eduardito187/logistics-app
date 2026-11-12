@@ -8,16 +8,19 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/brand_loader.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
+import 'settlement_actions_permissions.dart';
 import 'settlement_detail_row.dart';
 import 'settlement_format.dart';
 
 /// Detalle de una liquidación con las acciones aprobar / disputar / pagar según
-/// el estado. Las acciones se delegan a los callbacks del padre.
+/// el estado Y el permiso del usuario. Las acciones se delegan a los callbacks
+/// del padre.
 class SettlementDetail extends StatelessWidget {
   const SettlementDetail({
     super.key,
     required this.settlement,
     required this.busy,
+    required this.permissions,
     required this.onApprove,
     required this.onDispute,
     required this.onPay,
@@ -25,17 +28,28 @@ class SettlementDetail extends StatelessWidget {
 
   final Settlement settlement;
   final bool busy;
+
+  /// Permisos del usuario sobre las acciones financieras: una acción que no
+  /// tiene permitida NO se muestra, aunque el estado la permita.
+  final SettlementActionsPermissions permissions;
+
   final Future<void> Function() onApprove;
   final Future<void> Function() onDispute;
   final Future<void> Function() onPay;
 
   @override
   Widget build(BuildContext context) {
+    // Estado de la liquidación Y permiso del usuario: sin permiso el botón no
+    // existe (no se muestra deshabilitado).
     final canApprove =
-        settlement.status == SettlementStatus.submitted ||
-        settlement.status == SettlementStatus.disputed;
-    final canDispute = settlement.status == SettlementStatus.submitted;
-    final canPay = settlement.status == SettlementStatus.approved;
+        permissions.canApprove &&
+        (settlement.status == SettlementStatus.submitted ||
+            settlement.status == SettlementStatus.disputed);
+    final canDispute =
+        permissions.canDispute &&
+        settlement.status == SettlementStatus.submitted;
+    final canPay =
+        permissions.canPay && settlement.status == SettlementStatus.approved;
 
     return ResponsiveBody(
       child: ListView(

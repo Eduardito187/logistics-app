@@ -16,10 +16,10 @@ import 'driver_common.dart';
 import 'scan_mode.dart';
 import 'scanned_unit.dart';
 
-/// Escaneo de bultos para carga (al camión) o descarga (por parada) en modo
-/// CONTINUO: la cámara queda abierta entre bultos y cada lectura muestra su
-/// aviso verde/rojo encima ("Bulto 3/5 cargado", "Ya registrado"...). Cada
-/// bulto se registra local con id idempotente y se sincroniza después; nunca
+/// Escaneo de productos para carga (al camión) o descarga (por parada) en modo
+/// CONTINUO: la cámara queda abierta entre productos y cada lectura muestra su
+/// aviso verde/rojo encima ("Producto 3/5 cargado", "Ya registrado"...). Cada
+/// producto se registra local con id idempotente y se sincroniza después; nunca
 /// espera a la red.
 class ScanUnitsScreen extends ConsumerStatefulWidget {
   const ScanUnitsScreen({
@@ -44,11 +44,11 @@ class ScanUnitsScreen extends ConsumerStatefulWidget {
 class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
   final List<ScannedUnit> _scanned = [];
 
-  /// Bultos registrados (no fallidos) en esta pantalla.
+  /// Productos registrados (no fallidos) en esta pantalla.
   final Set<String> _registered = {};
   bool _busy = false;
 
-  /// Mantiene viva la lista de bultos esperados mientras se escanea.
+  /// Mantiene viva la lista de productos esperados mientras se escanea.
   ProviderSubscription<AsyncValue<Set<String>>>? _expectedSub;
 
   bool get _isLoad => widget.mode == ScanMode.load;
@@ -56,10 +56,10 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
   @override
   void initState() {
     super.initState();
-    // GPS caliente antes del primer bulto: cada registro toma el último fix
-    // sin prender el GPS por bulto.
+    // GPS caliente antes del primer producto: cada registro toma el último fix
+    // sin prender el GPS por producto.
     ref.read(locationServiceProvider).prefetch();
-    // Bultos esperados del envío, sin esperarlos (offline-first).
+    // Productos esperados del envío, sin esperarlos (offline-first).
     _expectedSub = ref.listenManual(
       driverShipmentUnitsProvider(widget.shipmentId),
       (_, _) {},
@@ -92,7 +92,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
                         ),
                       ),
                     )
-                  // builder: con cientos de bultos solo se construyen las
+                  // builder: con cientos de productos solo se construyen las
                   // filas visibles (memoria acotada en teléfonos de 1 GB).
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
@@ -145,7 +145,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
     );
   }
 
-  /// Abre la cámara continua: se escanean todos los bultos seguidos y se
+  /// Abre la cámara continua: se escanean todos los productos seguidos y se
   /// vuelve con "Terminar".
   Future<void> _scanSession() async {
     setState(() => _busy = true);
@@ -163,7 +163,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
   }
 
   /// Procesa un código leído: verifica la etiqueta offline, valida que el
-  /// bulto sea de este envío y que no esté repetido, y lo encola.
+  /// producto sea de este envío y que no esté repetido, y lo encola.
   Future<ScanFeedback> _onCode(String qr) async {
     final unitId = await verifyUnitLabel(ref, qr);
     if (unitId == null) return const ScanFeedback.error('Etiqueta inválida');
@@ -197,7 +197,7 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
           .add(widget.shipmentId, unitId);
     }
     setState(() {
-      // Un reintento de un bulto fallido reemplaza su fila.
+      // Un reintento de un producto fallido reemplaza su fila.
       _scanned.removeWhere((s) => s.unitId == unitId);
       _scanned.add(ScannedUnit(unitId, outcome));
       if (!failed) _registered.add(unitId);
@@ -223,8 +223,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
     return local != null && local.contains(unitId);
   }
 
-  /// Bultos del envío registrados: en carga incluye los cargados antes en este
-  /// teléfono (otra pasada por la pantalla).
+  /// Productos del envío registrados: en carga incluye los cargados antes en
+  /// este teléfono (otra pasada por la pantalla).
   int _registeredCount() {
     if (!_isLoad) return _registered.length;
     final local = ref.read(locallyLoadedUnitsProvider)[widget.shipmentId];
@@ -266,8 +266,8 @@ class _ScanUnitsScreenState extends ConsumerState<ScanUnitsScreen> {
   }
 }
 
-/// Fila de un bulto escaneado. Offline invisible: lo encolado se muestra igual
-/// que lo enviado (la cola sube todo por debajo).
+/// Fila de un producto escaneado. Offline invisible: lo encolado se muestra
+/// igual que lo enviado (la cola sube todo por debajo).
 class _ScannedTile extends StatelessWidget {
   const _ScannedTile({required this.item});
 

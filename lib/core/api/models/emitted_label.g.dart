@@ -15,7 +15,7 @@ EmittedLabel _$EmittedLabelFromJson(Map<String, dynamic> json) => EmittedLabel(
   qrContent: json['qr_content'] as String,
   zpl: json['zpl'] as String,
   emittedAt: (json['emitted_at'] as num).toInt(),
-  revoked: json['revoked'] as bool,
+  revoked: json['revoked'] as bool? ?? false,
   revokedAt: (json['revoked_at'] as num?)?.toInt(),
   revokedReason: json['revoked_reason'] as String?,
   productName: json['product_name'] as String?,

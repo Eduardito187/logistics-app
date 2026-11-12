@@ -141,6 +141,14 @@ Future<void> _settleShort(WidgetTester tester) async {
   }
 }
 
+/// Lleva [finder] a la vista y deja un frame para que el scroll se aplique
+/// (`ensureVisible` solo mueve la posición; sin `pump` el tap usa la
+/// posición vieja y cae fuera de pantalla).
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pump();
+}
+
 /// Deja vencer los avisos.
 Future<void> _finish(WidgetTester tester) =>
     tester.pump(const Duration(seconds: 5));
@@ -333,7 +341,7 @@ void main() {
       // "Buscar en otra red" sigue escondido hasta que se pida.
       expect(find.byType(WifiExtraNetworks), findsNothing);
 
-      await tester.ensureVisible(find.text('Buscar en otra red'));
+      await _scrollTo(tester, find.text('Buscar en otra red'));
       await tester.tap(find.text('Buscar en otra red'));
       await tester.pump();
       expect(find.byType(WifiExtraNetworks), findsOneWidget);
@@ -349,7 +357,7 @@ void main() {
         find.widgetWithText(TextField, 'IP de la impresora'),
         '192.168.1.60',
       );
-      await tester.ensureVisible(find.text('Probar conexión'));
+      await _scrollTo(tester, find.text('Probar conexión'));
       await tester.tap(find.text('Probar conexión'));
       await tester.pump();
       await tester.pump();
@@ -371,7 +379,7 @@ void main() {
         find.widgetWithText(TextField, 'IP de la impresora'),
         '192.168.1.60',
       );
-      await tester.ensureVisible(find.text('Guardar impresora WiFi'));
+      await _scrollTo(tester, find.text('Guardar impresora WiFi'));
       await tester.tap(find.text('Guardar impresora WiFi'));
       await _settleShort(tester);
 
@@ -435,7 +443,7 @@ void main() {
         find.widgetWithText(TextField, 'Contraseña'),
         's3cr3t',
       );
-      await tester.ensureVisible(find.text('Guardar y probar'));
+      await _scrollTo(tester, find.text('Guardar y probar'));
       await tester.tap(find.text('Guardar y probar'));
       await _settleShort(tester);
 
@@ -463,8 +471,10 @@ void main() {
       final h = await chooseUnknown(tester, _Harness());
 
       await tester.tap(find.text('Imprimir prueba'));
+      // El aviso de la prueba reemplaza al de "guardada": primero sale el
+      // anterior (animación) y recién después entra el nuevo.
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(h.printer.prints, 1);
       // Aviso + resultado fijo en el paso.
@@ -526,10 +536,10 @@ void main() {
         ], done: false),
       );
       await tester.pump();
-      await tester.ensureVisible(find.text('¿No aparece? Ingresar IP'));
+      await _scrollTo(tester, find.text('¿No aparece? Ingresar IP'));
       await tester.tap(find.text('¿No aparece? Ingresar IP'));
       await tester.pump();
-      await tester.ensureVisible(find.text('Buscar en otra red'));
+      await _scrollTo(tester, find.text('Buscar en otra red'));
       await tester.tap(find.text('Buscar en otra red'));
       await tester.pump();
 
@@ -552,14 +562,23 @@ void main() {
         ]),
       );
       await tester.pump();
-      await tester.ensureVisible(find.byType(PrinterOptionCard).first);
+      await _scrollTo(tester, find.byType(PrinterOptionCard).first);
       await tester.tap(find.byType(PrinterOptionCard).first);
       await _settleShort(tester);
 
       expect(find.byType(PrinterCredentialsPrompt), findsOneWidget);
-      await tester.ensureVisible(find.text('Guardar y probar'));
+      // Con letra 1.3 y un nombre tan largo el aviso "Impresora guardada…"
+      // ocupa media pantalla chica: se espera a que se vaya (2 s) antes de
+      // tocar, como haría el operario. En frames cortos: el plazo del aviso
+      // recién corre cuando terminó de entrar.
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(SnackBar), findsNothing);
+      await _scrollTo(tester, find.text('Guardar y probar'));
       await tester.tap(find.text('Guardar y probar'));
       await _settleShort(tester);
+      expect(h.printer.prints, 1);
       expect(find.text('Terminar'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await _finish(tester);

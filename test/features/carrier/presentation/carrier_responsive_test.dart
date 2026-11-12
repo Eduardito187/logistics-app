@@ -26,7 +26,8 @@ import '../carrier_test_harness.dart';
 // hace fallar el test solo; además se verifica que en tablets el contenido no
 // se estire de borde a borde.
 
-/// Monta [home] con letra 1.3x y el transportista ya elegido.
+/// Monta [home] con letra 1.3x, el transportista ya elegido y una sesión de
+/// oficina (para que las acciones financieras del detalle se muestren).
 Future<void> _pumpWithCarrier(
   WidgetTester tester,
   Widget home, {
@@ -37,6 +38,7 @@ Future<void> _pumpWithCarrier(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        officeSessionOverride(),
         carrierRepositoryProvider.overrideWithValue(
           repo ?? FakeCarrierRepository(),
         ),
@@ -81,7 +83,7 @@ void main() {
     );
     expect(find.text('Sin productos recogidos'), findsOneWidget);
 
-    // Escaneo continuo: dos bultos en una sola apertura de la cámara.
+    // Escaneo continuo: dos productos en una sola apertura de la cámara.
     await tester.tap(findButtonWithText<FilledButton>('Escanear producto'));
     await tester.pumpAndSettle();
 

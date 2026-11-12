@@ -27,8 +27,8 @@ const Map<UserRole, List<HomeWidgetKind>> kRoleHomeWidgetKinds = {
 };
 
 /// Tarea de escaneo principal de cada rol (rutas REALES de `RoleTask`):
-/// chofer → carga del camión (escaneo de bultos), preparador → ingresar
-/// pedido (escanear el número), tienda → recepción (escaneo de bultos),
+/// chofer → carga del camión (escaneo de productos), preparador → ingresar
+/// pedido (escanear el número), tienda → recepción (escaneo de productos),
 /// transportista → escanear al recoger.
 const Map<UserRole, String> kQuickScanRoutes = {
   UserRole.driver: '/driver/load',

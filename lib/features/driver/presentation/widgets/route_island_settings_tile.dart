@@ -15,8 +15,9 @@ import '../../../../core/live_updates/route_island.dart';
 ///
 /// - Android 7+: estado de la isla y lo que se puede hacer:
 ///   [Activar en el sistema] (Live Updates de Android 16 apagado),
-///   [Permitir isla de DisTrack] (permiso "Mostrar sobre otras apps") y, si
-///   las dos están disponibles, el selector Sistema / DisTrack.
+///   [Permitir isla de DisTrack] (permiso "Mostrar sobre otras apps") y, con
+///   ese permiso dado, el selector Sistema (o "Sin isla", si el teléfono no
+///   tiene la del sistema) / DisTrack, que se puede alternar cuando se quiera.
 /// - iOS: texto informativo (Dynamic Island / pantalla de bloqueo), sin
 ///   controles.
 /// - Otros roles u otras plataformas: no se muestra.
@@ -86,8 +87,10 @@ class _RouteIslandSettingsTileState
     final systemFixable =
         availability.promotion.state ==
         LiveUpdatesPromotionState.disabledBySystem;
-    final bothAvailable =
-        availability.systemAvailable && availability.overlayAvailable;
+    // El selector se muestra con el permiso de la isla de DisTrack concedido:
+    // es la única forma de elegirla (y de volver atrás). Si el teléfono no
+    // tiene la isla del sistema, la otra opción es quedarse sin isla.
+    final canPickOverlay = availability.overlayAvailable;
 
     return Column(
       key: const Key('routeIslandTile'),
@@ -105,30 +108,34 @@ class _RouteIslandSettingsTileState
           title: const Text('Isla de ruta'),
           subtitle: Text(_statusText(mode)),
         ),
-        if (bothAvailable)
+        if (canPickOverlay)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: SegmentedButton<RouteIslandMode>(
+            child: SegmentedButton<RouteIslandPreference>(
               key: const Key('routeIslandSelector'),
-              segments: const [
+              segments: [
                 ButtonSegment(
-                  value: RouteIslandMode.system,
-                  label: Text('Isla del sistema'),
+                  value: RouteIslandPreference.system,
+                  label: Text(
+                    availability.systemAvailable
+                        ? 'Isla del sistema'
+                        : 'Sin isla',
+                  ),
                 ),
-                ButtonSegment(
-                  value: RouteIslandMode.overlay,
+                const ButtonSegment(
+                  value: RouteIslandPreference.overlay,
                   label: Text('Isla de DisTrack'),
                 ),
               ],
-              selected: {mode},
-              onSelectionChanged: (selection) {
-                final picked = selection.first == RouteIslandMode.overlay
-                    ? RouteIslandPreference.overlay
-                    : RouteIslandPreference.system;
-                unawaited(
-                  ref.read(routeIslandPreferenceProvider.notifier).set(picked),
-                );
-              },
+              // Se marca la PREFERENCIA (no la isla efectiva): así el selector
+              // siempre refleja lo elegido y se puede alternar sin quedarse
+              // pegado si la disponibilidad cambia.
+              selected: {preference ?? RouteIslandPreference.system},
+              onSelectionChanged: (selection) => unawaited(
+                ref
+                    .read(routeIslandPreferenceProvider.notifier)
+                    .set(selection.first),
+              ),
             ),
           ),
         if (systemFixable)

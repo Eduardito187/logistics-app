@@ -14,7 +14,7 @@ import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/app_icon_finders.dart';
 
-// Escaneo continuo: la cámara queda abierta entre bultos, cada código llama a
+// Escaneo continuo: la cámara queda abierta entre productos, cada código llama a
 // onCode, se muestra el aviso sobre la cámara, el mismo código repetido en
 // < 2 s se ignora y "Terminar" cierra.
 

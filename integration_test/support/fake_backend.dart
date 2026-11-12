@@ -6,6 +6,7 @@ import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:logistics_app/features/driver/domain/repositories/driver_route_repository.dart';
+import 'package:logistics_app/features/picking/domain/entities/shipment_page.dart';
 import 'package:logistics_app/features/picking/domain/repositories/picking_repository.dart';
 import 'package:logistics_app/features/store/domain/repositories/store_repository.dart';
 
@@ -163,7 +164,7 @@ class FakeBackend {
 
   /// Resuelve un `label_id` (Code128). Por defecto ECHO: reconoce la etiqueta y
   /// usa el label_id como `unit_id` (igual que antes el código escaneado
-  /// representaba el bulto). Los tests pueden sembrar [labelResolutions].
+  /// representaba el producto). Los tests pueden sembrar [labelResolutions].
   Map<String, Object?> resolveLabel(String labelId) =>
       labelResolutions[labelId] ??
       {'label_id': labelId, 'resolved': true, 'unit_id': labelId};
@@ -357,7 +358,7 @@ class FakeBackend {
   }
 
   // ---------------------------------------------------------------------------
-  // Tienda: un envío que llega a la tienda del usuario con dos bultos.
+  // Tienda: un envío que llega a la tienda del usuario con dos productos.
   // ---------------------------------------------------------------------------
 
   static final storeShipment = Shipment(
@@ -386,9 +387,9 @@ class FakeBackend {
     ],
   );
 
-  /// Bultos esperados del envío: el del QR firmado del vector y uno con
+  /// Productos esperados del envío: el del QR firmado del vector y uno con
   /// etiqueta sin firma (código simple).
-  static const storeExpectedUnits = [vectorUnitId, 'BULTO-2'];
+  static const storeExpectedUnits = [vectorUnitId, 'PROD-2'];
 
   OpenNodeReceptionRequest? openedReception;
   final List<String> receivedUnits = [];
@@ -634,9 +635,11 @@ class FakePickingRepository implements PickingRepository {
   final OfflineQueue queue;
 
   @override
-  Future<List<Shipment>> listShipments({ShipmentStatus? status}) async => [
-    FakeBackend.pickingOrder,
-  ];
+  Future<ShipmentPage> listShipments({
+    ShipmentStatus? status,
+    int page = 1,
+    int perPage = 50,
+  }) async => ShipmentPage(items: [FakeBackend.pickingOrder], hasMore: false);
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) async =>
@@ -659,10 +662,10 @@ class FakePickingRepository implements PickingRepository {
   ) => throw UnimplementedError('emitLabels no se usa en el e2e');
 
   @override
-  Future<List<EmittedLabel>> reprintLabels(
-    String orderNumber,
-    ReprintLabelsRequest body,
-  ) => throw UnimplementedError('reprintLabels no se usa en el e2e');
+  Future<void> assignVehicle(String orderNumber, String vehicleId) async {
+    // El e2e solo necesita que no falle: la asignación real la prueba el
+    // test de la pantalla de preparación.
+  }
 
   @override
   Future<String> getSignedZpl(String orderNumber) async =>

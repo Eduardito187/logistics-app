@@ -58,7 +58,7 @@ void main() {
     expect(args['status'], 'on_the_way');
     expect(args['customer'], 'Juan Pérez');
     expect(args['title'], 'Parada 3 de 8 · Llega 14:20');
-    expect(args['chip'], '14:20');
+    expect(args['chip'], '3/8 · 14:20');
     expect(args['subText'], 'A 2,3 km');
     expect(args['lat'], -17.78);
     expect(args['progress'], closeTo(0.25, 1e-9));

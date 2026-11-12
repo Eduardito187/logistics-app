@@ -317,7 +317,8 @@ object LiveUpdatesChannel {
         if (lat != null && lng != null) {
             builder.addAction(
                 Notification.Action.Builder(
-                    Icon.createWithResource(context, R.drawable.ic_stat_route),
+                    // Link al mapa → ícono de mapa (no el camión, que es el estado).
+                    Icon.createWithResource(context, R.drawable.ic_action_map),
                     "Navegar",
                     navigateIntent(context, lat, lng, customer),
                 ).build()
@@ -325,7 +326,8 @@ object LiveUpdatesChannel {
         }
         builder.addAction(
             Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.ic_stat_route),
+                // Abre la app → ícono "abrir en la app".
+                Icon.createWithResource(context, R.drawable.ic_action_open),
                 "Abrir",
                 openIntent,
             ).build()

@@ -61,29 +61,47 @@ class RouteIslandAvailability {
   /// Permiso "Mostrar sobre otras apps" concedido.
   final bool overlayGranted;
 
-  bool get systemAvailable =>
-      promotion.state == LiveUpdatesPromotionState.active;
+  /// ¿El teléfono puede mostrar la isla del SISTEMA?
+  ///
+  /// Ojo: con la isla de DisTrack elegida, la notificación de ruta se arma SIN
+  /// el pedido de promoción (una sola isla), así que el nativo reporta
+  /// `promotable: false` y el estado cae en `unavailable` aunque el teléfono sí
+  /// sepa promoverla. `canPostPromoted` NO depende de cómo armamos la
+  /// notificación (es el permiso "Live updates" de la app), así que se usa para
+  /// no perder la isla del sistema —ni el selector de Ajustes— al pasarse a la
+  /// de DisTrack.
+  bool get systemAvailable {
+    final state = promotion.state;
+    if (state == LiveUpdatesPromotionState.active) return true;
+    return state == LiveUpdatesPromotionState.unavailable &&
+        promotion.canPostPromoted;
+  }
 
   bool get overlayAvailable => overlaySupported && overlayGranted;
 }
 
-/// Elige UNA isla (nunca las dos a la vez):
-/// - Solo una disponible → esa.
-/// - Las dos → la preferencia del chofer; sin preferencia, la del sistema.
-/// - Ninguna → [RouteIslandMode.none] (queda la notificación).
+/// Elige UNA isla (nunca las dos a la vez). La isla del SISTEMA (chip en la
+/// barra de estado) es la preferida; la pastilla flotante (overlay) es
+/// INTRUSIVA —dibuja sobre otras apps— así que SOLO se usa si el chofer la
+/// eligió explícitamente, nunca por defecto:
+/// - Isla del sistema disponible → esa (salvo que el chofer prefiera el overlay).
+/// - Sin isla del sistema → overlay SOLO si el chofer lo eligió; si no,
+///   [RouteIslandMode.none] (queda la notificación / chip, nunca el overlay).
 RouteIslandMode resolveRouteIslandMode(
   RouteIslandAvailability availability,
   RouteIslandPreference? preference,
 ) {
   final system = availability.systemAvailable;
   final overlay = availability.overlayAvailable;
-  if (system && overlay) {
-    return preference == RouteIslandPreference.overlay
+  final wantsOverlay = preference == RouteIslandPreference.overlay;
+  if (system) {
+    return overlay && wantsOverlay
         ? RouteIslandMode.overlay
         : RouteIslandMode.system;
   }
-  if (system) return RouteIslandMode.system;
-  if (overlay) return RouteIslandMode.overlay;
+  // Sin isla del sistema: el overlay flotante NO es el default (es intrusivo).
+  // Solo si el chofer lo eligió explícitamente; si no, queda la notificación.
+  if (overlay && wantsOverlay) return RouteIslandMode.overlay;
   return RouteIslandMode.none;
 }
 
@@ -104,7 +122,9 @@ class RouteIslandPreferenceNotifier extends Notifier<RouteIslandPreference?> {
   Future<void> _load() async {
     try {
       final raw = await ref.read(tokenStoreProvider).readPref(storageKey);
-      if (!ref.mounted || _changedByUser) return;
+      // Si el chofer ya eligió (la lectura del almacén tarda), manda su
+      // elección: la precarga del almacén no ve las escrituras directas.
+      if (!ref.mounted || _changedByUser || state != null) return;
       state = RouteIslandPreference.parse(raw);
     } on Object {
       // Almacén no disponible: queda la automática.

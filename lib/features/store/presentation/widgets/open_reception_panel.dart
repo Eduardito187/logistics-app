@@ -11,7 +11,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../controllers/store_controllers.dart';
 
-/// Panel para abrir una recepción que aún no existe: muestra los bultos
+/// Panel para abrir una recepción que aún no existe: muestra los productos
 /// esperados del envío y pide el nodo de origen para anunciarlos.
 class OpenReceptionPanel extends ConsumerStatefulWidget {
   const OpenReceptionPanel({

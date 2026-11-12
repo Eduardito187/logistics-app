@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/emitted_label.dart';
+import 'package:logistics_app/core/api/models/vehicle.dart';
 import 'package:logistics_app/core/location/location_service.dart';
+import 'package:logistics_app/features/picking/data/available_vehicles.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/printing/printer_config.dart';
@@ -11,7 +13,6 @@ import 'package:logistics_app/features/picking/data/repositories/picking_reposit
 import 'package:logistics_app/features/picking/domain/entities/preparation_state.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/preparation_controller.dart';
 import 'package:logistics_app/features/picking/presentation/order_preparation_screen.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
@@ -44,6 +45,10 @@ Future<FakeLabelPrinter> _pump(
         pickingRepositoryProvider.overrideWithValue(repo),
         labelPrinterProvider.overrideWithValue(fakePrinter),
         locationServiceProvider.overrideWithValue(FakeLocationService()),
+        // El selector de vehículos no pega a la red en test.
+        availableVehiclesProvider.overrideWith(
+          (ref) async => const <Vehicle>[],
+        ),
         if (seedState != null)
           preparationControllerProvider(
             orderNumber,
@@ -57,11 +62,6 @@ Future<FakeLabelPrinter> _pump(
   await tester.pumpAndSettle();
   return fakePrinter;
 }
-
-Finder _sheetFields() => find.descendant(
-  of: find.byType(LabelBatchSheet),
-  matching: find.byType(TextField),
-);
 
 void main() {
   testWidgets('sin etiquetas: muestra la LISTA de productos del pedido', (
@@ -112,9 +112,11 @@ void main() {
     expect(find.text('0/2'), findsOneWidget); // ninguna preparada aún
   });
 
-  testWidgets('las etiquetas revocadas no cuentan como unidades vigentes', (
+  testWidgets('etiquetas PERMANENTES: todas cuentan (ninguna se anula)', (
     tester,
   ) async {
+    // Ya no hay etiquetas "revocadas": el backend no las anula y la app las
+    // cuenta todas. El flag legacy `revoked` no excluye nada.
     await _pump(
       tester,
       repo: FakePickingRepository(
@@ -125,8 +127,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Productos (1)'), findsOneWidget);
-    expect(find.byType(UnitTile), findsOneWidget);
+    expect(find.text('Productos (2)'), findsOneWidget);
+    expect(find.byType(UnitTile), findsNWidgets(2));
   });
 
   testWidgets('error de red al cargar muestra "No se pudo cargar"', (
@@ -160,7 +162,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // No se abre ningún formulario de origen/destino/SKU.
-    expect(find.byType(LabelBatchSheet), findsNothing);
+    expect(find.text('Origen'), findsNothing);
+    expect(find.text('Destino'), findsNothing);
     expect(repo.emitOrderCalls, 1);
     expect(repo.lastEmitOrderNumber, 'EXT-1');
     expect(repo.emitCalls, 0); // nunca el emit explícito (legado)
@@ -266,39 +269,79 @@ void main() {
     expect(find.text('Seleccioná una impresora en Ajustes.'), findsOneWidget);
   });
 
-  testWidgets('reimprimir lote: pide motivo y confirma', (tester) async {
+  testWidgets('sin vehículo NO marca preparadas: primero pide asignarlo', (
+    tester,
+  ) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [
+        buildLabel(labelId: 'L1', sku: 'SKU1'),
+        buildLabel(labelId: 'L2', sku: 'SKU2'),
+      ],
+    );
+    await _pump(tester, repo: repo); // sin vehículo asignado
+
+    expect(find.text('0/2'), findsOneWidget);
+    await tester.tap(find.text('Marcar como preparadas'));
+    await tester.pumpAndSettle();
+
+    // Acción limitada: avisa y NO marca nada.
+    expect(
+      find.text('Asigná el vehículo antes de marcar como preparadas.'),
+      findsOneWidget,
+    );
+    expect(find.text('0/2'), findsOneWidget);
+  });
+
+  testWidgets('con vehículo asignado, el botón marca TODAS como preparadas', (
+    tester,
+  ) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [
+        buildLabel(labelId: 'L1', sku: 'SKU1'),
+        buildLabel(labelId: 'L2', sku: 'SKU2'),
+      ],
+    );
+    await _pump(
+      tester,
+      repo: repo,
+      seedState: const PreparationState(vehicleId: '904U10', lane: '904U10'),
+    );
+
+    expect(find.text('0/2'), findsOneWidget);
+    await tester.tap(find.text('Marcar como preparadas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2/2'), findsOneWidget);
+    // Ya no faltan: el botón desaparece.
+    expect(find.text('Marcar como preparadas'), findsNothing);
+  });
+
+  testWidgets('NO hay escaneo de producto en la preparación', (tester) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [buildLabel(labelId: 'L1', sku: 'SKU1')],
+    );
+    await _pump(tester, repo: repo);
+
+    // Lo único que se escanea son las etiquetas: acá no se escanea el producto.
+    expect(find.text('Verificar productos con escaneo'), findsNothing);
+  });
+
+  testWidgets('etiquetas permanentes: NO existe "Anular y emitir de nuevo"', (
+    tester,
+  ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [
         buildLabel(labelId: 'L1', sku: 'SKU1'),
         buildLabel(labelId: 'L2', sku: 'SKU1'),
       ],
-      onReprintLabels: (_, _) async => [buildLabel(labelId: 'NEW')],
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.text('Anular y emitir de nuevo'));
-    await tester.pumpAndSettle();
-
-    // Líneas pre-cargadas por SKU (SKU1 x2); sólo faltan origen/destino/motivo.
-    await tester.enterText(_sheetFields().at(0), 'LPZ'); // origen
-    await tester.enterText(_sheetFields().at(1), 'SCZ'); // destino
-    await tester.enterText(_sheetFields().at(2), 'dañada'); // motivo
-    final reprintSubmit = find.descendant(
-      of: find.byType(LabelBatchSheet),
-      matching: findButtonWithText<FilledButton>('Reimprimir'),
-    );
-    await tester.ensureVisible(reprintSubmit);
-    await tester.tap(reprintSubmit);
-    await tester.pumpAndSettle();
-
-    expect(repo.reprintCalls, 1);
-    expect(repo.lastReprintBody?.reason, 'dañada');
-    expect(repo.lastReprintBody?.lines.single.sku, 'SKU1');
-    expect(repo.lastReprintBody?.lines.single.quantity, 2);
-    expect(
-      find.text('Lote reimpreso: se emitieron etiquetas nuevas.'),
-      findsOneWidget,
-    );
+    // Una etiqueta nunca se invalida ni se regenera: el botón no existe.
+    expect(find.text('Anular y emitir de nuevo'), findsNothing);
+    expect(find.text('Reemitir'), findsNothing);
+    // Se puede volver a imprimir la MISMA etiqueta.
+    expect(find.text('Imprimir todas las etiquetas'), findsOneWidget);
   });
 
   testWidgets('reimprimir una unidad ya preparada imprime su ZPL', (

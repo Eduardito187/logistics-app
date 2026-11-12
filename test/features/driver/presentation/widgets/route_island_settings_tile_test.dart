@@ -66,6 +66,16 @@ const _promotionDenied = LiveUpdatesPromotionStatus(
   reasons: ['promotionDenied'],
 );
 
+/// Lo que reporta el nativo cuando ya se eligió la isla de DisTrack: la
+/// notificación se arma sin pedido de promoción (`promotable: false`), pero el
+/// teléfono sigue pudiendo promover (`canPostPromoted`).
+const _promotionNotRequested = LiveUpdatesPromotionStatus(
+  sdk: 36,
+  canPostPromoted: true,
+  promotable: false,
+  reasons: ['notPromotable'],
+);
+
 const _android13 = LiveUpdatesPromotionStatus(sdk: 33, reasons: ['sdk']);
 
 Future<FakeSecureStorage> _pump(
@@ -115,6 +125,42 @@ void main() {
       RouteIslandPreference.overlay.storageValue,
     );
     expect(find.textContaining('isla de DisTrack se ve'), findsOneWidget);
+
+    // Y se puede volver: el selector no queda pegado en la primera elección.
+    await tester.tap(find.text('Isla del sistema'));
+    await tester.pumpAndSettle();
+    expect(
+      storage.data[RouteIslandPreferenceNotifier.storageKey],
+      RouteIslandPreference.system.storageValue,
+    );
+    expect(find.textContaining('barra de estado del teléfono'), findsOneWidget);
+  });
+
+  testWidgets('con la isla de DisTrack puesta se vuelve a la del sistema', (
+    tester,
+  ) async {
+    // El nativo reporta promotable:false (la notificación va sin pedido de
+    // promoción): el selector tiene que seguir ahí y la isla del sistema
+    // seguir siendo elegible.
+    final storage = await _pump(
+      tester,
+      _FakeService(promotion: _promotionNotRequested, overlayGranted: true),
+    );
+    expect(find.byKey(const Key('routeIslandSelector')), findsOneWidget);
+    expect(find.text('Isla del sistema'), findsOneWidget);
+    expect(find.textContaining('barra de estado del teléfono'), findsOneWidget);
+
+    await tester.tap(find.text('Isla de DisTrack'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('isla de DisTrack se ve'), findsOneWidget);
+
+    await tester.tap(find.text('Isla del sistema'));
+    await tester.pumpAndSettle();
+    expect(
+      storage.data[RouteIslandPreferenceNotifier.storageKey],
+      RouteIslandPreference.system.storageValue,
+    );
+    expect(find.textContaining('barra de estado del teléfono'), findsOneWidget);
   });
 
   testWidgets('Android < 16 sin permiso: desactivada + Permitir isla', (
@@ -131,15 +177,32 @@ void main() {
     expect(service.opened, ['overlay']);
   });
 
-  testWidgets('Android < 16 con permiso: isla de DisTrack activa', (
+  testWidgets('Android < 16 con permiso: se elige "Sin isla" o DisTrack', (
     tester,
   ) async {
-    await _pump(
+    // Sin isla del sistema la pastilla NO es el default (es intrusiva): se
+    // elige en el selector, y se puede volver a "Sin isla".
+    final storage = await _pump(
       tester,
       _FakeService(promotion: _android13, overlayGranted: true),
     );
-    expect(find.textContaining('isla de DisTrack se ve'), findsOneWidget);
     expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.byKey(const Key('routeIslandSelector')), findsOneWidget);
+    expect(find.text('Sin isla'), findsOneWidget);
+    expect(find.text('Isla del sistema'), findsNothing);
+    expect(find.textContaining('Desactivada'), findsOneWidget);
+
+    await tester.tap(find.text('Isla de DisTrack'));
+    await tester.pumpAndSettle();
+    expect(
+      storage.data[RouteIslandPreferenceNotifier.storageKey],
+      RouteIslandPreference.overlay.storageValue,
+    );
+    expect(find.textContaining('isla de DisTrack se ve'), findsOneWidget);
+
+    await tester.tap(find.text('Sin isla'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Desactivada'), findsOneWidget);
   });
 
   testWidgets('Android 16 con Live updates apagado: Activar en el sistema', (

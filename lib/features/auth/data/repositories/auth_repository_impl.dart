@@ -135,6 +135,9 @@ class AuthRepositoryImpl implements AuthRepository {
       userName: response.user.name,
       role: role,
       storeNode: response.user.node,
+      // Vencimiento real del token: deja que la renovación proactiva caiga
+      // justo antes de vencer (sin esto se usa la política por antigüedad).
+      expiresAt: response.expiresAt,
     );
 
     // Con el Bearer ya puesto, pedimos las abilities del token (`/app/auth/me`)

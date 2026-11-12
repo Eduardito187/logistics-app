@@ -44,7 +44,7 @@ class PrinterCredentials {
   String get authUser {
     final d = domain?.trim() ?? '';
     final u = username.trim();
-    return d.isEmpty ? u : '$d\$u';
+    return d.isEmpty ? u : '$d\\$u';
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{

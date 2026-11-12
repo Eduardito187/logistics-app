@@ -15,7 +15,7 @@ import '../../../support/button_finders.dart';
 
 // Flujo RECOGER con escaneo CONTINUO: la cámara queda abierta y cada QR firmado
 // se verifica (Ed25519 offline), se registra en la cola y suma una fila; el
-// aviso de cada bulto va sobre la cámara y al terminar hay un resumen. La
+// aviso de cada producto va sobre la cámara y al terminar hay un resumen. La
 // cámara se reemplaza con FakeContinuousScanner (varios códigos por sesión).
 
 Future<void> _tapScan(WidgetTester tester) async {
@@ -192,7 +192,7 @@ void main() {
       findAppIconInState(AppIcon.error, AppIconState.error),
       findsOneWidget,
     );
-    // Sin bultos registrados no hay resumen.
+    // Sin productos registrados no hay resumen.
     expect(find.byType(SnackBar), findsNothing);
   });
 

@@ -164,13 +164,17 @@ void main() {
     });
 
     test('cambio de parada (route_day) sale al instante', () {
+      // El login del preparador (setUp) ya publicó route_day = notAllowed:
+      // se cuenta solo lo de la sesión del chofer.
+      final before = service.updatesOf(HomeWidgetKind.routeDay);
       controller.signOut();
       controller.signIn(userKey: 'chofer', role: UserRole.driver);
       controller.onPayload(_day(1));
       now = now.add(const Duration(seconds: 1));
       controller.onPayload(_day(2));
       expect(service.payloads[HomeWidgetKind.routeDay]!['delivered'], 2);
-      expect(service.updatesOf(HomeWidgetKind.routeDay), 3);
+      // "empty" inicial del login + parada 1 + parada 2 (a 1 s, sin throttle).
+      expect(service.updatesOf(HomeWidgetKind.routeDay) - before, 3);
     });
 
     test('kind de otro rol se ignora', () {

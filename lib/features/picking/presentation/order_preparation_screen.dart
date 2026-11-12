@@ -2,34 +2,26 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../../core/api/models/emit_label_line.dart';
 import '../../../core/api/models/emitted_label.dart';
-import '../../../core/api/models/preparation_scan_request.dart';
-import '../../../core/api/models/reprint_labels_request.dart';
+import '../../../core/api/models/vehicle.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
-import '../../../core/location/location_service.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/offline/offline_queue.dart';
-import '../../../core/offline/submit_feedback.dart';
 import '../../../core/printing/label_printer.dart';
 import '../../../core/printing/printer_config.dart';
-import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../domain/order_number.dart';
+import '../domain/usecases/assign_order_vehicle.dart';
 import '../domain/usecases/emit_labels.dart';
 import '../domain/usecases/get_signed_zpl.dart';
-import '../domain/usecases/record_preparation_scan.dart';
-import '../domain/usecases/reprint_labels.dart';
 import 'controllers/order_labels_controller.dart';
+import 'controllers/orders_worklist_controller.dart';
 import 'controllers/preparation_controller.dart';
 import 'widgets/assign_lane_dialog.dart';
 import 'widgets/dispatch_lines_body.dart';
-import 'widgets/label_batch_sheet.dart';
 import 'widgets/label_preview_sheet.dart';
 import 'widgets/preparation_units_layout.dart';
 import 'widgets/printable_label_renderer.dart';
@@ -54,11 +46,8 @@ class _OrderPreparationScreenState
   /// Unidad con una operación en curso (muestra spinner en su fila).
   String? _busyUnitId;
 
-  /// Operación a nivel pedido en curso (emitir, reimprimir lote, imprimir todo).
+  /// Operación a nivel pedido en curso (emitir, imprimir todo).
   bool _orderBusy = false;
-
-  /// La operación de pedido en curso es "Reimprimir lote" (spinner propio).
-  bool _reprintingBatch = false;
 
   String get _orderNumber => widget.orderNumber;
 
@@ -71,195 +60,72 @@ class _OrderPreparationScreenState
   List<EmittedLabel> _unitsOf(List<EmittedLabel> labels) {
     if (!identical(labels, _labelsSource)) {
       _labelsSource = labels;
-      _activeUnits = labels.where((l) => !l.revoked).toList(growable: false);
+      // Etiquetas PERMANENTES: no hay anuladas, se toman todas.
+      _activeUnits = List<EmittedLabel>.unmodifiable(labels);
     }
     return _activeUnits;
   }
 
   Future<void> _assignLane() async {
     final current = ref.read(preparationControllerProvider(_orderNumber));
-    final result = await showDialog<String>(
+    final vehicle = await showDialog<Vehicle>(
       context: context,
-      builder: (_) => AssignLaneDialog(initial: current.vehicleId),
+      builder: (_) => AssignLaneDialog(initial: current.lane),
     );
-    if (!mounted || result == null) return;
-    final value = result.trim();
-    if (value.isEmpty) return;
-    ref
-        .read(preparationControllerProvider(_orderNumber).notifier)
-        .assign(vehicleId: value, lane: value);
-  }
+    if (!mounted || vehicle == null) return;
+    final plate = (vehicle.plate ?? '').trim();
 
-  /// Verificación por escaneo del pedido ENTERO (un solo flujo, no por ítem):
-  /// abre la cámara en escaneo continuo empezando por el primer producto por
-  /// preparar; cada código leído marca su producto. Es opcional.
-  Future<void> _verifyAll(List<EmittedLabel> units) async {
-    final state = ref.read(preparationControllerProvider(_orderNumber));
-    EmittedLabel? first;
-    for (final u in units) {
-      if (!state.isPrepared(u.labelId)) {
-        first = u;
-        break;
-      }
-    }
-    if (first == null) return;
-    await _prepareUnit(first);
-  }
-
-  Future<void> _prepareUnit(EmittedLabel label) async {
-    // El carril/vehículo abre la entrega: es obligatorio antes del primer escaneo.
-    if (!ref.read(preparationControllerProvider(_orderNumber)).hasAssignment) {
-      await _assignLane();
+    setState(() => _orderBusy = true);
+    try {
+      // ATA el pedido al vehículo EN EL BACKEND: así deja de figurar en
+      // "Pedidos por preparar" y pasa a la ruta de ese camión. Antes esto era
+      // solo estado local y el pedido seguía apareciendo en la worklist.
+      await ref.read(assignOrderVehicleProvider).call(_orderNumber, vehicle.id);
       if (!mounted) return;
-      if (!ref
-          .read(preparationControllerProvider(_orderNumber))
-          .hasAssignment) {
-        showInfoSnack(context, 'Asigná un carril o vehículo para empezar.');
-        return;
-      }
-    }
-
-    // Escaneo CONTINUO: la cámara queda abierta y cada EAN prepara una unidad.
-    // El primero es la unidad tocada; los siguientes, la pendiente cuyo SKU
-    // coincide con el código leído o, si ninguna coincide, la siguiente
-    // pendiente de la lista (el EAN no viaja en la etiqueta, igual que antes
-    // no se valida contra el producto).
-    final session = _PrepSession(first: label);
-    // El GPS se calienta junto con la cámara: al leer el EAN ya suele haber
-    // fix y el registro no lo espera aparte.
-    _warmUpLocation();
-    await scanContinuous(
-      context,
-      title: 'Escanear producto',
-      helper:
-          'Escaneá el código de cada producto (empezá por SKU ${label.sku}).',
-      formats: const <BarcodeFormat>[
-        BarcodeFormat.ean13,
-        BarcodeFormat.code128,
-      ],
-      onCode: (ean) => _prepareCode(ean, session),
-    );
-    if (!mounted || session.prepared == 0) return;
-    // La impresión va en cola (no frena la cámara): se espera a que salga la
-    // última etiqueta para avisar una sola vez.
-    await session.printing;
-    if (!mounted) return;
-    final printError = session.printError;
-    if (printError != null) {
-      // Sin impresora o la impresora rechazó: no se anuncia "impresa" en
-      // falso; se dice el motivo.
-      showInfoSnack(context, printError);
-      return;
-    }
-    if (session.unconfirmed) {
-      // 9100 sin confirmación: veraz, se pide revisar que hayan salido.
+      ref
+          .read(preparationControllerProvider(_orderNumber).notifier)
+          .assign(vehicleId: vehicle.id, lane: plate.isEmpty ? null : plate);
+      // Asignar el vehículo PREPARA el pedido: sus etiquetas quedan marcadas
+      // como preparadas (ya no hay escaneo del producto, decisión del dueño).
+      _markAllPrepared();
+      // La worklist ya no debe mostrarlo.
+      ref.invalidate(ordersWorklistProvider);
       showSuccessSnack(
         context,
-        session.prepared == 1
-            ? 'Producto preparado. Etiqueta enviada; la impresora no '
-                  'confirma, revisá que haya salido.'
-            : '${session.prepared} productos preparados. Etiquetas '
-                  'enviadas; la impresora no confirma, revisá que hayan '
-                  'salido.',
+        plate.isEmpty
+            ? 'Pedido asignado al vehículo.'
+            : 'Pedido asignado al vehículo $plate.',
       );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      showErrorSnack(context, e);
+    } finally {
+      if (mounted) setState(() => _orderBusy = false);
+    }
+  }
+
+  /// Marca TODAS las etiquetas del pedido como preparadas.
+  void _markAllPrepared() {
+    final prep = ref.read(preparationControllerProvider(_orderNumber).notifier);
+    for (final label in _activeUnits) {
+      prep.markPrepared(label.labelId);
+    }
+  }
+
+  /// "Marcar como preparadas" a mano. EXIGE vehículo asignado: sin vehículo no
+  /// se puede preparar (acción limitada) y se ofrece asignarlo ahí mismo.
+  Future<void> _markPreparedManually() async {
+    if (!ref.read(preparationControllerProvider(_orderNumber)).hasAssignment) {
+      showInfoSnack(
+        context,
+        'Asigná el vehículo antes de marcar como preparadas.',
+      );
+      await _assignLane();
       return;
     }
-    // Offline invisible: encolado o enviado, para el usuario es lo mismo.
-    showSuccessSnack(
-      context,
-      session.prepared == 1
-          ? 'Producto preparado e impreso.'
-          : '${session.prepared} productos preparados e impresos.',
-    );
-  }
-
-  /// Unidad que corresponde al próximo EAN de la ráfaga (ver [_prepareUnit]).
-  EmittedLabel? _nextUnit(String code, _PrepSession session) {
-    final first = session.takeFirst();
-    final state = ref.read(preparationControllerProvider(_orderNumber));
-    if (first != null && !state.isPrepared(first.labelId)) return first;
-    final pending = _activeUnits
-        .where((l) => !state.isPrepared(l.labelId))
-        .toList(growable: false);
-    if (pending.isEmpty) return null;
-    return pending.firstWhere(
-      (l) => l.sku == code,
-      orElse: () => pending.first,
-    );
-  }
-
-  /// Registra la preparación de una unidad por un EAN leído y encola su
-  /// etiqueta en la impresora.
-  Future<ScanFeedback> _prepareCode(String ean, _PrepSession session) async {
-    if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
-    final label = _nextUnit(ean, session);
-    if (label == null) {
-      return const ScanFeedback.error('Pedido completo: no quedan productos');
-    }
-
-    // Feedback inmediato: la unidad se marca apenas se lee el código; si el
-    // backend rechaza el registro (error de datos) se desmarca.
-    final prep = ref.read(preparationControllerProvider(_orderNumber).notifier);
-    prep.markPrepared(label.labelId);
-    // Se leen antes de esperar: si el usuario sale de la pantalla, el escaneo
-    // ya marcado igual se registra (no queda marcado sin registrar).
-    final vehicleId = ref
-        .read(preparationControllerProvider(_orderNumber))
-        .vehicleId!;
-    final record = ref.read(recordPreparationScanProvider);
-    // Vista para dibujar la etiqueta si la impresora es de oficina.
-    final view = View.of(context);
-    setState(() => _busyUnitId = label.labelId);
-    try {
-      // El GPS no debe trabar el escaneo: si no hay fix a tiempo, va en cero.
-      final fix = await _currentFix();
-      final outcome = await record(
-        PreparationScanRequest(
-          shipmentId: _orderNumber,
-          unitId: label.labelId,
-          lat: fix?.lat ?? 0,
-          lng: fix?.lng ?? 0,
-          occurredAt: DateTime.now(),
-          vehicleId: vehicleId,
-        ),
-      );
-      if (outcome == SubmitOutcome.failed) {
-        prep.unmarkPrepared(label.labelId);
-        return ScanFeedback.error(submitOutcomeMessage(outcome));
-      }
-      session.prepared++;
-      // Impresión en cola, en orden de escaneo: la Zebra puede tardar y la
-      // cámara no espera a que salga cada etiqueta.
-      session.enqueuePrint(() => _send(label, view));
-      final state = ref.read(preparationControllerProvider(_orderNumber));
-      final done = _activeUnits.where((l) => state.isPrepared(l.labelId));
-      return ScanFeedback.ok(
-        'Producto ${done.length}/${_activeUnits.length} preparado · SKU '
-        '${label.sku}',
-      );
-    } finally {
-      if (mounted) setState(() => _busyUnitId = null);
-    }
-  }
-
-  /// Calienta el GPS sin esperar (nunca lanza).
-  void _warmUpLocation() {
-    try {
-      ref.read(locationServiceProvider).prefetch();
-    } on Object {
-      // Sin plugin/permiso: lat/lng van en cero.
-    }
-  }
-
-  /// Ubicación para el registro. Nunca falla: sin permiso, plugin o señal
-  /// devuelve `null` (lat/lng van en cero); tras [_warmUpLocation] suele salir
-  /// de la caché al instante.
-  Future<GpsFix?> _currentFix() async {
-    try {
-      return await ref.read(locationServiceProvider).current();
-    } on Object {
-      return null;
-    }
+    _markAllPrepared();
+    if (!mounted) return;
+    showSuccessSnack(context, 'Productos marcados como preparados.');
   }
 
   /// Manda una etiqueta a la impresora activa: el ZPL a las Zebra o la
@@ -389,68 +255,6 @@ class _OrderPreparationScreenState
     }
   }
 
-  /// Reimprime el lote: revoca las etiquetas vigentes y emite identidades
-  /// nuevas en el backend. Requiere un motivo (ADR 004).
-  Future<void> _reprintBatch(List<EmittedLabel> current) async {
-    if (_orderBusy) return;
-    // Pre-carga las líneas agrupando las etiquetas vigentes por SKU.
-    final initialLines = _linesFromLabels(current);
-    final result = await showLabelBatchSheet(
-      context,
-      title: 'Reimprimir etiquetas',
-      submitLabel: 'Reimprimir',
-      requireReason: true,
-      initialLines: initialLines,
-    );
-    if (!mounted || result == null) return;
-
-    setState(() {
-      _orderBusy = true;
-      _reprintingBatch = true;
-    });
-    try {
-      await ref
-          .read(reprintLabelsProvider)
-          .call(
-            _orderNumber,
-            ReprintLabelsRequest(
-              origin: result.origin,
-              destination: result.destination,
-              lines: result.lines,
-              reason: result.reason ?? '',
-            ),
-          );
-      if (!mounted) return;
-      ref.invalidate(orderLabelsProvider(_orderNumber));
-      showSuccessSnack(
-        context,
-        'Lote reimpreso: se emitieron etiquetas nuevas.',
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      showErrorSnack(context, e);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _orderBusy = false;
-          _reprintingBatch = false;
-        });
-      }
-    }
-  }
-
-  /// Agrupa las etiquetas vigentes por SKU para proponer las líneas al
-  /// reimprimir. El nombre no viaja en la etiqueta (ADR 004): se deja el SKU.
-  List<EmitLabelLine> _linesFromLabels(List<EmittedLabel> labels) {
-    final counts = <String, int>{};
-    for (final label in labels) {
-      counts[label.sku] = (counts[label.sku] ?? 0) + 1;
-    }
-    return counts.entries
-        .map((e) => EmitLabelLine(sku: e.key, name: e.key, quantity: e.value))
-        .toList(growable: false);
-  }
-
   @override
   Widget build(BuildContext context) {
     // Defensa: un código que no es un pedido (p. ej. el JSON de una etiqueta QR
@@ -501,13 +305,10 @@ class _OrderPreparationScreenState
       total: units.length,
       lane: state.lane,
       busy: _orderBusy,
-      reprinting: _reprintingBatch,
       onAssign: _assignLane,
       onPrintAll: () => _printAll(units),
-      onReprintBatch: () => _reprintBatch(units),
-      // Verificación por escaneo GLOBAL (un botón para el pedido, no por ítem).
-      // Solo si quedan productos por preparar.
-      onVerify: pending > 0 ? () => _verifyAll(units) : null,
+      // Marcar a mano las que falten. Exige vehículo asignado (lo valida).
+      onMarkPrepared: pending > 0 ? _markPreparedManually : null,
     );
     final title = Text(
       'Productos (${units.length})',
@@ -550,43 +351,5 @@ class _OrderPreparationScreenState
       unitRows: unitRows,
       onRefresh: refresh,
     );
-  }
-}
-
-/// Estado de una ráfaga de escaneo continuo del preparador: la unidad tocada
-/// (va primero), cuántas se prepararon y la cola de impresión.
-class _PrepSession {
-  _PrepSession({required EmittedLabel first}) : _first = first;
-
-  EmittedLabel? _first;
-  int prepared = 0;
-
-  /// Primer error de impresión de la ráfaga (texto para el operario).
-  String? printError;
-
-  /// Alguna etiqueta salió por 9100 sin confirmación de la impresora.
-  bool unconfirmed = false;
-
-  /// Cola serial de impresión: cada etiqueta sale cuando terminó la anterior.
-  Future<void> printing = Future<void>.value();
-
-  /// Devuelve la unidad tocada la primera vez y `null` después.
-  EmittedLabel? takeFirst() {
-    final first = _first;
-    _first = null;
-    return first;
-  }
-
-  void enqueuePrint(Future<PrintOutcome> Function() print) {
-    printing = printing.then((_) async {
-      try {
-        final outcome = await print();
-        if (outcome.kind == PrintOutcomeKind.sentUnconfirmed) {
-          unconfirmed = true;
-        }
-      } on PrinterException catch (e) {
-        printError ??= _OrderPreparationScreenState._printerErrorText(e);
-      }
-    });
   }
 }

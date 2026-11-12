@@ -8,8 +8,7 @@ import '../../../../core/performance/cache_for.dart';
 import '../../domain/usecases/get_node_reception.dart';
 import '../../domain/usecases/get_shipment_units.dart';
 import '../../domain/usecases/list_nodes.dart';
-import '../../domain/usecases/list_shipments.dart';
-import 'selected_store_node_notifier.dart';
+import 'store_shipments_notifier.dart';
 
 /// Clave de una recepción: envío + nodo destino. Record con igualdad estructural
 /// para usarse como argumento de familia de providers.
@@ -22,20 +21,16 @@ final storeNodesProvider = FutureProvider.autoDispose<List<Node>>((ref) {
   return ref.watch(listNodesProvider).call();
 });
 
-/// Envíos que llegan a la tienda del usuario, para recepción y entrega en
-/// mostrador (las dos pantallas comparten este provider).
+/// Envíos que llegan a la tienda del usuario (solo la lista acumulada).
 ///
-/// - Filtro en el servidor por `destination_node_id` = tienda de la sesión.
-/// - Caché corta: ir de Recepción a Recojo (o volver de un detalle) muestra la
-///   lista al instante, sin spinner ni otro GET. Al refrescar, el dato previo
-///   sigue visible (`AsyncValueView` salta la carga en recargas).
-final storeShipmentsProvider = FutureProvider.autoDispose<List<Shipment>>((
-  ref,
-) {
-  ref.cacheFor(CacheTtl.short);
-  final nodeId = ref.watch(selectedStoreNodeProvider.select((n) => n?.id));
-  return ref.watch(listShipmentsProvider).call(destinationNodeId: nodeId);
-});
+/// Vista de lectura de [storeShipmentsPagedProvider] para quien solo necesita
+/// los envíos y no el estado del scroll infinito (el widget de inicio, la
+/// precarga del home). Las pantallas de tienda miran el provider paginado.
+final storeShipmentsProvider = Provider.autoDispose<AsyncValue<List<Shipment>>>(
+  (ref) => ref
+      .watch(storeShipmentsPagedProvider)
+      .whenData((state) => state.shipments),
+);
 
 /// Estado de la recepción de un envío en un nodo. `null` cuando aún no se abrió
 /// (el backend responde 404), lo que la UI usa para ofrecer "Abrir recepción".
@@ -46,8 +41,8 @@ final nodeReceptionProvider = FutureProvider.autoDispose
           .call(shipmentId: key.shipmentId, nodeId: key.nodeId),
     );
 
-/// Bultos esperados de un envío (per-bulto); insumo de la recepción y del POD.
-/// Caché corta: entrar y salir del detalle no los vuelve a pedir.
+/// Productos esperados de un envío (uno por unidad física); insumo de la
+/// recepción y del POD. Caché corta: entrar y salir del detalle no los vuelve a pedir.
 final shipmentUnitsProvider = FutureProvider.autoDispose
     .family<List<UnitTracking>, String>((ref, shipmentId) {
       ref.cacheFor(CacheTtl.short);

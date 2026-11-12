@@ -203,7 +203,7 @@ class LocationService {
   }
 
   /// Calienta la posición en segundo plano (sin esperar): las pantallas de
-  /// escaneo lo llaman al abrir la cámara para que, al registrar el bulto,
+  /// escaneo lo llaman al abrir la cámara para que, al registrar el producto,
   /// [current] ya tenga una posición fresca y no espere al GPS. No hace nada si
   /// ya hay una posición reciente o una lectura en curso. Nunca lanza.
   void prefetch() {

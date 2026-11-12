@@ -157,7 +157,10 @@ class OfflineQueue {
         // o tarea de fondo). Marcarla fallida perdería la escritura de terreno.
         if (SyncRetryPolicy.countsAsAttempt(e)) {
           await _db.markTransientFailure(id, e.message);
-          _scheduleRetry(await _db.actionAttempts(id));
+          _scheduleRetry(
+            await _db.actionAttempts(id),
+            retryAfter: SyncRetryPolicy.retryAfterOf(e),
+          );
         }
         unawaited(_scheduler.scheduleOneOff());
         return SubmitOutcome.queued;
@@ -297,7 +300,10 @@ class OfflineQueue {
             }
             // 429/5xx: suma el intento, corta y reintenta con backoff.
             await _db.markTransientFailure(action.id, e.message);
-            _scheduleRetry(attempts);
+            _scheduleRetry(
+              attempts,
+              retryAfter: SyncRetryPolicy.retryAfterOf(e),
+            );
             unawaited(_scheduler.scheduleOneOff());
             return;
           }
@@ -335,13 +341,15 @@ class OfflineQueue {
   );
 
   /// Reintento en primer plano con backoff exponencial sobre `attempts`
-  /// (5 s, 10 s, 20 s... tope 10 min). Un solo timer a la vez.
+  /// (5 s, 10 s, 20 s... tope 10 min), o lo que pida el servidor en
+  /// `Retry-After` si es más (429/503). Un solo timer a la vez.
   Timer? _retryTimer;
   bool _disposed = false;
 
-  void _scheduleRetry(int attempts) {
+  void _scheduleRetry(int attempts, {Duration? retryAfter}) {
     if (_disposed || (_retryTimer?.isActive ?? false)) return;
-    _retryTimer = Timer(SyncRetryPolicy.backoffFor(attempts), () {
+    final delay = SyncRetryPolicy.delayFor(attempts, retryAfter: retryAfter);
+    _retryTimer = Timer(delay, () {
       _retryTimer = null;
       if (!_disposed) unawaited(drain());
     });

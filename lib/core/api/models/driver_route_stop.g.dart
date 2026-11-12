@@ -28,6 +28,9 @@ DriverRouteStop _$DriverRouteStopFromJson(Map<String, dynamic> json) =>
       settledAt: json['settled_at'] == null
           ? null
           : DateTime.parse(json['settled_at'] as String),
+      unitIds: (json['unit_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
 
 Map<String, dynamic> _$DriverRouteStopToJson(DriverRouteStop instance) =>

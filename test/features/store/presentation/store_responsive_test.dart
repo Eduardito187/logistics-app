@@ -82,7 +82,7 @@ void main() {
     screen,
   ) async {
     await _pump(tester, const NodeReceptionScreen(), [
-      storeShipmentsProvider.overrideWith((ref) async => _shipments),
+      storeShipmentsOverride(() async => _shipments),
       selectedStoreNodeProvider.overrideWithValue(_node),
     ]);
 
@@ -117,7 +117,7 @@ void main() {
     screen,
   ) async {
     await _pump(tester, const CounterPickupScreen(), [
-      storeShipmentsProvider.overrideWith((ref) async => _shipments),
+      storeShipmentsOverride(() async => _shipments),
     ]);
 
     expect(find.byType(PickupCard), findsWidgets);
@@ -136,7 +136,7 @@ void main() {
     screen,
   ) async {
     await _pump(tester, const CounterPickupScreen(), [
-      storeShipmentsProvider.overrideWith((ref) async => const []),
+      storeShipmentsOverride(() async => const []),
     ]);
 
     expect(find.text('Sin recojos'), findsOneWidget);
@@ -255,7 +255,7 @@ void main() {
   });
 }
 
-/// Ubicaciones en estante precargadas (para probar el texto extra por bulto).
+/// Ubicaciones en estante precargadas (para probar el texto extra por producto).
 class _PresetShelves extends ShelfLocationsNotifier {
   _PresetShelves(this.initial);
 

@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/data.dart';
 import '../../../../core/api/models/delivery.dart';
+import '../../../../core/api/models/enum0.dart';
+import '../../../../core/api/models/meta_sealed.dart';
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/node_reception_request.dart';
 import '../../../../core/api/models/node_reception_view.dart';
@@ -14,6 +19,7 @@ import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../domain/entities/shipment_page.dart';
 
 /// Única clase del feature Tienda que toca `logisticsApiProvider` / `api.*`.
 ///
@@ -57,6 +63,74 @@ class StoreRemoteDataSource {
     }
   }
 
+  /// Una página de envíos del nodo ([page] desde 1, [perPage] ≤ 200). El
+  /// cliente generado tiene `page = 1, per_page = 50` por defecto: sin mandar
+  /// estos parámetros una tienda con más de 50 envíos perdía el resto en
+  /// silencio.
+  Future<ShipmentPage> listShipmentsPage({
+    String? destinationNodeId,
+    required int page,
+    required int perPage,
+  }) async {
+    try {
+      final response = await _ref
+          .read(logisticsApiProvider)
+          .shipments
+          .listShipments(
+            destinationNodeId: destinationNodeId,
+            page: page,
+            perPage: perPage,
+          );
+      return ShipmentPage(
+        shipments: response.data,
+        hasMore: _hasMoreAfter(response.meta, response.data.length, perPage),
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Si queda otra página después de la recién traída.
+  ///
+  /// El backend manda `meta` con `page/per_page/total/total_pages/next_page`,
+  /// pero el modelo generado [MetaSealed] deserializa sus variantes con claves
+  /// camelCase (`per_page` → `perPage`), así que una respuesta real nunca
+  /// encaja en [MetaSealedPaginationMeta] y cae en la variante "solo count".
+  /// Por eso se usa `meta` cuando SÍ se puede leer (si el generador se
+  /// arregla, esto empieza a funcionar solo) y, si no, se deduce por tamaño:
+  /// una página completa significa que puede haber más. El costo del heurístico
+  /// es, como máximo, un GET extra que vuelve vacío.
+  bool _hasMoreAfter(MetaSealed? meta, int received, int perPage) =>
+      switch (meta) {
+        MetaSealedPaginationMeta(:final nextPage) => nextPage != null,
+        MetaSealedCursorMeta(:final hasMore) => hasMore,
+        _ => received >= perPage,
+      };
+
+  /// Sube la foto de evidencia del POD y devuelve `{disk, path, url}`: `path`
+  /// es la referencia durable que el backend espera en `photo_path` de la
+  /// prueba de entrega. Requiere red; el fallback offline lo decide el caso de
+  /// uso (ver `UploadPodPhoto`).
+  Future<Data> uploadDeliveryPhoto({
+    required String shipmentId,
+    required File photo,
+    Enum0 kind = Enum0.pod,
+  }) async {
+    try {
+      final response = await _ref
+          .read(logisticsApiProvider)
+          .execution
+          .uploadDeliveryPhoto(
+            shipmentId: shipmentId,
+            photo: photo,
+            kind: kind,
+          );
+      return response.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// Estado de la recepción de un envío en un nodo. El backend responde 404
   /// cuando aún no se abrió; esa traducción a "sin recepción" vive en el
   /// repositorio, acá solo se normaliza el error.
@@ -75,7 +149,8 @@ class StoreRemoteDataSource {
     }
   }
 
-  /// Bultos esperados de un envío (per-bulto); insumo de la recepción y del POD.
+  /// Productos esperados de un envío (uno por unidad física); insumo de la
+  /// recepción y del POD.
   Future<List<UnitTracking>> getShipmentUnits(String shipmentId) async {
     try {
       final response = await _ref
@@ -131,7 +206,7 @@ class StoreRemoteDataSource {
     }
   }
 
-  /// Llamada directa al endpoint de recepción de un bulto en el nodo. La usa el
+  /// Llamada directa al endpoint de recepción de un producto en el nodo. La usa el
   /// dispatcher de la cola offline; en terreno el escaneo se encola primero.
   Future<NodeReceptionView> receiveUnitAtNode(
     ReceiveUnitAtNodeRequest body, {
@@ -148,8 +223,8 @@ class StoreRemoteDataSource {
     }
   }
 
-  /// Llamada directa al endpoint de recepción (EAN→etiqueta) de un bulto. La usa
-  /// el dispatcher de la cola offline.
+  /// Llamada directa al endpoint de recepción (EAN→etiqueta) de un producto.
+  /// La usa el dispatcher de la cola offline.
   Future<Delivery> recordNodeReception(
     NodeReceptionRequest body, {
     String? idempotencyKey,

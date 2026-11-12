@@ -26,7 +26,7 @@ Future<ProviderContainer> _pump(
     overrides: [
       ...syncBadgeOverrides(),
       storeNodesProvider.overrideWith((ref) async => nodes),
-      storeShipmentsProvider.overrideWith((ref) async => shipments),
+      storeShipmentsOverride(() async => shipments),
       // La tienda es la del usuario (sesión); acá se inyecta directo.
       selectedStoreNodeProvider.overrideWithValue(selected),
     ],

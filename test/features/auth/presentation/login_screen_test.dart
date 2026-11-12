@@ -67,6 +67,32 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 }
 
+/// Repo con respuestas en secuencia: el i-ésimo login usa `errors[i]`
+/// (`null` = éxito). Permite reproducir fallo→reintento. `secondGate`, si se
+/// pasa, hace esperar al 2do intento para observar el fotograma de "cargando".
+class _SequencedAuthRepository extends _FakeAuthRepository {
+  _SequencedAuthRepository({required this.errors, this.secondGate});
+
+  final List<Object?> errors;
+  final Completer<void>? secondGate;
+  int _calls = 0;
+
+  @override
+  Future<LoginResult> login({
+    required String email,
+    required String password,
+  }) async {
+    final index = _calls++;
+    loginCalled = true;
+    lastEmail = email;
+    lastPassword = password;
+    if (index == 1 && secondGate != null) await secondGate!.future;
+    final error = index < errors.length ? errors[index] : null;
+    if (error != null) throw error;
+    return const LoginSignedIn();
+  }
+}
+
 Future<void> _pump(WidgetTester tester, _FakeAuthRepository repo) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -164,6 +190,51 @@ void main() {
     expect(find.text('Usuario o contraseña incorrectos.'), findsOneWidget);
     // Sigue en el login (no se deslogueó ni navegó).
     expect(find.text('Ingresar'), findsOneWidget);
+  });
+
+  testWidgets('reintento tras un fallo: NO reaparece el error anterior', (
+    tester,
+  ) async {
+    // Repo que falla el 1er intento (401) y deja pasar el 2do (con compuerta
+    // para observar el fotograma de "cargando").
+    final gate = Completer<void>();
+    final repo = _SequencedAuthRepository(
+      errors: [
+        const ApiException(
+          status: 401,
+          title: 'No se pudo ingresar',
+          detail: 'Usuario o contraseña incorrectos.',
+        ),
+        null, // 2do intento: ok
+      ],
+      secondGate: gate,
+    );
+    await _pump(tester, repo);
+
+    await tester.enterText(find.byType(TextField).first, 'user@x.com');
+    await tester.enterText(find.byType(TextField).last, 'mala');
+    await tester.tap(find.text('Ingresar'));
+    await tester.pumpAndSettle();
+    // 1er intento: se ve el error.
+    expect(find.text('Usuario o contraseña incorrectos.'), findsOneWidget);
+
+    // 2do intento (ahora con la contraseña correcta).
+    await tester.enterText(find.byType(TextField).last, 'buena');
+    await tester.tap(find.text('Ingresar'));
+    // El tap dispara submit → AsyncLoading (que conserva el error previo). Se
+    // deja que el aviso viejo termine de salir (clearSnackBars anima); el 2do
+    // intento sigue en curso (gated), así que el estado sigue en "cargando".
+    await tester.pump(); // submit
+    await tester.pump(const Duration(seconds: 1)); // el snack viejo se va
+
+    // AQUÍ estaba el bug: la transición a "cargando" reaparecía el aviso viejo
+    // (copyWithPrevious). Con el intento aún cargando, NO debe haber error.
+    expect(find.text('Usuario o contraseña incorrectos.'), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    // El 2do intento fue exitoso: tampoco hay error.
+    expect(find.text('Usuario o contraseña incorrectos.'), findsNothing);
   });
 
   testWidgets('mientras carga: muestra spinner y deshabilita el botón', (

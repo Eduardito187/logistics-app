@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/session.dart';
 import 'core/home_widgets/home_widgets_provider.dart';
+import 'core/labels/label_keys_notifier.dart';
 import 'core/live_updates/route_live_updates_provider.dart';
 import 'core/shortcuts/app_shortcuts_provider.dart';
 import 'core/monitoring/crash_session_binder.dart';
@@ -59,6 +62,11 @@ class LogisticsApp extends ConsumerWidget {
     ref.listen(sessionProvider, (previous, next) {
       if (previous == null && next != null) {
         messengerKey.currentState?.clearSnackBars();
+        // Refresca claves de etiquetas y el MODO ABIERTO en cada sesión activa
+        // (login Y restauración al reabrir la app), no solo al iniciar sesión.
+        // Así, si el backend está en modo abierto, el escáner no vuelve a
+        // verificar firma al reabrir y NINGUNA etiqueta se marca inválida.
+        unawaited(ref.read(labelKeysProvider.notifier).refresh());
       }
     });
 

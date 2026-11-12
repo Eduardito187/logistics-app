@@ -18,7 +18,7 @@ void driverDeliveryFlowTests() {
       final h = await pumpE2eApp(
         tester,
         scans: [
-          validLabelQr, // bulto entregado (POD)
+          validLabelQr, // producto entregado (POD)
           'CLIENTE-QR-123', // QR de confirmación del cliente
         ],
         photos: [photo],

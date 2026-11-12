@@ -16,7 +16,7 @@ import 'scanner_screen.dart' show createScannerController;
 class ScanFeedback {
   const ScanFeedback({required this.ok, required this.message});
 
-  /// Código aceptado (p. ej. "Bulto 3/12 registrado").
+  /// Código aceptado (p. ej. "Producto 3/12 registrado").
   const ScanFeedback.ok(this.message) : ok = true;
 
   /// Código rechazado (p. ej. "No es de esta ruta").
@@ -48,20 +48,20 @@ final continuousScannerProvider = Provider<ContinuousCodeScanner?>(
 );
 
 /// Ventana en la que el MISMO código leído otra vez se ignora (la cámara queda
-/// apoyada sobre el bulto y lo lee ~4 veces por segundo).
+/// apoyada sobre el producto y lo lee ~4 veces por segundo).
 const Duration kContinuousScanRepeatWindow = Duration(seconds: 2);
 
 /// Tiempo que queda visible el aviso del último código.
 const Duration kContinuousScanFeedbackVisible = Duration(seconds: 3);
 
-/// Abre la cámara en modo CONTINUO: no se cierra entre bultos. Por cada código
+/// Abre la cámara en modo CONTINUO: no se cierra entre productos. Por cada código
 /// leído llama a [onCode] y muestra su [ScanFeedback] sobre la cámara (verde o
 /// rojo, con vibración/sonido según la preferencia). El mismo código repetido
 /// dentro de [kContinuousScanRepeatWindow] se ignora, y mientras [onCode]
 /// procesa uno no se toman otros. Termina con el botón "Terminar" (o atrás).
 ///
 /// Carga/descarga/recepción: la cámara se abre una sola vez por tanda en vez
-/// de una por bulto (0,5–1,5 s ahorrados por bulto en gama baja).
+/// de una por producto (0,5–1,5 s ahorrados por producto en gama baja).
 Future<void> scanContinuous(
   BuildContext context, {
   required String title,
@@ -230,7 +230,7 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
         lastAt != null &&
         now.difference(lastAt) < widget.repeatWindow;
     if (code == _lastCode) {
-      // Mientras la cámara siga sobre el mismo bulto se renueva la ventana.
+      // Mientras la cámara siga sobre el mismo producto se renueva la ventana.
       _lastSeenAt = now;
     }
     if (repeated || _busy) return;

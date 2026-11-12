@@ -13,8 +13,9 @@ import 'widgets/carrier_scan_session_view.dart';
 import 'widgets/carrier_scan_support.dart';
 import 'widgets/signed_label_result.dart';
 
-/// Escaneo del transportista al ENTREGAR: prueba de entrega. Escanea el bulto,
-/// luego el QR de confirmación del cliente, y registra la entrega offline-first.
+/// Escaneo del transportista al ENTREGAR: prueba de entrega. Escanea el
+/// producto, luego el QR de confirmación del cliente, y registra la entrega
+/// offline-first.
 class CarrierDeliverScreen extends ConsumerStatefulWidget {
   const CarrierDeliverScreen({super.key});
 
@@ -27,13 +28,13 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
   final List<CarrierScanRecord> _records = [];
   bool _busy = false;
 
-  /// Bultos ya entregados (no rechazados) en esta pantalla: un segundo
+  /// Productos ya entregados (no rechazados) en esta pantalla: un segundo
   /// escaneo del mismo no encola otra prueba de entrega.
   final Set<String> _delivered = <String>{};
 
   /// Primero el QR de confirmación del cliente (una vez por entrega) y después
-  /// escaneo CONTINUO de sus bultos: la cámara queda abierta y cada bulto se
-  /// registra al leerlo. Todos los bultos de la tanda deben ser del mismo
+  /// escaneo CONTINUO de sus productos: la cámara queda abierta y cada producto
+  /// se registra al leerlo. Todos los productos de la tanda deben ser del mismo
   /// pedido (la confirmación es de ese cliente).
   Future<void> _deliver() async {
     if (_busy) return;
