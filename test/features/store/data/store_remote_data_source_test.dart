@@ -120,35 +120,38 @@ void main() {
       expect(page.hasMore, isFalse);
     });
 
-    test('el `meta` del cliente generado NO sirve: manda el heurístico', () async {
-      // DOS bugs independientes del cliente generado dejan `meta` inservible
-      // para paginar:
-      //   1. `MetaSealed` deserializa en camelCase (`perPage`, `nextPage`)
-      //      mientras el backend manda snake_case.
-      //   2. La PRIMERA variante del tipo sellado solo exige `count`, así que
-      //      SIEMPRE gana ella y las variantes con paginación/cursor quedan
-      //      inalcanzables.
-      // Por eso, aunque el `meta` diga "última página", manda el heurístico de
-      // tamaño. Pedido al backend: arreglar el generador/spec de `meta`.
-      final w = _wire(
-        body: {
-          'data': [shipment().toJson(), shipment(id: 'ship-2').toJson()],
-          'meta': {
-            'count': 2,
-            'page': 1,
-            'per_page': 2,
-            'total': 2,
-            'total_pages': 1,
-            'next_page': null,
+    test(
+      'el `meta` del cliente generado NO sirve: manda el heurístico',
+      () async {
+        // DOS bugs independientes del cliente generado dejan `meta` inservible
+        // para paginar:
+        //   1. `MetaSealed` deserializa en camelCase (`perPage`, `nextPage`)
+        //      mientras el backend manda snake_case.
+        //   2. La PRIMERA variante del tipo sellado solo exige `count`, así que
+        //      SIEMPRE gana ella y las variantes con paginación/cursor quedan
+        //      inalcanzables.
+        // Por eso, aunque el `meta` diga "última página", manda el heurístico de
+        // tamaño. Pedido al backend: arreglar el generador/spec de `meta`.
+        final w = _wire(
+          body: {
+            'data': [shipment().toJson(), shipment(id: 'ship-2').toJson()],
+            'meta': {
+              'count': 2,
+              'page': 1,
+              'per_page': 2,
+              'total': 2,
+              'total_pages': 1,
+              'next_page': null,
+            },
           },
-        },
-      );
+        );
 
-      final page = await w.source.listShipmentsPage(page: 1, perPage: 2);
+        final page = await w.source.listShipmentsPage(page: 1, perPage: 2);
 
-      // Página completa ⇒ el heurístico dice que puede haber más (cuesta a lo
-      // sumo un GET vacío al final).
-      expect(page.hasMore, isTrue);
-    });
+        // Página completa ⇒ el heurístico dice que puede haber más (cuesta a lo
+        // sumo un GET vacío al final).
+        expect(page.hasMore, isTrue);
+      },
+    );
   });
 }
