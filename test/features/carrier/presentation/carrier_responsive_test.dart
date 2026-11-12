@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/corridor_type.dart';
+import 'package:logistics_app/core/api/models/settlement.dart';
 import 'package:logistics_app/core/api/models/settlement_status.dart';
 import 'package:logistics_app/core/layout/breakpoints.dart';
 import 'package:logistics_app/features/carrier/data/repositories/carrier_repository_impl.dart';
@@ -51,6 +53,17 @@ Future<void> _pumpWithCarrier(
   ).read(selectedCarrierProvider.notifier).select(carrier());
   await tester.pumpAndSettle();
 }
+
+/// Dos corredores reales del transportista: con más de uno el selector pide
+/// elegir (con uno solo lo dejaría ya elegido).
+Future<List<Settlement>> _corridors(String _) async => [
+  settlement(
+    corridorFrom: 'cd-santa-cruz',
+    corridorTo: 'store-scz-centro',
+    corridorType: CorridorType.cdToStore,
+  ),
+  settlement(id: 's2', corridorFrom: 'cd-la-paz', corridorTo: 'cd-santa-cruz'),
+];
 
 /// En tablets el ancho del contenido queda acotado.
 void _expectBoundedWidth(WidgetTester tester, Finder finder, double max) {
@@ -203,17 +216,19 @@ void main() {
     await _pumpWithCarrier(
       tester,
       const CarrierTariffScreen(),
-      repo: FakeCarrierRepository(onGetTariff: () async => tariff()),
+      repo: FakeCarrierRepository(
+        onListSettlements: _corridors,
+        onGetTariff: () async => tariff(),
+      ),
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Origen (código)'),
-      'LPB',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Destino (código)'),
-      'SCZ',
-    );
+    // Corredor elegido de la lista (sin tipear códigos).
+    expect(find.text('Elegí tu corredor'), findsOneWidget);
+    await tester.tap(find.text('Elegí tu corredor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CD Santa Cruz → Tienda SCZ Centro').last);
+    await tester.pumpAndSettle();
+
     final button = findButtonWithText<FilledButton>('Consultar tarifa');
     await tester.ensureVisible(button);
     await tester.tap(button);
@@ -231,19 +246,16 @@ void main() {
       tester,
       const CarrierAssignmentScreen(),
       repo: FakeCarrierRepository(
+        onListSettlements: _corridors,
         onAssignForVolume: () async =>
             assignment(volumeM3: 1234.75, tariffValue: tariff()),
       ),
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Origen (código)'),
-      'LPB',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Destino (código)'),
-      'SCZ',
-    );
+    await tester.tap(find.text('Elegí tu corredor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CD Santa Cruz → Tienda SCZ Centro').last);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Volumen (m³)'),
       '1234.75',
@@ -264,17 +276,17 @@ void main() {
     await _pumpWithCarrier(
       tester,
       const CarrierCheapestTariffScreen(),
-      repo: FakeCarrierRepository(onCheapestTariff: () async => tariff()),
+      repo: FakeCarrierRepository(
+        onListSettlements: _corridors,
+        onCheapestTariff: () async => tariff(),
+      ),
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Origen (código)'),
-      'LPB',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Destino (código)'),
-      'SCZ',
-    );
+    await tester.tap(find.text('Elegí tu corredor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CD Santa Cruz → Tienda SCZ Centro').last);
+    await tester.pumpAndSettle();
+
     final button = findButtonWithText<FilledButton>('Buscar más barata');
     await tester.ensureVisible(button);
     await tester.tap(button);

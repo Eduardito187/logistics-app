@@ -225,6 +225,7 @@ void main() {
     screen,
   ) async {
     await _pump(tester, PickupPodScreen(shipment: _shipment), [
+      storeRepositoryProvider.overrideWithValue(FakeStoreRepository()),
       shipmentUnitsProvider(_shipment.id).overrideWith(
         (ref) async => [
           for (var i = 0; i < 6; i++)

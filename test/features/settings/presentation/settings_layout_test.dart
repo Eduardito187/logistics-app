@@ -187,7 +187,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Este dispositivo'), findsOneWidget);
+    expect(find.text('Este teléfono'), findsOneWidget);
     // Lista perezosa: no construye las 12 tarjetas de una.
     if (screen != TestScreen.tabletPortrait) {
       expect(find.byType(DeviceCard).evaluate().length, lessThan(12));

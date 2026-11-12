@@ -8,6 +8,7 @@ import 'package:logistics_app/core/scanning/scanner_screen.dart';
 import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/widgets/app_snack.dart';
+import 'package:logistics_app/features/store/data/repositories/store_repository_impl.dart';
 import 'package:logistics_app/features/store/domain/usecases/enqueue_delivery_photo.dart';
 import 'package:logistics_app/features/store/domain/usecases/record_pod.dart';
 import 'package:logistics_app/features/store/domain/usecases/upload_pod_photo.dart';
@@ -111,6 +112,9 @@ Future<_Harness> _pump(
     ProviderScope(
       overrides: [
         ...syncBadgeOverrides(),
+        // Sin red para el estado de entrega: la pantalla abre igual con la
+        // lista de entregados vacía (ver pickup_pod_scan_test.dart).
+        storeRepositoryProvider.overrideWithValue(FakeStoreRepository()),
         shipmentUnitsProvider(
           _shipment.id,
         ).overrideWith((ref) async => [unit(unitId: 'unit-1')]),

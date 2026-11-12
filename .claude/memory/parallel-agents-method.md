@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 09382079-47de-4656-9b51-88ca4bb40fff
-  modified: 2026-11-11T14:08:45.587Z
+  modified: 2026-11-12T08:45:25.811Z
 ---
 
 El dueño pide repetidamente **agentes en paralelo** y "completar al 100%", no de a poco. El método que funcionó sin conflictos:
@@ -26,5 +26,12 @@ archivo nuevo/tocado por el agente apenas cierra; (2) si el agente se cuelga, Ta
 mano; (3) lo **interconectado** (mapa/GPS, pantallas que varios features comparten) lo hace el coordinador
 mismo — repartirlo entre agentes da conflictos o archivos rotos. Un agente = archivos NUEVOS o un archivo
 puntual no compartido; el coordinador cablea `driver_routes.dart`/`checklist_screen.dart`/home, etc.
+
+**Variante que funcionó MUY bien en código EXISTENTE (nov 2026).** Para un cambio transversal (renombrar vocabulario en ~250 lugares) + varias mejoras a la vez, repartir **por ÁREA, no por tarea**: cada agente hace el cambio transversal **y** la mejora funcional **de su propia carpeta** (`features/store`, `features/carrier`, `features/driver`, `core` sin `core/api`), y el coordinador toma el resto (`features/picking`, `integration_test`) + el cableado. Así nadie toca el archivo de otro aunque las tareas se solapen conceptualmente. Reglas que hicieron la diferencia:
+- Decirle a cada agente **qué NO tocar**, nombrando las carpetas de los otros y **siempre** `lib/core/api/**` (generado).
+- Si un provider/firma compartida cambia, el coordinador deja un **alias de compatibilidad** (p. ej. mantener `ordersToPrepareProvider` derivado del nuevo notifier) para no romper archivos de otras áreas en pleno vuelo.
+- **Agentes de solo lectura para auditar**: para relevar deuda/pedidos al backend, 3 agentes con `PROHIBIDO editar` dan informes accionables sin riesgo de conflicto.
+- Pedirles que **reescriban la frase** cuando un reemplazo mecánico diría un absurdo; un agente detectó solo que "la cantidad de productos no es la cantidad de productos" no tenía sentido y acuñó "ítems" vs "productos etiquetados".
+- Verificación del coordinador al cerrar cada agente: `getDiagnostics` → `dart format` → `flutter analyze` → tests **por área** y recién al final la suite completa.
 
 **Why:** evita colisiones de last-writer-wins en archivos compartidos y mantiene el build siempre verde. Ver [[app-api-coverage-state]], [[test-battery-and-infra]].

@@ -64,12 +64,37 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
   /// Si hay confirmación escrita. Se cachea para reconstruir solo cuando
   /// cambia (no en cada tecla, que redibujaría la foto y la lista de productos).
   bool _hasConfirmation = false;
+
+  /// Productos ya entregados: los que el servidor confirmó antes de abrir la
+  /// pantalla (ver [initState]) más los de esta sesión. No es solo memoria: así
+  /// un reinicio de la app a mitad del retiro no permite entregar dos veces el
+  /// mismo producto.
   final Set<String> _delivered = <String>{};
+
+  /// Mantiene viva la consulta de lo ya entregado mientras dura el retiro.
+  ProviderSubscription<AsyncValue<Set<String>>>? _deliveredSub;
 
   Shipment get _shipment => widget.shipment;
 
   @override
+  void initState() {
+    super.initState();
+    final provider = deliveredUnitIdsProvider(_shipment.id);
+    // Se escucha SIN esperarla (regla 4): el retiro arranca igual y lo ya
+    // entregado se siembra en cuanto llegue. Si no hay red el provider devuelve
+    // vacío y no se bloquea nada.
+    _deliveredSub = ref.listenManual(
+      provider,
+      (_, next) => _seedDelivered(next.value),
+    );
+    // Si la respuesta ya estaba en caché (volver a entrar a la pantalla) el
+    // listener no dispara: se siembra acá, antes del primer build.
+    _delivered.addAll(ref.read(provider).value ?? const <String>{});
+  }
+
+  @override
   void dispose() {
+    _deliveredSub?.close();
     _confirmationController.dispose();
     _evictPreview(_photoFile);
     super.dispose();
@@ -146,6 +171,16 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
         ),
       ),
     );
+  }
+
+  /// Suma lo que el servidor ya tiene entregado a [_delivered]. Solo agrega:
+  /// nunca borra un producto entregado en esta sesión (que todavía puede estar
+  /// en la cola offline y por eso el servidor aún no lo reporta).
+  void _seedDelivered(Set<String>? confirmed) {
+    if (confirmed == null || !mounted) return;
+    final missing = confirmed.difference(_delivered);
+    if (missing.isEmpty) return;
+    setState(() => _delivered.addAll(missing));
   }
 
   void _onConfirmationChanged(String _) {
@@ -302,8 +337,10 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     if (units != null && !units.any((u) => u.unitId == unitId)) {
       return const ScanFeedback.error('No es de este pedido');
     }
+    // Ya entregado: en esta sesión o según el servidor (sembrado al abrir).
+    // Volver a registrarlo encolaría un POD duplicado del mismo producto.
     if (_delivered.contains(unitId)) {
-      return const ScanFeedback.error('Ya entregado');
+      return const ScanFeedback.error('Este producto ya fue entregado');
     }
 
     // Feedback inmediato: el producto se marca entregado apenas se lee; el POD
@@ -322,8 +359,13 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
           location: prefetchFix(ref),
         );
     if (outcome == SubmitOutcome.failed) {
-      // Rechazado por el backend: no queda como entregado.
-      if (mounted) setState(() => _delivered.remove(unitId));
+      // Rechazado por el backend: no queda como entregado. Salvo que el
+      // servidor lo tenga confirmado (llegó mientras se registraba): ahí sigue
+      // entregado, para no habilitar una segunda entrega del mismo producto.
+      final confirmed = ref.read(deliveredUnitIdsProvider(_shipment.id)).value;
+      if (mounted && !(confirmed?.contains(unitId) ?? false)) {
+        setState(() => _delivered.remove(unitId));
+      }
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
     final total = units?.length;

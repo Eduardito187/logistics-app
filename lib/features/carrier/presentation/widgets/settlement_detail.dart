@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/brand_loader.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
+import 'corridor_format.dart';
 import 'settlement_actions_permissions.dart';
 import 'settlement_detail_row.dart';
 import 'settlement_format.dart';
@@ -63,7 +64,10 @@ class SettlementDetail extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${settlement.corridorFrom} → ${settlement.corridorTo}',
+                        corridorPairLabel(
+                          settlement.corridorFrom,
+                          settlement.corridorTo,
+                        ),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),

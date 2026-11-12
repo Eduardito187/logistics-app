@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/widgets/stat_tile.dart';
 import 'package:logistics_app/features/driver/domain/entities/my_day_stats.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/locally_settled_stops.dart';
 import 'package:logistics_app/features/driver/presentation/my_day_screen.dart';
 
 import '../../../support/screen_sizes.dart';
@@ -40,9 +41,29 @@ DriverRoute _route() => buildRoute(
   ],
 );
 
-Future<void> _pump(WidgetTester tester, DriverRoute route) => pumpScoped(
+/// Paradas ya resueltas en el teléfono (cola offline) fijadas de entrada, para
+/// montar "Mi día" como lo ve el chofer sin señal.
+class _PresetSettledStops extends LocallySettledStops {
+  _PresetSettledStops(this.initial);
+
+  final Map<String, DriverRouteStopStatus> initial;
+
+  @override
+  Map<String, DriverRouteStopStatus> build() => initial;
+}
+
+Future<void> _pump(
+  WidgetTester tester,
+  DriverRoute route, {
+  Map<String, DriverRouteStopStatus> locallySettled = const {},
+}) => pumpScoped(
   tester,
-  overrides: gateBase(route: route),
+  overrides: [
+    ...gateBase(route: route),
+    locallySettledStopsProvider.overrideWith(
+      () => _PresetSettledStops(locallySettled),
+    ),
+  ],
   child: const MyDayScreen(),
   tall: true,
 );
@@ -94,6 +115,41 @@ void main() {
       expect(s.averagePerStop, isNull);
     });
 
+    test('cuenta la parada resuelta en el teléfono (sin señal)', () {
+      // El backend sigue diciendo "pendiente" para s4 (la cola offline no
+      // sincronizó todavía), pero el chofer ya la cerró: "Mi día" debe contarla
+      // como entregada, igual que la lista de paradas y la entrega en curso.
+      final s = MyDayStats.fromRoute(_route(), const {
+        's4': DriverRouteStopStatus.completed,
+      });
+      expect(s.delivered, 3);
+      expect(s.failed, 1);
+      expect(s.pending, 1);
+      expect(s.attended, 4);
+      // La hora de cierre la pone el backend: sin señal no cambia.
+      expect(s.lastSettledAt, DateTime(2026, 10, 15, 10, 20));
+    });
+
+    test('una entrega fallida local cuenta como no entregada', () {
+      final s = MyDayStats.fromRoute(_route(), const {
+        's5': DriverRouteStopStatus.failed,
+      });
+      expect(s.delivered, 2);
+      expect(s.failed, 2);
+      expect(s.pending, 1);
+    });
+
+    test('con señal el estado del backend manda', () {
+      // La parada ya volvió resuelta del backend: el mapa local no la duplica
+      // ni cambia el conteo.
+      final s = MyDayStats.fromRoute(_route(), const {
+        's1': DriverRouteStopStatus.failed,
+      });
+      expect(s.delivered, 2);
+      expect(s.failed, 1);
+      expect(s.pending, 2);
+    });
+
     test('sin paradas listadas usa totalStops', () {
       final s = MyDayStats.fromRoute(
         buildRoute(totalStops: 4, completedStops: 0, stops: const []),
@@ -132,6 +188,27 @@ void main() {
     expect(find.text('Ver ruta del día'), findsOneWidget);
     // Offline invisible: nada de conexión ni pendientes de sincronizar.
     expect(find.textContaining('conexión'), findsNothing);
+    expect(find.textContaining('sincroniz'), findsNothing);
+  });
+
+  testWidgets('la parada cerrada sin señal ya no figura pendiente', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _route(),
+      locallySettled: const {'s4': DriverRouteStopStatus.completed},
+    );
+
+    String valueOf(String label) => tester
+        .widget<StatTile>(
+          find.ancestor(of: find.text(label), matching: find.byType(StatTile)),
+        )
+        .value;
+    expect(find.text('4 de 5 paradas atendidas'), findsOneWidget);
+    expect(valueOf('Entregadas'), '3');
+    expect(valueOf('Pendientes'), '1');
+    // Offline invisible: no se menciona la cola ni la conexión.
     expect(find.textContaining('sincroniz'), findsNothing);
   });
 

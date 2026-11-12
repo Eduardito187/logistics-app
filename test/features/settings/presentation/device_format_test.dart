@@ -33,6 +33,26 @@ void main() {
     });
   });
 
+  group('deviceNameLabel', () {
+    test('usa el nombre que mandó la app (el modelo del equipo)', () {
+      expect(deviceNameLabel('OnePlus CPH2749', 'android'), 'OnePlus CPH2749');
+    });
+
+    test('null, vacío o solo espacios caen a la plataforma', () {
+      expect(deviceNameLabel(null, 'ios'), 'iOS');
+      expect(deviceNameLabel('', 'android'), 'Android');
+      expect(deviceNameLabel('   ', 'android'), 'Android');
+      expect(deviceNameLabel(null, null), 'Dispositivo');
+    });
+
+    test('recorta espacios sobrantes del nombre', () {
+      expect(
+        deviceNameLabel('  Honor Magic5 Lite ', 'android'),
+        'Honor Magic5 Lite',
+      );
+    });
+  });
+
   group('formatDeviceDateTime', () {
     test('null se muestra como guion', () {
       expect(formatDeviceDateTime(null), '—');

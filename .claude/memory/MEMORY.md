@@ -32,4 +32,11 @@
 - [Login otro usuario → "dado de baja"](device-revoked-other-user-cache.md) — caché 30 s de EnsureDeviceToken sin invalidar en bindDevice; fix backend (sin deploy) + reintento app 35 s
 - [Impresora WiFi: búsqueda + oficina](wifi-printer-discovery.md) — búsqueda tipo Windows (máscara real/mDNS/WSD); Ricoh/láser = **PDF directo por 9100 + código de usuario en texto claro** (PCL salía en blanco, IPP cancela); cómo diagnosticar una Ricoh desde la PC
 - [Funciones nativas del teléfono + batería](device-features-native.md) — biometría, Live Updates/Dynamic Island, accesos directos, modo ahorro; canales propios sin pub; target iOS pendiente
+- [flutter test colgado = huérfanos](orphan-flutter-test-processes.md) — matar `flutter test` huérfanos; correr suite con timeout + JSON, sin pipes
 - [Ruta del backend vigente](backend-repo-path.md) — C:\Users\ehhuallata\Documents\APP\logistics (solo lectura); ~/dismac/logistics de WSL es viejo
+- [Endurecimiento POD/escáner/vehículo](pod-scanner-vehicle-hardening.md) — nov 2026: scanner no-negro, sin "QR del cliente", bulto validado vs envío, selector de vehículos reales; binding/POD-500/ruta≠deliveries van al backend
+- [Footgun de rotación de clave de etiquetas](label-key-rotation-footgun.md) — nov 2026: "etiqueta no válida" = el deploy regeneraba la Ed25519 bajo el mismo key_id=1; K_old irrecuperable → re-emitir (staging); fix prod = registro append-only + guardia al boot; bug: /labels/reprint solo revoca
+- [Auditoría completa y backlog del backend](backend-audit-2026-11-12.md) — nov 2026: 29 pedidos priorizados; estado del pedido que no avanzaba (384 arrastrados), fuga de liquidaciones, POD de tienda con foto falsa; qué falta cablear tras el deploy
+- [Corredores = slugs, no códigos de nodo](carrier-corridor-slugs.md) — `cd-santa-cruz` da 200 y `CD-SCZ-01` da 404; no hay endpoint que los liste; CorridorType/VehicleClass son enums
+- [Decir "producto", nunca "bulto"](vocabulario-producto-no-bulto.md) — prohibida la palabra bulto/bultos en UI y comentarios; siempre producto/productos (identificadores en inglés no se tocan)
+- [PROHIBIDO mutar etiquetas](no-label-mutations-rule.md) — el agente NO revoca/re-emite/emite etiquetas (no tiene permiso ni autoridad); re-emitir revocó etiquetas en uso del dueño; arreglos van del lado del app (modo abierto) o al dueño/backend

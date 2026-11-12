@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/carrier.dart';
 import '../../../../core/api/models/settlement.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../domain/models/carrier_corridor.dart';
 import '../../domain/usecases/get_settlement.dart';
 import '../../domain/usecases/list_carriers.dart';
 import '../../domain/usecases/list_settlements.dart';
@@ -47,3 +48,15 @@ final carrierSettlementProvider = FutureProvider.autoDispose
     .family<Settlement, String>(
       (ref, settlementId) => ref.watch(getSettlementProvider)(settlementId),
     );
+
+/// Corredores reales del transportista (origen, destino y tipo), derivados de
+/// sus liquidaciones. Es la única fuente disponible: el backend todavía no
+/// expone un catálogo de corredores. Reusa la caché de las liquidaciones, así
+/// que abrir tarifas después de ver la lista no dispara otra request.
+final carrierCorridorsProvider = FutureProvider.autoDispose
+    .family<List<CarrierCorridor>, String>((ref, carrierId) async {
+      final settlements = await ref.watch(
+        carrierSettlementsProvider(carrierId).future,
+      );
+      return CarrierCorridor.uniqueFrom(settlements);
+    });

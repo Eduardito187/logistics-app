@@ -28,7 +28,7 @@ class DevicesScreen extends ConsumerWidget {
     DeviceListItem device, {
     required bool isCurrent,
   }) async {
-    final name = device.name ?? platformLabel(device.platform);
+    final name = deviceNameLabel(device.name, device.platform);
     final confirmed = await confirmSettingsAction(
       context,
       title: 'Revocar dispositivo',

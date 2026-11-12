@@ -66,7 +66,9 @@ void main() {
     expect(request.unitId, vectorUnitId);
     expect(request.lat, -16.5);
     expect(request.lng, -68.15);
-    expect(loadScan.labels.single, 'Recojo · $vectorSku');
+    // Prefijo propio del transportista: es lo que identifica la fila como
+    // nuestra en la cola del dispositivo al rearmar la tanda.
+    expect(loadScan.labels.single, 'Recojo transportista · $vectorSku');
     expect(scanner.messages, ['Producto recogido · $vectorSku']);
 
     expect(find.text('Sin productos recogidos'), findsNothing);

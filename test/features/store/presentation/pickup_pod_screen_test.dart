@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/delivery.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
+import 'package:logistics_app/features/store/data/repositories/store_repository_impl.dart';
 import 'package:logistics_app/features/store/presentation/controllers/store_controllers.dart';
 import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart';
 
@@ -22,6 +24,7 @@ final _shipment = shipment(
 Future<void> _pump(
   WidgetTester tester, {
   List<UnitTracking> units = const [],
+  Future<Delivery> Function(String shipmentId)? onGetDeliveryState,
 }) async {
   // Superficie alta: la lista es perezosa y la lista de productos queda debajo
   // del pie fijo en 800x600.
@@ -32,6 +35,12 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         ...syncBadgeOverrides(),
+        // Entregas ya confirmadas por el servidor: siembran la lista de
+        // entregados al abrir. Sin `onGetDeliveryState` el repositorio falso
+        // falla y la pantalla abre igual (offline-first).
+        storeRepositoryProvider.overrideWithValue(
+          FakeStoreRepository(onGetDeliveryState: onGetDeliveryState),
+        ),
         shipmentUnitsProvider(_shipment.id).overrideWith((ref) async => units),
       ],
       child: MaterialApp(home: PickupPodScreen(shipment: _shipment)),
@@ -113,5 +122,34 @@ void main() {
   testWidgets('sin productos muestra 0 de 0', (tester) async {
     await _pump(tester);
     expect(find.text('Entregados 0 de 0 producto(s).'), findsOneWidget);
+  });
+
+  testWidgets('al abrir cuenta lo que el servidor ya tiene entregado', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      units: [
+        unit(unitId: 'unit-1'),
+        unit(unitId: 'unit-2'),
+      ],
+      onGetDeliveryState: (shipmentId) async =>
+          delivery(shipmentId: shipmentId, podUnitIds: const ['unit-2']),
+    );
+
+    expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+    expect(find.text('Entregado'), findsOneWidget);
+    expect(find.text('Pendiente'), findsOneWidget);
+  });
+
+  testWidgets('sin red el contador arranca en 0 y la pantalla no falla', (
+    tester,
+  ) async {
+    // Sin `onGetDeliveryState` el repositorio falso falla: el POD igual abre.
+    await _pump(tester, units: [unit(unitId: 'unit-1')]);
+
+    expect(find.text('Entregados 0 de 1 producto(s).'), findsOneWidget);
+    expect(find.text('Pendiente'), findsOneWidget);
+    expect(find.textContaining('No se pudo'), findsNothing);
   });
 }

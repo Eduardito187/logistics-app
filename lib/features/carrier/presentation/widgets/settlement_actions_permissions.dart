@@ -35,11 +35,9 @@ class SettlementActionsPermissions {
     if (session == null) {
       return none;
     }
-    // El admin lleva el comodín en vez de la lista de abilities.
-    final hasWildcard = session.can(wildcardAbility);
     // Aprobar y pagar son fail-closed: mueven plata y son de oficina, así que
     // sin permiso confirmado NO se muestran.
-    final isOffice = hasWildcard || session.can(officeApprovalAbility);
+    final isOfficeUser = isOffice(session);
     // Mismo criterio de degradación que `visibleTasksFor`: si todavía no
     // sabemos qué puede el usuario (abilities vacías: dev-login, login sin
     // `/me` o `/me` caído) no se le oculta SU acción propia (disputar), que el
@@ -47,12 +45,24 @@ class SettlementActionsPermissions {
     // transportista (`EnsureCarrierScope` MODE_SETTLEMENT).
     final knowsAbilities = session.abilities.isNotEmpty;
     final canDispute =
-        isOffice || !knowsAbilities || session.can(carrierWriteAbility);
+        isOfficeUser || !knowsAbilities || session.can(carrierWriteAbility);
     return SettlementActionsPermissions(
-      canApprove: isOffice,
+      canApprove: isOfficeUser,
       canDispute: canDispute,
-      canPay: isOffice,
+      canPay: isOfficeUser,
     );
+  }
+
+  /// ¿La sesión es de OFICINA (admin o supervisor)? Resuelve el comodín `*` del
+  /// admin y, si no, la ability de oficina. Fail-closed: sin sesión o sin
+  /// permiso confirmado devuelve `false`.
+  ///
+  /// Lo usan las acciones de oficina de esta clase (aprobar / marcar como
+  /// pagada) y, con el MISMO criterio, las herramientas de compra/costeo del
+  /// módulo (ver `canUseCarrierOfficeTools`).
+  static bool isOffice(Session? session) {
+    if (session == null) return false;
+    return session.can(wildcardAbility) || session.can(officeApprovalAbility);
   }
 
   /// Comodín de abilities del backend (solo admin): concede todas.

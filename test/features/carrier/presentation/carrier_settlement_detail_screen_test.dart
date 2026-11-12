@@ -56,7 +56,7 @@ void main() {
   ) async {
     await _pump(tester, data: settlement(status: SettlementStatus.submitted));
 
-    expect(find.text('LPZ → SCZ'), findsOneWidget);
+    expect(find.text('CD La Paz → CD Santa Cruz'), findsOneWidget);
     expect(find.text('Enviada'), findsOneWidget);
     expect(findButtonWithText<FilledButton>('Aprobar'), findsOneWidget);
     expect(findButtonWithText<OutlinedButton>('Disputar'), findsOneWidget);

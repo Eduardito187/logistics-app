@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/node_reception_view.dart';
+import '../../../../core/api/models/scan_type.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../domain/usecases/get_delivery_state.dart';
 import '../../domain/usecases/get_node_reception.dart';
 import '../../domain/usecases/get_shipment_units.dart';
 import '../../domain/usecases/list_nodes.dart';
@@ -47,4 +49,28 @@ final shipmentUnitsProvider = FutureProvider.autoDispose
     .family<List<UnitTracking>, String>((ref, shipmentId) {
       ref.cacheFor(CacheTtl.short);
       return ref.watch(getShipmentUnitsProvider).call(shipmentId);
+    });
+
+/// Productos de un envío que el SERVIDOR ya tiene como entregados (escaneos de
+/// tipo prueba de entrega). Siembra la lista en memoria del POD de mostrador:
+/// si el sistema operativo mata la app o el operario sale y vuelve a mitad del
+/// retiro, lo ya entregado sigue bloqueado y no se encola un POD duplicado.
+///
+/// Degrada a vacío (regla 4, offline-first): sin red, con 404 (todavía no hay
+/// entrega abierta) o ante cualquier fallo devuelve el conjunto vacío en lugar
+/// de propagar el error, para que la falta de señal nunca trabe el retiro. Lo
+/// entregado en esta sesión lo sigue cubriendo la memoria de la pantalla.
+/// Caché corta, como el resto de los providers de pantalla.
+final deliveredUnitIdsProvider = FutureProvider.autoDispose
+    .family<Set<String>, String>((ref, shipmentId) async {
+      ref.cacheFor(CacheTtl.short);
+      try {
+        final delivery = await ref.watch(getDeliveryStateProvider)(shipmentId);
+        return {
+          for (final scan in delivery.scans)
+            if (scan.type == ScanType.proofOfDelivery) scan.unitId,
+        };
+      } on Object {
+        return const <String>{};
+      }
     });

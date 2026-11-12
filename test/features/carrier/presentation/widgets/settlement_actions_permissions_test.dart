@@ -60,6 +60,28 @@ void main() {
     expect(permissions.canPay, isFalse);
   });
 
+  test('isOffice: admin y oficina sí, transportista y sin sesión no', () {
+    expect(
+      SettlementActionsPermissions.isOffice(
+        _session(UserRole.supervisor, const ['planning:write']),
+      ),
+      isTrue,
+    );
+    expect(
+      SettlementActionsPermissions.isOffice(
+        _session(UserRole.supervisor, const ['*']),
+      ),
+      isTrue,
+    );
+    expect(
+      SettlementActionsPermissions.isOffice(
+        _session(UserRole.carrier, const ['carriers:write']),
+      ),
+      isFalse,
+    );
+    expect(SettlementActionsPermissions.isOffice(null), isFalse);
+  });
+
   test('abilities sin ninguna de escritura: ninguna acción', () {
     final permissions = SettlementActionsPermissions.fromSession(
       _session(UserRole.carrier, const ['carriers:read', 'execution:read']),

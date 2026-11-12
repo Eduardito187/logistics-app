@@ -136,6 +136,8 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
     }
     // El odómetro solo avanza: se avisa en el acto si retrocede (mismo guard
     // del backend, adelantado para no pagar el viaje de red ni confundir).
+    // Compara contra las lecturas del último mes (es lo que baja el teléfono);
+    // si no hay ninguna no se adelanta nada y valida el backend.
     final lastKm = odometerBelowLast(
       km,
       ref.read(vehicleOdometerReadingsProvider).value ?? const [],
@@ -164,6 +166,9 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
           );
       if (!mounted) return;
       ref.invalidate(vehicleOdometerReadingsProvider);
+      // También las de hoy: son otra consulta (rango del día) y alimentan los
+      // kilómetros de "Mi día".
+      ref.invalidate(todayOdometerReadingsProvider);
       _km.clear();
       _note.clear();
       showSuccessSnack(context, 'Lectura de odómetro registrada.');

@@ -72,7 +72,9 @@ void main() {
     expect(request.confirmation, 'CONF-CLIENTE-1');
     expect(request.lat, -17.8);
     expect(request.lng, -63.2);
-    expect(pod.labels.single, 'Entrega · $vectorSku');
+    // Prefijo propio del transportista: la tienda encola su POD de mostrador
+    // con el MISMO `kind`, así que la etiqueta es lo que distingue las filas.
+    expect(pod.labels.single, 'Entrega transportista · $vectorSku');
     expect(units.messages, ['Producto entregado · $vectorSku']);
 
     expect(find.text('Sin entregas registradas'), findsNothing);

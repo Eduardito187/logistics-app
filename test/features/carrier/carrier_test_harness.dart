@@ -87,6 +87,12 @@ class FakeCarrierRepository implements CarrierRepository {
   String? lastDisputeReason;
   String? lastPaymentReference;
 
+  /// Último corredor consultado (tarifa, asignación o más barata): sirve para
+  /// verificar que el selector manda origen, destino y tipo coherentes.
+  String? lastCorridorFrom;
+  String? lastCorridorTo;
+  CorridorType? lastCorridorType;
+
   @override
   Future<List<Carrier>> listCarriers() =>
       (onListCarriers ?? (() async => <Carrier>[]))();
@@ -130,7 +136,11 @@ class FakeCarrierRepository implements CarrierRepository {
     required String corridorTo,
     required CorridorType corridorType,
     required VehicleClass vehicleClass,
-  }) => (onGetTariff ?? (() async => throw UnimplementedError('getTariff')))();
+  }) {
+    _recordCorridor(corridorFrom, corridorTo, corridorType);
+    return (onGetTariff ??
+        (() async => throw UnimplementedError('getTariff')))();
+  }
 
   @override
   Future<Assignment> assignForVolume({
@@ -138,16 +148,26 @@ class FakeCarrierRepository implements CarrierRepository {
     required String corridorTo,
     required CorridorType corridorType,
     required double volumeM3,
-  }) =>
-      (onAssignForVolume ??
-      (() async => throw UnimplementedError('assignForVolume')))();
+  }) {
+    _recordCorridor(corridorFrom, corridorTo, corridorType);
+    return (onAssignForVolume ??
+        (() async => throw UnimplementedError('assignForVolume')))();
+  }
 
   @override
   Future<Tariff> cheapestTariff({
     required String corridorFrom,
     required String corridorTo,
     required CorridorType corridorType,
-  }) =>
-      (onCheapestTariff ??
-      (() async => throw UnimplementedError('cheapestTariff')))();
+  }) {
+    _recordCorridor(corridorFrom, corridorTo, corridorType);
+    return (onCheapestTariff ??
+        (() async => throw UnimplementedError('cheapestTariff')))();
+  }
+
+  void _recordCorridor(String from, String to, CorridorType type) {
+    lastCorridorFrom = from;
+    lastCorridorTo = to;
+    lastCorridorType = type;
+  }
 }

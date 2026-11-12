@@ -28,9 +28,12 @@ class RecentReadings extends ConsumerWidget {
         onRetry: () => ref.invalidate(vehicleOdometerReadingsProvider),
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
+            // La lista llega acotada a los últimos días ([recentHistoryDays]):
+            // vacía significa "sin lecturas en ese período", no que el camión
+            // nunca tuvo lecturas ni que algo falló.
+            return EmptyState(
               icon: AppIcon.speed,
-              title: 'Sin lecturas registradas',
+              title: 'Sin lecturas en los últimos $recentHistoryDays días',
               message: 'Las lecturas que registres aparecerán aquí.',
             );
           }

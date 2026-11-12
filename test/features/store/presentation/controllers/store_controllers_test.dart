@@ -358,4 +358,70 @@ void main() {
       expect(await container.read(shipmentUnitsProvider('x').future), isEmpty);
     });
   });
+
+  group('deliveredUnitIdsProvider', () {
+    test('devuelve los productos con prueba de entrega del servidor', () async {
+      final repo = FakeStoreRepository(
+        onGetDeliveryState: (shipmentId) async =>
+            delivery(shipmentId: shipmentId, podUnitIds: ['u1', 'u2']),
+      );
+      final container = _container(repo);
+
+      expect(await container.read(deliveredUnitIdsProvider('ship-1').future), {
+        'u1',
+        'u2',
+      });
+    });
+
+    test('ignora los escaneos que no son entrega (carga/descarga)', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              delivery(podUnitIds: ['u1'], otherUnitIds: ['u2', 'u3']),
+        ),
+      );
+
+      expect(await container.read(deliveredUnitIdsProvider('ship-1').future), {
+        'u1',
+      });
+    });
+
+    test('sin entregas confirmadas devuelve conjunto vacío', () async {
+      final container = _container(
+        FakeStoreRepository(onGetDeliveryState: (_) async => delivery()),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
+    });
+
+    // Offline-first (regla 4): la consulta es solo un refuerzo contra la doble
+    // entrega; si falla, el retiro no se traba con un error.
+    test('error de API: conjunto vacío, no propaga', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              throw const ApiException(status: 503, title: 'Caído'),
+        ),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
+    });
+
+    test('sin red (fallo de transporte): conjunto vacío', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              throw Exception('SocketException: sin red'),
+        ),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
+    });
+  });
 }

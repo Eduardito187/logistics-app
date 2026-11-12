@@ -4,13 +4,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/delivery.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/gps_fix.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
+import 'package:logistics_app/features/store/data/repositories/store_repository_impl.dart';
 import 'package:logistics_app/features/store/domain/usecases/record_pod.dart';
 import 'package:logistics_app/features/store/presentation/controllers/store_controllers.dart';
 import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart';
@@ -86,6 +89,7 @@ Future<_Harness> _pump(
   List<UnitTracking>? units,
   LabelScanner? labelScanner,
   SubmitOutcome outcome = SubmitOutcome.sent,
+  Future<Delivery> Function(String shipmentId)? onGetDeliveryState,
 }) async {
   // Superficie alta: la lista es perezosa y en 800x600 deja botones fuera.
   tester.view.physicalSize = const Size(1200, 3600);
@@ -101,6 +105,13 @@ Future<_Harness> _pump(
     ProviderScope(
       overrides: [
         ...syncBadgeOverrides(),
+        // Entregas que el servidor ya tiene confirmadas: siembran la lista de
+        // entregados al abrir (sin esto, un reinicio permitiría re-entregar).
+        storeRepositoryProvider.overrideWithValue(
+          FakeStoreRepository(
+            onGetDeliveryState: onGetDeliveryState ?? ((_) async => delivery()),
+          ),
+        ),
         shipmentUnitsProvider(_shipment.id).overrideWith(
           (ref) async =>
               units ?? [unit(unitId: 'unit-1'), unit(unitId: 'unit-2')],
@@ -421,10 +432,109 @@ void main() {
       expect(h.calls, hasLength(1));
       expect(h.products.messages, [
         'Producto entregado (1/2)',
-        'Ya entregado',
-        'Ya entregado',
+        'Este producto ya fue entregado',
+        'Este producto ya fue entregado',
       ]);
       expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+    });
+  });
+
+  // Doble entrega entre reinicios: la lista en memoria se vacía cuando el
+  // sistema operativo mata la app o el operario sale y vuelve a mitad del
+  // retiro. Lo entregado se siembra con lo que el servidor ya confirmó.
+  group('productos ya entregados según el servidor', () {
+    testWidgets('al abrir se siembran y se ven como entregados', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        onGetDeliveryState: (shipmentId) async =>
+            delivery(shipmentId: shipmentId, podUnitIds: const ['unit-1']),
+      );
+
+      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+      expect(find.text('Entregado'), findsOneWidget);
+      expect(find.text('Pendiente'), findsOneWidget);
+    });
+
+    testWidgets('no se puede entregar de nuevo tras un reinicio', (
+      tester,
+    ) async {
+      final h = await _pump(
+        tester,
+        products: ['unit-1'],
+        onGetDeliveryState: (_) async => delivery(podUnitIds: const ['unit-1']),
+      );
+      await _typeConfirmation(tester, 'CI-1');
+
+      await _tapDeliver(tester);
+
+      // Nada encolado: no se duplica el POD del producto ya entregado.
+      expect(h.calls, isEmpty);
+      expect(h.products.messages, ['Este producto ya fue entregado']);
+      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+    });
+
+    testWidgets('los escaneos de carga no cuentan como entrega', (
+      tester,
+    ) async {
+      final h = await _pump(
+        tester,
+        products: ['unit-1'],
+        onGetDeliveryState: (_) async =>
+            delivery(otherUnitIds: const ['unit-1']),
+      );
+      await _typeConfirmation(tester, 'CI-1');
+
+      await _tapDeliver(tester);
+
+      expect(h.unitIds, ['unit-1']);
+      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+    });
+
+    testWidgets('sin red el retiro sigue igual, sin error que trabe', (
+      tester,
+    ) async {
+      final h = await _pump(
+        tester,
+        products: ['unit-1'],
+        onGetDeliveryState: (_) async =>
+            throw const ApiException(status: 503, title: 'Caído'),
+      );
+      await _typeConfirmation(tester, 'CI-1');
+
+      await _tapDeliver(tester);
+
+      // Offline invisible: entrega normal y ningún aviso de error.
+      expect(h.unitIds, ['unit-1']);
+      expect(h.products.messages, ['Producto entregado (1/2)']);
+      expect(find.text('1 producto entregado.'), findsOneWidget);
+      expect(find.textContaining('No se pudo'), findsNothing);
+      expect(find.textContaining('Reintentar'), findsNothing);
+    });
+
+    testWidgets('sin red lo entregado en la sesión sigue bloqueado', (
+      tester,
+    ) async {
+      final h = await _pump(
+        tester,
+        productSessions: [
+          ['unit-1'],
+          ['unit-1'],
+        ],
+        onGetDeliveryState: (_) async =>
+            throw Exception('SocketException: sin red'),
+      );
+      await _typeConfirmation(tester, 'CI-1');
+
+      await _tapDeliver(tester);
+      await _tapDeliver(tester);
+
+      expect(h.calls, hasLength(1));
+      expect(h.products.messages, [
+        'Producto entregado (1/2)',
+        'Este producto ya fue entregado',
+      ]);
     });
   });
 }

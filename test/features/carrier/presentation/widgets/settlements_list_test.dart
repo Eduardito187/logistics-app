@@ -38,7 +38,9 @@ void main() {
       () async => [settlement(status: SettlementStatus.approved)],
     );
 
-    expect(find.text('LPZ → SCZ'), findsOneWidget);
+    // El corredor se muestra con nombres legibles, no con las claves del
+    // backend (`cd-la-paz`).
+    expect(find.text('CD La Paz → CD Santa Cruz'), findsOneWidget);
     expect(find.text('Periodo 2026-03'), findsOneWidget);
     expect(find.text('Aprobada'), findsOneWidget);
     expect(find.textContaining('Bs'), findsOneWidget);

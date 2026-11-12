@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/proof_of_delivery_request.dart';
 import 'package:logistics_app/core/api/models/scan_request.dart';
@@ -14,6 +15,9 @@ import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
+import 'package:logistics_app/features/carrier/data/datasources/carrier_scan_queue_source.dart';
+import 'package:logistics_app/features/carrier/domain/models/carrier_scan_kind.dart';
+import 'package:logistics_app/features/carrier/domain/models/queued_carrier_scan.dart';
 import 'package:logistics_app/features/carrier/domain/usecases/record_load_scan.dart';
 import 'package:logistics_app/features/carrier/domain/usecases/record_proof_of_delivery.dart';
 
@@ -174,6 +178,56 @@ class FakeRecordProofOfDelivery implements RecordProofOfDelivery {
   }
 }
 
+/// Cola offline falsa: devuelve los escaneos que el test quiera "ya encolados"
+/// por tipo de escaneo. Por defecto no hay nada pendiente (así ningún test
+/// toca Drift al rearmar la tanda).
+class FakeCarrierScanQueueSource implements CarrierScanQueueSource {
+  FakeCarrierScanQueueSource([this.pendingByKind = const {}]);
+
+  final Map<CarrierScanKind, List<QueuedCarrierScan>> pendingByKind;
+  final List<CarrierScanKind> queries = [];
+
+  @override
+  Future<List<QueuedCarrierScan>> pending(CarrierScanKind kind) async {
+    queries.add(kind);
+    return pendingByKind[kind] ?? const [];
+  }
+}
+
+/// Overrides de los flujos de escaneo del transportista (escáneres, etiqueta,
+/// GPS, casos de uso de la cola y la cola offline que rearma la tanda).
+List<Override> carrierScanOverrides({
+  FakeCodeScanner? scanner,
+  FakeContinuousScanner? continuous,
+  LabelScanner? labelScanner,
+  LabelResolver? labelResolver,
+  FakeRecordLoadScan? loadScan,
+  FakeRecordProofOfDelivery? proofOfDelivery,
+  CarrierScanQueueSource? queueSource,
+  GpsFix? fix,
+}) => [
+  ...syncBadgeOverrides(),
+  codeScannerProvider.overrideWithValue(
+    (scanner ?? FakeCodeScanner(const [])).call,
+  ),
+  continuousScannerProvider.overrideWithValue(
+    (continuous ?? FakeContinuousScanner(const [])).call,
+  ),
+  labelScannerProvider.overrideWithValue(labelScanner ?? vectorLabelScanner()),
+  // Code128: un valor no-QR se resuelve online. Por defecto el backend no
+  // lo reconoce (resolved:false → "Etiqueta no reconocida"); los tests que
+  // necesiten otra cosa pasan su propio `labelResolver`.
+  labelResolverProvider.overrideWithValue(labelResolver ?? FakeLabelResolver()),
+  locationServiceProvider.overrideWithValue(FixedLocationService(fix)),
+  recordLoadScanProvider.overrideWithValue(loadScan ?? FakeRecordLoadScan()),
+  recordProofOfDeliveryProvider.overrideWithValue(
+    proofOfDelivery ?? FakeRecordProofOfDelivery(),
+  ),
+  carrierScanQueueSourceProvider.overrideWithValue(
+    queueSource ?? FakeCarrierScanQueueSource(),
+  ),
+];
+
 /// Monta [screen] con los escáneres falsos (un código: confirmación del
 /// cliente; continuo: productos) y los dobles de verificación/GPS/cola.
 Future<void> pumpCarrierScanScreen(
@@ -185,35 +239,21 @@ Future<void> pumpCarrierScanScreen(
   LabelResolver? labelResolver,
   FakeRecordLoadScan? loadScan,
   FakeRecordProofOfDelivery? proofOfDelivery,
+  CarrierScanQueueSource? queueSource,
   GpsFix? fix,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        ...syncBadgeOverrides(),
-        codeScannerProvider.overrideWithValue(
-          (scanner ?? FakeCodeScanner(const [])).call,
-        ),
-        continuousScannerProvider.overrideWithValue(
-          (continuous ?? FakeContinuousScanner(const [])).call,
-        ),
-        labelScannerProvider.overrideWithValue(
-          labelScanner ?? vectorLabelScanner(),
-        ),
-        // Code128: un valor no-QR se resuelve online. Por defecto el backend no
-        // lo reconoce (resolved:false → "Etiqueta no reconocida"); los tests que
-        // necesiten otra cosa pasan su propio `labelResolver`.
-        labelResolverProvider.overrideWithValue(
-          labelResolver ?? FakeLabelResolver(),
-        ),
-        locationServiceProvider.overrideWithValue(FixedLocationService(fix)),
-        recordLoadScanProvider.overrideWithValue(
-          loadScan ?? FakeRecordLoadScan(),
-        ),
-        recordProofOfDeliveryProvider.overrideWithValue(
-          proofOfDelivery ?? FakeRecordProofOfDelivery(),
-        ),
-      ],
+      overrides: carrierScanOverrides(
+        scanner: scanner,
+        continuous: continuous,
+        labelScanner: labelScanner,
+        labelResolver: labelResolver,
+        loadScan: loadScan,
+        proofOfDelivery: proofOfDelivery,
+        queueSource: queueSource,
+        fix: fix,
+      ),
       child: MaterialApp(home: screen),
     ),
   );

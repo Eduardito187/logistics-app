@@ -15,6 +15,8 @@ import '../../domain/entities/login_result.dart';
 import '../../domain/entities/two_factor_enrollment.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
+import '../datasources/device_identity_reader.dart';
+import '../device_display_name.dart';
 
 /// Implementación del contrato de autenticación. Arma el pedido con el
 /// dispositivo, delega la llamada en el data source y, con la respuesta, mapea
@@ -42,6 +44,12 @@ class AuthRepositoryImpl implements AuthRepository {
     // Token FCM si ya se registró; viaja como device.push_token para que el
     // backend sepa a dónde notificar.
     final pushToken = _ref.read(pushTokenProvider);
+    // Nombre del equipo (modelo real) para la pantalla "Mis dispositivos": con
+    // el nombre fijo de antes todas las filas decían lo mismo y no se podía
+    // saber cuál revocar. Degradación segura y obligatoria: el lector no lanza
+    // ni tarda (ver `DeviceIdentityReader`) y, por si acaso, acá se cae al
+    // nombre genérico. El login NUNCA se rompe por no conocer el teléfono.
+    final deviceName = await _deviceName();
 
     final LoginRaw raw;
     try {
@@ -52,7 +60,7 @@ class AuthRepositoryImpl implements AuthRepository {
           device: Device(
             fingerprint: fingerprint,
             platform: defaultTargetPlatform.name,
-            name: 'App interna',
+            name: deviceName,
             pushToken: pushToken,
           ),
         ),
@@ -118,6 +126,21 @@ class AuthRepositoryImpl implements AuthRepository {
     code: code.trim(),
     password: password,
   );
+
+  /// Nombre del equipo para `device.name`. Blindado: cualquier error del lector
+  /// cae al nombre genérico en vez de tumbar el login.
+  ///
+  /// Cuando el backend despliegue `X-Device-Model` / `X-Device-Os-Version`, se
+  /// usa la MISMA `DeviceIdentity` (ya trae `model` y `osVersion`) para armar
+  /// esas cabeceras: no hay que averiguar nada de nuevo.
+  Future<String> _deviceName() async {
+    try {
+      final identity = await _ref.read(deviceIdentityReaderProvider).read();
+      return deviceDisplayName(identity);
+    } on Object {
+      return genericDeviceName;
+    }
+  }
 
   /// Con la respuesta de éxito (login sin 2FA o verificación OK): resuelve el
   /// rol operativo, abre la sesión, pide abilities (`/me`, degradación segura) y
