@@ -30,16 +30,42 @@ const _me = AppMeResponse(
   abilities: [],
 );
 
+/// Impresora activa (la tarjeta muestra "Imprimir prueba" solo si hay una).
+const _active = PrinterConfig(
+  transport: PrinterTransport.bluetooth,
+  address: 'AA:BB:CC',
+  label: 'Zebra ZQ630',
+);
+
 /// Impresora falsa: registra el ZPL enviado o lanza una PrinterException.
 class _FakeLabelPrinter implements LabelPrinter {
-  _FakeLabelPrinter({this.printError});
+  _FakeLabelPrinter({
+    this.printError,
+    this.outcome = const PrintOutcome.sent(),
+  });
   final PrinterException? printError;
+  final PrintOutcome outcome;
   String? lastZpl;
+  String? lastJobName;
+  LabelRenderer? lastRender;
+
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async {
+    lastZpl = zpl;
+    lastJobName = jobName;
+    lastRender = render;
+    if (printError != null) throw printError!;
+    return outcome;
+  }
 
   @override
   Future<void> printZpl(String zpl, {PrinterConfig? to}) async {
-    lastZpl = zpl;
-    if (printError != null) throw printError!;
+    await printLabel(zpl: zpl, to: to);
   }
 
   @override
@@ -54,14 +80,16 @@ class _FakeLabelPrinter implements LabelPrinter {
 Future<_FakeLabelPrinter> _pump(
   WidgetTester tester, {
   PrinterException? printError,
+  PrintOutcome outcome = const PrintOutcome.sent(),
   UserRole role = UserRole.picker,
+  PrinterConfig? selected = _active,
 }) async {
-  final printer = _FakeLabelPrinter(printError: printError);
+  final printer = _FakeLabelPrinter(printError: printError, outcome: outcome);
   final container = ProviderContainer(
     overrides: [
       labelPrinterProvider.overrideWithValue(printer),
       appMeProvider.overrideWith((ref) async => _me),
-      selectedPrinterProvider.overrideWith((ref) async => null),
+      selectedPrinterProvider.overrideWith((ref) async => selected),
       discoveredPrintersProvider(
         PrinterTransport.bluetooth,
       ).overrideWith((ref) async => const []),
@@ -119,6 +147,15 @@ void main() {
     });
   }
 
+  testWidgets('sin impresora: la tarjeta ofrece "Conectar impresora"', (
+    tester,
+  ) async {
+    await _pump(tester, selected: null);
+
+    expect(find.text('Conectar impresora'), findsOneWidget);
+    expect(find.text('Imprimir prueba'), findsNothing);
+  });
+
   testWidgets('imprimir prueba envía el ZPL fijo y avisa del éxito', (
     tester,
   ) async {
@@ -129,7 +166,45 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50)); // aviso
 
     expect(printer.lastZpl, '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ');
-    expect(find.text('Etiqueta de prueba enviada.'), findsOneWidget);
+    // Para impresoras de oficina viaja la hoja dibujada y el nombre del job.
+    expect(printer.lastRender, isNotNull);
+    expect(printer.lastJobName, 'Prueba DisTrack');
+    // Aviso + resultado fijo en la sección.
+    expect(find.text('Etiqueta de prueba enviada.'), findsNWidgets(2));
+  });
+
+  testWidgets('IPP: muestra que la impresora confirmó el trabajo impreso', (
+    tester,
+  ) async {
+    await _pump(tester, outcome: const PrintOutcome.printed(jobId: 123));
+
+    await tester.tap(find.text('Imprimir prueba'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.text('Impreso: la impresora confirmó el trabajo (#123).'),
+      findsNWidgets(2),
+    );
+  });
+
+  testWidgets('9100 sin confirmación: lo dice, no anuncia éxito falso', (
+    tester,
+  ) async {
+    await _pump(tester, outcome: const PrintOutcome.sentUnconfirmed());
+
+    await tester.tap(find.text('Imprimir prueba'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.text(
+        'Enviado. Esta impresora no confirma la impresión; revisá que haya '
+        'salido.',
+      ),
+      findsNWidgets(2),
+    );
+    expect(find.text('Etiqueta de prueba enviada.'), findsNothing);
   });
 
   testWidgets('error de impresión muestra el mensaje del operario', (
@@ -144,7 +219,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    // PrinterException se muestra tal cual (showInfoSnack), no mapeada.
-    expect(find.text('No hay impresora seleccionada.'), findsOneWidget);
+    // PrinterException se muestra tal cual (aviso + resultado en la sección).
+    expect(find.text('No hay impresora seleccionada.'), findsNWidgets(2));
   });
 }

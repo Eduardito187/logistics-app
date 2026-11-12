@@ -9,7 +9,7 @@ class SignedLabelResult {
     required this.sku,
   });
 
-  /// `LabelPayload.id`: identifica el bulto escaneado (`unit_id`).
+  /// `LabelPayload.id`: identifica el producto escaneado (`unit_id`).
   final String unitId;
 
   /// `LabelPayload.orderNumber`: referencia del envío/pedido (`shipment_id`).

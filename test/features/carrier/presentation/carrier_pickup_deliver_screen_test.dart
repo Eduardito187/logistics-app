@@ -5,7 +5,7 @@ import 'package:logistics_app/core/widgets/empty_state.dart';
 import 'package:logistics_app/features/carrier/presentation/carrier_deliver_screen.dart';
 import 'package:logistics_app/features/carrier/presentation/carrier_pickup_screen.dart';
 
-import '../carrier_test_harness.dart';
+import '../carrier_scan_harness.dart';
 import '../../../support/button_finders.dart';
 
 // Pantallas de escaneo del transportista (recoger/entregar). El escaneo real
@@ -18,7 +18,9 @@ import '../../../support/button_finders.dart';
 Future<void> _pump(WidgetTester tester, Widget screen) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: syncBadgeOverrides(),
+      // Incluye la cola offline falsa (vacía): al abrir, la pantalla rearma la
+      // tanda desde la cola y no debe tocar Drift en los tests.
+      overrides: carrierScanOverrides(),
       child: MaterialApp(home: screen),
     ),
   );

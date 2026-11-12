@@ -38,7 +38,7 @@ Widget unloadScreenFor(DriverRouteStop stop) => ScanUnitsScreen(
 );
 
 /// Botones del pie según el paso de la entrega:
-/// - en curso: "Entregar pedido" (con foto obligatoria), "Escanear bultos"
+/// - en curso: "Entregar pedido" (con foto obligatoria), "Escanear productos"
 ///   (QR o código de barras de las etiquetas) y "No se pudo entregar";
 /// - ya cerrada (entregada o fallida): "Siguiente entrega".
 class DeliveryActionsBar extends ConsumerWidget {

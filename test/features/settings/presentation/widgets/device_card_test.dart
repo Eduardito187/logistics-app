@@ -67,12 +67,39 @@ void main() {
     expect(find.text('iOS'), findsWidgets);
   });
 
+  testWidgets('nombre vacío también cae a la plataforma', (tester) async {
+    await _pump(
+      tester,
+      device: _device(name: '  '),
+      isCurrent: false,
+      onRevoke: () {},
+    );
+
+    expect(find.text('Android'), findsWidgets);
+  });
+
+  testWidgets('el modelo del equipo se muestra junto a "Este teléfono"', (
+    tester,
+  ) async {
+    // Lo que resuelve el problema real: con tres teléfonos registrados, el
+    // usuario ve el modelo de cada uno y cuál es el que tiene en la mano.
+    await _pump(
+      tester,
+      device: _device(name: 'OnePlus CPH2749'),
+      isCurrent: true,
+      onRevoke: () {},
+    );
+
+    expect(find.text('OnePlus CPH2749'), findsOneWidget);
+    expect(find.text('Este teléfono'), findsOneWidget);
+  });
+
   testWidgets('dispositivo actual: muestra la pastilla y el botón específico', (
     tester,
   ) async {
     await _pump(tester, device: _device(), isCurrent: true, onRevoke: () {});
 
-    expect(find.text('Este dispositivo'), findsOneWidget);
+    expect(find.text('Este teléfono'), findsOneWidget);
     expect(find.text('Revocar este dispositivo'), findsOneWidget);
   });
 

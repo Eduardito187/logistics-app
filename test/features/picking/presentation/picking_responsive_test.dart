@@ -2,23 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/models/emit_label_line.dart';
 import 'package:logistics_app/core/layout/breakpoints.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/theme/app_theme.dart';
 import 'package:logistics_app/features/picking/data/repositories/picking_repository_impl.dart';
 import 'package:logistics_app/features/picking/domain/entities/preparation_state.dart';
-import 'package:logistics_app/features/picking/presentation/controllers/orders_worklist_controller.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/preparation_controller.dart';
 import 'package:logistics_app/features/picking/presentation/order_preparation_screen.dart';
 import 'package:logistics_app/features/picking/presentation/orders_worklist_screen.dart';
 import 'package:logistics_app/features/picking/presentation/prepare_order_screen.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/order_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
+import '../../../support/button_finders.dart';
 import '../../../support/screen_sizes.dart';
 import '../picking_test_harness.dart';
 
@@ -61,7 +59,11 @@ void main() {
       _app(
         const OrdersWorklistScreen(),
         overrides: [
-          ordersToPrepareProvider.overrideWith((ref) async => orders),
+          // La pantalla usa `ordersWorklistProvider`, armado desde el caso de
+          // uso: se siembra el repositorio.
+          pickingRepositoryProvider.overrideWithValue(
+            FakePickingRepository(onListShipments: () async => orders),
+          ),
         ],
       ),
     );
@@ -94,7 +96,73 @@ void main() {
 
     final field = tester.getRect(find.byType(TextField));
     expect(field.width, lessThanOrEqualTo(AppBreakpoints.maxFormWidth));
-    expect(find.text('Escanear pedido'), findsOneWidget);
+    // Acción principal: escanear la etiqueta de un producto.
+    final scan = findButtonWithText<FilledButton>('Escanear producto');
+    expect(scan, findsOneWidget);
+    final scanRect = tester.getRect(scan);
+    expect(scanRect.width, lessThanOrEqualTo(AppBreakpoints.maxFormWidth));
+    expect(scanRect.right, lessThanOrEqualTo(screen.size.width));
+    // Alternativa: escribir el número y "Abrir pedido" (alcanzable scrolleando
+    // en el teléfono chico con letra grande).
+    final open = findButtonWithText<OutlinedButton>('Abrir pedido');
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
+    expect(open, findsOneWidget);
+    expect(tester.getRect(open).right, lessThanOrEqualTo(screen.size.width));
+    expect(find.text('Escanear pedido'), findsNothing);
+    expect(find.text('Ver etiquetas'), findsNothing);
+  });
+
+  testOnScreens('preparar por código: aviso de número inválido sin desbordes', (
+    tester,
+    screen,
+  ) async {
+    await tester.pumpWidget(_app(const PrepareOrderScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '{"v":1,"t":"PKG"}');
+    final open = findButtonWithText<OutlinedButton>('Abrir pedido');
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Ese no es un número de pedido válido (ej. DIS-123456).'),
+      findsOneWidget,
+    );
+  });
+
+  testOnScreens('pedido con código que no es un número: aviso sin desbordes', (
+    tester,
+    screen,
+  ) async {
+    var repoCalls = 0;
+    await tester.pumpWidget(
+      _app(
+        const OrderPreparationScreen(orderNumber: '{"v":1,"t":"PKG"}'),
+        overrides: [
+          pickingRepositoryProvider.overrideWithValue(
+            FakePickingRepository(
+              onGetOrderLabels: (_) async {
+                repoCalls++;
+                return const [];
+              },
+              onGetOrderDispatchLines: (_) async {
+                repoCalls++;
+                return buildDispatchLines();
+              },
+            ),
+          ),
+          labelPrinterProvider.overrideWithValue(FakeLabelPrinter()),
+          locationServiceProvider.overrideWithValue(FakeLocationService()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pedido'), findsOneWidget);
+    expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+    expect(repoCalls, 0);
   });
 
   testOnScreens('preparación del pedido con muchas unidades', (
@@ -204,55 +272,5 @@ void main() {
     expect(find.text('Televisor 55"'), findsOneWidget); // producto del pedido
     final button = tester.getRect(find.text('Emitir etiquetas del pedido'));
     expect(button.right, lessThanOrEqualTo(screen.size.width));
-  });
-
-  testOnScreens('hoja de etiquetas (reimpresión) sin desbordes', (
-    tester,
-    screen,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: withTextScale(
-          Scaffold(
-            body: Builder(
-              builder: (context) => Center(
-                child: TextButton(
-                  onPressed: () => showLabelBatchSheet(
-                    context,
-                    title: 'Reimprimir etiquetas',
-                    submitLabel: 'Reimprimir',
-                    requireReason: true,
-                    initialLines: const [
-                      EmitLabelLine(
-                        sku: 'SKU-1',
-                        name: 'Heladera',
-                        quantity: 2,
-                      ),
-                      EmitLabelLine(sku: 'SKU-2', name: 'Cocina', quantity: 1),
-                      EmitLabelLine(
-                        sku: 'SKU-3',
-                        name: 'Lavadora',
-                        quantity: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Text('abrir'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('abrir'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(LabelBatchSheet), findsOneWidget);
-    expect(find.text('Líneas (3)'), findsOneWidget);
-    final submit = find.text('Reimprimir');
-    await tester.ensureVisible(submit);
-    await tester.pumpAndSettle();
-    expect(submit, findsOneWidget);
   });
 }

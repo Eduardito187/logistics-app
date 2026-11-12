@@ -6,7 +6,8 @@ import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/selected_store_node_notifier.dart';
-import 'controllers/store_controllers.dart';
+import 'controllers/store_shipments_notifier.dart';
+import 'widgets/load_more_on_scroll.dart';
 import 'widgets/shipments_section.dart';
 import 'widgets/store_selector.dart';
 
@@ -22,35 +23,40 @@ class NodeReceptionScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Recepción de mercadería')),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(storeShipmentsProvider),
-        child: ResponsiveBody(
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              const SliverPadding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                sliver: SliverToBoxAdapter(child: StoreSelector()),
-              ),
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  navScrollBottomPadding(context),
+        // Refrescar vuelve a la página 1 de envíos.
+        onRefresh: () async => ref.invalidate(storeShipmentsPagedProvider),
+        child: LoadMoreOnScroll(
+          onLoadMore: () =>
+              ref.read(storeShipmentsPagedProvider.notifier).loadMore(),
+          child: ResponsiveBody(
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const SliverPadding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(child: StoreSelector()),
                 ),
-                sliver: selected == null
-                    ? const SliverToBoxAdapter(
-                        child: EmptyState(
-                          icon: AppIcon.pickupStore,
-                          title: 'Sin tienda asignada',
-                          message:
-                              'Tu usuario no tiene una tienda asignada. '
-                              'Contactá a tu supervisor.',
-                        ),
-                      )
-                    : ShipmentsSection(node: selected),
-              ),
-            ],
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    navScrollBottomPadding(context),
+                  ),
+                  sliver: selected == null
+                      ? const SliverToBoxAdapter(
+                          child: EmptyState(
+                            icon: AppIcon.pickupStore,
+                            title: 'Sin tienda asignada',
+                            message:
+                                'Tu usuario no tiene una tienda asignada. '
+                                'Contactá a tu supervisor.',
+                          ),
+                        )
+                      : ShipmentsSection(node: selected),
+                ),
+              ],
+            ),
           ),
         ),
       ),

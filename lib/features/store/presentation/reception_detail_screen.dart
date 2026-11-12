@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/node.dart';
 import '../../../core/api/models/node_reception_view.dart';
@@ -42,8 +41,8 @@ import 'widgets/shelf_location_dialog.dart';
 typedef ReceptionArgs = ({Shipment shipment, Node node});
 
 /// Recepción de un envío contra manifiesto en el nodo: abre la recepción,
-/// escanea cada bulto que llega, muestra el progreso (recibidos vs esperados) y
-/// concilia al cerrar (faltantes/sobrantes).
+/// escanea cada producto que llega, muestra el progreso (recibidos vs
+/// esperados) y concilia al cerrar (faltantes/sobrantes).
 class ReceptionDetailScreen extends ConsumerStatefulWidget {
   const ReceptionDetailScreen({super.key, required this.args});
 
@@ -57,7 +56,7 @@ class ReceptionDetailScreen extends ConsumerStatefulWidget {
 /// Espera tras el último escaneo subido antes de re-leer la recepción del
 /// servidor. Durante una ráfaga de escaneos el conteo avanza con el estado
 /// local ([locallyReceivedProvider]); recién al terminar se baja la vista real
-/// una sola vez (antes: un GET de la recepción entera por bulto).
+/// una sola vez (antes: un GET de la recepción entera por producto).
 @visibleForTesting
 const Duration kReceptionRefreshDebounce = Duration(seconds: 5);
 
@@ -80,7 +79,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   }
 
   /// Reprograma el refresco: cada escaneo subido corre el plazo, así una
-  /// ráfaga de N bultos hace un solo GET al final.
+  /// ráfaga de N productos hace un solo GET al final.
   void _scheduleRefresh() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer(kReceptionRefreshDebounce, () {
@@ -104,7 +103,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
   Widget build(BuildContext context) {
     final receptionAsync = ref.watch(nodeReceptionProvider(_key));
     // Precarga en paralelo con la recepción lo que necesita el panel "Abrir
-    // recepción" (bultos y nodos), sin esperar al 404 para pedirlos. `listen`
+    // recepción" (productos y nodos), sin esperar al 404 para pedirlos. `listen`
     // los mantiene vivos sin reconstruir la pantalla cuando llegan.
     if (!receptionAsync.hasValue || receptionAsync.value == null) {
       ref.listen(shipmentUnitsProvider(_shipment.id), (_, _) {});
@@ -308,7 +307,7 @@ class _ReceptionDetailScreenState extends ConsumerState<ReceptionDetailScreen> {
         context,
         title: 'Escanear producto',
         helper: 'Apunta al QR de la etiqueta del producto.',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: (qr) => _receiveCode(qr, registered),
       );
     } finally {

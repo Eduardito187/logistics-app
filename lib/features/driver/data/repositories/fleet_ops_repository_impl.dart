@@ -30,13 +30,18 @@ class FleetOpsRepositoryImpl implements FleetOpsRepository {
       _remote.getCurrentFuelPrice(fuelType: fuelType);
 
   @override
-  Future<List<Refuel>> listVehicleRefuels({required String vehicleId}) =>
-      _remote.listVehicleRefuels(vehicleId: vehicleId);
+  Future<List<Refuel>> listVehicleRefuels({
+    required String vehicleId,
+    required DateTime from,
+    required DateTime to,
+  }) => _remote.listVehicleRefuels(vehicleId: vehicleId, from: from, to: to);
 
   @override
   Future<List<OdometerReading>> listOdometerReadings({
     required String vehicleId,
-  }) => _remote.listOdometerReadings(vehicleId: vehicleId);
+    required DateTime from,
+    required DateTime to,
+  }) => _remote.listOdometerReadings(vehicleId: vehicleId, from: from, to: to);
 
   @override
   Future<List<DueMaintenanceItem>> listDueMaintenance() =>

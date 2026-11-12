@@ -6,8 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/export.dart';
 import '../auth/session.dart';
+import '../live_updates/route_live_notification.dart';
 import '../offline/offline_queue.dart';
+import '../power/power_status.dart';
+import '../power/power_status_notifier.dart';
 import 'location_service.dart';
+import 'motion_detector.dart';
 import 'truck_tracking_state.dart';
 
 // Se reexporta [TruckTrackingState] (movido a su propio archivo por SRP) para no
@@ -16,10 +20,20 @@ export 'truck_tracking_state.dart';
 
 /// Canal de notificación del rastreo en vivo. Android exige una notificación
 /// visible y persistente mientras el foreground service está activo.
+///
+/// UNA sola notificación (nov 2026): el servicio arranca con
+/// `serviceId: routeLiveNotificationId` (4120), el mismo id de la ruta en vivo
+/// (`LiveUpdatesChannel.kt`). El plugin postea primero su texto neutro en este
+/// canal y la ruta en vivo lo reemplaza enseguida con su contenido (canal
+/// "route_live"; Android conserva la marca de foreground service porque el id
+/// es el del servicio). Ver `docs/live-updates.md`.
 const String _trackingChannelId = 'dismac_truck_tracking';
 // Nombre del canal NEUTRAL: el usuario lo ve en los ajustes de notificaciones
 // del sistema; no debe revelar el rastreo de ubicación.
 const String _trackingChannelName = 'Sesión en curso';
+
+/// Una posición capturada y todavía no encolada (lote en memoria).
+typedef _PendingFix = ({String shipmentId, GpsFix fix, DateTime at});
 
 /// Rastreo del camión en primer plano (foreground service).
 ///
@@ -27,6 +41,21 @@ const String _trackingChannelName = 'Sesión en curso';
 /// envío manual de posiciones. Arranca solo cuando el chofer tiene un envío/ruta
 /// activos (ver `driver_tracking_autostart.dart`) y se detiene al terminar la
 /// ruta o cerrar sesión. No se confía en que el chofer lo encienda.
+///
+/// **Batería (nov 2026).** El rastreo era el mayor consumo de la app: GPS en
+/// alta precisión cada 10 s todo el día y un POST por posición (la radio
+/// celular nunca se dormía). Ahora es ADAPTATIVO (ver [TrackingProfile]):
+/// - [MotionDetector] decide si el camión está en marcha o detenido; detenido
+///   pasa a precisión balanceada (sin chip GPS) y lecturas cada 60 s.
+/// - Las posiciones se juntan en memoria y se encolan/envían en ráfaga cada
+///   60 s (la primera de cada arranque sale enseguida para que el supervisor
+///   vea el camión al toque). Una posición casi igual a la anterior no se
+///   reenvía; con el camión quieto sale un latido cada 5 min.
+/// - Con ahorro de energía o batería < 20 % ([powerStatusProvider]) todo se
+///   espacia el doble.
+/// El lote se vacía al pasar a segundo plano, al detener y al cambiar de
+/// envío, así que como mucho se pierde 1 min de posiciones si el SO mata la
+/// app sin aviso (aceptable para telemetría; los escaneos siguen igual).
 ///
 /// Decisión de diseño: la captura de posiciones y el encolado se hacen en el
 /// isolate principal, reutilizando [LocationService] y [OfflineQueue]. El
@@ -38,34 +67,44 @@ const String _trackingChannelName = 'Sesión en curso';
 /// obligaría a reconstruir allí la base de datos (drift) y los providers de
 /// Riverpod; no aporta y complica. Por eso el `eventAction` del task es
 /// `nothing()`: no corre callback en el isolate secundario, sólo se mantiene el
-/// servicio. El `allowWakeLock` evita que el CPU se duerma y corte el GPS.
+/// servicio. El `allowWakeLock` evita que el CPU se duerma y corte el GPS (y
+/// los timers del lote) mientras la app está en segundo plano.
 ///
 /// Realidad de la plataforma (segundo plano):
 ///  - Android: un foreground service de ubicación EXIGE una notificación
 ///    persistente y visible mientras corre; el sistema no permite ocultarla.
-///    Esto es, además, deseable para este caso de uso: deja a la vista que el
-///    camión se está rastreando y refuerza que el rastreo no se puede apagar a
-///    escondidas. Requiere los permisos `FOREGROUND_SERVICE_LOCATION`,
+///    Requiere los permisos `FOREGROUND_SERVICE_LOCATION`,
 ///    `ACCESS_BACKGROUND_LOCATION` y `POST_NOTIFICATIONS` (ya declarados en el
 ///    manifest). Si el usuario niega POST_NOTIFICATIONS (Android 13+), el
 ///    servicio igual corre, pero el sistema puede no mostrar el aviso.
 ///  - iOS: se usa background location (modo declarado en Info.plist). iOS puede
-///    suspender la app y entregar las posiciones en ráfagas según batería y
-///    movimiento; la cadencia no es tan firme como en Android.
+///    entregar las posiciones en ráfagas según batería y movimiento; la
+///    cadencia no es tan firme como en Android.
 ///  - Límites comunes: optimización de batería agresiva del fabricante, GPS sin
 ///    señal (túnel, sótano) o servicio de ubicación apagado pueden cortar el
 ///    flujo. Por eso cada posición se encola offline-first y se sincroniza al
 ///    recuperar señal; nunca se pierde por falta de red momentánea.
 class TruckTrackingService extends Notifier<TruckTrackingState> {
-  /// Separación mínima entre posiciones encoladas. Cada posición es una fila
-  /// en la cola local y un POST: a 60 km/h con filtro de 20 m serían ~3000 por
-  /// hora. Con 10 s quedan ~360/h, suficiente para el seguimiento en vivo.
-  static const Duration minFixInterval = Duration(seconds: 10);
+  /// Separación mínima entre posiciones encoladas en marcha (perfil normal).
+  /// Se mantiene por compatibilidad: el valor vigente lo da el perfil activo.
+  static const Duration minFixInterval = Duration(seconds: 15);
+
+  /// Distancia mínima (m) a la última posición encolada para encolar otra; por
+  /// debajo es el mismo lugar (jitter) y solo cuenta el latido.
+  static const double minEnqueueMeters = 25;
+
+  /// Tope del lote en memoria: llegado a esta cantidad se envía ya.
+  static const int maxBatch = 10;
+
+  /// Reloj (tests).
+  @visibleForTesting
+  static DateTime Function() clock = DateTime.now;
 
   StreamSubscription<GpsFix>? _sub;
 
-  /// Momento de la última posición encolada (para [minFixInterval]).
+  /// Momento y posición de la última encolada (throttle y deduplicado).
   DateTime? _lastEnqueuedAt;
+  GpsFix? _lastEnqueuedFix;
   bool _channelReady = false;
 
   /// Envío al que se asocian las posiciones capturadas. Se puede re-apuntar en
@@ -75,6 +114,22 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// Observa primer plano / segundo plano para mostrar la notificación del
   /// servicio SOLO cuando hace falta (ver [_onLifecycleChange]).
   AppLifecycleListener? _lifecycle;
+
+  /// Detector en marcha / detenido y perfil vigente del GPS.
+  final MotionDetector _motion = MotionDetector();
+  TrackingProfile _profile = TrackingProfile.moving;
+
+  /// Posiciones juntadas a la espera del próximo envío por lote.
+  final List<_PendingFix> _batch = <_PendingFix>[];
+  DateTime? _lastFlushAt;
+  bool _firstFixSent = false;
+
+  Timer? _flushTimer;
+  Timer? _stillTimer;
+  Timer? _heartbeatTimer;
+
+  /// Perfil del GPS vigente (tests / diagnóstico).
+  TrackingProfile get profile => _profile;
 
   @override
   TruckTrackingState build() {
@@ -90,6 +145,12 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
         unawaited(stop());
       }
     });
+    // Ahorro de energía / batería baja: re-ajusta el perfil del GPS en caliente.
+    ref.listen<PowerStatus>(powerStatusProvider, (previous, next) {
+      if (previous?.shouldSaveEnergy != next.shouldSaveEnergy) {
+        _applyProfile();
+      }
+    });
     // Notificación "fantasma": el servicio en primer plano (y su notificación,
     // que Android EXIGE en segundo plano) se levanta SOLO cuando la app pasa a
     // segundo plano, y se baja al volver al primer plano. Así el chofer nunca ve
@@ -103,6 +164,7 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     }
     ref.onDispose(() {
       _lifecycle?.dispose();
+      _cancelTimers();
       unawaited(_sub?.cancel());
     });
     return const TruckTrackingState();
@@ -119,7 +181,9 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
         unawaited(_stopForegroundService());
       case AppLifecycleState.paused:
         // La app pasó a segundo plano: se levanta el servicio (con su
-        // notificación) para que Android no mate el proceso y el GPS siga.
+        // notificación) para que Android no mate el proceso y el GPS siga. El
+        // lote en memoria se encola ya (si el SO mata el proceso no se pierde).
+        unawaited(_flush());
         unawaited(_startForegroundService());
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -144,19 +208,31 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// Levanta el foreground service (con su notificación) si no corre ya. Tolera
   /// la restricción de Android 12+ de iniciar un FGS desde segundo plano: si el
   /// SO lo rechaza, el rastreo sigue en primer plano y reintenta al próximo paso.
+  ///
+  /// La notificación del servicio usa el id de la ruta en vivo y un texto
+  /// NEUTRO: al quedar arriba ([TruckTrackingState.foregroundServiceRunning])
+  /// la ruta en vivo vuelve a publicar su contenido con ese id, así queda una
+  /// sola notificación. El texto neutro solo se ve si no hay ruta (raro) o si
+  /// el sistema reinicia el servicio sin la app (no se usa el estado de la
+  /// ruta acá: quedaría viejo en ese caso).
   Future<void> _startForegroundService() async {
     try {
-      if (await FlutterForegroundTask.isRunningService) return;
+      if (await FlutterForegroundTask.isRunningService) {
+        _setServiceRunning(true);
+        return;
+      }
       _ensureChannel();
       final permission =
           await FlutterForegroundTask.checkNotificationPermission();
       if (permission != NotificationPermission.granted) {
         await FlutterForegroundTask.requestNotificationPermission();
       }
-      await FlutterForegroundTask.startService(
-        notificationTitle: 'DisTrack',
-        notificationText: 'Sesión en curso',
+      final result = await FlutterForegroundTask.startService(
+        serviceId: routeLiveNotificationId,
+        notificationTitle: routeLiveFallbackTitle,
+        notificationText: routeLiveFallbackText,
       );
+      _setServiceRunning(result is ServiceRequestSuccess);
     } on Object {
       // SO rechazó el FGS (p. ej. background-start restringido): no es crítico.
     }
@@ -171,6 +247,13 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     } on Object {
       // Sin plugin (tests) o error del SO: no es crítico.
     }
+    _setServiceRunning(false);
+  }
+
+  /// Publica si el foreground service quedó arriba (la ruta en vivo lo escucha).
+  void _setServiceRunning(bool running) {
+    if (!ref.mounted || state.foregroundServiceRunning == running) return;
+    state = state.copyWith(foregroundServiceRunning: running);
   }
 
   /// Configura el canal de notificación y las opciones del servicio. Idempotente.
@@ -189,15 +272,18 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
         eventAction: ForegroundTaskEventAction.nothing(),
         autoRunOnBoot: false,
         allowWakeLock: true,
-        allowWifiLock: true,
+        // SIN Wi-Fi lock: mantenía la Wi-Fi en modo de alto rendimiento todo
+        // el turno. El chofer va con datos móviles; los envíos por lote no lo
+        // necesitan.
+        allowWifiLock: false,
       ),
     );
     _channelReady = true;
   }
 
-  /// Inicia (o re-apunta) el rastreo del envío [shipmentId]. Levanta el
-  /// foreground service y se suscribe al stream de GPS. Devuelve `false` si
-  /// falta el permiso de ubicación "siempre" o si el servicio no pudo arrancar.
+  /// Inicia (o re-apunta) el rastreo del envío [shipmentId]. Se suscribe al
+  /// stream de GPS (el foreground service se levanta solo en segundo plano).
+  /// Devuelve `false` si falta el permiso de ubicación "siempre".
   ///
   /// Si ya está activo, no reinicia el servicio: sólo re-apunta el envío
   /// asociado (la parada en curso puede cambiar durante la ruta), de modo que
@@ -208,6 +294,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// para no arrancar un servicio que no podrá leer la ubicación.
   Future<bool> start({required String shipmentId}) async {
     if (state.active) {
+      if (_shipmentId != shipmentId) {
+        // Cambio de parada: lo juntado del envío anterior sale ya.
+        unawaited(_flush());
+      }
       _shipmentId = shipmentId;
       state = state.copyWith(shipmentId: shipmentId);
       return true;
@@ -243,16 +333,24 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     _pendingShipmentId = null;
     _shipmentId = current;
     _lastEnqueuedAt = null;
+    _lastEnqueuedFix = null;
+    _firstFixSent = false;
+    _lastFlushAt = null;
+    _motion.reset();
+    _profile = TrackingProfile.resolve(
+      motion: TruckMotion.moving,
+      saveEnergy: _saveEnergy,
+    );
     // Nunca dos suscripciones al GPS a la vez. En primer plano alcanza el stream
     // directo (sin servicio ni notificación); el foreground service se levanta
     // solo al pasar a segundo plano (ver [_onLifecycleChange]).
-    await _sub?.cancel();
-    _sub = location.stream().listen(_onFix);
+    await _subscribe();
     state = TruckTrackingState(
       active: true,
       shipmentId: current,
       sent: 0,
       lastFix: null,
+      foregroundServiceRunning: state.foregroundServiceRunning,
     );
     // Si al arrancar el rastreo la app YA está en segundo plano, se levanta el
     // servicio enseguida para no perder posiciones.
@@ -260,17 +358,56 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     return true;
   }
 
-  /// Detiene el rastreo y baja el foreground service.
+  /// `true` si el teléfono está en ahorro de energía o con batería baja.
+  bool get _saveEnergy {
+    try {
+      return ref.read(powerStatusProvider).shouldSaveEnergy;
+    } on Object {
+      return false;
+    }
+  }
+
+  /// (Re)suscribe el GPS con el perfil vigente (cancelando el anterior).
+  Future<void> _subscribe() async {
+    await _sub?.cancel();
+    _sub = ref
+        .read(locationServiceProvider)
+        .stream(profile: _profile)
+        .listen(_onFix);
+  }
+
+  /// Recalcula el perfil (movimiento + energía) y, si cambió, re-suscribe el
+  /// GPS con los ajustes nuevos. Sin rastreo activo no hace nada.
+  void _applyProfile() {
+    if (!state.active && _starting == null) return;
+    final next = TrackingProfile.resolve(
+      motion: _motion.motion,
+      saveEnergy: _saveEnergy,
+    );
+    if (identical(next, _profile)) return;
+    _profile = next;
+    if (_sub != null) unawaited(_subscribe());
+    _armHeartbeat();
+  }
+
+  /// Detiene el rastreo y baja el foreground service. Lo juntado en el lote se
+  /// encola antes de soltar el envío.
   Future<void> stop() async {
     await _sub?.cancel();
     _sub = null;
+    await _flush();
+    _cancelTimers();
     _shipmentId = null;
-    await FlutterForegroundTask.stopService();
-    state = state.copyWith(active: false);
+    try {
+      await FlutterForegroundTask.stopService();
+    } on Object {
+      // Sin plugin (tests) o error del SO: no es crítico.
+    }
+    state = state.copyWith(active: false, foregroundServiceRunning: false);
   }
 
   /// Baja un foreground service HUÉRFANO: uno que sobrevivió a un cierre de la
-  /// app o a un cambio de rol y dejó colgada su notificación ("Sesión en curso")
+  /// app o a un cambio de rol y dejó colgada su notificación (id 4120)
   /// aunque el usuario ya no sea un chofer rastreándose. Seguro de llamar
   /// siempre (al arrancar): `stopService` no hace nada si no hay servicio
   /// corriendo, y si el usuario ES chofer con parada activa el autostart lo
@@ -282,42 +419,171 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     } on Object {
       // Sin plugin (tests) o error del SO: no es crítico.
     }
-    if (state.active) state = state.copyWith(active: false);
+    if (state.active || state.foregroundServiceRunning) {
+      state = state.copyWith(active: false, foregroundServiceRunning: false);
+    }
   }
 
-  /// Encola una posición capturada con el envío vigente. Mismo contrato de
-  /// siempre: kind `ingestTruckPosition` + `@shipmentId` en el payload
-  /// (offline-first, nunca espera a la red).
+  /// Procesa una lectura del GPS: actualiza en marcha/detenido (y el perfil),
+  /// descarta lecturas demasiado seguidas o en el mismo lugar, y junta la
+  /// posición en el lote. Mismo contrato de siempre al encolar: kind
+  /// `ingestTruckPosition` + `@shipmentId` (offline-first, nunca espera a la
+  /// red).
   void _onFix(GpsFix fix) {
     final shipmentId = _shipmentId;
     if (shipmentId == null) return;
-    final now = DateTime.now();
+    final now = clock();
+    if (_motion.onFix(fix, now)) _applyProfile();
+    _armStillTimer(now);
+
     final last = _lastEnqueuedAt;
+    final lastFix = _lastEnqueuedFix;
     // Lecturas demasiado seguidas se descartan: ni fila, ni POST, ni rebuild.
-    if (last != null && now.difference(last) < minFixInterval) return;
+    if (last != null && now.difference(last) < _profile.minEnqueueInterval) {
+      _maybeFlushOverdue(now);
+      return;
+    }
+    // Mismo lugar (jitter): solo se reenvía como latido.
+    if (lastFix != null &&
+        last != null &&
+        MotionDetector.distanceMeters(lastFix, fix) < minEnqueueMeters &&
+        now.difference(last) < _profile.heartbeatInterval) {
+      _maybeFlushOverdue(now);
+      return;
+    }
+    _collect(shipmentId, fix, now);
+  }
+
+  /// Junta una posición en el lote y decide si se envía ya.
+  void _collect(String shipmentId, GpsFix fix, DateTime now) {
     _lastEnqueuedAt = now;
+    _lastEnqueuedFix = fix;
     state = state.copyWith(lastFix: fix);
-    final payload = <String, Object?>{
-      ...TruckPositionInput(
-        lat: fix.lat,
-        lng: fix.lng,
-        reportedAt: now,
-      ).toJson(),
-      '@shipmentId': shipmentId,
-    };
-    unawaited(
-      ref
-          .read(offlineQueueProvider)
-          .submit(
-            kind: 'ingestTruckPosition',
-            payload: payload,
-            label: 'GPS · $shipmentId',
-            occurredAt: now,
-          )
-          .then((_) {
-            state = state.copyWith(sent: state.sent + 1);
-          }),
-    );
+    _batch.add((shipmentId: shipmentId, fix: fix, at: now));
+    _armHeartbeat();
+    // La primera posición de cada arranque sale enseguida: el supervisor ve el
+    // camión apenas empieza la ruta.
+    if (!_firstFixSent || _batch.length >= maxBatch) {
+      _firstFixSent = true;
+      unawaited(_flush());
+      return;
+    }
+    if (!_maybeFlushOverdue(now)) {
+      _flushTimer ??= Timer(_profile.flushInterval, () {
+        _flushTimer = null;
+        unawaited(_flush());
+      });
+    }
+  }
+
+  /// Envía el lote si el último envío fue hace más de un intervalo (por si el
+  /// timer se atrasó con la CPU dormida). Devuelve `true` si envió.
+  bool _maybeFlushOverdue(DateTime now) {
+    if (_batch.isEmpty) return false;
+    final at = _lastFlushAt;
+    if (at != null && now.difference(at) < _profile.flushInterval) {
+      return false;
+    }
+    unawaited(_flush());
+    return true;
+  }
+
+  /// Encola (en ráfaga, en orden) las posiciones juntadas. La cola offline las
+  /// intenta enviar enseguida: así todos los POST salen juntos y la radio
+  /// vuelve a dormir. Nunca lanza.
+  Future<void> _flush() async {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    if (_batch.isEmpty) return;
+    final items = List<_PendingFix>.of(_batch);
+    _batch.clear();
+    _lastFlushAt = clock();
+    final queue = ref.read(offlineQueueProvider);
+    for (final item in items) {
+      final payload = <String, Object?>{
+        ...TruckPositionInput(
+          lat: item.fix.lat,
+          lng: item.fix.lng,
+          reportedAt: item.at,
+        ).toJson(),
+        '@shipmentId': item.shipmentId,
+      };
+      try {
+        await queue.submit(
+          kind: 'ingestTruckPosition',
+          payload: payload,
+          label: 'GPS · ${item.shipmentId}',
+          occurredAt: item.at,
+        );
+        if (ref.mounted) state = state.copyWith(sent: state.sent + 1);
+      } on Object {
+        // Error de la base local: se pierde solo esta posición (telemetría).
+      }
+    }
+    // Aprovecha el envío para seguir la batería durante la ruta.
+    if (ref.mounted) {
+      try {
+        unawaited(ref.read(powerStatusProvider.notifier).refreshIfStale());
+      } on Object {
+        // Sin canal de energía: comportamiento normal.
+      }
+    }
+  }
+
+  /// (Re)arma el chequeo de "detenido" para cuando se cumpla el tiempo sin
+  /// moverse (con el filtro de distancia, quieto no llegan lecturas).
+  void _armStillTimer(DateTime now) {
+    _stillTimer?.cancel();
+    _stillTimer = null;
+    final left = _motion.timeUntilStill(now);
+    if (left == null) return;
+    _stillTimer = Timer(left, checkStillness);
+  }
+
+  /// Revisa si el camión ya está detenido y ajusta el perfil. Lo llama el
+  /// timer; expuesto para tests.
+  @visibleForTesting
+  void checkStillness() {
+    _stillTimer = null;
+    if (_motion.evaluate(clock())) _applyProfile();
+  }
+
+  /// Con el camión detenido no llegan lecturas (filtro de distancia): cada
+  /// [TrackingProfile.heartbeatInterval] se reenvía la última posición para
+  /// que el supervisor lo siga viendo activo.
+  void _armHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    if (!state.active || _motion.motion != TruckMotion.stationary) return;
+    _heartbeatTimer = Timer(_profile.heartbeatInterval, heartbeat);
+  }
+
+  /// Reenvía la última posición como latido (expuesto para tests).
+  @visibleForTesting
+  void heartbeat() {
+    _heartbeatTimer = null;
+    final shipmentId = _shipmentId;
+    final fix = _lastEnqueuedFix;
+    if (shipmentId == null || fix == null || !state.active) return;
+    _collect(shipmentId, fix, clock());
+    unawaited(_flush());
+  }
+
+  /// Envía ya el lote pendiente (tests).
+  @visibleForTesting
+  Future<void> flushNow() => _flush();
+
+  /// Posiciones juntadas a la espera del envío (tests).
+  @visibleForTesting
+  int get pendingBatch => _batch.length;
+
+  void _cancelTimers() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    _stillTimer?.cancel();
+    _stillTimer = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
   }
 }
 

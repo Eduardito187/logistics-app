@@ -96,10 +96,18 @@ class TokenStore {
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
   (ref) => const FlutterSecureStorage(
-    // resetOnError: si la clave del Keystore quedó inservible (p. ej. tras
-    // reinstalar o restaurar un backup) y no se puede descifrar, limpia el
-    // almacén y sigue (se pide login) en vez de volcar un SecurityException.
-    aOptions: AndroidOptions(resetOnError: true),
+    // Recuperación silenciosa cuando la clave del Keystore quedó inservible
+    // (reinstalación, restaurar un backup, o la migración de la v10 que
+    // abandona EncryptedSharedPreferences):
+    // - resetOnError: si no se puede descifrar, limpia y sigue (se pide login)
+    //   en vez de volcar un SecurityException.
+    // - migrateOnAlgorithmChange: migra los datos al nuevo cifrado (custom
+    //   ciphers) en vez de perderlos; sin esto el log "Could not decrypt key"
+    //   reaparecía en cada arranque al sondear el almacén viejo.
+    aOptions: AndroidOptions(
+      resetOnError: true,
+      migrateOnAlgorithmChange: true,
+    ),
   ),
 );
 

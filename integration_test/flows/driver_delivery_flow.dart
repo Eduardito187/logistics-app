@@ -18,7 +18,7 @@ void driverDeliveryFlowTests() {
       final h = await pumpE2eApp(
         tester,
         scans: [
-          validLabelQr, // bulto entregado (POD)
+          validLabelQr, // producto entregado (POD)
           'CLIENTE-QR-123', // QR de confirmación del cliente
         ],
         photos: [photo],
@@ -34,7 +34,7 @@ void driverDeliveryFlowTests() {
 
       // --- Entregar con foto obligatoria ------------------------------------
       await tapVisible(tester, find.text('Entregar'));
-      expect(find.text('Prueba de entrega'), findsOneWidget);
+      expect(find.text('Comprobante de entrega'), findsOneWidget);
 
       Finder registerButton() =>
           findButtonWithText<FilledButton>('Registrar entrega');
@@ -82,8 +82,12 @@ void driverDeliveryFlowTests() {
       expect(find.text('En camino a Carlos Rojas'), findsOneWidget);
       expect(find.text('Entregar'), findsOneWidget);
 
-      // Cámara: escaneos de QR y foto reducida para teléfonos de 1 GB.
-      expect(h.scanner.requestedFormats, everyElement([BarcodeFormat.qrCode]));
+      // Cámara: la etiqueta acepta QR + Code128 (Zebra); el QR de confirmación
+      // del cliente sigue siendo solo QR. Foto reducida para teléfonos de 1 GB.
+      expect(h.scanner.requestedFormats, [
+        [BarcodeFormat.qrCode, BarcodeFormat.code128], // etiqueta del producto
+        [BarcodeFormat.qrCode], // QR de confirmación del cliente
+      ]);
       expect(h.picker.requests.single.maxWidth, 1600);
 
       // Backend: el POD llegó por la cola offline real, con su Idempotency-Key,

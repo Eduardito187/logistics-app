@@ -1,14 +1,26 @@
 ---
 name: run-environments-config
-description: Entornos dev/staging/production en config/*.json (--dart-define-from-file), claves vigentes y pendientes de valores reales
+description: "3 entornos (dev/staging/production) con su endpoint vía --dart-define-from-file config/*.json, enganchados a los botones de play de VS Code y Android Studio."
 metadata:
+  node_type: memory
   type: project
+  originSessionId: b09fb122-a063-448a-9f98-c86b13899a10
+  modified: 2026-11-11T16:46:27.933Z
 ---
 
-`config/dev.json`, `config/staging.json`, `config/production.json` se inyectan con `--dart-define-from-file=config/<env>.json` (botones de play: `.vscode/launch.json` y `.run/*.run.xml`; `make apk ENV=…`). Los lee `lib/core/config/app_config.dart`.
+El 2026-10-14 se dejaron los entornos para correr con el botón de play:
 
-Claves vigentes (2026-10-16): `ENV`, `API_BASE_URL`, `LABEL_PUBLIC_KEYS`, `APP_UPDATE_URL`, `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_PROJECT_ID`, `FIREBASE_IOS_APP_ID`, `FIREBASE_IOS_BUNDLE_ID`, `FIREBASE_IOS_API_KEY` (opcional) y opcional `MAP_TILES_URL`. (`PUSH_ENDPOINT` ya no existe.) `scripts/check-config.ps1` dice qué falta sin imprimir valores.
+- `config/dev.json`, `config/staging.json`, `config/production.json` — cada uno con `ENV`, `API_BASE_URL`, `LABEL_PUBLIC_KEYS` (y pueden sumar `MAP_TILES_URL`, `PUSH_ENDPOINT`). Se inyectan con un solo arg: `--dart-define-from-file=config/<env>.json`. Los lee `lib/core/config/app_config.dart`.
+- `.vscode/launch.json` → 3 configs (dev debug / staging profile / production release).
+- `.run/*.run.xml` → 3 run configurations de Android Studio/IntelliJ (versionadas).
 
-**Pendiente del dueño:** URLs reales de staging/production (las actuales son tentativas), `LABEL_PUBLIC_KEYS` de staging/prod (vacías → no se validan etiquetas), todas las `FIREBASE_*` (push/Crashlytics inactivos), `APP_UPDATE_URL`.
+**STAGING real (nov 2026):** `http://137.131.245.152:8110/api/v1` (servidor OCI, ver
+[[staging-server-access]]). Es **http en claro** → como staging corre en modo **profile**, hubo que
+whitelistear esa IP en `android/app/src/{profile,debug}/res/xml/network_security_config.xml` (el
+`base-config` sigue bloqueando cleartext; solo esa IP + 10.0.2.2/localhost pasan). **Release NO sirve para
+staging** (bloquea todo cleartext). `LABEL_PUBLIC_KEYS` de staging sigue **vacía** → el QR Ed25519 no valida
+hasta que el backend pase la clave pública de staging (el Code128 online sí anda). Production sigue
+tentativa (`logistics.dismac.com.bo`).
 
-dev apunta a `http://10.0.2.2:8110/api/v1` (emulador). En un teléfono físico hay que usar la IP LAN de la PC. **Un APK release bloquea `http://`** (networkSecurityConfig): probar release contra staging/production. Ver [[windows-native-toolchain]].
+dev apunta a `http://localhost:8110/api/v1` (antes `10.0.2.2`; por `adb reverse`). Ver [[wsl-run-toolchain]],
+[[device-run-usb-wsl]].

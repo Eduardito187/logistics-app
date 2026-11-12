@@ -12,7 +12,6 @@ import 'package:logistics_app/core/api/models/emitted_label.dart';
 import 'package:logistics_app/core/api/models/order_source.dart';
 import 'package:logistics_app/core/api/models/origin2.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
-import 'package:logistics_app/core/api/models/reprint_labels_request.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/shipment_line.dart';
 import 'package:logistics_app/core/api/models/shipment_status.dart';
@@ -23,6 +22,7 @@ import 'package:logistics_app/core/offline/submit_outcome.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
 import 'package:logistics_app/core/printing/printer_config.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
+import 'package:logistics_app/features/picking/domain/entities/shipment_page.dart';
 import 'package:logistics_app/features/picking/domain/repositories/picking_repository.dart';
 
 /// Repositorio de preparación totalmente controlable por los tests. Cada método
@@ -35,7 +35,7 @@ class FakePickingRepository implements PickingRepository {
     this.onGetOrderDispatchLines,
     this.onEmitOrderLabels,
     this.onEmitLabels,
-    this.onReprintLabels,
+    this.assignVehicleError,
     this.onGetSignedZpl,
     this.onRecordScan,
   });
@@ -50,33 +50,46 @@ class FakePickingRepository implements PickingRepository {
     EmitLabelsRequest body,
   )?
   onEmitLabels;
-  Future<List<EmittedLabel>> Function(
-    String orderNumber,
-    ReprintLabelsRequest body,
-  )?
-  onReprintLabels;
+
+  /// Error a lanzar al asignar el vehículo (para probar el camino de fallo).
+  final Object? assignVehicleError;
   Future<String> Function(String orderNumber)? onGetSignedZpl;
   Future<SubmitOutcome> Function(PreparationScanRequest scan)? onRecordScan;
 
   // Espías de las escrituras.
   int emitCalls = 0;
   int emitOrderCalls = 0;
-  int reprintCalls = 0;
+  int assignVehicleCalls = 0;
   int recordScanCalls = 0;
   String? lastEmitOrder;
   String? lastEmitOrderNumber;
   EmitLabelsRequest? lastEmitBody;
-  String? lastReprintOrder;
-  ReprintLabelsRequest? lastReprintBody;
+  String? lastAssignedOrder;
+  String? lastAssignedVehicleId;
   PreparationScanRequest? lastScan;
 
   /// Estado pedido en cada `listShipments` (filtro de servidor).
   final List<ShipmentStatus?> listShipmentsStatuses = <ShipmentStatus?>[];
 
+  /// Página pedida en cada `listShipments` (para probar la paginación).
+  final List<int> listShipmentsPages = <int>[];
+
+  /// Estados que deben responder "hay más" (se consume una sola vez).
+  final Map<ShipmentStatus?, bool> morePages = <ShipmentStatus?, bool>{};
+
   @override
-  Future<List<Shipment>> listShipments({ShipmentStatus? status}) {
+  Future<ShipmentPage> listShipments({
+    ShipmentStatus? status,
+    int page = 1,
+    int perPage = 50,
+  }) async {
     listShipmentsStatuses.add(status);
-    return (onListShipments ?? (() async => <Shipment>[]))();
+    listShipmentsPages.add(page);
+    final items = await (onListShipments ?? (() async => <Shipment>[]))();
+    return ShipmentPage(
+      items: items,
+      hasMore: morePages.remove(status) ?? false,
+    );
   }
 
   @override
@@ -114,17 +127,12 @@ class FakePickingRepository implements PickingRepository {
   }
 
   @override
-  Future<List<EmittedLabel>> reprintLabels(
-    String orderNumber,
-    ReprintLabelsRequest body,
-  ) {
-    reprintCalls++;
-    lastReprintOrder = orderNumber;
-    lastReprintBody = body;
-    return (onReprintLabels ?? ((_, _) async => <EmittedLabel>[]))(
-      orderNumber,
-      body,
-    );
+  Future<void> assignVehicle(String orderNumber, String vehicleId) async {
+    assignVehicleCalls++;
+    lastAssignedOrder = orderNumber;
+    lastAssignedVehicleId = vehicleId;
+    final fail = assignVehicleError;
+    if (fail != null) throw fail;
   }
 
   @override
@@ -160,12 +168,31 @@ class FakeLabelPrinter extends LabelPrinter {
   bool throwOnPrint;
   final List<String> printed = <String>[];
 
+  /// Cada pedido de impresión trae su dibujo para impresoras de oficina.
+  final List<LabelRenderer?> renders = <LabelRenderer?>[];
+
+  /// Resultado que devuelve cada impresión (por defecto: enviado).
+  PrintOutcome outcome = const PrintOutcome.sent();
+
+  @override
+  Future<PrinterConfig?> selectedPrinter() async => null;
+
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async {
+    printed.add(zpl);
+    renders.add(render);
+    if (throwOnPrint) throw PrinterException.notSelected;
+    return outcome;
+  }
+
   @override
   Future<void> printZpl(String zpl, {PrinterConfig? to}) async {
-    printed.add(zpl);
-    if (throwOnPrint) {
-      throw const PrinterException('No hay impresora seleccionada.');
-    }
+    await printLabel(zpl: zpl, to: to);
   }
 }
 

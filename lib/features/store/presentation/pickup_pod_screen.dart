@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/models/shipment.dart';
 import '../../../core/icons/icons.dart';
@@ -16,6 +15,7 @@ import '../../../core/sharing/share_service.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
 import '../domain/usecases/record_pod.dart';
+import '../domain/usecases/upload_pod_photo.dart';
 import 'controllers/store_controllers.dart';
 import 'unit_scan.dart';
 import 'widgets/bottom_action_bar.dart';
@@ -23,8 +23,16 @@ import 'widgets/pickup_pod_cards.dart';
 
 export 'widgets/pickup_pod_cards.dart' show kPhotoPreviewCacheWidth;
 
+/// Cuánto espera el POD, como MÁXIMO, a que termine de subir la foto de
+/// evidencia para mandar su `photo_path` real. Mismo criterio que
+/// [kSubmitWaitBudget] de la cola offline: con buena señal la subida ya
+/// terminó (la foto se saca antes de escanear) y el POD sale encadenado; si
+/// no, sale igual sin la foto (regla 4: la entrega nunca espera a la red).
+const Duration kPodPhotoAttachBudget = Duration(milliseconds: 1500);
+
 /// Prueba de entrega en mostrador (recojo en tienda): se confirma al cliente,
-/// se toma una foto como evidencia y se registra el POD por cada bulto retirado.
+/// se toma una foto como evidencia y se registra el POD por cada producto
+/// retirado.
 class PickupPodScreen extends ConsumerStatefulWidget {
   const PickupPodScreen({super.key, required this.shipment});
 
@@ -38,20 +46,55 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
   final TextEditingController _confirmationController = TextEditingController();
   File? _photoFile;
 
-  /// Marca de foto adjunta para el POD: la foto viaja aparte por la cola de
-  /// fotos; acá solo se indica que existe (igual que en el POD del chofer).
+  /// Referencia durable de la evidencia (`data.path` que devolvió el backend):
+  /// es lo que el POD manda en `photo_path`. `null` mientras la subida no
+  /// terminó o si la foto quedó en la cola offline.
   String? _photoPath;
+
+  /// Subida en curso de la foto actual (ver [_attachPhoto]). El POD la espera
+  /// como máximo [kPodPhotoAttachBudget].
+  Future<String?>? _photoUpload;
+
+  /// Sube con cada "Volver a tomar": la subida de una foto reemplazada ya no
+  /// debe pisar [_photoPath].
+  int _photoGeneration = 0;
+
   bool _busy = false;
 
   /// Si hay confirmación escrita. Se cachea para reconstruir solo cuando
-  /// cambia (no en cada tecla, que redibujaría la foto y la lista de bultos).
+  /// cambia (no en cada tecla, que redibujaría la foto y la lista de productos).
   bool _hasConfirmation = false;
+
+  /// Productos ya entregados: los que el servidor confirmó antes de abrir la
+  /// pantalla (ver [initState]) más los de esta sesión. No es solo memoria: así
+  /// un reinicio de la app a mitad del retiro no permite entregar dos veces el
+  /// mismo producto.
   final Set<String> _delivered = <String>{};
+
+  /// Mantiene viva la consulta de lo ya entregado mientras dura el retiro.
+  ProviderSubscription<AsyncValue<Set<String>>>? _deliveredSub;
 
   Shipment get _shipment => widget.shipment;
 
   @override
+  void initState() {
+    super.initState();
+    final provider = deliveredUnitIdsProvider(_shipment.id);
+    // Se escucha SIN esperarla (regla 4): el retiro arranca igual y lo ya
+    // entregado se siembra en cuanto llegue. Si no hay red el provider devuelve
+    // vacío y no se bloquea nada.
+    _deliveredSub = ref.listenManual(
+      provider,
+      (_, next) => _seedDelivered(next.value),
+    );
+    // Si la respuesta ya estaba en caché (volver a entrar a la pantalla) el
+    // listener no dispara: se siembra acá, antes del primer build.
+    _delivered.addAll(ref.read(provider).value ?? const <String>{});
+  }
+
+  @override
   void dispose() {
+    _deliveredSub?.close();
     _confirmationController.dispose();
     _evictPreview(_photoFile);
     super.dispose();
@@ -59,7 +102,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Solo importa si los bultos ya cargaron, no su contenido.
+    // Solo importa si los productos ya cargaron, no su contenido.
     final unitsLoaded = ref.watch(
       shipmentUnitsProvider(_shipment.id).select((a) => a.hasValue),
     );
@@ -107,7 +150,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                 ],
               ),
             ),
-            // Escaneo seguido de bultos: botón fijo al pie, a mano del pulgar;
+            // Escaneo seguido de productos: botón fijo al pie, a mano del pulgar;
             // los avisos flotan encima (kBottomActionClearance).
             BottomActionBar(
               child: FilledButton.icon(
@@ -128,6 +171,16 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
         ),
       ),
     );
+  }
+
+  /// Suma lo que el servidor ya tiene entregado a [_delivered]. Solo agrega:
+  /// nunca borra un producto entregado en esta sesión (que todavía puede estar
+  /// en la cola offline y por eso el servidor aún no lo reporta).
+  void _seedDelivered(Set<String>? confirmed) {
+    if (confirmed == null || !mounted) return;
+    final missing = confirmed.difference(_delivered);
+    if (missing.isEmpty) return;
+    setState(() => _delivered.addAll(missing));
   }
 
   void _onConfirmationChanged(String _) {
@@ -162,29 +215,71 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
       imageQuality: kEvidencePhotoQuality,
     );
     if (picked == null || !mounted) return;
-    // La foto se encola y se sube idempotentemente (offline-first); el backend
-    // la liga al envío. No se bloquea la entrega esperando a la red.
+    // La vista previa anterior ya no se muestra: se libera de la caché.
+    _evictPreview(_photoFile);
+    final generation = ++_photoGeneration;
+    setState(() {
+      _photoFile = File(picked.path);
+      _photoPath = null;
+    });
+    // La evidencia se encadena en segundo plano: la pantalla no espera ni a la
+    // subida ni a la cola (regla 4). Ver [_attachPhoto].
+    _photoUpload = _attachPhoto(generation, picked.path);
+  }
+
+  /// Encadena la foto al POD y nunca lanza.
+  ///
+  /// 1. Intenta subirla YA (`POST /app/deliveries/photos`): su `path` es lo que
+  ///    el backend exige en `photo_path` de la prueba de entrega.
+  /// 2. Si no se pudo (sin red, timeout o rechazo), la foto NO se pierde: se
+  ///    deja en la cola offline de fotos, que la sube al recuperar señal. El
+  ///    POD sale sin `photo_path` y el backend la liga al envío.
+  ///
+  /// Límite conocido: en el caso 2 la foto no queda ligada al POD (ver
+  /// `UploadPodPhoto`, que documenta lo que falta pedirle al backend). Y si la
+  /// subida muere por timeout de red después de que el servidor la guardó, la
+  /// cola la sube otra vez: el backend queda con una foto repetida del mismo
+  /// envío (molesto, no incorrecto). Lo mismo con "Volver a tomar": la foto
+  /// descartada ya subida queda en el envío, sin ligar al POD.
+  Future<String?> _attachPhoto(int generation, String filePath) async {
+    final path = await ref
+        .read(uploadPodPhotoProvider)
+        .call(shipmentId: _shipment.id, filePath: filePath);
+    // Se volvió a tomar la foto mientras subía: esta ya no es la vigente.
+    if (generation != _photoGeneration) return null;
+    if (path != null) {
+      if (mounted) setState(() => _photoPath = path);
+      return path;
+    }
     try {
       await ref
           .read(enqueueDeliveryPhotoProvider)
-          .call(shipmentId: _shipment.id, filePath: picked.path, kind: 'pod');
-    } catch (_) {
-      // Falla local (copiar a disco), no de red: hay que volver a tomarla.
-      if (!mounted) return;
-      showErrorSnack(
-        context,
-        'No se pudo guardar la foto. Intentá de nuevo.',
-        bottomClearance: kBottomActionClearance,
-      );
-      return;
+          .call(shipmentId: _shipment.id, filePath: filePath, kind: 'pod');
+    } on Object {
+      // Falla local (copiar a disco), no de red: la foto no quedó guardada en
+      // ningún lado, así que se descarta la vista previa y hay que repetirla.
+      if (generation == _photoGeneration && mounted) {
+        _evictPreview(_photoFile);
+        setState(() => _photoFile = null);
+        showErrorSnack(
+          context,
+          'No se pudo guardar la foto. Intentá de nuevo.',
+          bottomClearance: kBottomActionClearance,
+        );
+      }
     }
-    if (!mounted) return;
-    // La vista previa anterior ya no se muestra: se libera de la caché.
-    _evictPreview(_photoFile);
-    setState(() {
-      _photoFile = File(picked.path);
-      _photoPath = 'pendiente';
-    });
+    return null;
+  }
+
+  /// `photo_path` para el POD: la referencia real si la subida ya terminó; si
+  /// está en vuelo se le da el margen acotado [kPodPhotoAttachBudget] y, si no
+  /// llega, el POD sale sin ella (la foto igual viaja por su cola).
+  Future<String?> _photoPathForPod() {
+    final path = _photoPath;
+    if (path != null) return Future.value(path);
+    final upload = _photoUpload;
+    if (upload == null) return Future.value();
+    return upload.timeout(kPodPhotoAttachBudget, onTimeout: () => null);
   }
 
   /// Saca de la caché de imágenes la vista previa decodificada de [file].
@@ -207,7 +302,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
         context,
         title: 'Escanear producto',
         helper: 'Apunta al QR de la etiqueta del producto.',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: _deliverCode,
       );
     } finally {
@@ -235,20 +330,24 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
       return ScanFeedback.error(unitScanShortError(scan));
     }
 
-    // Solo bultos de este envío y una sola vez: si no, se entregaría al cliente
+    // Solo productos de este envío y una sola vez: si no, se entregaría al cliente
     // algo ajeno o se encolaría un POD duplicado.
     final units = ref.read(shipmentUnitsProvider(_shipment.id)).value;
     final unitId = scan.unitId;
     if (units != null && !units.any((u) => u.unitId == unitId)) {
       return const ScanFeedback.error('No es de este pedido');
     }
+    // Ya entregado: en esta sesión o según el servidor (sembrado al abrir).
+    // Volver a registrarlo encolaría un POD duplicado del mismo producto.
     if (_delivered.contains(unitId)) {
-      return const ScanFeedback.error('Ya entregado');
+      return const ScanFeedback.error('Este producto ya fue entregado');
     }
 
-    // Feedback inmediato: el bulto se marca entregado apenas se lee; el POD
+    // Feedback inmediato: el producto se marca entregado apenas se lee; el POD
     // se guarda local y sube por la cola.
     setState(() => _delivered.add(unitId));
+    final photoPath = await _photoPathForPod();
+    if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
     final outcome = await ref
         .read(recordPodProvider)
         .call(
@@ -256,12 +355,17 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
           unitId: unitId,
           confirmation: _confirmationController.text.trim(),
           customerName: _shipment.customerName,
-          photoPath: _photoPath,
+          photoPath: photoPath,
           location: prefetchFix(ref),
         );
     if (outcome == SubmitOutcome.failed) {
-      // Rechazado por el backend: no queda como entregado.
-      if (mounted) setState(() => _delivered.remove(unitId));
+      // Rechazado por el backend: no queda como entregado. Salvo que el
+      // servidor lo tenga confirmado (llegó mientras se registraba): ahí sigue
+      // entregado, para no habilitar una segunda entrega del mismo producto.
+      final confirmed = ref.read(deliveredUnitIdsProvider(_shipment.id)).value;
+      if (mounted && !(confirmed?.contains(unitId) ?? false)) {
+        setState(() => _delivered.remove(unitId));
+      }
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
     final total = units?.length;

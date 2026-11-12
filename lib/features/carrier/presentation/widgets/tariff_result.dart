@@ -25,7 +25,7 @@ class TariffResult extends StatelessWidget {
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          Text('${tariff.corridorFrom} → ${tariff.corridorTo}'),
+          Text(corridorPairLabel(tariff.corridorFrom, tariff.corridorTo)),
           Text(corridorTypeLabel(tariff.corridorType)),
           Text(vehicleClassLabel(tariff.vehicleClass)),
           const SizedBox(height: 4),

@@ -17,7 +17,7 @@ import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
 import 'widgets/evidence_photo_preview.dart';
 
-/// Entrega fallida: bulto + motivo tipado + foto opcional + GPS, registro
+/// Entrega fallida: producto + motivo tipado + foto opcional + GPS, registro
 /// offline-first.
 class FailedDeliveryScreen extends ConsumerStatefulWidget {
   const FailedDeliveryScreen({super.key, required this.stop});

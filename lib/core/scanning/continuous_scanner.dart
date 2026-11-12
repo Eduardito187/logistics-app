@@ -8,6 +8,7 @@ import '../icons/icons.dart';
 
 import 'scan_feedback.dart';
 import 'scan_frame.dart';
+import 'scanner_paused_overlay.dart';
 import 'scanner_screen.dart' show createScannerController;
 
 /// Resultado de procesar un código en el escaneo continuo: si se registró
@@ -15,7 +16,7 @@ import 'scanner_screen.dart' show createScannerController;
 class ScanFeedback {
   const ScanFeedback({required this.ok, required this.message});
 
-  /// Código aceptado (p. ej. "Bulto 3/12 registrado").
+  /// Código aceptado (p. ej. "Producto 3/12 registrado").
   const ScanFeedback.ok(this.message) : ok = true;
 
   /// Código rechazado (p. ej. "No es de esta ruta").
@@ -47,20 +48,20 @@ final continuousScannerProvider = Provider<ContinuousCodeScanner?>(
 );
 
 /// Ventana en la que el MISMO código leído otra vez se ignora (la cámara queda
-/// apoyada sobre el bulto y lo lee ~4 veces por segundo).
+/// apoyada sobre el producto y lo lee ~4 veces por segundo).
 const Duration kContinuousScanRepeatWindow = Duration(seconds: 2);
 
 /// Tiempo que queda visible el aviso del último código.
 const Duration kContinuousScanFeedbackVisible = Duration(seconds: 3);
 
-/// Abre la cámara en modo CONTINUO: no se cierra entre bultos. Por cada código
+/// Abre la cámara en modo CONTINUO: no se cierra entre productos. Por cada código
 /// leído llama a [onCode] y muestra su [ScanFeedback] sobre la cámara (verde o
 /// rojo, con vibración/sonido según la preferencia). El mismo código repetido
 /// dentro de [kContinuousScanRepeatWindow] se ignora, y mientras [onCode]
 /// procesa uno no se toman otros. Termina con el botón "Terminar" (o atrás).
 ///
 /// Carga/descarga/recepción: la cámara se abre una sola vez por tanda en vez
-/// de una por bulto (0,5–1,5 s ahorrados por bulto en gama baja).
+/// de una por producto (0,5–1,5 s ahorrados por producto en gama baja).
 Future<void> scanContinuous(
   BuildContext context, {
   required String title,
@@ -119,6 +120,7 @@ class ContinuousScannerScreen extends StatefulWidget {
     this.helper,
     this.formats = const [],
     this.repeatWindow = kContinuousScanRepeatWindow,
+    this.idlePause = kScannerIdlePause,
     this.now,
   });
 
@@ -129,6 +131,9 @@ class ContinuousScannerScreen extends StatefulWidget {
 
   /// Ventana anti-repetición del mismo código.
   final Duration repeatWindow;
+
+  /// Sin lecturas durante este tiempo, la cámara se pausa (batería).
+  final Duration idlePause;
 
   /// Reloj inyectable (tests).
   final DateTime Function()? now;
@@ -151,12 +156,38 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
   Timer? _feedbackTimer;
   int _okCount = 0;
 
+  /// Pausa por inactividad (ver [kScannerIdlePause]).
+  Timer? _idleTimer;
+  bool _idlePaused = false;
+
   DateTime _now() => (widget.now ?? DateTime.now)();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _armIdle();
+  }
+
+  /// (Re)arma la pausa por inactividad: cada lectura la posterga.
+  void _armIdle() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(widget.idlePause, _pauseForIdle);
+  }
+
+  /// Apaga la cámara (y el análisis de códigos) tras [ContinuousScannerScreen.idlePause]
+  /// sin lecturas. La pantalla y el contador quedan; un toque la retoma.
+  void _pauseForIdle() {
+    _idleTimer = null;
+    if (!mounted || _idlePaused) return;
+    setState(() => _idlePaused = true);
+    unawaited(_controller.stop().catchError((Object _) {}));
+  }
+
+  void _resumeFromIdle() {
+    setState(() => _idlePaused = false);
+    unawaited(_controller.start().catchError((Object _) {}));
+    _armIdle();
   }
 
   @override
@@ -165,7 +196,8 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
     if (!_controller.value.isInitialized) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        unawaited(_controller.start());
+        // Pausada por inactividad: sigue apagada hasta que el usuario toque.
+        if (!_idlePaused) unawaited(_controller.start());
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
@@ -178,12 +210,15 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _idleTimer?.cancel();
     _feedbackTimer?.cancel();
     unawaited(_controller.dispose());
     super.dispose();
   }
 
   void _onDetect(BarcodeCapture capture) {
+    // Cualquier lectura (aunque sea repetida) cuenta como uso activo.
+    _armIdle();
     final code = capture.barcodes
         .map((b) => b.rawValue)
         .firstWhere((v) => v != null && v.isNotEmpty, orElse: () => null);
@@ -195,7 +230,7 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
         lastAt != null &&
         now.difference(lastAt) < widget.repeatWindow;
     if (code == _lastCode) {
-      // Mientras la cámara siga sobre el mismo bulto se renueva la ventana.
+      // Mientras la cámara siga sobre el mismo producto se renueva la ventana.
       _lastSeenAt = now;
     }
     if (repeated || _busy) return;
@@ -262,6 +297,10 @@ class _ContinuousScannerScreenState extends State<ContinuousScannerScreen>
               ],
             ),
           ),
+          if (_idlePaused)
+            Positioned.fill(
+              child: ScannerPausedOverlay(onResume: _resumeFromIdle),
+            ),
           Positioned(
             left: 16,
             right: 16,

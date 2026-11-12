@@ -20,6 +20,9 @@ import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/network/dio_client.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:logistics_app/features/auth/data/datasources/device_identity_reader.dart';
+import 'package:logistics_app/features/auth/data/device_display_name.dart';
+import 'package:logistics_app/features/auth/domain/entities/device_identity.dart';
 import 'package:logistics_app/features/auth/domain/entities/login_result.dart';
 import 'package:logistics_app/features/auth/domain/entities/two_factor_challenge.dart';
 import 'package:logistics_app/features/auth/domain/entities/two_factor_enrollment.dart';
@@ -84,8 +87,12 @@ class _FakeAuthRemote implements AuthRemoteDataSource {
   final AppMeResponse? meResponse;
   final Object? meError;
 
+  /// Último pedido recibido: sirve para verificar qué `device` se mandó.
+  AppLoginRequest? lastRequest;
+
   @override
   Future<LoginRaw> login(AppLoginRequest request) async {
+    lastRequest = request;
     if (loginError != null) throw loginError!;
     return (success: loginResponse, challenge: loginChallenge);
   }
@@ -102,6 +109,13 @@ class _FakeAuthRemote implements AuthRemoteDataSource {
   @override
   Future<AppMeResponse> me() async {
     if (meError != null) throw meError!;
+    // Sin `meResponse` configurado, simulamos "/me no disponible": un fallo que
+    // `_completeSignIn` degrada (abilities vacías) en vez de romper el login.
+    // Así los tests que solo verifican el device/login no están obligados a
+    // armar un `AppMeResponse` completo.
+    if (meResponse == null) {
+      throw const ApiException(status: 503, title: 'me no disponible');
+    }
     return meResponse!;
   }
 
@@ -145,13 +159,38 @@ AppLoginResponse _loginWithRoles(List<String> roles, {Node? node}) =>
       ),
     );
 
-ProviderContainer _container(_FakeAuthRemote remote) {
+/// Lector del modelo del equipo con el `build.prop` simulado. Sin esto el
+/// lector real no lee nada en el runner de tests (no es Android) y el nombre
+/// cae al genérico.
+DeviceIdentityReader _fakeIdentityReader(String? buildProp) =>
+    DeviceIdentityReader(
+      platformName: 'android',
+      readFile: (path) async {
+        if (buildProp == null || path != '/system/build.prop') {
+          throw StateError('no existe $path');
+        }
+        return buildProp;
+      },
+    );
+
+/// Lector roto: simula que averiguar el modelo falla (permisos, ROM rara).
+class _BrokenIdentityReader extends DeviceIdentityReader {
+  @override
+  Future<DeviceIdentity> read() async => throw StateError('sin acceso');
+}
+
+ProviderContainer _container(
+  _FakeAuthRemote remote, {
+  DeviceIdentityReader? identityReader,
+}) {
   final container = ProviderContainer(
     overrides: [
       authRemoteDataSourceProvider.overrideWithValue(remote),
       tokenStoreProvider.overrideWithValue(_FakeTokenStore()),
       pushTokenProvider.overrideWith(_FakePushToken.new),
       labelKeysProvider.overrideWith(_FakeLabelKeys.new),
+      if (identityReader != null)
+        deviceIdentityReaderProvider.overrideWithValue(identityReader),
     ],
   );
   addTearDown(container.dispose);
@@ -193,6 +232,80 @@ Dio _fakeDio({required int statusCode, required String body}) =>
       ..httpClientAdapter = _FakeDioAdapter(statusCode: statusCode, body: body);
 
 void main() {
+  group('AuthRepositoryImpl: nombre del dispositivo', () {
+    test('manda el modelo real del equipo (no una constante)', () async {
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['chofer']),
+      );
+      final container = _container(
+        remote,
+        identityReader: _fakeIdentityReader('''
+ro.product.manufacturer=OnePlus
+ro.product.model=CPH2749
+'''),
+      );
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      // Sin esto, la pantalla "Mis dispositivos" lista N filas idénticas.
+      expect(remote.lastRequest!.device.name, 'OnePlus CPH2749');
+    });
+
+    test('si no se puede averiguar el modelo, manda el nombre genérico y el '
+        'login funciona igual', () async {
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['chofer']),
+      );
+      final container = _container(
+        remote,
+        identityReader: _fakeIdentityReader(null),
+      );
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      expect(remote.lastRequest!.device.name, genericDeviceName);
+      expect(container.read(sessionProvider), isNotNull);
+    });
+
+    test('si la detección LANZA, el login no se rompe', () async {
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['chofer']),
+      );
+      final container = _container(
+        remote,
+        identityReader: _BrokenIdentityReader(),
+      );
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      expect(remote.lastRequest!.device.name, genericDeviceName);
+      expect(container.read(sessionProvider), isNotNull);
+      expect(container.read(sessionProvider)!.role, UserRole.driver);
+    });
+
+    test('la huella y el resto del device siguen viajando', () async {
+      final remote = _FakeAuthRemote(
+        loginResponse: _loginWithRoles(['chofer']),
+      );
+      final container = _container(remote);
+
+      await container
+          .read(signInProvider)
+          .call(email: 'juan@x.com', password: 'secret');
+
+      final device = remote.lastRequest!.device;
+      // Huella por instalación + usuario (device-1 es el fake del TokenStore).
+      expect(device.fingerprint, startsWith('device-1-u'));
+      expect(device.platform, isNotEmpty);
+    });
+  });
+
   group('AuthRepositoryImpl (vía SignIn)', () {
     test('login con 2FA: no abre sesión, devuelve el reto', () async {
       final remote = _FakeAuthRemote(

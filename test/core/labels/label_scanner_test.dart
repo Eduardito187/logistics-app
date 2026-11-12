@@ -157,6 +157,98 @@ void main() {
     });
   });
 
+  group('LabelScanner.scan — etiqueta ABIERTA (k:0, modo LABELS_OPEN)', () {
+    // QR abierto: mismo JSON, k:0 y sin firma real. No se verifica Ed25519; su
+    // autenticidad la decide el registro/pertenencia aguas abajo.
+    String openQr({String s = ''}) => jsonEncode(<String, dynamic>{
+      'v': 1,
+      't': 'PKG',
+      'k': 0,
+      'id': 'LBL-OPEN-1',
+      'o': 'DM-1',
+      'ln': 1,
+      'sku': 'SKU-1',
+      'u': <int>[1, 1],
+      'pc': <int>[1, 1],
+      'org': 'CD01',
+      'dst': 'C',
+      'ts': 1700000000,
+      's': s,
+    });
+
+    test('devuelve open (no se rechaza por firma) CON verificador', () async {
+      final scanner = LabelScanner(_vectorVerifier());
+
+      final result = await scanner.scan(openQr());
+
+      expect(result.verification, VerificationResult.open);
+      expect(result.isValid, isTrue);
+      expect(result.label.payload.id, 'LBL-OPEN-1');
+    });
+
+    test(
+      'valida SIN claves configuradas (no lanza): el abierto no las usa',
+      () async {
+        final scanner = LabelScanner(null);
+
+        final result = await scanner.scan(openQr());
+
+        expect(result.verification, VerificationResult.open);
+        expect(result.isValid, isTrue);
+      },
+    );
+
+    test(
+      'nunca se descarta por la firma: `s` vacío o basura igual parsea',
+      () async {
+        final scanner = LabelScanner(null);
+
+        expect((await scanner.scan(openQr(s: ''))).isValid, isTrue);
+        expect((await scanner.scan(openQr(s: 'xxx'))).isValid, isTrue);
+      },
+    );
+  });
+
+  group('LabelScanner.scan — MODO ABIERTO (open:true del backend)', () {
+    test(
+      'acepta una etiqueta FIRMADA vieja (k:1) SIN verificar firma',
+      () async {
+        // En modo abierto, ni siquiera las k:1 ya impresas se verifican: una
+        // etiqueta impresa nunca se descarta por un tema de claves.
+        final scanner = LabelScanner(_vectorVerifier(), openMode: true);
+
+        final result = await scanner.scan(_vector()['qr_content'] as String);
+
+        expect(result.verification, VerificationResult.open);
+        expect(result.isValid, isTrue);
+      },
+    );
+
+    test(
+      'acepta una k:1 ALTERADA (firma muerta) en vez de rechazarla',
+      () async {
+        final scanner = LabelScanner(_vectorVerifier(), openMode: true);
+
+        final result = await scanner.scan(
+          _vector()['tampered_qr_content'] as String,
+        );
+
+        // Firmado normal daría invalidSignature; en abierto NO se rechaza.
+        expect(result.verification, VerificationResult.open);
+        expect(result.isValid, isTrue);
+      },
+    );
+
+    test('funciona sin claves configuradas', () async {
+      final scanner = LabelScanner(null, openMode: true);
+
+      final result = await scanner.scan(_vector()['qr_content'] as String);
+
+      expect(result.verification, VerificationResult.open);
+      expect(result.isValid, isTrue);
+    });
+  });
+
   group('LabelScanner.scanAndReport', () {
     test('sin cliente API, devuelve solo el resultado offline', () async {
       final scanner = LabelScanner(_vectorVerifier());

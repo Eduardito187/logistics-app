@@ -11,6 +11,7 @@ import 'carrier_pickup_screen.dart';
 import 'carrier_settlement_detail_screen.dart';
 import 'carrier_settlements_screen.dart';
 import 'carrier_tariff_screen.dart';
+import 'widgets/carrier_office_only.dart';
 
 /// Tarjetas de inicio del transportista externo.
 const List<RoleTask> carrierTasks = [
@@ -63,12 +64,20 @@ final List<RouteBase> carrierRoutes = [
     path: '/carrier/tariff',
     builder: (context, state) => const CarrierTariffScreen(),
   ),
+  // Herramientas de COMPRA/COSTEO de la oficina: el transportista no las ve
+  // (el backend ya le responde 403). Ver [CarrierOfficeOnly].
   GoRoute(
     path: '/carrier/assignment',
-    builder: (context, state) => const CarrierAssignmentScreen(),
+    builder: (context, state) => const CarrierOfficeOnly(
+      title: 'Asignación por volumen',
+      child: CarrierAssignmentScreen(),
+    ),
   ),
   GoRoute(
     path: '/carrier/tariff/cheapest',
-    builder: (context, state) => const CarrierCheapestTariffScreen(),
+    builder: (context, state) => const CarrierOfficeOnly(
+      title: 'Tarifa más barata',
+      child: CarrierCheapestTariffScreen(),
+    ),
   ),
 ];

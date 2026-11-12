@@ -14,7 +14,7 @@ import 'package:logistics_app/core/icons/icons.dart';
 
 import '../../support/app_icon_finders.dart';
 
-// Escaneo continuo: la cámara queda abierta entre bultos, cada código llama a
+// Escaneo continuo: la cámara queda abierta entre productos, cada código llama a
 // onCode, se muestra el aviso sobre la cámara, el mismo código repetido en
 // < 2 s se ignora y "Terminar" cierra.
 
@@ -318,5 +318,63 @@ void main() {
 
     expect(find.byType(ContinuousScannerScreen), findsOneWidget);
     expect(find.text('Recepción'), findsOneWidget);
+  });
+
+  group('batería: pausa de la cámara por inactividad', () {
+    Future<void> openIdle(WidgetTester tester, List<String> codes) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ContinuousScannerScreen(
+            title: 'Cargar productos',
+            idlePause: const Duration(seconds: 10),
+            now: () => now,
+            onCode: (code) async {
+              codes.add(code);
+              return ScanFeedback.ok('Producto $code registrado');
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    test('la pausa por defecto es de 60 s', () {
+      expect(kScannerIdlePause, const Duration(seconds: 60));
+    });
+
+    testWidgets('sin lecturas se pausa la cámara; un toque la retoma', (
+      tester,
+    ) async {
+      final codes = <String>[];
+      await openIdle(tester, codes);
+      expect(find.byType(ScannerPausedOverlay), findsNothing);
+
+      await tester.pump(const Duration(seconds: 11));
+      expect(find.byType(ScannerPausedOverlay), findsOneWidget);
+      expect(find.text('Cámara en pausa para ahorrar batería'), findsOneWidget);
+      // El contador sigue en pantalla debajo de la pausa.
+      expect(find.byType(ContinuousScannerScreen), findsOneWidget);
+
+      await tester.tap(find.text('Seguir escaneando'));
+      await tester.pump();
+      expect(find.byType(ScannerPausedOverlay), findsNothing);
+    });
+
+    testWidgets('cada lectura posterga la pausa', (tester) async {
+      final codes = <String>[];
+      await openIdle(tester, codes);
+
+      await tester.pump(const Duration(seconds: 8));
+      platform.read('A1');
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 8));
+      // 16 s desde que abrió, pero solo 8 desde la última lectura.
+      expect(find.byType(ScannerPausedOverlay), findsNothing);
+      expect(codes, ['A1']);
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(ScannerPausedOverlay), findsOneWidget);
+    });
   });
 }

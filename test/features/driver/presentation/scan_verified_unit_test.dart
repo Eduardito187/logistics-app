@@ -9,7 +9,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../support/fake_code_scanner.dart';
 import '../support/driver_test_support.dart';
 
-// scanVerifiedUnit (driver_common): escanea el QR del bulto vía el seam
+// scanVerifiedUnit (driver_common): escanea el QR del producto vía el seam
 // codeScannerProvider y verifica la firma Ed25519 offline con el vector
 // compartido con el backend.
 
@@ -59,9 +59,12 @@ void main() {
 
     expect(results, [vectorUnitId]);
     expect(find.text('Etiqueta no válida'), findsNothing);
-    // Pide un QR con el título y la ayuda por defecto del bulto.
+    // Pide un QR con el título y la ayuda por defecto del producto.
     expect(fake.requestedTitles, ['Escanear producto']);
-    expect(fake.requestedFormats.single, [BarcodeFormat.qrCode]);
+    expect(fake.requestedFormats.single, [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+    ]);
     expect(find.byType(ScannerScreen), findsNothing);
   });
 

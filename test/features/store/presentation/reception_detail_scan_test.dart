@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
 import 'package:logistics_app/core/api/models/node_reception_view_status.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/gps_fix.dart';
@@ -21,6 +22,7 @@ import 'package:logistics_app/features/store/presentation/controllers/store_cont
 import 'package:logistics_app/features/store/presentation/reception_detail_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../support/fake_label_resolver.dart';
 import '../fake_continuous_scanner.dart';
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
@@ -112,6 +114,9 @@ Future<_Harness> _pump(
     storeNodesProvider.overrideWith((ref) async => [_node, originNode()]),
     continuousScannerProvider.overrideWithValue(h.scanner.call),
     labelScannerProvider.overrideWithValue(labelScanner ?? LabelScanner(null)),
+    // El código escaneado representa al producto (Code128): se resuelve con su
+    // propio valor como unit_id (el backend real lo mapea; acá se echo-ea).
+    labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
     receiveUnitAtNodeProvider.overrideWith(
       (ref) =>
           _FakeReceiveUnitAtNode(ref, h.calls, outcomeFor ?? (_) => outcome),
@@ -159,7 +164,10 @@ void main() {
 
       // Se abrió la cámara continua de QR con el título de la pantalla.
       expect(h.scanner.requestedTitles, ['Escanear producto']);
-      expect(h.scanner.requestedFormats.single, [BarcodeFormat.qrCode]);
+      expect(h.scanner.requestedFormats.single, [
+        BarcodeFormat.qrCode,
+        BarcodeFormat.code128,
+      ]);
       // El caso de uso recibió el código escaneado y los datos del envío/nodo.
       expect(h.calls, [
         {

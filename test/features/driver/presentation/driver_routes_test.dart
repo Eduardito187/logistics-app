@@ -29,7 +29,6 @@ void main() {
       'driver-incident': '/driver/incident',
       'driver-summary': '/driver/summary',
       'driver-fuel': '/driver/fuel',
-      'driver-odometer': '/driver/odometer',
       'driver-maintenance': '/driver/maintenance',
     });
   });

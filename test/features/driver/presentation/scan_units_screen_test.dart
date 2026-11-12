@@ -17,12 +17,12 @@ import '../../../support/screen_sizes.dart';
 import '../support/driver_test_support.dart';
 import '../support/fake_continuous_scanner.dart';
 
-// Escaneo CONTINUO de bultos (carga/descarga): la cámara se abre una vez por
+// Escaneo CONTINUO de productos (carga/descarga): la cámara se abre una vez por
 // tanda (continuousScannerProvider falso con códigos guionizados), cada código
-// se verifica offline, se valida contra los bultos del envío, se encola y
+// se verifica offline, se valida contra los productos del envío, se encola y
 // devuelve su aviso corto.
 
-/// Bultos esperados del envío: [units] o, con `null`, sin señal (error).
+/// Productos esperados del envío: [units] o, con `null`, sin señal (error).
 List<Object> _overrides(
   FakeContinuousScanner scanner,
   FakeOfflineQueue queue, {
@@ -135,7 +135,10 @@ void main() {
       await _scan(tester);
 
       expect(scanner.titles, ['Cargar productos']);
-      expect(scanner.formats.single, [BarcodeFormat.qrCode]);
+      expect(scanner.formats.single, [
+        BarcodeFormat.qrCode,
+        BarcodeFormat.code128,
+      ]);
       expect(scanner.messages, ['Producto 1/2 cargado']);
       expect(scanner.feedbacks.single.ok, isTrue);
       expect(queue.lastKind, 'recordLoadScan');
@@ -146,7 +149,7 @@ void main() {
       expect(payload['lng'], -63.2);
       expect(payload.containsKey('node_id'), isFalse);
 
-      // Al volver: lista con el bulto, pastilla y contador.
+      // Al volver: lista con el producto, pastilla y contador.
       expect(find.text(vectorUnitId), findsOneWidget);
       expect(find.text('Registrado'), findsOneWidget);
       expect(find.text('1 producto(s) registrados'), findsOneWidget);
@@ -176,7 +179,7 @@ void main() {
 
     await _scan(tester);
 
-    // Una sola apertura de cámara para los tres bultos.
+    // Una sola apertura de cámara para los tres productos.
     expect(scanner.titles, hasLength(1));
     expect(scanner.messages, [
       'Producto 1/5 cargado',
@@ -199,7 +202,7 @@ void main() {
   ) async {
     final scanner = FakeContinuousScanner([
       [unsignedLabelQr('U-1'), unsignedLabelQr('U-1')],
-      // Segunda tanda: el mismo bulto sigue registrado.
+      // Segunda tanda: el mismo producto sigue registrado.
       [unsignedLabelQr('U-1')],
     ]);
     final queue = FakeOfflineQueue(SubmitOutcome.sent);
@@ -277,7 +280,7 @@ void main() {
     await pumpScoped(
       tester,
       child: _loadScreen,
-      // units: null → la lista de bultos del envío no llegó (sin conexión).
+      // units: null → la lista de productos del envío no llegó (sin conexión).
       overrides: _overrides(scanner, queue, withKeys: false),
     );
 
@@ -385,7 +388,7 @@ void main() {
         'No se pudo registrar. Reintentá.',
       ]);
       expect(queue.submissions, hasLength(2));
-      // Una sola fila por bulto (el reintento reemplaza la anterior).
+      // Una sola fila por producto (el reintento reemplaza la anterior).
       expect(find.text('Error'), findsOneWidget);
       expect(find.text('0 producto(s) registrados'), findsOneWidget);
       expect(_localLoaded(tester), isEmpty);
@@ -418,7 +421,7 @@ void main() {
       child: withTextScale(_loadScreen),
       overrides: _overrides(
         FakeContinuousScanner.single([
-          for (var i = 1; i <= 12; i++) unsignedLabelQr('BULTO-$i'),
+          for (var i = 1; i <= 12; i++) unsignedLabelQr('PRODUCTO-$i'),
         ]),
         FakeOfflineQueue(SubmitOutcome.sent),
         withKeys: false,

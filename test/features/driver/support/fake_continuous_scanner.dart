@@ -48,7 +48,7 @@ class FakeContinuousScanner {
 }
 
 /// QR de etiqueta con formato válido y firma de relleno (no verifica): sirve
-/// para sesiones con varios bultos distintos usando un scanner SIN claves.
+/// para sesiones con varios productos distintos usando un scanner SIN claves.
 String unsignedLabelQr(String unitId, {String order = 'DM-1'}) => jsonEncode({
   'v': 1,
   't': 'PKG',

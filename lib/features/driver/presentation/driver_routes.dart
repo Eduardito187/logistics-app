@@ -11,7 +11,6 @@ import 'incident_screen.dart';
 import 'load_scan_screen.dart';
 import 'maintenance_due_screen.dart';
 import 'my_day_screen.dart';
-import 'odometer_screen.dart';
 import 'vehicle_summary_screen.dart';
 
 /// Tarjetas del chofer en el inicio del rol. La descarga, la prueba de entrega y
@@ -83,14 +82,6 @@ const List<RoleTask> driverTasks = [
     roles: {UserRole.driver},
   ),
   RoleTask(
-    id: 'driver-odometer',
-    label: 'Odómetro',
-    subtitle: 'Registrar el kilometraje actual',
-    appIcon: AppIcon.speed,
-    route: '/driver/odometer',
-    roles: {UserRole.driver},
-  ),
-  RoleTask(
     id: 'driver-maintenance',
     label: 'Mantenimiento',
     subtitle: 'Servicios por vencer del vehículo',
@@ -134,10 +125,6 @@ final List<RouteBase> driverRoutes = [
   GoRoute(
     path: '/driver/fuel',
     builder: (context, state) => const FuelScreen(),
-  ),
-  GoRoute(
-    path: '/driver/odometer',
-    builder: (context, state) => const OdometerScreen(),
   ),
   GoRoute(
     path: '/driver/maintenance',

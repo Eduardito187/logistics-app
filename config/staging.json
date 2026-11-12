@@ -1,6 +1,6 @@
 {
   "ENV": "staging",
-  "API_BASE_URL": "https://logistics-staging.dismac.com.bo/api/v1",
+  "API_BASE_URL": "http://137.131.245.152:8110/api/v1",
   "LABEL_PUBLIC_KEYS": "",
   "APP_UPDATE_URL": "",
   "FIREBASE_API_KEY": "",

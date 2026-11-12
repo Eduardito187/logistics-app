@@ -30,6 +30,13 @@ class LabelPayload {
 
   static const int currentVersion = 1;
 
+  /// `keyId` reservado para la etiqueta ABIERTA (sin firma Ed25519): el backend
+  /// emite con `k:0` cuando opera en modo abierto (`LABELS_OPEN`). Una etiqueta
+  /// abierta NO se verifica criptográficamente; su autenticidad la decide el
+  /// registro/pertenencia (que el `id` resuelva y pertenezca al envío/ruta). Así
+  /// una etiqueta impresa nunca se descarta por un tema de claves.
+  static const int openKeyId = 0;
+
   /// Destino "cliente final" (en vez de un código de nodo).
   static const String customerDestination = 'C';
 
@@ -47,6 +54,10 @@ class LabelPayload {
   final int issuedAt;
 
   bool get isForCustomer => destination == customerDestination;
+
+  /// Etiqueta ABIERTA (sin firma): se valida por registro/pertenencia, no por
+  /// Ed25519. Ver [openKeyId].
+  bool get isOpen => keyId == openKeyId;
 
   /// Mensaje exacto que se firma. Idéntico a `LabelPayload::canonical()` del backend.
   String canonical() => [

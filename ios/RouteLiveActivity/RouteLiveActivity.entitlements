@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mismo App Group que Runner.entitlements: los widgets de inicio leen lo que la
+	     app guarda en UserDefaults(suiteName:) (claves "widget.<kind>"). -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.bo.com.dismac.logisticsApp</string>
+	</array>
+</dict>
+</plist>

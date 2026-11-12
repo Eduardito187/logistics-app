@@ -1,25 +1,42 @@
 - [App solo consume el backend](app-scope-backend-consumer.md) — la app nunca integra servicios externos; medir completitud por cobertura de endpoints /app/*
 - [Estado de cobertura del API](app-api-coverage-state.md) — endpoints /app/* útiles consumidos (+issues, +push-token); contrato rutas/tareas; roles incl. admin
 - [Generación del cliente API](api-client-generation.md) — swagger_parser + preprocesado JSON (anchors/params), retrofit pinneado, cómo regenerar
-- [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas; los agentes NO corren Flutter (solo código + revisión estática)
+- [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas que el coordinador cablea al final
 - [Toolchain Android en WSL (histórico)](wsl-run-toolchain.md) — SOLO WSL; en Windows ver windows-native-toolchain
-- [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas, y 8 agentes con flutter test (2026-10-26) saturaron la RAM; topes, drop_caches sin shutdown
+- [Gradle colgó WSL (crítico)](wsl-gradle-memory-hang.md) — heap 8G + builds apiladas saturaron la RAM; topes puestos, nunca apilar builds
 - [Entornos dev/staging/production](run-environments-config.md) — claves vigentes de config/*.json (FIREBASE_*, APP_UPDATE_URL…), release bloquea http, valores reales pendientes
 - [Trampas de código generado](generated-code-build-caveats.md) — correr build_runner tras cambiar Drift/modelos; parche de `meta` se pisa al regenerar (fix va en backend)
 - [Falencias detectadas al testear](test-pass-detected-flaws.md) — #1–#10 YA corregidas (401 concurrente, push copyWith, cola offline 429/5xx/attempts, API en presentation, revoke→signOut, ETA final, scan tienda, backendDisagrees)
-- [Batería de tests e infra](test-battery-and-infra.md) — 1726 + e2e 6/6; cómo correr en Windows; seams/fakes compartidos (scanner, fotos, tamaños, finders de botones) y trampas
+- [Batería de tests e infra](test-battery-and-infra.md) — 2026 unit + e2e 6/6; seams (scanner puntual/continuo/resolver); `flutter run` queda adjunto (≠ tarea colgada); verificar salida de agentes
 - [Portabilidad de memorias/skills](portable-memory-skills.md) — skills viajan con el repo; memorias no → espejo en .claude/memory/ + instalador para Windows/otras rutas
 - [Toolchain Windows nativo](windows-native-toolchain.md) — proyecto bajado a Flutter 3.32.0 / Dart 3.8 (C:/flutter) a pedido del usuario; deps, Gradle 8.12/AGP 8.7.3, trampas
 - [Decisiones de UX del dueño](product-ux-decisions.md) — offline invisible, campana en header, tienda fija, "Recojo en tienda", sesión persistente, push = FCM (solo faltan credenciales)
-- [Fases de optimización (RAM/pantallas/velocidad)](perf-responsive-phase.md) — 3 fases: base común, memoria por RAM del equipo + Skia, velocidad (escaneo/GPS sin espera, cacheFor, escáner continuo); medir en release
+- [Fases de optimización (RAM/pantallas/velocidad)](perf-responsive-phase.md) — base común + memoria por RAM; **fase 512 MB (nov 2026)**: tier isVeryLowEnd (10 MB img), halo camión estático, íconos con controllers perezosos; pendientes de dispositivo: SkSL, subset de fuentes
 - [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
 - [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
 - [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
+- [Correr en teléfono por USB desde WSL](device-run-usb-wsl.md) — usbipd se cae (OnePlus 15 CPH2749); fix = registrar GUID de interfaz ADB en Windows; WSL es NAT → build APK en WSL + install/launch con adb.exe de Windows
+- [Acceso al servidor de staging](staging-server-access.md) — backend staging en OCI vía `ssh oci`; stack Docker (app/web/worker/postgres…); leer logs por `docker logs`, artisan/psql en contenedores
+- [500 en login staging (2FA/APP_KEY)](staging-login-500-2fa-appkey.md) — "Error del servidor" = 5xx real del backend; chofer/supervisor 500 por secreto 2FA con APP_KEY viejo (DecryptException); diagnóstico por curl+roles+logs y fix
 - [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
 - [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
-- [Perfil del usuario](user-profile.md) — dueño de la plataforma Dismac, español informal, decide producto, PC Windows con RAM justa
-- [Usuarios de prueba y escenario del día](dev-test-users-scenario.md) — cuentas por rol con password123, TodayScenarioSeeder (SCZ, 904U10), cómo re-correrlo
-- [Forma de trabajar](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, "solo trabaja" (no correr Flutter/Docker/backend sin pedido), íconos animados completos
+- [Perfil del dueño](user-profile.md) — dueño del producto Dismac (Santa Cruz, Bolivia); español informal, decide rápido, pide cerrar todo al 100%
+- [Cómo quiere que trabaje](feedback-working-style.md) — agentes en paralelo, cerrar al 100%, decidir sin preguntar de más, pedidos al backend por doc, reportar con números
+- [Usuarios de prueba (dev)](dev-test-users-scenario.md) — cuentas por rol con password123 + seeder TodayScenarioSeeder (día en Santa Cruz) en el backend dev
 - [Push desde WSL](git-push-from-wsl.md) — WSL sin credenciales GitHub; pushear con el git.exe de Windows apuntando al repo WSL por ruta UNC (wslpath -w)
 - [Consolidación Windows→WSL](windows-wsl-consolidation.md) — oct 2026: merge-unión de las 2 copias en WSL (8b4c04a), checkout de Windows borrado, trabajar solo en /dismac/logistics-app
-- [Íconos custom animados](custom-animated-icons.md) — AnimatedAppIcon reemplaza Icons.* en toda la app; anima el ícono COMPLETO; motor sin compilar, lo verifica el dueño; skill animated-app-icons
+- [Etiquetado por orden + multishipping](labeling-order-multishipping.md) — nov 2026: lista producto foto/SKU + preview + multishipping; EMIT-por-orden = bloqueo del BACKEND (deriva origen/destino), coordinado con logistics-8e; fix overflow 21px en dispatch-lines
+- [Compartir evidencia por share nativo](native-share-evidence.md) — nov 2026: share_plus; botón Compartir en etiqueta (captura PNG), firma y fotos de POD (chofer + tienda); servicio core/sharing con seam para tests
+- [Escaneo Code128 + QR](code128-label-scanning.md) — nov 2026: etiqueta QR (offline Ed25519) o Code128 (label_id → resuelve online /app/labels/{id}/resolve); seams, enums parchados, detectar QR antes de resolver
+- [Ciclo de operación del chofer](driver-fleet-ops-cycle.md) — nov 2026: auto-enfoque mapa en reposo, geocerca llegada, odómetro salida/llegada, inspección diaria diésel + historial + recordatorio + bloqueo crítico, km recorridos, fixes UI
+- [Login otro usuario → "dado de baja"](device-revoked-other-user-cache.md) — caché 30 s de EnsureDeviceToken sin invalidar en bindDevice; fix backend (sin deploy) + reintento app 35 s
+- [Impresora WiFi: búsqueda + oficina](wifi-printer-discovery.md) — búsqueda tipo Windows (máscara real/mDNS/WSD); Ricoh/láser = **PDF directo por 9100 + código de usuario en texto claro** (PCL salía en blanco, IPP cancela); cómo diagnosticar una Ricoh desde la PC
+- [Funciones nativas del teléfono + batería](device-features-native.md) — biometría, Live Updates/Dynamic Island, accesos directos, modo ahorro; canales propios sin pub; target iOS pendiente
+- [flutter test colgado = huérfanos](orphan-flutter-test-processes.md) — matar `flutter test` huérfanos; correr suite con timeout + JSON, sin pipes
+- [Ruta del backend vigente](backend-repo-path.md) — C:\Users\ehhuallata\Documents\APP\logistics (solo lectura); ~/dismac/logistics de WSL es viejo
+- [Endurecimiento POD/escáner/vehículo](pod-scanner-vehicle-hardening.md) — nov 2026: scanner no-negro, sin "QR del cliente", bulto validado vs envío, selector de vehículos reales; binding/POD-500/ruta≠deliveries van al backend
+- [Footgun de rotación de clave de etiquetas](label-key-rotation-footgun.md) — nov 2026: "etiqueta no válida" = el deploy regeneraba la Ed25519 bajo el mismo key_id=1; K_old irrecuperable → re-emitir (staging); fix prod = registro append-only + guardia al boot; bug: /labels/reprint solo revoca
+- [Auditoría completa y backlog del backend](backend-audit-2026-11-12.md) — nov 2026: 29 pedidos priorizados; estado del pedido que no avanzaba (384 arrastrados), fuga de liquidaciones, POD de tienda con foto falsa; qué falta cablear tras el deploy
+- [Corredores = slugs, no códigos de nodo](carrier-corridor-slugs.md) — `cd-santa-cruz` da 200 y `CD-SCZ-01` da 404; no hay endpoint que los liste; CorridorType/VehicleClass son enums
+- [Decir "producto", nunca "bulto"](vocabulario-producto-no-bulto.md) — prohibida la palabra bulto/bultos en UI y comentarios; siempre producto/productos (identificadores en inglés no se tocan)
+- [PROHIBIDO mutar etiquetas](no-label-mutations-rule.md) — el agente NO revoca/re-emite/emite etiquetas (no tiene permiso ni autoridad); re-emitir revocó etiquetas en uso del dueño; arreglos van del lado del app (modo abierto) o al dueño/backend

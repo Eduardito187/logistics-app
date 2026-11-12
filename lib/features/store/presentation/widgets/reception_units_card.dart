@@ -60,7 +60,7 @@ class ReceptionUnitsCard extends StatelessWidget {
   }
 }
 
-/// Fila que escucha SOLO la ubicación en estante de su bulto: guardar una
+/// Fila que escucha SOLO la ubicación en estante de su producto: guardar una
 /// ubicación reconstruye esa fila y no la lista entera.
 class _ShelfAwareRow extends ConsumerWidget {
   const _ShelfAwareRow({

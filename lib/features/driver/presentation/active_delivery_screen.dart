@@ -35,7 +35,8 @@ void _closeOrHome(BuildContext context, WidgetRef ref) {
 /// y "Ayuda" (der) y el estado (parada N de M, hora estimada, progreso). Al
 /// pie, una barra compacta con el cliente + "Ver pedido" (abre los datos y el
 /// pedido en un modal BAJO DEMANDA, no una hoja siempre abierta que tapaba el
-/// mapa) y los botones del paso: entregar con foto, escanear bultos, no se pudo.
+/// mapa) y los botones del paso: entregar con foto, escanear productos, no se
+/// pudo.
 /// "Ayuda" reúne llamar, navegar y reportar problemas.
 class ActiveDeliveryScreen extends ConsumerWidget {
   const ActiveDeliveryScreen({super.key});

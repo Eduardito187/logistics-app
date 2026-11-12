@@ -201,6 +201,40 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   /// Zoom al seguir: suficiente para ver la cuadra siguiente.
   static const double _followZoom = 17;
 
+  // --- Auto-enfoque al quedar todo quieto -----------------------------------
+  // Cuando NI el usuario mueve el mapa NI el camión se mueve por unos segundos,
+  // el mapa se acerca suavemente a la ubicación del camión. Nunca se mueve el
+  // mapa mientras el dedo lo está arrastrando o el camión va en marcha (sería
+  // molesto). Es un enfoque automático distinto del modo "seguir" manual.
+
+  /// Momento del último gesto del usuario sobre el mapa (arrastre/pellizco).
+  DateTime _lastGestureAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Posición donde el camión quedó quieto y desde cuándo. Si se mueve más de
+  /// [_stationaryMeters] se reinicia (el camión está en marcha).
+  LatLng? _truckStillAt;
+  DateTime? _truckStillSince;
+
+  /// Ya se hizo el auto-enfoque para la quietud actual: no se repite hasta que
+  /// el camión se mueva o el usuario toque el mapa otra vez.
+  bool _autoFocused = false;
+
+  /// Chequeo puntual del auto-enfoque: se programa para el instante exacto en
+  /// que se cumple la ventana de quietud (antes era un `Timer.periodic` de 1 s
+  /// que despertaba la CPU todo el turno, incluso con la app en segundo plano
+  /// mientras el foreground service del GPS mantiene vivo el proceso).
+  Timer? _idleTimer;
+
+  /// El camión se considera "en marcha" si se movió más que esto entre fixes
+  /// (tolera el jitter del GPS estando parado).
+  static const double _stationaryMeters = 12;
+
+  /// Segundos que deben estar quietos TANTO el mapa como el camión.
+  static const Duration _idleWindow = Duration(seconds: 6);
+
+  /// Zoom objetivo del auto-enfoque (nunca aleja: respeta un zoom mayor).
+  static const double _autoFocusZoom = 16.5;
+
   /// Opciones del mapa: se arman con el primer encuadre y se reusan (el
   /// centro/zoom inicial solo cuentan al crear el mapa).
   MapOptions? _options;
@@ -230,6 +264,36 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       if (!mounted) return;
       _prefetchTimer = Timer(_prefetchDelay, _prefetchTiles);
     });
+    // El chequeo de "todo quieto" se programa a demanda (ver
+    // [_scheduleAutoFocusCheck]) cuando el camión se detiene o el usuario
+    // suelta el mapa: cero timers mientras nada cambia.
+  }
+
+  /// Programa UN chequeo del auto-enfoque para cuando se cumpla la ventana de
+  /// quietud (camión quieto y mapa sin tocar [_idleWindow]). Si no aplica
+  /// (modo seguir, ya enfocado, sin posición), no deja ningún timer.
+  void _scheduleAutoFocusCheck() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    if (!mounted || _follow || _autoFocused) return;
+    final since = _truckStillSince;
+    if (since == null) return;
+    final stillReady = since.add(_idleWindow);
+    final gestureReady = _lastGestureAt.add(_idleWindow);
+    final readyAt = stillReady.isAfter(gestureReady)
+        ? stillReady
+        : gestureReady;
+    var wait = readyAt.difference(DateTime.now());
+    // Mínimo 1 s: si ya pasó la ventana pero algo lo impide (animación de
+    // cámara en curso), se reintenta sin girar en un bucle apretado.
+    if (wait < const Duration(seconds: 1)) wait = const Duration(seconds: 1);
+    _idleTimer = Timer(wait, () {
+      _idleTimer = null;
+      if (!mounted) return;
+      _maybeAutoFocus();
+      // Bloqueado por una animación en curso: se reintenta una vez más tarde.
+      if (!_autoFocused && _mover.isAnimating) _scheduleAutoFocusCheck();
+    });
   }
 
   void _prefetchTiles() {
@@ -257,9 +321,52 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   @override
   void dispose() {
     _prefetchTimer?.cancel();
+    _idleTimer?.cancel();
     _mover.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Registra la posición del camión para saber si está quieto. Si se movió más
+  /// de [_stationaryMeters] desde la última posición de reposo, el camión está
+  /// en marcha: se reinicia el reloj de quietud y se habilita un nuevo
+  /// auto-enfoque para cuando vuelva a detenerse.
+  void _trackStillness(LatLng driver) {
+    final anchor = _truckStillAt;
+    if (anchor == null ||
+        const Distance()(anchor, driver) > _stationaryMeters) {
+      _truckStillAt = driver;
+      _truckStillSince = DateTime.now();
+      _autoFocused = false;
+      _scheduleAutoFocusCheck();
+    }
+  }
+
+  /// Acerca el mapa a la ubicación del camión SOLO si lleva quieto [_idleWindow]
+  /// y el usuario no tocó el mapa en ese mismo lapso (y no hay otra animación en
+  /// curso ni modo seguir activo). Se hace una sola vez por cada quietud.
+  void _maybeAutoFocus() {
+    if (!mounted) return;
+    final still = _truckStillAt;
+    if (!shouldAutoFocus(
+      now: DateTime.now(),
+      truckStillSince: _truckStillSince,
+      lastGestureAt: _lastGestureAt,
+      follow: _follow,
+      autoFocused: _autoFocused,
+      animating: _mover.isAnimating,
+      window: _idleWindow,
+    )) {
+      return;
+    }
+    if (still == null) return;
+    _autoFocused = true;
+    final zoom = math.max(_controller.camera.zoom, _autoFocusZoom);
+    _mover.animateTo(
+      still,
+      zoom,
+      reduceMotion: MediaQuery.disableAnimationsOf(context),
+    );
   }
 
   void _followTo(LatLng driver) {
@@ -270,6 +377,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   void _toggleFollow(LatLng? driver) {
     setState(() => _follow = !_follow);
     if (_follow && driver != null) _followTo(driver);
+    _scheduleAutoFocusCheck();
   }
 
   void _zoomBy(double delta) {
@@ -379,18 +487,25 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   /// Arma las opciones con el primer encuadre y las guarda: flutter_map solo
   /// usa el centro/zoom iniciales al crear el mapa, así que recalcular el
   /// encuadre en cada fix del GPS era trabajo tirado.
-  MapOptions _optionsFor(({LatLng center, double zoom}) initial) =>
-      _options ??= MapOptions(
-        initialCenter: initial.center,
-        initialZoom: initial.zoom,
-        minZoom: kDriverMapMinZoom,
-        maxZoom: kMapMaxZoom,
-        interactionOptions: kDriverMapInteraction,
-        // Arrastrar el mapa con el dedo apaga el modo seguir.
-        onPositionChanged: (camera, hasGesture) {
-          if (hasGesture && _follow) setState(() => _follow = false);
-        },
-      );
+  MapOptions _optionsFor(
+    ({LatLng center, double zoom}) initial,
+  ) => _options ??= MapOptions(
+    initialCenter: initial.center,
+    initialZoom: initial.zoom,
+    minZoom: kDriverMapMinZoom,
+    maxZoom: kMapMaxZoom,
+    interactionOptions: kDriverMapInteraction,
+    // Un gesto del usuario (arrastrar/pellizcar) apaga el modo seguir,
+    // marca el momento del toque (para no auto-enfocar encima) y habilita un
+    // nuevo auto-enfoque cuando todo vuelva a quedar quieto.
+    onPositionChanged: (camera, hasGesture) {
+      if (!hasGesture) return;
+      _lastGestureAt = DateTime.now();
+      _autoFocused = false;
+      if (_follow) setState(() => _follow = false);
+      _scheduleAutoFocusCheck();
+    },
+  );
 
   void _recenter(LatLng? driver) {
     final points = [?_destination, ?driver];
@@ -415,9 +530,13 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     // fix creíble se calcula UNA vez por fix (memoizado) y lo reusan el
     // seguimiento, el mapa y la tarjeta de estado.
     ref.listen(deliveryDriverFixProvider, (_, next) {
-      if (!_follow) return;
       final f = plausibleDriverFix(widget.route, next.value);
-      if (f != null) _followTo(LatLng(f.lat, f.lng));
+      if (f == null) return;
+      final pos = LatLng(f.lat, f.lng);
+      // Siempre se mide la quietud del camión (para el auto-enfoque); el modo
+      // seguir, si está activo, acompaña además cada movimiento.
+      _trackStillness(pos);
+      if (_follow) _followTo(pos);
     });
     final fix = plausibleDriverFix(
       widget.route,
@@ -562,6 +681,27 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       ],
     );
   }
+}
+
+/// ¿Corresponde auto-enfocar el mapa en el camión quieto? `true` solo si nada se
+/// mueve: no está activo el modo seguir, no se auto-enfocó ya para esta
+/// quietud, no hay otra animación de cámara, el camión lleva quieto al menos
+/// [window] y el usuario no tocó el mapa en ese mismo lapso. Pura (sin estado ni
+/// tiempo real) para poder testear la regla con fechas controladas.
+bool shouldAutoFocus({
+  required DateTime now,
+  required DateTime? truckStillSince,
+  required DateTime lastGestureAt,
+  required bool follow,
+  required bool autoFocused,
+  required bool animating,
+  required Duration window,
+}) {
+  if (follow || autoFocused || animating) return false;
+  if (truckStillSince == null) return false;
+  if (now.difference(truckStillSince) < window) return false;
+  if (now.difference(lastGestureAt) < window) return false;
+  return true;
 }
 
 /// Rumbo (grados, 0 = norte, 90 = este) del tramo [a]→[b], para orientar el

@@ -66,6 +66,31 @@
 		<string>El Bluetooth se usa para conectar e imprimir etiquetas en la impresora Zebra portátil.</string>
 		<key>NSBluetoothPeripheralUsageDescription</key>
 		<string>El Bluetooth se usa para conectar e imprimir etiquetas en la impresora Zebra portátil.</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>CFBundleURLName</key>
+				<string>bo.com.dismac.logisticsApp.widgets</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>distrack</string>
+				</array>
+			</dict>
+		</array>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Face ID se usa para ingresar a la app sin escribir tu contraseña, solo si lo activás en tu perfil.</string>
+		<key>NSSupportsLiveActivities</key>
+		<true/>
+		<key>NSBonjourServices</key>
+		<array>
+			<string>_pdl-datastream._tcp</string>
+			<string>_printer._tcp</string>
+			<string>_ipp._tcp</string>
+		</array>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>La red local se usa para buscar e imprimir etiquetas en la impresora Zebra conectada al WiFi del local.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Se usan tus fotos para adjuntar pruebas de entrega o de daños.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>

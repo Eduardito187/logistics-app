@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Texto monoespaciado para VALORES tipo código/identificador: números de
-/// pedido (SC-104832), ids de bulto, SKU, ids de liquidación/plan, uuid de
+/// pedido (SC-104832), ids de producto, SKU, ids de liquidación/plan, uuid de
 /// dispositivo, referencias de tracking/envío, etc.
 ///
 /// Aplica IBM Plex Mono 500 (familia `IBMPlexMono`, ya bundleada y declarada en

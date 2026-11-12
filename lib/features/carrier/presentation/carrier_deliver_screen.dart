@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -7,14 +9,17 @@ import '../../../core/icons/icons.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/offline/submit_outcome.dart';
 import '../../../core/scanning/scanner_screen.dart';
+import '../domain/models/carrier_scan_kind.dart';
 import '../domain/usecases/record_proof_of_delivery.dart';
+import 'controllers/carrier_scan_session.dart';
 import 'widgets/carrier_scan_record.dart';
 import 'widgets/carrier_scan_session_view.dart';
 import 'widgets/carrier_scan_support.dart';
 import 'widgets/signed_label_result.dart';
 
-/// Escaneo del transportista al ENTREGAR: prueba de entrega. Escanea el bulto,
-/// luego el QR de confirmación del cliente, y registra la entrega offline-first.
+/// Escaneo del transportista al ENTREGAR: prueba de entrega. Escanea el
+/// producto, luego el QR de confirmación del cliente, y registra la entrega
+/// offline-first.
 class CarrierDeliverScreen extends ConsumerStatefulWidget {
   const CarrierDeliverScreen({super.key});
 
@@ -24,16 +29,30 @@ class CarrierDeliverScreen extends ConsumerStatefulWidget {
 }
 
 class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
-  final List<CarrierScanRecord> _records = [];
+  static const CarrierScanKind _kind = CarrierScanKind.deliver;
+
   bool _busy = false;
 
-  /// Bultos ya entregados (no rechazados) en esta pantalla: un segundo
-  /// escaneo del mismo no encola otra prueba de entrega.
-  final Set<String> _delivered = <String>{};
+  /// Productos con la entrega EN VUELO (entre la lectura y la respuesta de la
+  /// cola): dos lecturas seguidas del mismo no encolan dos pruebas de entrega.
+  /// Lo ya entregado vive en [carrierScanSessionProvider] (sobrevive a salir y
+  /// volver a la pantalla).
+  final Set<String> _inFlight = <String>{};
+
+  CarrierScanSession get _session =>
+      ref.read(carrierScanSessionProvider(_kind).notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    // Al abrir se rearma la tanda con lo que quedó en la cola offline: salir y
+    // volver no borra el historial ni el "ya entregado".
+    unawaited(_session.restoreFromQueue());
+  }
 
   /// Primero el QR de confirmación del cliente (una vez por entrega) y después
-  /// escaneo CONTINUO de sus bultos: la cámara queda abierta y cada bulto se
-  /// registra al leerlo. Todos los bultos de la tanda deben ser del mismo
+  /// escaneo CONTINUO de sus productos: la cámara queda abierta y cada producto
+  /// se registra al leerlo. Todos los productos de la tanda deben ser del mismo
   /// pedido (la confirmación es de ese cliente).
   Future<void> _deliver() async {
     if (_busy) return;
@@ -55,7 +74,7 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
         context,
         title: 'Entregar productos',
         helper: 'Apunta al QR de la etiqueta de cada producto',
-        formats: const [BarcodeFormat.qrCode],
+        formats: kLabelScanFormats,
         onCode: (qr) async {
           final check = await verifyLabelQr(ref, qr);
           final label = check.label;
@@ -87,10 +106,12 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
     SignedLabelResult label,
     String confirmation,
   ) async {
-    if (_delivered.contains(label.unitId)) {
+    final session = _session;
+    if (_inFlight.contains(label.unitId) ||
+        session.isRegistered(label.unitId)) {
       return const ScanFeedback.error('Ya entregado');
     }
-    _delivered.add(label.unitId);
+    _inFlight.add(label.unitId);
     final gps = await prefetchCarrierFix(ref);
     final now = DateTime.now();
     final outcome = await ref.read(recordProofOfDeliveryProvider)(
@@ -102,23 +123,19 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
         occurredAt: now,
         confirmation: confirmation,
       ),
-      label: 'Entrega · ${label.sku}',
+      // El prefijo identifica la fila como nuestra al rearmar la tanda.
+      label: _kind.labelFor(label.sku),
     );
-    if (outcome == SubmitOutcome.failed) _delivered.remove(label.unitId);
-    if (mounted) {
-      setState(() {
-        // Acotada a kMaxSessionRecords: la entrega ya quedó en la cola.
-        addSessionRecord(
-          _records,
-          CarrierScanRecord(
-            unitId: label.unitId,
-            title: label.sku,
-            outcome: outcome,
-            at: now,
-          ),
-        );
-      });
-    }
+    _inFlight.remove(label.unitId);
+    // Acotada a kMaxSessionRecords: la entrega ya quedó en la cola.
+    session.add(
+      CarrierScanRecord(
+        unitId: label.unitId,
+        title: label.sku,
+        outcome: outcome,
+        at: now,
+      ),
+    );
     if (outcome == SubmitOutcome.failed) {
       return ScanFeedback.error(submitOutcomeMessage(outcome));
     }
@@ -127,10 +144,11 @@ class _CarrierDeliverScreenState extends ConsumerState<CarrierDeliverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final records = ref.watch(carrierScanSessionProvider(_kind));
     return Scaffold(
       appBar: AppBar(title: const Text('Escanear al entregar')),
       body: CarrierScanSessionView(
-        records: _records,
+        records: records,
         emptyIcon: AppIcon.deliverScan,
         emptyTitle: 'Sin entregas registradas',
         emptyMessage:

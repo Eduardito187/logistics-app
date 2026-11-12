@@ -4,21 +4,24 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/api/export.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
+import '../../../core/labels/label_format_exception.dart';
+import '../../../core/labels/signed_label.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
-import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
+import '../../../core/offline/submit_feedback.dart';
 import '../../../core/sharing/share_service.dart';
+import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/section_card.dart';
 import '../data/datasources/signature_file_store.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
+import 'controllers/driver_controllers.dart';
 import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
 import 'signature_pad_screen.dart';
@@ -38,9 +41,10 @@ const String kSignatureEvidenceKind = 'signature';
 /// cliente.
 const String kDocumentEvidenceKind = 'id_document';
 
-/// Prueba de entrega (POD): bulto + confirmación del cliente (QR o firma en
-/// pantalla) + foto obligatoria + GPS. El registro es offline-first; la foto y
-/// la firma se suben aparte, por la cola de fotos.
+/// Prueba de entrega (POD): producto (validado contra el envío) + firma del
+/// cliente en pantalla + foto obligatoria + GPS. El registro es offline-first;
+/// la foto y la firma se suben aparte, por la cola de fotos. (No hay "QR del
+/// cliente": el cliente no tiene un código que escanear; confirma firmando.)
 class PodScreen extends ConsumerStatefulWidget {
   const PodScreen({super.key, required this.stop});
 
@@ -51,7 +55,14 @@ class PodScreen extends ConsumerStatefulWidget {
 }
 
 class _PodScreenState extends ConsumerState<PodScreen> {
-  String? _unitId;
+  /// Productos escaneados para esta entrega, en orden y sin repetir. Un pedido
+  /// de N productos se entrega escaneando los N productos (no uno solo).
+  final List<String> _unitIds = <String>[];
+
+  /// Cantidad de productos esperados del envío, o `null` si todavía no se pudo
+  /// saber (sin red / el backend aún no la expone). Con `null` no se exige un
+  /// total: alcanza con ≥1 producto para poder cerrar (offline-first).
+  int? _expectedCount;
   String? _confirmation;
   XFile? _photo;
 
@@ -67,34 +78,86 @@ class _PodScreenState extends ConsumerState<PodScreen> {
     super.initState();
     // GPS caliente al entrar: al registrar, el fix ya está y no se espera.
     ref.read(locationServiceProvider).prefetch();
+    // Total de productos del pedido. Fuente AUTORITATIVA: `unit_ids` de la
+    // parada (un id por producto etiquetado). La cantidad de los ÍTEMS
+    // (`items[].quantity`) NO siempre coincide con la cantidad de productos
+    // etiquetados —un ítem puede salir en 2 etiquetas, o 3 ítems en 1— así que
+    // solo se usa como respaldo si el backend aún no manda unit_ids.
+    // Con esto el escaneo se LIMITA al total real del pedido.
+    final unitIds = widget.stop.unitIds;
+    final fromItems = widget.stop.items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+    if (unitIds != null && unitIds.isNotEmpty) {
+      _expectedCount = unitIds.length;
+    } else if (fromItems > 0) {
+      _expectedCount = fromItems;
+    } else {
+      // Ni `unit_ids` ni ítems en la parada: se intenta por el endpoint.
+      _loadExpectedCount();
+    }
+  }
+
+  Future<void> _loadExpectedCount() async {
+    try {
+      final units = await ref.read(
+        driverShipmentUnitsProvider(widget.stop.shipmentId).future,
+      );
+      if (mounted && units.isNotEmpty) {
+        setState(() => _expectedCount = units.length);
+      }
+    } on Object {
+      // Sin red / error: se queda en null (no se exige total).
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // La foto de la entrega es obligatoria (evidencia ante reclamos).
-    final ready = _unitId != null && _confirmation != null && _photo != null;
+    // Se puede CERRAR con al menos un producto y —si se sabe el total— todos
+    // los productos del pedido; + confirmación del cliente + foto (obligatoria).
+    final canClose =
+        _unitIds.isNotEmpty &&
+        (_expectedCount == null || _unitIds.length >= _expectedCount!);
+    final ready = canClose && _confirmation != null && _photo != null;
+    // Se deja de ESCANEAR solo cuando se CONOCE el total y ya se llegó. Si el
+    // total es desconocido (el backend no lo expone), NUNCA se corta el escaneo:
+    // así un pedido de N productos se puede seguir escaneando (bug: antes se
+    // cortaba en 1 cuando no se sabía el total).
+    final reachedKnownTotal =
+        _expectedCount != null && _unitIds.length >= _expectedCount!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Prueba de entrega')),
+      appBar: AppBar(title: const Text('Comprobante de entrega')),
       body: ResponsiveBody(
         maxWidth: AppBreakpoints.maxFormWidth,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: '1. Producto entregado',
+              title: '1. Productos entregados',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_unitId != null)
-                    Text('Producto: $_unitId')
-                  else
-                    const Text('Escanea el producto a entregar.'),
+                  Text(_unitsSummary(), style: _unitsSummaryStyle(context)),
+                  if (_unitIds.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < _unitIds.length; i++)
+                      _ScannedUnitTile(
+                        index: i + 1,
+                        unitId: _unitIds[i],
+                        onRemove: _busy
+                            ? null
+                            : () => setState(() => _unitIds.removeAt(i)),
+                      ),
+                  ],
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: _busy ? null : _scanUnit,
+                    onPressed: _busy || reachedKnownTotal ? null : _scanUnit,
                     icon: const AnimatedAppIcon(AppIcon.scan),
                     label: Text(
-                      _unitId == null ? 'Escanear producto' : 'Reescanear',
+                      _unitIds.isEmpty
+                          ? 'Escanear producto'
+                          : 'Escanear siguiente',
                     ),
                   ),
                 ],
@@ -132,17 +195,9 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                         label: const Text('Compartir firma'),
                       ),
                     ),
-                  ] else if (_confirmation != null)
-                    Text('Confirmación: $_confirmation')
-                  else
-                    const Text('Escanea el QR del cliente o pedile que firme.'),
+                  ] else
+                    const Text('Pedile al cliente que firme.'),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _scanConfirmation,
-                    icon: const AnimatedAppIcon(AppIcon.qrCode),
-                    label: const Text('Escanear QR del cliente'),
-                  ),
-                  const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _sign,
                     icon: const AnimatedAppIcon(AppIcon.signature),
@@ -230,23 +285,76 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   }
 
   Future<void> _scanUnit() async {
-    final unitId = await scanVerifiedUnit(context, ref);
-    if (unitId != null && mounted) setState(() => _unitId = unitId);
+    final qr = await scanCode(
+      context,
+      title: 'Escanear producto',
+      helper: 'Apunta al QR del producto',
+      formats: kLabelScanFormats,
+    );
+    if (qr == null || !mounted) return;
+    // No cerrar un pedido que no corresponde: la etiqueta DEBE ser de ESTA orden.
+    // La pertenencia se valida POR ORDEN (QR.o == orden de la parada): sobrevive
+    // reimpresiones/revocaciones y, como el QR abierto no lleva firma, NUNCA se
+    // rechaza por la firma. Si no se puede saber la orden (Code128), no bloquea.
+    if (!_belongsByOrder(qr)) {
+      final orderRef = widget.stop.orderReference;
+      showInfoSnack(
+        context,
+        orderRef == null
+            ? 'Ese producto es de otro pedido.'
+            : 'Ese producto es de otro pedido. Escaneá un producto de $orderRef.',
+      );
+      return;
+    }
+    final unitId = await verifyUnitLabel(ref, qr);
+    if (!mounted) return;
+    if (unitId == null) {
+      showInfoSnack(context, 'Etiqueta no válida');
+      return;
+    }
+    // Mismo producto escaneado dos veces: avisar y no duplicar.
+    if (_unitIds.contains(unitId)) {
+      showInfoSnack(context, 'Ese producto ya lo escaneaste.');
+      return;
+    }
+    setState(() => _unitIds.add(unitId));
   }
 
-  Future<void> _scanConfirmation() async {
-    final code = await scanCode(
-      context,
-      title: 'QR del cliente',
-      helper: 'Apunta al QR de confirmación del cliente',
-      formats: const [BarcodeFormat.qrCode],
-    );
-    if (code != null && mounted) {
-      setState(() {
-        _confirmation = code;
-        _signature = null; // el QR reemplaza a una firma previa
-      });
+  /// Pertenencia POR ORDEN: la etiqueta pertenece a la parada si su `o`
+  /// (order_reference del QR) coincide con la orden de la parada. Devuelve
+  /// `true` también cuando no se puede determinar (Code128 sin `o`, o la parada
+  /// no trae orden): offline-first, nunca se rechaza una etiqueta válida de más.
+  bool _belongsByOrder(String qr) {
+    final stopOrder = widget.stop.orderReference;
+    if (stopOrder == null) return true;
+    try {
+      return SignedLabel.fromQrContent(qr).payload.orderNumber == stopOrder;
+    } on LabelFormatException {
+      return true; // no es un QR de etiqueta (Code128): no se puede saber → acepta
     }
+  }
+
+  /// Resumen del avance de escaneo para la cabecera de la sección 1.
+  String _unitsSummary() {
+    final total = _expectedCount;
+    if (_unitIds.isEmpty) {
+      return total == null
+          ? 'Escaneá cada producto a entregar.'
+          : 'Escaneá los $total productos del pedido.';
+    }
+    return total == null
+        ? 'Escaneados: ${_unitIds.length}'
+        : 'Escaneados ${_unitIds.length} de $total';
+  }
+
+  TextStyle? _unitsSummaryStyle(BuildContext context) {
+    final complete =
+        _expectedCount != null && _unitIds.length >= _expectedCount!;
+    final scheme = Theme.of(context).colorScheme;
+    return Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: complete ? scheme.primary : null,
+      fontWeight: complete ? FontWeight.w600 : null,
+    );
   }
 
   Future<void> _sign() async {
@@ -372,25 +480,44 @@ class _PodScreenState extends ConsumerState<PodScreen> {
       }
       if (!mounted) return;
       final now = DateTime.now();
-      final outcome = await ref
-          .read(offlineQueueProvider)
-          .submit(
+      // Un POD por CADA producto del pedido (pedido de N productos = N
+      // registros).
+      // Cada submit lleva su propio Idempotency-Key (lo pone la cola), así que
+      // reintentar no duplica. Se cierra la parada solo si TODOS se registraron
+      // (encolados cuenta como registrados: offline-first).
+      final queue = ref.read(offlineQueueProvider);
+      final cliente = widget.stop.customerName ?? 'Entrega';
+      final outcomes = <SubmitOutcome>[];
+      for (var i = 0; i < _unitIds.length; i++) {
+        outcomes.add(
+          await queue.submit(
             kind: 'recordProofOfDelivery',
             payload: ProofOfDeliveryRequest(
               shipmentId: widget.stop.shipmentId,
-              unitId: _unitId!,
+              unitId: _unitIds[i],
               lat: fix?.lat ?? 0,
               lng: fix?.lng ?? 0,
               occurredAt: now,
               confirmation: _confirmation!,
               photoPath: photo != null ? 'pendiente' : null,
             ).toJson(),
-            label: 'POD · ${widget.stop.customerName ?? 'Entrega'}',
+            label: _unitIds.length > 1
+                ? 'POD · $cliente · producto ${i + 1}/${_unitIds.length}'
+                : 'POD · $cliente',
             occurredAt: now,
-          );
+          ),
+        );
+      }
+      // Veredicto combinado: si alguno falló → falló; si alguno quedó encolado
+      // (sin red) → "Registrado."; si todos se enviaron → "Enviado".
+      final combined = outcomes.contains(SubmitOutcome.failed)
+          ? SubmitOutcome.failed
+          : outcomes.contains(SubmitOutcome.queued)
+          ? SubmitOutcome.queued
+          : SubmitOutcome.sent;
       if (!mounted) return;
-      showSubmitOutcome(context, outcome);
-      if (outcome != SubmitOutcome.failed) {
+      showSubmitOutcome(context, combined);
+      if (combined != SubmitOutcome.failed) {
         // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
         // entrega en curso pasa a la siguiente aunque no haya señal).
         ref
@@ -401,5 +528,54 @@ class _PodScreenState extends ConsumerState<PodScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+}
+
+/// Una fila de la lista de productos escaneados en el POD: número de orden, id
+/// del producto y un botón para quitarlo (por si se escaneó de más).
+class _ScannedUnitTile extends StatelessWidget {
+  const _ScannedUnitTile({
+    required this.index,
+    required this.unitId,
+    required this.onRemove,
+  });
+
+  final int index;
+  final String unitId;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: scheme.primaryContainer,
+            child: Text(
+              '$index',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(unitId, overflow: TextOverflow.ellipsis, maxLines: 1),
+          ),
+          if (onRemove != null)
+            IconButton(
+              tooltip: 'Quitar',
+              visualDensity: VisualDensity.compact,
+              onPressed: onRemove,
+              icon: const AnimatedAppIcon(AppIcon.close, size: 18),
+            ),
+        ],
+      ),
+    );
   }
 }

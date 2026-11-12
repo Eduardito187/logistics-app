@@ -489,7 +489,8 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      // Sin señal (encolado): el bulto ya cuenta; y la lista se volvió a pedir.
+      // Sin señal (encolado): el producto ya cuenta; y la lista se volvió a
+      // pedir.
       expect(find.text('1 escaneo(s)'), findsOneWidget);
       expect(listCalls, 2);
     });

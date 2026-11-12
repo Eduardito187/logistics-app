@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Bultos recibidos localmente en esta sesión (feedback inmediato offline-first),
-/// indexados por envío. Se fusionan con lo que confirma el servidor para que el
+/// Productos recibidos localmente en esta sesión (feedback inmediato
+/// offline-first), indexados por envío. Se fusionan con lo que confirma el servidor para que el
 /// conteo avance aunque el escaneo todavía no se haya sincronizado.
 final locallyReceivedProvider =
     NotifierProvider<LocallyReceivedNotifier, Map<String, Set<String>>>(
       LocallyReceivedNotifier.new,
     );
 
-/// Acumula los ids de bulto recibidos localmente por envío.
+/// Acumula los ids de producto recibidos localmente por envío.
 ///
 /// Acotado para un turno largo en un teléfono de 1 GB: se guardan a lo sumo
 /// [maxShipments] envíos (se descarta el usado hace más tiempo) y el envío se
@@ -32,7 +32,7 @@ class LocallyReceivedNotifier extends Notifier<Map<String, Set<String>>> {
     state = next;
   }
 
-  /// Deshace un bulto marcado de forma optimista (p. ej. el backend lo
+  /// Deshace un producto marcado de forma optimista (p. ej. el backend lo
   /// rechazó con un error de datos).
   void remove(String shipmentId, String unitId) {
     final current = state[shipmentId];

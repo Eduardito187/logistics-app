@@ -29,7 +29,9 @@ void main() {
     expect(find.text('500 km'), findsOneWidget);
   });
 
-  testWidgets('sin lecturas muestra el estado vacío', (tester) async {
+  // Sin lecturas en la ventana que baja el teléfono (últimos 30 días): estado
+  // vacío que lo dice, no un error.
+  testWidgets('sin lecturas recientes muestra el estado vacío', (tester) async {
     await pumpScoped(
       tester,
       overrides: [
@@ -41,6 +43,9 @@ void main() {
         body: SingleChildScrollView(child: RecentReadings()),
       ),
     );
-    expect(find.text('Sin lecturas registradas'), findsOneWidget);
+    expect(
+      find.text('Sin lecturas en los últimos $recentHistoryDays días'),
+      findsOneWidget,
+    );
   });
 }
