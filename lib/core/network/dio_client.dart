@@ -10,7 +10,9 @@ import '../auth/session.dart';
 import '../config/app_config.dart';
 import 'app_version_interceptor.dart';
 import 'auth_headers.dart';
+import 'date_body_interceptor.dart';
 import 'date_query_interceptor.dart';
+import 'null_body_strip_interceptor.dart';
 
 /// Interceptor que agrega el Bearer por usuario+dispositivo y el `X-Device-Id`
 /// a cada request de la puerta `/app/*`, leyendo las cabeceras vigentes en
@@ -202,8 +204,17 @@ final dioProvider = Provider<Dio>((ref) {
   dio.httpClientAdapter = createApiHttpClientAdapter();
 
   dio.interceptors.add(_AuthInterceptor(ref, dio));
+  // Omite del cuerpo los campos opcionales en `null` (el cliente generado los
+  // incluye siempre): varias validaciones del backend son `sometimes|string`
+  // sin `nullable` y un `null` explícito da 422 (era la causa de "No se pudo
+  // registrar" en el POD por `device_id`/`user_id`). Va ANTES de serializar.
+  dio.interceptors.add(const NullBodyStripInterceptor());
   // Fechas de calendario del query como `Y-m-d` (el cliente generado manda ISO).
   dio.interceptors.add(const DateQueryInterceptor());
+  // Idem para los campos de fecha-de-calendario del CUERPO (`plan_date`,
+  // `performed_on`, …): el backend los valida `date_format:Y-m-d` y el cliente
+  // generado manda fecha-hora ISO → 422. No toca los `*_at` (fecha-hora reales).
+  dio.interceptors.add(const DateBodyInterceptor());
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.
   dio.interceptors.add(AppVersionInterceptor(ref));
 

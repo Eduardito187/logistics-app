@@ -84,16 +84,32 @@ class FleetDataSource {
   Future<Data5?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {
-    final api = _ref.read(logisticsApiProvider);
+    // El backend valida `performed_on` con `date_format:Y-m-d`; el cliente
+    // generado lo serializa como fecha-hora ISO (`toIso8601String`) → 422
+    // ("performed_on must match the format Y-m-d"). Se arma el cuerpo con la
+    // FECHA DE CALENDARIO (Y-m-d) por Dio directo, reusando el modelo generado
+    // para el parseo (no se escribe DTO a mano). Mismo caso que `getMyCrew`.
+    final dio = _ref.read(dioProvider);
+    final body = request.toJson()..['performed_on'] = _ymd(request.performedOn);
     try {
-      final response = await api.fleet.fleetConductPreTripChecklist(
-        body: request,
+      final response = await dio.post<Map<String, Object?>>(
+        '/app/fleet/pre-trip-checklists',
+        data: body,
       );
-      return response.data;
+      final data = response.data;
+      if (data == null) return null;
+      return PostAppFleetPreTripChecklistsResponse.fromJson(data).data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
   }
+
+  /// Fecha de calendario `Y-m-d` (el backend la exige así en varios endpoints;
+  /// el cliente generado manda fecha-hora ISO).
+  static String _ymd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }
 
 final fleetDataSourceProvider = Provider<FleetDataSource>(FleetDataSource.new);

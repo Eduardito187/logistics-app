@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/emitted_label.dart';
 import '../../../core/api/models/vehicle.dart';
+import '../../../core/labels/signed_label.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/printing/label_printer.dart';
@@ -17,8 +18,8 @@ import '../domain/order_number.dart';
 import '../domain/usecases/assign_order_vehicle.dart';
 import '../domain/usecases/emit_labels.dart';
 import '../domain/usecases/get_signed_zpl.dart';
+import 'controllers/locally_assigned_orders.dart';
 import 'controllers/order_labels_controller.dart';
-import 'controllers/orders_worklist_controller.dart';
 import 'controllers/preparation_controller.dart';
 import 'widgets/assign_lane_dialog.dart';
 import 'widgets/dispatch_lines_body.dart';
@@ -60,10 +61,52 @@ class _OrderPreparationScreenState
   List<EmittedLabel> _unitsOf(List<EmittedLabel> labels) {
     if (!identical(labels, _labelsSource)) {
       _labelsSource = labels;
-      // Etiquetas PERMANENTES: no hay anuladas, se toman todas.
-      _activeUnits = List<EmittedLabel>.unmodifiable(labels);
+      _activeUnits = _dedupeByProductPiece(labels);
     }
     return _activeUnits;
+  }
+
+  /// Colapsa etiquetas DUPLICADAS del MISMO producto físico. Una re-emisión crea
+  /// etiquetas nuevas (otro id y hasta otra línea) para el MISMO producto; sin
+  /// esto el pedido mostraba 4 "productos" cuando son 2. La identidad física es
+  /// (SKU, unidad, pieza) del QR firmado: dos etiquetas con la misma identidad
+  /// son la misma pieza → se deja la MÁS reciente (la re-emisión vigente). Un
+  /// producto de CANTIDAD 2 tiene unidades DISTINTAS (u 1/2 y 2/2) → NO se
+  /// colapsa: siguen siendo 2 etiquetas legítimas. Si no se puede leer el QR, la
+  /// etiqueta se conserva (nunca se oculta de más). El arreglo de fondo (no
+  /// emitir/limpiar duplicados) va del lado del backend.
+  static List<EmittedLabel> _dedupeByProductPiece(List<EmittedLabel> labels) {
+    final latestForKey = <String, EmittedLabel>{};
+    final kept = <EmittedLabel>[];
+    for (final label in labels) {
+      final key = _productPieceKey(label);
+      if (key == null) {
+        kept.add(label); // QR ilegible: no se arriesga a ocultarla
+        continue;
+      }
+      final existing = latestForKey[key];
+      if (existing == null) {
+        latestForKey[key] = label;
+        kept.add(label);
+      } else if (label.emittedAt > existing.emittedAt) {
+        latestForKey[key] = label;
+        final i = kept.indexOf(existing);
+        if (i >= 0) kept[i] = label;
+      }
+    }
+    return List<EmittedLabel>.unmodifiable(kept);
+  }
+
+  /// Identidad física de la etiqueta `(SKU|unidad|pieza)` leída del QR, o `null`
+  /// si no se puede parsear (no es un QR de etiqueta válido).
+  static String? _productPieceKey(EmittedLabel label) {
+    try {
+      final payload = SignedLabel.fromQrContent(label.qrContent).payload;
+      return '${payload.sku}|${payload.unit.toCanonical()}|'
+          '${payload.piece.toCanonical()}';
+    } on Object {
+      return null;
+    }
   }
 
   Future<void> _assignLane() async {
@@ -88,8 +131,12 @@ class _OrderPreparationScreenState
       // Asignar el vehículo PREPARA el pedido: sus etiquetas quedan marcadas
       // como preparadas (ya no hay escaneo del producto, decisión del dueño).
       _markAllPrepared();
-      // La worklist ya no debe mostrarlo.
-      ref.invalidate(ordersWorklistProvider);
+      // La worklist ya no debe mostrarlo: se marca asignado (el backend todavía
+      // lo devuelve como PLANNED, así que invalidar sola no bastaba — reaparecía;
+      // ver [LocallyAssignedOrders]). El `watch` del worklist lo saca al instante.
+      ref
+          .read(locallyAssignedOrdersProvider.notifier)
+          .markAssigned(_orderNumber);
       showSuccessSnack(
         context,
         plate.isEmpty

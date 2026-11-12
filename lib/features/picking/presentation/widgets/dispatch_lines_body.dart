@@ -208,7 +208,7 @@ class _DispatchLineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      hasName ? name : 'SKU ${line.sku}',
+                      hasName ? name : line.sku,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -217,7 +217,7 @@ class _DispatchLineCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'SKU ${line.sku} · x${line.quantity} · Línea ${line.lineNumber}',
+                      '${line.sku} · x${line.quantity} · Línea ${line.lineNumber}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.outline,
                       ),

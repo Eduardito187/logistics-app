@@ -85,7 +85,7 @@ class UnitTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    hasName ? name : 'SKU ${label.sku}',
+                    hasName ? name : label.sku,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -95,7 +95,7 @@ class UnitTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     hasName
-                        ? 'SKU ${label.sku} · Línea ${label.lineNumber}'
+                        ? '${label.sku} · Línea ${label.lineNumber}'
                         : 'Línea ${label.lineNumber}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.outline,

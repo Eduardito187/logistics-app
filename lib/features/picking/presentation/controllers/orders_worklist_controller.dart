@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../domain/usecases/list_orders_to_prepare.dart';
+import 'locally_assigned_orders.dart';
 
 /// Estado de la worklist del preparador con carga incremental.
 class OrdersWorklistState {
@@ -43,8 +44,27 @@ class OrdersWorklistState {
 class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
   @override
   Future<OrdersWorklistState> build() async {
+    // Se ocultan los pedidos ya asignados en esta sesión (el backend aún los
+    // devuelve como PLANNED; ver [LocallyAssignedOrders]). `watch`: al asignar
+    // uno, la lista se recalcula sola y el pedido desaparece al instante.
+    final assigned = ref.watch(locallyAssignedOrdersProvider);
     final batch = await ref.watch(listOrdersToPrepareProvider).call();
-    return OrdersWorklistState(orders: batch.items, nextPages: batch.nextPages);
+    return OrdersWorklistState(
+      orders: _withoutAssigned(batch.items, assigned),
+      nextPages: batch.nextPages,
+    );
+  }
+
+  /// Quita de la tanda los pedidos ya asignados localmente (por `externalId`).
+  static List<Shipment> _withoutAssigned(
+    List<Shipment> items,
+    Set<String> assigned,
+  ) {
+    if (assigned.isEmpty) return items;
+    return [
+      for (final s in items)
+        if (!assigned.contains(s.externalId)) s,
+    ];
   }
 
   /// Trae la tanda siguiente y la agrega al final. No hace nada si ya no quedan
@@ -57,12 +77,13 @@ class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
       final batch = await ref
           .read(listOrdersToPrepareProvider)
           .call(pages: current.nextPages);
+      final assigned = ref.read(locallyAssignedOrdersProvider);
       // Sin duplicados: las páginas pueden solaparse si el servidor reordena.
       final seen = {for (final s in current.orders) s.id};
       final merged = [
         ...current.orders,
         for (final s in batch.items)
-          if (seen.add(s.id)) s,
+          if (!assigned.contains(s.externalId) && seen.add(s.id)) s,
       ];
       state = AsyncData(
         OrdersWorklistState(orders: merged, nextPages: batch.nextPages),

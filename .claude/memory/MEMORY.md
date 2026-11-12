@@ -16,7 +16,6 @@
 - [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
 - [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
 - [Correr en teléfono por USB desde WSL](device-run-usb-wsl.md) — usbipd se cae (OnePlus 15 CPH2749); fix = registrar GUID de interfaz ADB en Windows; WSL es NAT → build APK en WSL + install/launch con adb.exe de Windows
-- [Acceso al servidor de staging](staging-server-access.md) — backend staging en OCI vía `ssh oci`; stack Docker (app/web/worker/postgres…); leer logs por `docker logs`, artisan/psql en contenedores
 - [500 en login staging (2FA/APP_KEY)](staging-login-500-2fa-appkey.md) — "Error del servidor" = 5xx real del backend; chofer/supervisor 500 por secreto 2FA con APP_KEY viejo (DecryptException); diagnóstico por curl+roles+logs y fix
 - [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
 - [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
