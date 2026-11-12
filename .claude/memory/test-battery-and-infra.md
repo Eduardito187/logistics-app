@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 09382079-47de-4656-9b51-88ca4bb40fff
-  modified: 2026-11-11T14:08:33.447Z
+  modified: 2026-11-12T12:46:37.984Z
 ---
 
 Existe una batería de tests exhaustiva escrita en paralelo (~190 archivos, ~1000 casos iniciales) que cubre core y los 5 roles de campo. Patrón: fakes a mano + `ProviderScope`/`ProviderContainer(overrides:)`, sin Dio/GPS/HW real; vector Ed25519 real en `test/fixtures/label_test_vector.json`.
@@ -33,6 +33,8 @@ Existe una batería de tests exhaustiva escrita en paralelo (~190 archivos, ~100
 - **Entrega chofer v2 AUTO-AVANZA tras el POD:** `_register` settlea el stop local (`locallySettledStopsProvider`) y `currentStopOf` salta a la siguiente parada → NO hay botón intermedio "Siguiente entrega". El e2e espera aterrizar directo en "Parada N+1 de M".
 
 **Estado 2026-11-11: `flutter analyze` limpio · `flutter test` 2026/2026 · `flutter test integration_test` 6/6.**
+
+**Estado 2026-11-12: `flutter analyze` limpio · `dart format lib test` sin cambios · `flutter test` 2856/2856 VERDE** (subió desde 2770 con 4 agentes en paralelo: chofer "Mi día" por estado efectivo + rangos de fecha; tienda anti-doble-entrega (`deliveredUnitIdsProvider`); transportista rehidrata la tanda de escaneo desde la cola offline + bloquea pantallas de oficina por rol; auth manda el modelo real del equipo en `device.name` leyendo `build.prop` sin dependencias nuevas). **Trampa que dejó un agente:** sus 4 tests nuevos de `auth_repository_impl_test.dart` no pasaban `meResponse` y el fake `me()` hacía `meResponse!` (null-check) → reventaba fuera del `try/catch` de `ApiException` de `_completeSignIn`. Fix: el fake `me()` ahora lanza `ApiException(503)` cuando no hay `meResponse` (simula "/me no disponible" = degradación segura), así los tests que solo miran device/login no tienen que armar un `AppMeResponse` completo.
 
 **Seam del resolver de etiquetas (nov 2026):** además de `codeScannerProvider`/`continuousScannerProvider`,
 está `labelResolverProvider` (Code128 → `/resolve`). Tests que escanean códigos PLANOS (no-QR) necesitan
