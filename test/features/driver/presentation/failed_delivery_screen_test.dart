@@ -11,9 +11,9 @@ import '../../../support/fake_code_scanner.dart';
 import '../support/driver_test_support.dart';
 import '../../../support/button_finders.dart';
 
-// Entrega fallida: bulto + motivo tipado + foto opcional + GPS.
+// Entrega fallida: producto + motivo tipado + foto opcional + GPS.
 //
-// El bulto se escanea vía codeScannerProvider y se verifica offline con el
+// El producto se escanea vía codeScannerProvider y se verifica offline con el
 // vector Ed25519 compartido. La foto usa image_picker (sin seam) y es opcional,
 // así que los flujos se ejercitan sin foto.
 

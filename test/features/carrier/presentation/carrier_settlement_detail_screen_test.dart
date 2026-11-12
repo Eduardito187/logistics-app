@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/settlement.dart';
 import 'package:logistics_app/core/api/models/settlement_status.dart';
+import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/carrier/data/repositories/carrier_repository_impl.dart';
 import 'package:logistics_app/features/carrier/presentation/carrier_settlement_detail_screen.dart';
@@ -15,9 +16,9 @@ import '../carrier_fixtures.dart';
 import '../carrier_test_harness.dart';
 import '../../../support/button_finders.dart';
 
-// Detalle de liquidación: visibilidad de acciones según estado y los comandos
-// async (aprobar/disputar/pagar → 202 "Aceptado. Se está procesando.") en sus
-// caminos ok y error.
+// Detalle de liquidación: visibilidad de acciones según estado y PERMISO, y los
+// comandos async (aprobar/disputar/pagar → 202 "Aceptado. Se está procesando.")
+// en sus caminos ok y error.
 
 const _id = 's1';
 
@@ -26,9 +27,12 @@ Future<FakeCarrierRepository> _pump(
   required Settlement data,
   FakeCarrierRepository? repo,
   Future<Settlement> Function()? loader,
+  // Por defecto, sesión de oficina: puede aprobar, disputar y pagar.
+  Override? session,
 }) async {
   final fakeRepo = repo ?? FakeCarrierRepository();
   final overrides = <Override>[
+    session ?? officeSessionOverride(),
     carrierRepositoryProvider.overrideWithValue(fakeRepo),
     carrierSettlementProvider(
       _id,
@@ -52,7 +56,7 @@ void main() {
   ) async {
     await _pump(tester, data: settlement(status: SettlementStatus.submitted));
 
-    expect(find.text('LPZ → SCZ'), findsOneWidget);
+    expect(find.text('CD La Paz → CD Santa Cruz'), findsOneWidget);
     expect(find.text('Enviada'), findsOneWidget);
     expect(findButtonWithText<FilledButton>('Aprobar'), findsOneWidget);
     expect(findButtonWithText<OutlinedButton>('Disputar'), findsOneWidget);
@@ -89,6 +93,47 @@ void main() {
     expect(findButtonWithText<FilledButton>('Aprobar'), findsOneWidget);
     expect(findButtonWithText<OutlinedButton>('Disputar'), findsNothing);
     expect(find.text('Monto no coincide'), findsOneWidget);
+  });
+
+  testWidgets('transportista: sin permiso NO aparece Aprobar, sí Disputar', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      data: settlement(status: SettlementStatus.submitted),
+      session: carrierSessionOverride(),
+    );
+
+    expect(findButtonWithText<FilledButton>('Aprobar'), findsNothing);
+    expect(findButtonWithText<OutlinedButton>('Disputar'), findsOneWidget);
+  });
+
+  testWidgets('transportista: sin permiso NO aparece Marcar como pagada', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      data: settlement(status: SettlementStatus.approved),
+      session: carrierSessionOverride(),
+    );
+
+    expect(
+      findButtonWithText<FilledButton>('Marcar como pagada'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('sin sesión no se muestra ninguna acción financiera', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      data: settlement(status: SettlementStatus.submitted),
+      session: sessionProvider.overrideWith(() => StubSessionNotifier(null)),
+    );
+
+    expect(findButtonWithText<FilledButton>('Aprobar'), findsNothing);
+    expect(findButtonWithText<OutlinedButton>('Disputar'), findsNothing);
   });
 
   testWidgets('aprobar ok: llama al repo y avisa 202 "en proceso"', (

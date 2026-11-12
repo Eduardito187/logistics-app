@@ -4,10 +4,9 @@ import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/preparation_scan_request.dart';
-import '../../../../core/api/models/reprint_labels_request.dart';
-import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/offline/offline_queue.dart';
+import '../../domain/entities/shipment_page.dart';
 import '../../domain/repositories/picking_repository.dart';
 import '../datasources/picking_remote_data_source.dart';
 
@@ -21,8 +20,11 @@ class PickingRepositoryImpl implements PickingRepository {
   final OfflineQueue _queue;
 
   @override
-  Future<List<Shipment>> listShipments({ShipmentStatus? status}) =>
-      _remote.listShipments(status: status);
+  Future<ShipmentPage> listShipments({
+    ShipmentStatus? status,
+    int page = 1,
+    int perPage = 50,
+  }) => _remote.listShipments(status: status, page: page, perPage: perPage);
 
   @override
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) =>
@@ -43,10 +45,8 @@ class PickingRepositoryImpl implements PickingRepository {
   ) => _remote.emitLabels(orderNumber, body);
 
   @override
-  Future<List<EmittedLabel>> reprintLabels(
-    String orderNumber,
-    ReprintLabelsRequest body,
-  ) => _remote.reprintLabels(orderNumber, body);
+  Future<void> assignVehicle(String orderNumber, String vehicleId) =>
+      _remote.assignVehicle(orderNumber, vehicleId);
 
   @override
   Future<String> getSignedZpl(String orderNumber) =>

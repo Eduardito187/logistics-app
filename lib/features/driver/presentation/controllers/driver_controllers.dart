@@ -156,11 +156,11 @@ final vehicleUtilizationProvider =
           .call(vehicleId: vehicleId, from: from, to: to);
     });
 
-/// Ids de los bultos esperados de un envío. El escaneo de carga/descarga lo
-/// pide al abrir (sin esperarlo): si llegó, un bulto ajeno se rechaza al
-/// instante y el aviso muestra "Bulto N/M"; sin señal no se valida en el
-/// teléfono (el backend decide al sincronizar). Caché larga: los bultos de un
-/// envío no cambian durante el turno.
+/// Ids de los productos esperados de un envío. El escaneo de carga/descarga lo
+/// pide al abrir (sin esperarlo): si llegó, un producto ajeno se rechaza al
+/// instante y el aviso muestra "Producto N/M"; sin señal no se valida en el
+/// teléfono (el backend decide al sincronizar). Caché larga: los productos de
+/// un envío no cambian durante el turno.
 final driverShipmentUnitsProvider = FutureProvider.autoDispose
     .family<Set<String>, String>((ref, shipmentId) async {
       ref.cacheFor(CacheTtl.long);

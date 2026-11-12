@@ -23,6 +23,11 @@ class _FakeAdapter implements HttpClientAdapter {
   int statusCode = 200;
   String body = '{}';
   RequestOptions? lastRequest;
+  int calls = 0;
+
+  /// Respuestas en orden (status, body) que se consumen antes de caer en
+  /// [statusCode]/[body]: simula "primero 401, después 200".
+  final List<(int, String)> queue = [];
 
   /// Se ejecuta MIENTRAS la request está "en vuelo" (antes de responder): sirve
   /// para simular que la sesión cambió entre el envío y la respuesta.
@@ -35,10 +40,14 @@ class _FakeAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     lastRequest = options;
+    calls++;
     await onFetch?.call();
+    final (status, payload) = queue.isNotEmpty
+        ? queue.removeAt(0)
+        : (statusCode, body);
     return ResponseBody.fromString(
-      body,
-      statusCode,
+      payload,
+      status,
       headers: {
         Headers.contentTypeHeader: ['application/json'],
       },
@@ -56,13 +65,19 @@ void main() {
   late Dio dio;
   late _FakeAdapter adapter;
 
+  /// Ventana de gracia tras login (en prod 35 s). Por defecto cero: los tests
+  /// existentes de 401 cierran al instante; los de gracia la suben.
+  var grace = Duration.zero;
+
   setUp(() {
     storage = FakeSecureStorage();
     authClient = FakeAuthClient();
+    grace = Duration.zero;
     container = ProviderContainer(
       overrides: [
         secureStorageProvider.overrideWithValue(storage),
         logisticsApiProvider.overrideWithValue(FakeLogisticsApi(authClient)),
+        deviceBindingGraceProvider.overrideWith((ref) => grace),
       ],
     );
     addTearDown(container.dispose);
@@ -208,6 +223,131 @@ void main() {
         // El 401 era del token viejo: la sesión vigente (tok-nuevo) sigue viva.
         expect(expiredMsg(), isNull);
         expect(session(), isNotNull);
+      },
+    );
+  });
+
+  group('onError: login nuevo de OTRO usuario en el mismo teléfono '
+      '(caché del backend desfasado)', () {
+    const revoked = '{"code":"device_revoked"}';
+    const superseded = '{"code":"session_superseded"}';
+
+    test('401 device_revoked tras login reciente: reintenta y NO cierra '
+        'la sesión (bug "dispositivo dado de baja")', () async {
+      grace = const Duration(milliseconds: 150);
+      await signedIn();
+      adapter.queue
+        ..add((401, revoked))
+        ..add((200, '{"ok":true}'));
+
+      final res = await dio.get<dynamic>('/app/shipments');
+
+      expect(res.statusCode, 200);
+      expect(adapter.calls, 2);
+      expect(adapter.lastRequest!.headers['Authorization'], 'Bearer tok');
+      expect(expiredMsg(), isNull);
+      expect(session(), isNotNull);
+      expect(authClient.logoutCalls, 0);
+    });
+
+    test(
+      '401 session_superseded tras login reciente también se reintenta',
+      () async {
+        grace = const Duration(milliseconds: 150);
+        await signedIn();
+        adapter.queue
+          ..add((401, superseded))
+          ..add((200, '{}'));
+
+        final res = await dio.get<dynamic>('/app/shipments');
+
+        expect(res.statusCode, 200);
+        expect(session(), isNotNull);
+        expect(expiredMsg(), isNull);
+      },
+    );
+
+    test(
+      'si el reintento vuelve a dar 401 es una baja real: cierra con aviso',
+      () async {
+        grace = const Duration(milliseconds: 100);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = revoked;
+
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(adapter.calls, 2); // un solo reintento, nunca más
+        expect(
+          expiredMsg(),
+          'Este dispositivo fue dado de baja. Volvé a ingresar.',
+        );
+        expect(session(), isNull);
+      },
+    );
+
+    test('fuera de la ventana (sesión vieja) cierra sin reintentar', () async {
+      await signedIn(); // grace = 0 → ya fuera de la ventana
+      adapter
+        ..statusCode = 401
+        ..body = revoked;
+
+      await expectLater(
+        dio.get<dynamic>('/app/shipments'),
+        throwsA(isA<DioException>()),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(adapter.calls, 1);
+      expect(session(), isNull);
+    });
+
+    test('sin login nuevo (sesión restaurada) no hay gracia', () {
+      expect(container.read(sessionProvider.notifier).freshSignInAt, isNull);
+    });
+
+    test(
+      'un 401 genérico (token vencido) tras login NO se reintenta',
+      () async {
+        grace = const Duration(seconds: 5);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = '{"code":"unauthenticated"}';
+
+        await expectLater(
+          dio.get<dynamic>('/app/shipments'),
+          throwsA(isA<DioException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(adapter.calls, 1);
+        expect(expiredMsg(), 'Tu sesión expiró, volvé a ingresar.');
+        expect(session(), isNull);
+      },
+    );
+
+    test(
+      'si se cierra la sesión durante la espera, no reintenta ni avisa',
+      () async {
+        grace = const Duration(milliseconds: 150);
+        await signedIn();
+        adapter
+          ..statusCode = 401
+          ..body = revoked;
+
+        final pending = dio.get<dynamic>('/app/shipments');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        await container.read(sessionProvider.notifier).signOut();
+
+        await expectLater(pending, throwsA(isA<DioException>()));
+        expect(adapter.calls, 1);
+        expect(expiredMsg(), isNull);
       },
     );
   });

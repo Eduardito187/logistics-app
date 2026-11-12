@@ -218,7 +218,7 @@ void main() {
     expect(find.byType(PodScreen), findsOneWidget);
     // La foto de la entrega es obligatoria, y el POD escanea el producto.
     expect(find.text('3. Foto de entrega (obligatoria)'), findsOneWidget);
-    expect(find.text('1. Producto entregado'), findsOneWidget);
+    expect(find.text('1. Productos entregados'), findsOneWidget);
   });
 
   testWidgets('"No se pudo" abre la entrega fallida', (tester) async {

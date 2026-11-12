@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textos de los widgets de la pantalla de inicio (WidgetsChannel /
+     paquete widgets). Todo con prefijo widget_ para no chocar con otros. -->
+<resources>
+    <!-- Nombres en el selector de widgets del launcher. -->
+    <string name="widget_next_delivery_name">DisTrack · Próxima entrega</string>
+    <string name="widget_route_day_name">DisTrack · Mi ruta de hoy</string>
+    <string name="widget_picking_pending_name">DisTrack · Por preparar</string>
+    <string name="widget_store_receptions_name">DisTrack · Tienda</string>
+    <string name="widget_supervisor_summary_name">DisTrack · Operación de hoy</string>
+    <string name="widget_quick_scan_name">DisTrack · Escanear</string>
+
+    <!-- Descripciones (selector de widgets, Android 12+). -->
+    <string name="widget_next_delivery_description">Cliente, hora de llegada y botón para navegar a tu próxima parada.</string>
+    <string name="widget_route_day_description">Entregadas, pendientes y no entregadas de tu ruta de hoy.</string>
+    <string name="widget_picking_pending_description">Pedidos pendientes y en curso, con acceso directo al escáner.</string>
+    <string name="widget_store_receptions_description">Envíos por recibir y pedidos para recojo en tienda.</string>
+    <string name="widget_supervisor_summary_description">Entregas, incidencias y camiones en ruta del día.</string>
+    <string name="widget_quick_scan_description">Botón grande para escanear una etiqueta al instante.</string>
+
+    <!-- Títulos del encabezado. -->
+    <string name="widget_next_delivery_title">Próxima entrega</string>
+    <string name="widget_route_day_title">Mi ruta de hoy</string>
+    <string name="widget_picking_pending_title">Por preparar</string>
+    <string name="widget_store_receptions_title">Tienda</string>
+    <string name="widget_supervisor_summary_title">Operación de hoy</string>
+
+    <!-- Etiquetas de los números. -->
+    <string name="widget_label_delivered">Entregadas</string>
+    <string name="widget_label_pending">Pendientes</string>
+    <string name="widget_label_failed">No entregadas</string>
+    <string name="widget_label_in_progress">En curso</string>
+    <string name="widget_label_incoming">Por recibir</string>
+    <string name="widget_label_pickups">Para recojo</string>
+    <string name="widget_label_incidents">Incidencias</string>
+    <string name="widget_label_trucks_on_route">Camiones en ruta</string>
+
+    <!-- Acciones. -->
+    <string name="widget_action_navigate">Navegar</string>
+    <string name="widget_action_scan">Escanear</string>
+    <string name="widget_action_sign_in">Iniciá sesión</string>
+
+    <!-- Estados. -->
+    <string name="widget_state_signed_out">Iniciá sesión en DisTrack</string>
+    <string name="widget_state_not_allowed">No disponible para tu rol</string>
+    <string name="widget_empty_next_delivery">Sin entregas pendientes</string>
+    <string name="widget_empty_route_day">Sin ruta asignada hoy</string>
+    <string name="widget_empty_picking_pending">Sin pedidos por preparar</string>
+    <string name="widget_empty_store_receptions">Sin recepciones pendientes</string>
+    <string name="widget_empty_supervisor_summary">Sin actividad por ahora</string>
+
+    <!-- Formatos. -->
+    <string name="widget_updated_at">Actualizado %1$s</string>
+    <string name="widget_stop_of">Parada %1$d de %2$d</string>
+    <string name="widget_eta">Llegada %1$s</string>
+    <string name="widget_total">Total %1$d</string>
+    <string name="widget_no_value">—</string>
+</resources>

@@ -1,163 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/icons/icons.dart';
-import '../../../../core/printing/label_printer.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/section_card.dart';
-import '../../../../core/widgets/status_pill.dart';
+import '../controllers/print_test_controller.dart';
 import '../controllers/printer_controllers.dart';
-import 'discovered_printers.dart';
-import 'wifi_printer_form.dart';
+import '../controllers/printer_save_result.dart';
+import '../controllers/printer_saver.dart';
+import '../printer_setup_screen.dart';
+import 'active_printer_tile.dart';
+import 'print_result_text.dart';
+import 'printer_actions.dart';
+import 'printer_advanced_options.dart';
+import 'printer_empty_state.dart';
 
-/// Sección de impresora: elige transporte (Bluetooth / WiFi / USB), descubre o
-/// ingresa la impresora, la guarda y permite imprimir una etiqueta de prueba.
+/// Tarjeta "Impresora" de Ajustes, ESTADO PRIMERO: muestra una sola cosa
+/// grande, la impresora activa (ícono, nombre, "Zebra · WiFi · IP" y estado
+/// Lista / No responde) con "Imprimir prueba" y "Cambiar". Sin impresora, un
+/// estado vacío con un único botón "Conectar impresora" que abre el asistente.
+///
+/// Todo lo técnico (tipo, protocolo, credenciales, redes extra, olvidar) vive
+/// en "Opciones avanzadas", colapsado.
 class PrinterSection extends ConsumerStatefulWidget {
-  const PrinterSection({
-    required this.printing,
-    required this.onPrintTest,
-    super.key,
-  });
+  const PrinterSection({this.defaultUser, super.key});
 
-  final bool printing;
-  final Future<void> Function() onPrintTest;
+  /// Usuario sugerido para impresoras de oficina que piden acceso.
+  final String? defaultUser;
 
   @override
   ConsumerState<PrinterSection> createState() => _PrinterSectionState();
 }
 
 class _PrinterSectionState extends ConsumerState<PrinterSection> {
-  PrinterTransport _transport = PrinterTransport.bluetooth;
+  bool _detecting = false;
+  String? _detectionSummary;
 
-  Future<void> _save(PrinterConfig config) async {
-    // El guardado (almacén seguro) puede fallar: se avisa al operario en vez de
-    // dejar una excepción async sin manejar (pantalla roja en debug / silencio).
-    try {
-      await ref.read(labelPrinterProvider).selectPrinter(config);
-      ref.invalidate(selectedPrinterProvider);
-    } on Object {
-      if (mounted) {
-        showInfoSnack(
-          context,
-          'No se pudo guardar la impresora. Probá de nuevo.',
-        );
-      }
+  void _openSetup() {
+    PrinterSetupScreen.open(context, defaultUser: widget.defaultUser);
+  }
+
+  /// Guarda el perfil elegido a mano en Opciones avanzadas (siempre avisa).
+  Future<PrinterSaveResult> _saveProfile(PrinterConfig config) async {
+    final result = await PrinterSaver(ref).persist(config);
+    if (mounted) announcePrinterSave(context, result, config);
+    return result;
+  }
+
+  /// "Detectar tipo de impresora" (IPP/web, nunca 9100).
+  Future<void> _detect(PrinterConfig config) async {
+    if (_detecting) return;
+    setState(() {
+      _detecting = true;
+      _detectionSummary = null;
+    });
+    final detection = await PrinterSaver(ref).detect(config);
+    if (!mounted) return;
+    setState(() {
+      _detecting = false;
+      _detectionSummary = detection.summary;
+    });
+  }
+
+  Future<void> _forget(PrinterConfig config) async {
+    final ok = await PrinterSaver(ref).forget(config);
+    if (!mounted) return;
+    if (ok) {
+      ref.read(printTestControllerProvider.notifier).clear();
+      showSuccessSnack(context, 'Impresora olvidada.');
+    } else {
+      showErrorSnack(
+        context,
+        'No se pudo olvidar la impresora. Probá de nuevo.',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final selected = ref.watch(selectedPrinterProvider).value;
+    final selectedAsync = ref.watch(selectedPrinterProvider);
+    final test = ref.watch(printTestControllerProvider);
+    final selected = selectedAsync.value;
 
     return SectionCard(
-      title: 'Impresora de etiquetas',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (selected != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                // scaleDown: con letra grande en teléfono chico la pastilla se
-                // achica en vez de desbordar (mismo patrón que device_card).
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: StatusPill(
-                    'Activa: ${selected.label} (${selected.transport.label})',
-                    tone: PillTone.success,
-                    icon: AppIcon.printing,
-                  ),
-                ),
-              ),
+      title: 'Impresora',
+      child: switch (selected) {
+        _ when !selectedAsync.hasValue && selectedAsync.isLoading =>
+          const SizedBox(height: 120),
+        null => PrinterEmptyState(onConnect: _openSetup),
+        final PrinterConfig printer => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ActivePrinterTile(printer: printer, lastResult: test.lastResult),
+            const SizedBox(height: 16),
+            PrinterActions(
+              printing: test.printing,
+              onPrintTest: () => runPrintTest(context, ref),
+              onChange: _openSetup,
             ),
-          // En teléfonos muy angostos (o con letra grande) los íconos no entran
-          // junto al texto: se muestran solo las etiquetas.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final withIcons =
-                  constraints.maxWidth /
-                      MediaQuery.textScalerOf(context).scale(1) >=
-                  300;
-              return SegmentedButton<PrinterTransport>(
-                // Sin el tilde del seleccionado (el relleno ya lo marca) y letra
-                // algo menor: con el tilde "Bluetooth" se partía en dos líneas.
-                showSelectedIcon: false,
-                style: const ButtonStyle(
-                  textStyle: WidgetStatePropertyAll(
-                    TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  padding: WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  ),
-                ),
-                segments: [
-                  for (final (transport, label, icon) in const [
-                    (
-                      PrinterTransport.bluetooth,
-                      'Bluetooth',
-                      AppIcon.bluetooth,
-                    ),
-                    (PrinterTransport.wifi, 'WiFi', AppIcon.wifi),
-                    (PrinterTransport.usb, 'USB', AppIcon.usb),
-                  ])
-                    ButtonSegment(
-                      value: transport,
-                      label: _SegmentLabel(label),
-                      // El transporte elegido queda "activo" (se rellena).
-                      icon: withIcons
-                          ? AnimatedAppIcon(
-                              icon,
-                              state: transport == _transport
-                                  ? AppIconState.active
-                                  : AppIconState.idle,
-                              excludeFromSemantics: true,
-                            )
-                          : null,
-                    ),
-                ],
-                selected: <PrinterTransport>{_transport},
-                onSelectionChanged: (value) =>
-                    setState(() => _transport = value.first),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          if (_transport == PrinterTransport.wifi)
-            WifiPrinterForm(initial: selected, onSave: _save)
-          else
-            DiscoveredPrinters(
-              transport: _transport,
-              selected: selected,
-              onSelect: _save,
+            if (test.lastResult case final result?) ...[
+              const SizedBox(height: 12),
+              PrintResultText(result),
+            ],
+            const Divider(height: 24),
+            PrinterAdvancedOptions(
+              printer: printer,
+              onSaveConfig: _saveProfile,
+              onForget: () => _forget(printer),
+              defaultUser: widget.defaultUser,
+              detecting: _detecting,
+              detectionSummary: _detectionSummary,
+              onDetect: () => _detect(printer),
             ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: widget.printing ? null : () => widget.onPrintTest(),
-            // Mientras imprime, la hoja sale de la impresora (loop de loading).
-            icon: AnimatedAppIcon(
-              AppIcon.printing,
-              state: widget.printing ? AppIconState.loading : AppIconState.idle,
-              semanticLabel: widget.printing ? 'Imprimiendo' : 'Imprimir',
-            ),
-            label: const Text('Imprimir prueba'),
-          ),
-        ],
-      ),
+          ],
+        ),
+      },
     );
-  }
-}
-
-/// Etiqueta de un segmento de transporte: una sola línea que se achica
-/// (`scaleDown`) si no entra, en vez de partirse o cortarse con letra grande.
-class _SegmentLabel extends StatelessWidget {
-  const _SegmentLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1));
   }
 }

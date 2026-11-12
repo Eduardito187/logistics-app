@@ -60,17 +60,21 @@ void main() {
     expect(res.accepted, isFalse);
   });
 
-  test('revoked:true → no aceptable aunque resuelva', () {
-    final res = LabelResolution.fromJson(const {
-      'label_id': 'LBL-R',
-      'resolved': true,
-      'revoked': true,
-      'unit_id': 'U-9',
-    });
-    expect(res.resolved, isTrue);
-    expect(res.revoked, isTrue);
-    expect(res.accepted, isFalse);
-  });
+  test(
+    'etiqueta permanente: resuelve → aceptable aunque venga el flag legacy revoked',
+    () {
+      // Etiquetas globales y permanentes: nada se anula. El backend ya no manda
+      // `revoked`; si llegara en true (legacy), NO debe rechazar.
+      final res = LabelResolution.fromJson(const {
+        'label_id': 'LBL-R',
+        'resolved': true,
+        'revoked': true,
+        'unit_id': 'U-9',
+      });
+      expect(res.resolved, isTrue);
+      expect(res.accepted, isTrue);
+    },
+  );
 
   test('resuelto pero sin unit_id → no aceptable', () {
     final res = LabelResolution.fromJson(const {

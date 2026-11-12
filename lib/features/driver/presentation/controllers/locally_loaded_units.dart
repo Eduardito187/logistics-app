@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
 
-/// Bultos que el chofer escaneó para CARGAR en este teléfono durante la sesión,
-/// por envío (`shipmentId` → `unitId`s). Sin señal esos escaneos quedan en la
-/// cola offline y el backend todavía no los cuenta; con esto la pantalla de
-/// Carga muestra el conteo real apenas se vuelve de escanear.
+/// Productos que el chofer escaneó para CARGAR en este teléfono durante la
+/// sesión, por envío (`shipmentId` → `unitId`s). Sin señal esos escaneos
+/// quedan en la cola offline y el backend todavía no los cuenta; con esto la
+/// pantalla de Carga muestra el conteo real apenas se vuelve de escanear.
 ///
 /// Acotado: a lo sumo [maxShipments] envíos (se descartan los más viejos).
 class LocallyLoadedUnits extends Notifier<Map<String, Set<String>>> {
@@ -34,9 +34,10 @@ final locallyLoadedUnitsProvider =
       LocallyLoadedUnits.new,
     );
 
-/// Escaneos a mostrar de [delivery]: los que ya trae el backend más los bultos
-/// cargados en este teléfono que el backend todavía no tiene (sin duplicar:
-/// cuando el escaneo se sincroniza, ese bulto ya viene en `scans`).
+/// Escaneos a mostrar de [delivery]: los que ya trae el backend más los
+/// productos cargados en este teléfono que el backend todavía no tiene (sin
+/// duplicar: cuando el escaneo se sincroniza, ese producto ya viene en
+/// `scans`).
 int effectiveScanCount(Delivery delivery, Set<String>? localUnits) {
   if (localUnits == null || localUnits.isEmpty) return delivery.scans.length;
   final known = {for (final s in delivery.scans) s.unitId};

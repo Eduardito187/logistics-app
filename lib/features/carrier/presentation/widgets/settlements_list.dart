@@ -11,6 +11,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../controllers/carrier_controllers.dart';
+import 'corridor_format.dart';
 import 'settlement_format.dart';
 
 /// Lista de liquidaciones del transportista indicado, con pull-to-refresh.
@@ -82,7 +83,10 @@ class SettlementCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${settlement.corridorFrom} → ${settlement.corridorTo}',
+                  corridorPairLabel(
+                    settlement.corridorFrom,
+                    settlement.corridorTo,
+                  ),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),

@@ -109,7 +109,7 @@ void main() {
       me: _meWithDevice('actual'),
     );
 
-    expect(find.text('Este dispositivo'), findsOneWidget);
+    expect(find.text('Este teléfono'), findsOneWidget);
   });
 
   testWidgets('revocar: confirma y muestra "Dispositivo revocado."', (

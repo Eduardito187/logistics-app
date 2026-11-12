@@ -3,7 +3,12 @@ import 'dart:collection';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
+import '../../domain/effective_stop_status.dart';
 import '../widgets/route_points.dart';
+
+// Se reexporta para que todo el feature siga tomando el criterio de estado
+// efectivo desde este archivo (la regla vive en `domain`).
+export '../../domain/effective_stop_status.dart';
 
 /// Paradas que el chofer ya resolvió EN ESTE TELÉFONO (POD o entrega fallida
 /// registrados) aunque el backend todavía no lo sepa: sin señal el registro
@@ -62,15 +67,6 @@ final locallySettledStopsProvider =
     NotifierProvider<LocallySettledStops, Map<String, DriverRouteStopStatus>>(
       LocallySettledStops.new,
     );
-
-/// Estado a mostrar de [stop]: el del backend, salvo que siga "pendiente" y el
-/// chofer ya la haya resuelto en este teléfono.
-DriverRouteStopStatus effectiveStopStatus(
-  DriverRouteStop stop,
-  Map<String, DriverRouteStopStatus> settled,
-) => stop.status == DriverRouteStopStatus.pending
-    ? settled[stop.id] ?? stop.status
-    : stop.status;
 
 /// Parada en curso: la que marca el backend (si no se resolvió localmente) o,
 /// si no la marca, la primera pendiente en orden. `null` cuando ya no quedan

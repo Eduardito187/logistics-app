@@ -4,7 +4,7 @@ import 'package:logistics_app/core/printing/zpl_builder.dart';
 
 // La etiqueta reimpresa en terreno debe contener el QR firmado y el texto
 // legible, y abrir/cerrar el formato ZPL. No validamos cada coordenada,
-// solo que los datos del bulto estén presentes y el formato sea correcto.
+// solo que los datos del producto estén presentes y el formato sea correcto.
 
 LabelPayload _payload({String destination = 'NODE-7'}) {
   return LabelPayload(

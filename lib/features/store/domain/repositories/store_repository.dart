@@ -10,7 +10,7 @@ import '../../../../core/api/models/unit_tracking.dart';
 /// implementa; los casos de uso dependen de esta interfaz, no del cliente API.
 ///
 /// Solo expone las lecturas y las escrituras que requieren red (abrir y
-/// conciliar). Las escrituras de terreno (recibir bulto, POD, foto) se encolan
+/// conciliar). Las escrituras de terreno (recibir producto, POD, foto) se encolan
 /// offline desde sus casos de uso y no viven en el repositorio.
 abstract interface class StoreRepository {
   /// Nodos activos de la red (candidatos a tienda/nodo de recepción).
@@ -27,7 +27,7 @@ abstract interface class StoreRepository {
     required String nodeId,
   });
 
-  /// Bultos esperados de un envío (per-bulto).
+  /// Productos esperados de un envío (uno por unidad física).
   Future<List<UnitTracking>> getShipmentUnits(String shipmentId);
 
   /// Estado de la entrega de un envío con sus escaneos (solo lectura).

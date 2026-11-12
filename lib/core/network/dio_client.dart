@@ -17,9 +17,16 @@ import 'date_query_interceptor.dart';
 /// memoria. Además maneja el 401 global: un token expirado o revocado cierra
 /// la sesión y la UI vuelve al login vía `sessionProvider`.
 class _AuthInterceptor extends Interceptor {
-  _AuthInterceptor(this._ref);
+  _AuthInterceptor(this._ref, this._dio);
 
   final Ref _ref;
+
+  /// El mismo Dio al que pertenece: para reintentar UNA vez un request tras el
+  /// desfase del caché del backend (ver [_retryAfterFreshLogin]).
+  final Dio _dio;
+
+  /// Marca en `RequestOptions.extra` de un request ya reintentado (nunca dos).
+  static const String _bindingRetryKey = 'deviceBindingRetried';
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -36,7 +43,10 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     // Ante un 401 cerramos sesión de forma global, salvo en el propio flujo de
     // login: su 401 es "credenciales inválidas", no una sesión caída, y forzar
     // logout ahí no aporta y podría enmascarar el error al usuario.
@@ -56,18 +66,66 @@ class _AuthInterceptor extends Interceptor {
       // el desalojo de sesión por otro dispositivo: el 401 del token viejo no
       // afecta a una sesión distinta y vigente.
       if (_isCurrentSessionToken(err.requestOptions)) {
-        // `handleUnauthorized` es idempotente: si ya no hay sesión, no hace
-        // nada, así varios 401 en paralelo no reinician el cierre ni el aviso.
-        // El aviso depende del motivo que informa el backend (código RFC7807):
-        // desalojo por otro dispositivo, baja del dispositivo, o expiración.
-        _ref
-            .read(sessionProvider.notifier)
-            .handleUnauthorized(
-              reason: _unauthorizedReason(_errorCode(err.response?.data)),
-            );
+        final code = _errorCode(err.response?.data);
+        // Login recién hecho + "dispositivo de otro usuario/desalojado": es el
+        // desfase del caché del backend, no una baja real. Se reintenta.
+        if (await _retryAfterFreshLogin(err, code, handler)) return;
+        // Mientras se esperaba pudo cambiar la sesión: re-chequear el token.
+        if (_isCurrentSessionToken(err.requestOptions)) {
+          // `handleUnauthorized` es idempotente: si ya no hay sesión, no hace
+          // nada, así varios 401 en paralelo no reinician el cierre ni el
+          // aviso. El aviso depende del motivo que informa el backend (código
+          // RFC7807): desalojo por otro dispositivo, baja, o expiración.
+          _ref
+              .read(sessionProvider.notifier)
+              .handleUnauthorized(reason: _unauthorizedReason(code));
+        }
       }
     }
     handler.next(err);
+  }
+
+  /// Defensa ante el bug "inicié sesión con OTRO usuario en el mismo teléfono y
+  /// me sacó con 'dispositivo dado de baja'".
+  ///
+  /// El backend cachea ~30 s el estado del dispositivo (`user_id`, revocado) en
+  /// su guarda de la puerta `/app/*`. Al loguear un usuario distinto en el
+  /// mismo teléfono la fila del dispositivo pasa al usuario nuevo, pero si el
+  /// caché todavía dice "usuario anterior" (o "desalojado"), responde 401
+  /// `device_revoked` / `session_superseded` con el token RECIÉN emitido.
+  ///
+  /// Un token emitido hace segundos no puede estar dado de baja de verdad, así
+  /// que dentro de [deviceBindingGraceProvider] desde el login se espera a que
+  /// venza ese caché y se reintenta el request UNA vez. Si el reintento vuelve
+  /// a dar 401, el interceptor lo trata normal (cierre con aviso). Devuelve
+  /// `true` si se encargó del request (resuelto o error del reintento).
+  Future<bool> _retryAfterFreshLogin(
+    DioException err,
+    String? code,
+    ErrorInterceptorHandler handler,
+  ) async {
+    if (code != 'device_revoked' && code != 'session_superseded') return false;
+    final options = err.requestOptions;
+    if (options.extra[_bindingRetryKey] == true) return false;
+    final signedInAt = _ref.read(sessionProvider.notifier).freshSignInAt;
+    if (signedInAt == null) return false;
+    final grace = _ref.read(deviceBindingGraceProvider);
+    final elapsed = DateTime.now().difference(signedInAt);
+    if (elapsed.isNegative || elapsed >= grace) return false;
+
+    await Future<void>.delayed(grace - elapsed);
+    // Si la sesión cambió o se cerró mientras esperábamos, no se reintenta.
+    if (!_isCurrentSessionToken(options)) return false;
+
+    options.extra[_bindingRetryKey] = true;
+    try {
+      handler.resolve(await _dio.fetch<dynamic>(options));
+    } on DioException catch (e) {
+      // El 401 del reintento ya pasó por este interceptor (sin nuevo reintento)
+      // y cerró la sesión si correspondía; acá solo se propaga el error.
+      handler.next(e);
+    }
+    return true;
   }
 
   /// Código de problema (RFC7807) del body del error, o `null`.
@@ -118,6 +176,16 @@ class _AuthInterceptor extends Interceptor {
       path.contains('/auth/me');
 }
 
+/// Ventana tras un login real en la que un 401 `device_revoked` /
+/// `session_superseded` se considera desfase del caché del backend (TTL 30 s
+/// del snapshot del dispositivo) y se reintenta en vez de cerrar la sesión.
+/// 30 s del backend + margen. Overridable en tests.
+const Duration kDeviceBindingGrace = Duration(seconds: 35);
+
+final deviceBindingGraceProvider = Provider<Duration>(
+  (ref) => kDeviceBindingGrace,
+);
+
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
@@ -133,7 +201,7 @@ final dioProvider = Provider<Dio>((ref) {
   // socket entre escaneos y el próximo request pagaba TCP+TLS de nuevo.
   dio.httpClientAdapter = createApiHttpClientAdapter();
 
-  dio.interceptors.add(_AuthInterceptor(ref));
+  dio.interceptors.add(_AuthInterceptor(ref, dio));
   // Fechas de calendario del query como `Y-m-d` (el cliente generado manda ISO).
   dio.interceptors.add(const DateQueryInterceptor());
   // X-App-Version/X-App-Build en cada request + bloqueo por versión mínima.

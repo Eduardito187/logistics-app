@@ -56,11 +56,15 @@ void main() {
       });
     });
 
-    testWidgets('no reconocido / anulado / sin señal → null', (tester) async {
+    testWidgets('no reconocido / sin señal → null; permanente → se acepta', (
+      tester,
+    ) async {
+      // Etiquetas PERMANENTES: nada se anula. Si resuelve, vale (aunque llegue
+      // el flag legacy `revoked`).
       final resolver = FakeLabelResolver(
         resolutions: {
-          'LBL-ANULADA': const LabelResolution(
-            labelId: 'LBL-ANULADA',
+          'LBL-PERM': const LabelResolution(
+            labelId: 'LBL-PERM',
             resolved: true,
             unitId: 'U-7',
             revoked: true,
@@ -69,7 +73,7 @@ void main() {
       );
       await _withRef(tester, _overrides(resolver), (ref) async {
         expect(await verifyUnitLabel(ref, 'DESCONOCIDO'), isNull);
-        expect(await verifyUnitLabel(ref, 'LBL-ANULADA'), isNull);
+        expect(await verifyUnitLabel(ref, 'LBL-PERM'), 'U-7');
       });
       final offline = FakeLabelResolver(offline: true);
       await _withRef(tester, _overrides(offline), (ref) async {
@@ -111,21 +115,23 @@ void main() {
       });
     });
 
-    testWidgets('anulada → "Etiqueta anulada"', (tester) async {
+    testWidgets('permanente: si resuelve se acepta (no hay "anulada")', (
+      tester,
+    ) async {
       final resolver = FakeLabelResolver(
         resolutions: {
           'LBL-A': const LabelResolution(
             labelId: 'LBL-A',
             resolved: true,
             unitId: 'U-1',
-            revoked: true,
+            revoked: true, // flag legacy: NO debe rechazar
           ),
         },
       );
       await _withRef(tester, _overrides(resolver), (ref) async {
         final check = await verifyLabelQr(ref, 'LBL-A');
-        expect(check.label, isNull);
-        expect(check.error, 'Etiqueta anulada');
+        expect(check.error, isNull);
+        expect(check.label!.unitId, 'U-1');
       });
     });
 

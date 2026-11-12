@@ -93,7 +93,7 @@ void main() {
   });
 
   group('PrinterConfig — (de)serialización', () {
-    test('toJson contiene transport, address y label', () {
+    test('toJson contiene transport, address, label y el perfil', () {
       const config = PrinterConfig(
         transport: PrinterTransport.bluetooth,
         address: 'AA:BB:CC',
@@ -103,6 +103,8 @@ void main() {
         'transport': 'bluetooth',
         'address': 'AA:BB:CC',
         'label': 'ZQ630',
+        'language': 'zpl',
+        'protocol': 'raw9100',
       });
     });
 
@@ -220,6 +222,80 @@ void main() {
         label: 'L',
       );
       expect(base == Object(), isFalse);
+    });
+  });
+
+  group('PrinterConfig — perfil de impresión (zpl/office, raw9100/ipp)', () {
+    test('JSON viejo (sin perfil) se lee como Zebra ZPL por 9100', () {
+      final old = PrinterConfig.decode(
+        jsonEncode(<String, dynamic>{
+          'transport': 'wifi',
+          'address': '192.168.2.154:9100',
+          'label': 'WiFi 192.168.2.154',
+        }),
+      )!;
+      expect(old.language, PrinterLanguage.zpl);
+      expect(old.protocol, PrinterProtocol.raw9100);
+      expect(old.ippPath, isNull);
+      expect(old.ippPort, isNull);
+      expect(old.ippTls, isFalse);
+      expect(old.isOffice, isFalse);
+    });
+
+    test('valores desconocidos caen en zpl/raw9100', () {
+      final config = PrinterConfig.fromJson(const <String, dynamic>{
+        'transport': 'wifi',
+        'address': '1.1.1.1:9100',
+        'label': 'X',
+        'language': 'postscript',
+        'protocol': 'lpd',
+        'ippPort': 'no',
+      });
+      expect(config.language, PrinterLanguage.zpl);
+      expect(config.protocol, PrinterProtocol.raw9100);
+      expect(config.ippPort, isNull);
+    });
+
+    test('perfil de oficina IPP: ida y vuelta completa', () {
+      const config = PrinterConfig(
+        transport: PrinterTransport.wifi,
+        address: '192.168.2.154:9100',
+        label: 'RICOH IM 550',
+        language: PrinterLanguage.office,
+        protocol: PrinterProtocol.ipp,
+        ippPath: '/printer',
+        ippPort: 443,
+        ippTls: true,
+      );
+      final back = PrinterConfig.decode(config.encode());
+      expect(back, config);
+      expect(back!.isOffice, isTrue);
+      expect(config.toJson()['ippTls'], isTrue);
+    });
+
+    test('difieren si cambia el perfil', () {
+      const base = PrinterConfig(
+        transport: PrinterTransport.wifi,
+        address: '1.1.1.1:9100',
+        label: 'L',
+      );
+      expect(base == base.copyWith(language: PrinterLanguage.office), isFalse);
+      expect(base == base.copyWith(protocol: PrinterProtocol.ipp), isFalse);
+      expect(base == base.copyWith(ippPath: '/ipp'), isFalse);
+    });
+
+    test('copyWith puede volver ippPath/ippPort a null', () {
+      const config = PrinterConfig(
+        transport: PrinterTransport.wifi,
+        address: '1.1.1.1:9100',
+        label: 'L',
+        ippPath: '/ipp',
+        ippPort: 631,
+      );
+      final cleared = config.copyWith(ippPath: null, ippPort: null);
+      expect(cleared.ippPath, isNull);
+      expect(cleared.ippPort, isNull);
+      expect(config.copyWith().ippPath, '/ipp');
     });
   });
 }

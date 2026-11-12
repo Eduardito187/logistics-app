@@ -7,6 +7,7 @@ import '../../../../core/api/models/dispatch_destination.dart';
 import '../../../../core/api/models/dispatch_destination_type.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/type3.dart';
+import '../../../../core/device/max_brightness_while_visible.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/sharing/capture_boundary.dart';
@@ -194,13 +195,17 @@ class _LabelPreviewSheetState extends ConsumerState<_LabelPreviewSheet> {
                       // La etiqueta, como en papel: SIEMPRE blanca (no sigue el
                       // tema oscuro de la app; una etiqueta impresa es blanca).
                       // El boundary permite "fotografiarla" para compartir.
-                      RepaintBoundary(
-                        key: _labelBoundaryKey,
-                        child: _LabelCard(
-                          label: widget.label,
-                          productName: widget.productName,
-                          imageUrl: widget.imageUrl,
-                          destination: widget.destination,
+                      // Brillo al máximo mientras se ve: sin impresora, otro
+                      // escanea el QR desde esta pantalla (bajo el sol).
+                      MaxBrightnessWhileVisible(
+                        child: RepaintBoundary(
+                          key: _labelBoundaryKey,
+                          child: _LabelCard(
+                            label: widget.label,
+                            productName: widget.productName,
+                            imageUrl: widget.imageUrl,
+                            destination: widget.destination,
+                          ),
                         ),
                       ),
                     ],
@@ -252,23 +257,14 @@ class _LabelCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Pedido + línea.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Pedido ${label.orderNumber}',
-                style: const TextStyle(
-                  color: ink,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                ),
-              ),
-              Text(
-                'Línea ${label.lineNumber}',
-                style: const TextStyle(color: Color(0xFF555555), fontSize: 13),
-              ),
-            ],
+          // Pedido (sin número de línea: no aporta al operario).
+          Text(
+            'Pedido ${label.orderNumber}',
+            style: const TextStyle(
+              color: ink,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
           ),
           const Divider(height: 20, color: Color(0xFFDDDDDD)),
           Row(
@@ -308,7 +304,7 @@ class _LabelCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'SKU ${label.sku}',
+                      label.sku,
                       style: const TextStyle(
                         color: Color(0xFF555555),
                         fontSize: 14,

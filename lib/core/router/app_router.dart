@@ -16,6 +16,7 @@ import '../auth/session.dart';
 import '../monitoring/crash_navigation_observer.dart';
 import '../monitoring/crash_reporter.dart';
 import '../navigation/home_shell.dart';
+import '../navigation/keyboard_dismiss_observer.dart';
 
 abstract final class AppRoutes {
   static const login = '/login';
@@ -53,11 +54,21 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
   ref.onDispose(sessionChanges.dispose);
 
+  // Refresh proactivo del token: se engancha acá porque el router es lo único
+  // que vive desde el arranque hasta el final, con o sin sesión. No devuelve
+  // nada útil al router; solo mantiene vivo al notifier (que renueva el token
+  // antes de que venza, sin molestar al usuario).
+  ref.listen(tokenRefreshProvider, (_, _) {});
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.login,
-    // Rastro de navegación para Crashlytics (patrón de ruta, sin ids).
-    observers: [CrashNavigationObserver(ref.read(crashReporterProvider))],
+    // Rastro de navegación para Crashlytics (patrón de ruta, sin ids) y cierre
+    // del teclado al cambiar de ruta (que no quede abierto sobre otra pantalla).
+    observers: [
+      CrashNavigationObserver(ref.read(crashReporterProvider)),
+      KeyboardDismissObserver(),
+    ],
     refreshListenable: sessionChanges,
     redirect: (context, state) {
       final signedIn = ref.read(sessionProvider) != null;

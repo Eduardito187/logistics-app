@@ -23,13 +23,14 @@ dueño) y `docs/` (release, ios, firebase-setup, cliente-api, rendimiento-y-pant
   Si aparece con rutas `/home/...` es un **VS Code abierto en modo WSL** sobre la carpeta (corre `pub get`
   con el Flutter de WSL y pisa `.dart_tool`, `pubspec.lock` y `local.properties`): reescribirlo y correr
   `C:\flutter\bin\flutter.bat pub get`; pedir al usuario cerrar esa ventana.
-- El backend vive en WSL: `\\wsl.localhost\Ubuntu-22.04\dismac\logistics` (puede tener cambios sin push;
-  GitHub puede ir atrasado). Grep pesado ahí: correr DENTRO de WSL con un `.sh` (`wsl.exe -d Ubuntu-22.04 -- bash /mnt/c/...sh`).
+- El backend vigente vive en Windows: `C:\Users\ehhuallata\Documents\APP\logistics` (spec:
+  `openapi\v1.yaml`; puede tener cambios sin commit de la sesión del backend → SOLO LECTURA). El
+  `~/dismac/logistics` de WSL es una copia VIEJA (13-oct): no usarla. Staging corre en OCI (`ssh oci`).
 
 ```bash
 /c/flutter/bin/dart.bat format lib test integration_test
 /c/flutter/bin/flutter.bat analyze
-/c/flutter/bin/flutter.bat test                    # ~1978 tests
+/c/flutter/bin/flutter.bat test                    # ~2026 tests
 /c/flutter/bin/flutter.bat test integration_test -d flutter-tester   # e2e en host (6)
 make apk ENV=staging                               # release --split-per-abi (necesita android/key.properties)
 ```
@@ -130,7 +131,12 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 - **Push/monitoreo/versión:** `pushRegistrationProvider`, `pushTokenProvider`, `crashReporterProvider.breadcrumb('x.y')`
   (sin datos personales), `VersionGate` ya cableado en `app.dart`.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
-  `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`). Impresora: `labelPrinterProvider`.
+  `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`).
+- **Impresión:** `labelPrinterProvider.printLabel({zpl, render, jobName, to}) → PrintOutcome` (texto VERAZ; "aceptado"
+  nunca = éxito). **Zebra** = ZPL por Bluetooth/USB/WiFi-9100 (+`~HS`). **Oficina (Ricoh/láser)** = `OfficePrinter`:
+  Ricoh se detecta y va por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + código de
+  usuario en texto claro (`USERCODE`); el PCL5 crudo le sale EN BLANCO e IPP lo cancela. Búsqueda WiFi y credenciales
+  por impresora en `lib/core/printing/`. Ver `.claude/memory/wifi-printer-discovery.md`.
 - **Íconos:** NUNCA `Icon(Icons.x)`. Siempre `AnimatedAppIcon(AppIcon.x, state: …)` (`lib/core/icons/icons.dart`):
   `active` al seleccionar, `loading` mientras escanea/sincroniza/imprime/GPS, `success`/`error` como resultado.
   `EmptyState`, `StatTile`, `StatusPill` y `UserRole.icon` reciben `AppIcon`; `NavTab`/`RoleTask` llevan `appIcon`.
@@ -139,6 +145,14 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 
 ## Reglas
 
+0. **VOCABULARIO: "producto"/"productos", NUNCA "bulto"/"bultos".** Regla dura del dueño, aplica a todo lo que ve
+   el usuario Y a comentarios en español. Los identificadores en inglés (`unitId`, `UnitTile`, `unitsTotal`) NO se
+   tocan. Antes de cerrar: `grep -ri "bulto" lib/ test/` debe volver vacío (salvo `lib/core/api/**`, que viene del
+   OpenAPI). Si un reemplazo mecánico diría un absurdo, **reescribir la frase** (p. ej. "ítems del pedido" vs
+   "productos etiquetados"). Ver `.claude/memory/` → `vocabulario-producto-no-bulto`.
+0b. **PROHIBIDO mutar etiquetas**: nunca emitir, reimprimir, revocar ni re-emitir etiquetas (ni por API, ni por DB).
+   No es del agente. Si una etiqueta "no valida", el arreglo es del lado app o se le pide al dueño/backend.
+   Diagnóstico de solo lectura sí; mutaciones NO. Ver `no-label-mutations-rule`.
 1. UI en español; código en inglés; comentarios en español. Botones ≥ 48 dp (principales 56), pocos toques, legible al sol.
 2. Riverpod 3 (`Notifier`, `.value`), go_router, Clean Architecture + CQRS, **una clase por archivo**.
 3. Cliente API generado (regla #5): nunca DTOs a mano. Regenerar: `scripts/regen_api_client.ps1` (ver abajo).
@@ -168,6 +182,25 @@ con números. Si cambió Android/iOS: una build (`make apk`). Reportar qué no s
 y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutter analyze` → `flutter test <carpeta tocada>`
 → `flutter test`.
 
+## Antes de culpar al app: medir contra staging
+
+Varias veces lo que parecía un bug del app era del backend (o al revés). El método que funcionó, en orden:
+
+1. **`curl` directo al endpoint** con un usuario de prueba (`preparador@dismac.test`/`password123`, ver
+   `.claude/memory/dev-test-users-scenario`) y mirar el **código HTTP y el JSON crudo**. 200 con datos ⇒ el
+   problema es del app (parseo, filtro, estado); 4xx/5xx ⇒ es del backend.
+2. **Comparar el JSON real contra el modelo generado**: claves que faltan y están como `required` rompen la
+   pantalla entera sin decir por qué.
+3. **Logs del backend** cuando hay 5xx: `ssh oci` → `docker logs --since 10m logistics-staging-app-1`; y el
+   **access log** (`logistics-staging-web-1`) para ver el status real de cada request — ahí se ve, por ejemplo,
+   que el POD daba 422 y la subida de fotos 500.
+4. **`adb logcat`/`dumpsys`** para lo nativo (notificaciones, permisos, overlay): `dumpsys notification` muestra
+   el contenido exacto que se está posteando; `appops get <pkg> SYSTEM_ALERT_WINDOW` el permiso de overlay.
+5. Recién con el dato en la mano, decidir y **decirlo con el número** (status, cantidad de filas, campo que falta).
+
+No asumir ni "arreglar" a ciegas: en esta app un diagnóstico equivocado llevó a re-emitir etiquetas que estaban
+en uso (ver regla 0b).
+
 ## Gotchas ya vistos
 
 | Síntoma | Causa | Arreglo |
@@ -184,6 +217,7 @@ y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutt
 | VS Code: "Errors exist in your project" / clases `undefined` (`PendingPhoto`, `DriverRoute`) que sí existen | `.g.dart` desactualizado tras cambiar tabla Drift o modelo API | `dart run build_runner build`; si persiste, `Dart: Restart Analysis Server` |
 | APK no compila: `meta` no-nullable con constructor opcional en `*_response.dart` | Bug de swagger_parser (campo no-nullable, param opcional) | Parchar a `MetaSealed? meta` + regenerar; **fix de fondo en backend `openapi/`** (se pisa al regenerar) |
 | Gradle: `requires core library desugaring to be enabled` (`flutter_local_notifications`) | Plugin usa APIs java.time en minSdk bajo | `isCoreLibraryDesugaringEnabled = true` + dep `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:…")` en `android/app/build.gradle.kts` |
+| CI (runner Linux): `Install NDK (Side by side) 27.0.12077973 failed` → `Error on ZipFile unknown archive` / `Archive is not a ZIP archive`, build cae configurando `:app` | `android/app/build.gradle.kts` fija `ndkVersion` → AGP intenta auto-instalar el NDK y el zip que baja el instalador de Gradle sale corrupto (mirror responde algo que no es el zip) | Pre-instalar el NDK con `sdkmanager` ANTES del build, en cada job que compila Android (`.github/workflows/ci.yml`, jobs `build-apk` y `release-apk`): `yes \| "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.0.12077973"` con reintentos + `rm -rf $ANDROID_HOME/ndk/27.0.12077973` entre intentos. NO quitar el `ndkVersion` (está pineado a propósito) |
 | `'bash\r': No such file or directory`, exited 127, consola de play se cierra al segundo | VS Code usa `C:\flutter` (CRLF) en vez del Flutter de WSL | `.vscode/settings.json` → `dart.flutterSdkPath=~/sdk/flutter` + Reload Window |
 | Emulador aparece `unauthorized` | adb de WSL usa llave nueva que el emulador no confía | Copiar `adbkey{,.pub}` de Windows a `~/.android/` y reiniciar adb |
 | `flutter test`: `Failed to load dynamic library 'libsqlite3.so'` (tests Drift) | WSL/Linux solo trae `libsqlite3.so.0`, no el symlink sin versión | Ya resuelto: `test/flutter_test_config.dart` redirige la carga a `.so.0` (no borrarlo). No requiere root |
@@ -214,5 +248,19 @@ y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutt
 | `pumpAndSettle timed out` con un `AnimatedAppIcon` en pantalla | Ícono en `state: loading` (loop real) | `pump()` + `pump(Duration)`; el `ambient` del botón central respira solo 3 ciclos y se detiene |
 | `find.byIcon(Icons.x)` no encuentra nada | La app ya no usa `Icon` | `findAppIcon(AppIcon.x)` / `findAppIconInState(AppIcon.x, AppIconState.success)` |
 | `UnimplementedError` en `Matrix4.translate` | vector_math 2.1 no acepta `int` | `m.multiply(Matrix4.translationValues(x, y, 0))` |
-| El diff muestra el archivo entero tras un script/codemod | El repo mezcla CRLF y LF; el script normalizó | Leer/escribir en binario y conservar el fin de línea original de cada archivo |
+| El diff muestra el archivo entero tras un script/codemod, o `git` escupe "LF will be replaced by CRLF" | El repo mezclaba CRLF y LF y `core.autocrlf=true` convertía en Windows | **Ya resuelto:** `.gitattributes` fija LF para todo el texto (`.bat`/`.cmd` CRLF, binarios `binary`) y el repo se normalizó (`git add --renormalize .`); `core.autocrlf=false` local. Si reaparece, revisar que `.gitattributes` exista y `git config core.autocrlf` sea `false` |
 | WSL colgado, VS Code "Starting Linux Subsystem" | Varios `flutter test`/`analyze` en paralelo (agentes) | Matar `dart`/`flutter`; liberar RAM sin `wsl --shutdown`: `wsl -d Ubuntu-22.04 -u root -- sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"` |
+| "Tengo una tarea ejecutando hace N min" / un `flutter run` que nunca termina | `flutter run` queda ADJUNTO para siempre (hot-reload + logs del device); no es un cuelgue | `TaskStop <id>` + `pkill -9 -f 'flutter.*run -d <ip>'` (y su `frontend_server_aot`/`dds_aot`). NO matar `dart language-server`/`devtools`/`dart_tooling_daemon`/`flutter daemon --show-web-server-device`: son de la extensión de VS Code |
+| `SendMessage` al backend falla ("No agent named …") | La sesión del backend ROTA de nombre (logistics-8e → 4c → 1a → 68…) | Antes de mensajear, `ListAgents` y usar el nombre vigente; el pedido igual queda en `docs/backend-requests/` para quien lo tome |
+| Escanear una etiqueta Zebra/Code128 no la reconoce, o un test de escaneo rompe al leer un código plano | La etiqueta acepta QR (offline Ed25519) **y Code128** (el valor ES el `label_id` → se resuelve online por `/app/labels/{id}/resolve`); `kLabelScanFormats=[qrCode,code128]` | En lib ya está cableado (`label_resolver.dart`); en tests que escanean códigos PLANOS pasar `labelResolverProvider.overrideWithValue(FakeLabelResolver(echo:true))`. Detectar QR con `SignedLabel.fromQrContent` ANTES de resolver (un QR sin claves NO va a `/resolve`). Ver `.claude/memory/code128-label-scanning.md` |
+| Un agente dejó un archivo roto / se colgó sin terminar | Los agentes NO corren flutter; a veces dejan sintaxis rota o se cuelgan | Correr `getDiagnostics` sobre CADA archivo que tocó el agente apenas cierra; lo interconectado (mapa/GPS, pantallas compartidas) hacerlo el coordinador, no repartirlo. Ver `.claude/memory/parallel-agents-method.md` |
+| La app muestra **"Error del servidor"** (login u otra pantalla) | Ese texto sale de `api_exception.dart` SOLO con **HTTP ≥ 500**: es un 5xx REAL del backend, NO bug de la app | Aislar con `curl` directo al endpoint por rol (`curl -X POST http://137.131.245.152:8110/api/v1/app/auth/login -d '{"email":…,"password":"password123","device":{"fingerprint":"x","platform":"android","name":"x"}}'`). Si da 500, leer el log del contenedor (`ssh oci 'docker logs --since 10m logistics-staging-app-1'`). Caso real: 2FA cifrado con APP_KEY viejo → `DecryptException`. Ver `.claude/memory/staging-login-500-2fa-appkey.md` y `staging-server-access.md` |
+| Compilar **staging** en el teléfono por USB desde WSL ("no sale en la lista de dispositivos") | El picker de VS Code corre en WSL y NO ve el USB de Windows; usbipd se cae con el OnePlus | Build en WSL `flutter build apk --profile --dart-define-from-file=config/staging.json` + instalar con el **adb de Windows** (`adb.exe install -r -d`); staging es **profile** (release bloquea el http en claro). Fix del driver y pasos: `.claude/memory/device-run-usb-wsl.md` |
+| Impresora de oficina (Ricoh/láser) "dice que imprimió pero no sale nada" o "sale en blanco" | Ricoh exige autenticación de usuario: por IPP CANCELA todo (`job-canceled-at-device`); el PCL5 crudo le sale EN BLANCO (su driver usa PCLXL) | Imprimir por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + **código de usuario en texto claro** (`USERCODE`, el operario lo carga en avanzado). La detección ya manda Ricoh por 9100. Diagnosticar desde una PC en la red de la impresora (IPP solo-lectura + capturar la salida del driver con `PrintDocument.PrintToFile`). NUNCA credenciales reales en repo/tests. Ver `.claude/memory/wifi-printer-discovery.md` |
+| Una pantalla dice **"No se pudo cargar"** pero `curl` al endpoint devuelve **200** | El backend dejó de mandar un campo que el modelo GENERADO tiene como `required` → `fromJson` explota. Pasó con `EmittedLabel.revoked` cuando el backend quitó `revoked`: **ningún** pedido cargaba | Comparar las claves del JSON real contra los `required` del modelo. Parche: campo opcional con default (`this.x = false` + `json['x'] as bool? ?? false` en el `.g.dart`) + test de regresión con el JSON REAL. Se resuelve solo al regenerar |
+| La paginación "no avanza": `next_page`/`next_cursor` siempre vacíos | **`MetaSealed` es inservible**: (a) deserializa en camelCase (`perPage`, `nextCursor`) y el backend manda snake_case; (b) la PRIMERA variante solo exige `count`, así que **siempre gana** y las de paginación son inalcanzables | Paginar por **número de página** con heurística "página completa ⇒ puede haber más" (cuesta un GET vacío al final). Al regenerar con el `ListMeta` único del backend, sacar la heurística |
+| `GET /app/shipments?status=planned` → **422** "The selected status is invalid" | Los estados del backend son **MAYÚSCULAS** (`PLANNED`, `RECEIVED`, `IN_EXECUTION`) | Mandar el valor del enum (`ShipmentStatus` serializa bien); en `curl` a mano usar mayúsculas. El backend va a aceptar ambos |
+| Tarifa del transportista siempre **404** aunque el corredor "exista" | Los corredores de tarifas/liquidaciones son **slugs** (`cd-santa-cruz`), NO los códigos de nodo de `/app/network/nodes` (`CD-SCZ-01`) | Usar los slugs (salen de las liquidaciones del transportista). Ver `.claude/memory/carrier-corridor-slugs` |
+| `pumpAndSettle timed out` en un test de un pie/estado "cargando" | El spinner es una animación en loop (igual que `AnimatedAppIcon` en `loading`) | `pump()` + `pump(Duration(...))` en vez de `pumpAndSettle()` |
+| La herramienta Bash muere con `fatal error - add_item ... failed, errno 1` | Git Bash en esta PC se cae con heredocs/`python - <<EOF` y comandos largos encadenados | Reintentar el comando (suele pasar 1 de cada N) o, mejor, editar con las herramientas Edit/Write en vez de scripts por heredoc |
+| Emitir etiquetas tira **"Error del servidor"** (500) | Backend sin `LABELS_SIGNING_KEY` en el env (clave Ed25519 de firma) → `RuntimeException` en `LabelsServiceProvider`. NO es la app | Es backend/ops: `php artisan logistics:labels:keygen` + setear la env. La app verifica con las públicas de `GET /app/labels/public-keys` (no fija ninguna). Derivar por `docs/backend-requests/` + a la sesión del backend. Ver `.claude/memory/staging-login-500-2fa-appkey.md` |

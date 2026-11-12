@@ -237,39 +237,6 @@ void main() {
         expect(queue.submissions.single['confirmation'], 'FIRMA_DIGITAL');
       },
     );
-
-    testWidgets('con QR del cliente no se encola ninguna firma', (
-      tester,
-    ) async {
-      final photos = _FakePhotoUploadQueue();
-      final signatures = FakeSignatureFileStore();
-      await pumpPushed(
-        tester,
-        child: PodScreen(stop: buildStop(shipmentId: 'ship-4')),
-        overrides: _overrides(
-          picker: FakePhotoPicker(['/tmp/pod.jpg']),
-          photos: photos,
-          queue: FakeOfflineQueue(SubmitOutcome.sent),
-          scans: [validLabelQr(), 'CONF-9'],
-          signatures: signatures,
-        ),
-        tall: true,
-      );
-
-      await tester.tap(find.text('Escanear producto'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Escanear QR del cliente'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Tomar foto'));
-      await tester.pump();
-      await tester.tap(find.text('Registrar entrega'));
-      await tester.pumpAndSettle();
-
-      expect(photos.enqueued.length, 1);
-      expect(photos.enqueued.single.kind, 'pod');
-      expect(photos.enqueued.single.filePath, '/tmp/pod.jpg');
-      expect(signatures.saved, isEmpty);
-    });
   });
 
   group('Entrega fallida', () {

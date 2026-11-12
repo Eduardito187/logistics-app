@@ -13,7 +13,7 @@ import 'scan_outcome_pill.dart';
 final DateFormat _timeFormat = DateFormat.Hm();
 
 /// Cuerpo común de las pantallas de escaneo del transportista (recoger y
-/// entregar): lista perezosa de los bultos de la sesión y el botón grande de
+/// entregar): lista perezosa de los productos de la sesión y el botón grande de
 /// escanear fijo al pie. En tablets el contenido se centra con ancho máximo.
 class CarrierScanSessionView extends StatelessWidget {
   const CarrierScanSessionView({
@@ -56,7 +56,8 @@ class CarrierScanSessionView extends StatelessWidget {
                     ),
                   )
                 // ListView.builder: solo construye las filas visibles (una
-                // sesión puede tener cientos de bultos en un teléfono de 1 GB).
+                // sesión puede tener cientos de productos en un teléfono de
+                // 1 GB).
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     itemCount: records.length,
@@ -94,12 +95,12 @@ class CarrierScanSessionView extends StatelessWidget {
   }
 }
 
-/// Fila de un bulto escaneado en la sesión: SKU, id del bulto, hora y la
+/// Fila de un producto escaneado en la sesión: SKU, id del producto, hora y la
 /// pastilla del resultado del envío (lo encolado se ve como "Enviado").
 ///
 /// La pastilla va DEBAJO del texto (no a la derecha como en un ListTile): en un
 /// teléfono de 320 dp con letra 1.3x la pastilla a la derecha dejaba ~100 dp
-/// para el SKU y el id del bulto, que se partían en muchas líneas.
+/// para el SKU y el id del producto, que se partían en muchas líneas.
 class CarrierScanTile extends StatelessWidget {
   const CarrierScanTile({super.key, required this.record, required this.icon});
 

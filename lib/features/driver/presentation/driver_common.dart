@@ -10,8 +10,8 @@ import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
 
 /// Escanea una etiqueta de unidad y verifica su firma Ed25519 sin red.
-/// Devuelve el id del bulto (`unit_id`), o `null` si se canceló o la etiqueta
-/// no es válida. Avisa en pantalla cuando la firma no verifica.
+/// Devuelve el id del producto (`unit_id`), o `null` si se canceló o la
+/// etiqueta no es válida. Avisa en pantalla cuando la firma no verifica.
 ///
 /// [bottomClearance]: en pantallas con botón fijo al pie pasar
 /// `kBottomActionClearance` para que el aviso no tape el botón.
@@ -31,7 +31,7 @@ Future<String?> scanVerifiedUnit(
 
   final unitId = await verifyUnitLabel(ref, qr);
   if (unitId == null && context.mounted) {
-    // Avisa que la etiqueta no sirve (sin bulto).
+    // Avisa que la etiqueta no sirve (sin producto).
     showInfoSnack(
       context,
       'Etiqueta no válida',
@@ -41,10 +41,11 @@ Future<String?> scanVerifiedUnit(
   return unitId;
 }
 
-/// Verifica OFFLINE la etiqueta [qr] de un bulto (firma Ed25519, sin esperar
-/// red) y devuelve su `unit_id`, o `null` si no es una etiqueta válida. No
-/// muestra nada: lo usan el escaneo de un solo código ([scanVerifiedUnit]) y el
-/// continuo de carga/descarga (que avisa sobre la cámara).
+/// Verifica OFFLINE la etiqueta [qr] de un producto (firma Ed25519, sin
+/// esperar red) y devuelve su `unit_id`, o `null` si no es una etiqueta
+/// válida. No muestra nada: lo usan el escaneo de un solo código
+/// ([scanVerifiedUnit]) y el continuo de carga/descarga (que avisa sobre la
+/// cámara).
 Future<String?> verifyUnitLabel(WidgetRef ref, String qr) async {
   final scanner = ref.read(labelScannerProvider);
   if (scanner.canVerify) {

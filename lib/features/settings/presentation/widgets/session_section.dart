@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/biometric/biometric_auto_prompt_gate.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/network/api_exception.dart';
@@ -52,7 +55,11 @@ class SessionSection extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: session == null
                 ? null
-                : () => ref.read(sessionProvider.notifier).signOut(),
+                : () {
+                    // Salida a propósito: el login no lanza la biometría solo.
+                    ref.read(biometricAutoPromptGateProvider).suppress();
+                    unawaited(ref.read(sessionProvider.notifier).signOut());
+                  },
             icon: const AnimatedAppIcon(AppIcon.logout),
             label: const Text('Cerrar sesión'),
             style: OutlinedButton.styleFrom(

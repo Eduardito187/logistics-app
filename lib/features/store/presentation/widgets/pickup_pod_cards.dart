@@ -209,7 +209,7 @@ class PickupUnitsCard extends ConsumerWidget {
   final String shipmentId;
   final bool hasConfirmation;
 
-  /// IDs de bultos ya entregados en esta pantalla.
+  /// IDs de productos ya entregados en esta pantalla.
   final Set<String> delivered;
 
   static const String _title = '3 · Entregar productos';

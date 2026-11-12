@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/features/store/presentation/controllers/shelf_locations_notifier.dart';
 import 'package:logistics_app/features/store/presentation/widgets/reception_units_card.dart';
 
-// Lista de bultos del manifiesto: cada bulto con su estado (Recibido/Pendiente/
-// Sobrante) y la ubicación en estante cuando se capturó.
+// Lista de productos del manifiesto: cada producto con su estado
+// (Recibido/Pendiente/Sobrante) y la ubicación en estante cuando se capturó.
 
 Future<ProviderContainer> _pump(
   WidgetTester tester, {
@@ -51,7 +51,7 @@ void main() {
     expect(find.text('Recibido'), findsOneWidget);
     expect(find.text('Pendiente'), findsOneWidget);
     expect(find.text('Sobrante'), findsOneWidget);
-    // Un bulto por fila (2 esperados + 1 sobrante).
+    // Un producto por fila (2 esperados + 1 sobrante).
     expect(find.textContaining('Producto '), findsNWidgets(3));
   });
 

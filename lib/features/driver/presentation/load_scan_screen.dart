@@ -14,7 +14,7 @@ import 'scan_mode.dart';
 import 'scan_units_screen.dart';
 
 /// Carga del camión: lista de envíos asignados al vehículo; al elegir uno se
-/// escanean sus bultos para cargarlos (registro de carga offline).
+/// escanean sus productos para cargarlos (registro de carga offline).
 class LoadScanScreen extends ConsumerWidget {
   const LoadScanScreen({super.key});
 

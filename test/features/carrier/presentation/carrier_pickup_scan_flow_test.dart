@@ -15,7 +15,7 @@ import '../../../support/button_finders.dart';
 
 // Flujo RECOGER con escaneo CONTINUO: la cámara queda abierta y cada QR firmado
 // se verifica (Ed25519 offline), se registra en la cola y suma una fila; el
-// aviso de cada bulto va sobre la cámara y al terminar hay un resumen. La
+// aviso de cada producto va sobre la cámara y al terminar hay un resumen. La
 // cámara se reemplaza con FakeContinuousScanner (varios códigos por sesión).
 
 Future<void> _tapScan(WidgetTester tester) async {
@@ -66,7 +66,9 @@ void main() {
     expect(request.unitId, vectorUnitId);
     expect(request.lat, -16.5);
     expect(request.lng, -68.15);
-    expect(loadScan.labels.single, 'Recojo · $vectorSku');
+    // Prefijo propio del transportista: es lo que identifica la fila como
+    // nuestra en la cola del dispositivo al rearmar la tanda.
+    expect(loadScan.labels.single, 'Recojo transportista · $vectorSku');
     expect(scanner.messages, ['Producto recogido · $vectorSku']);
 
     expect(find.text('Sin productos recogidos'), findsNothing);
@@ -192,7 +194,7 @@ void main() {
       findAppIconInState(AppIcon.error, AppIconState.error),
       findsOneWidget,
     );
-    // Sin bultos registrados no hay resumen.
+    // Sin productos registrados no hay resumen.
     expect(find.byType(SnackBar), findsNothing);
   });
 

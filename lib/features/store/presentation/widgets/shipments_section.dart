@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/node.dart';
-import '../../../../core/api/models/shipment.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/adaptive_card_rows.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
-import '../controllers/store_controllers.dart';
+import '../controllers/store_shipments_notifier.dart';
+import '../controllers/store_shipments_state.dart';
+import 'load_more_footer.dart';
 import 'shipment_card.dart';
 
 /// Sección (sliver) con la lista de envíos que llegan al nodo seleccionado.
-/// Va dentro de un `CustomScrollView`: las tarjetas se construyen a demanda.
+/// Va dentro de un `CustomScrollView`: las tarjetas se construyen a demanda y
+/// el pie pide la página siguiente (el disparo por scroll lo pone la pantalla
+/// con `LoadMoreOnScroll`).
 class ShipmentsSection extends ConsumerWidget {
   const ShipmentsSection({super.key, required this.node});
 
@@ -19,8 +22,9 @@ class ShipmentsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shipmentsAsync = ref.watch(storeShipmentsProvider);
-    final shipments = shipmentsAsync.hasError ? null : shipmentsAsync.value;
+    final shipmentsAsync = ref.watch(storeShipmentsPagedProvider);
+    final paged = shipmentsAsync.hasError ? null : shipmentsAsync.value;
+    final shipments = paged?.shipments;
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
@@ -34,17 +38,32 @@ class ShipmentsSection extends ConsumerWidget {
             ),
           ),
         ),
-        if (shipments != null && shipments.isNotEmpty)
+        if (shipments != null && shipments.isNotEmpty) ...[
           SliverAdaptiveCardRows(
             itemCount: shipments.length,
             itemBuilder: (context, i) =>
                 ShipmentCard(shipment: shipments[i], node: node),
-          )
-        else
+          ),
+          if (paged!.hasMore)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: LoadMoreFooter(
+                  loading: paged.loadingMore,
+                  failed: paged.moreFailed,
+                  onLoadMore: () =>
+                      ref.read(storeShipmentsPagedProvider.notifier).loadMore(),
+                  label: 'Cargar más envíos',
+                  loadingLabel: 'Cargando más envíos…',
+                  failedLabel: 'No se pudieron cargar más envíos.',
+                ),
+              ),
+            ),
+        ] else
           SliverToBoxAdapter(
-            child: AsyncValueView<List<Shipment>>(
+            child: AsyncValueView<StoreShipmentsState>(
               value: shipmentsAsync,
-              onRetry: () => ref.invalidate(storeShipmentsProvider),
+              onRetry: () => ref.invalidate(storeShipmentsPagedProvider),
               data: (_) => const EmptyState(
                 icon: AppIcon.inbox,
                 title: 'Sin envíos',

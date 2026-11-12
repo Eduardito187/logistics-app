@@ -6,19 +6,16 @@ import '../../../core/auth/session.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
-import '../../../core/printing/label_printer.dart';
-import '../../../core/printing/printer_exception.dart';
-import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../driver/presentation/widgets/route_island_settings_tile.dart';
+import 'widgets/home_widgets_section.dart';
+import 'controllers/settings_controllers.dart';
 import 'widgets/field_use_section.dart';
 import 'widgets/printer_section.dart';
 import 'widgets/profile_section.dart';
 import 'widgets/session_section.dart';
 
-/// ZPL mínimo para verificar que la impresora responde.
-const _testZpl = '^XA^FO40,40^A0N,40,40^FDPrueba DisTrack^FS^XZ';
-
-/// Ajustes del dispositivo: impresora Zebra, sesión y acceso a sincronización.
+/// Ajustes del dispositivo: impresora (estado + asistente), sesión y cuenta.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -27,20 +24,12 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _printing = false;
-
-  Future<void> _printTest() async {
-    setState(() => _printing = true);
-    try {
-      await ref.read(labelPrinterProvider).printZpl(_testZpl);
-      if (mounted) showSuccessSnack(context, 'Etiqueta de prueba enviada.');
-    } on PrinterException catch (e) {
-      // PrinterException trae un mensaje en español listo para el operario; se
-      // muestra tal cual (app_snack.showErrorSnack sólo mapea ApiException).
-      if (mounted) showInfoSnack(context, e.message);
-    } finally {
-      if (mounted) setState(() => _printing = false);
-    }
+  /// Usuario sugerido para la impresora: parte local del email de la sesión.
+  String? _defaultPrinterUser() {
+    final email = ref.watch(appMeProvider).value?.user.email.trim() ?? '';
+    final at = email.indexOf('@');
+    if (at > 0) return email.substring(0, at);
+    return email.isEmpty ? null : email;
   }
 
   @override
@@ -63,10 +52,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 12),
             // La impresora solo le sirve a quien imprime etiquetas.
             if (session?.role.usesLabelPrinter ?? false) ...[
-              PrinterSection(printing: _printing, onPrintTest: _printTest),
+              PrinterSection(defaultUser: _defaultPrinterUser()),
               const SizedBox(height: 12),
             ],
             const FieldUseSection(),
+            const SizedBox(height: 12),
+            // Isla de ruta (chofer): se oculta sola para otros roles.
+            const RouteIslandSettingsTile(),
+            // Widgets de la pantalla de inicio (vacío sin sesión o sin widgets
+            // para el rol).
+            const HomeWidgetsSection(),
             const SizedBox(height: 12),
             SessionSection(session: session),
             const SizedBox(height: 12),

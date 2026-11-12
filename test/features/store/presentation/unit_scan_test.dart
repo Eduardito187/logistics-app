@@ -12,7 +12,7 @@ import 'package:logistics_app/features/store/presentation/unit_scan.dart';
 
 import '../../../support/fake_label_resolver.dart';
 
-// `resolveUnitScan` convierte un QR en un `UnitScan` (id del bulto + si la firma
+// `resolveUnitScan` convierte un QR en un `UnitScan` (id del producto + si la firma
 // se verificó offline). Nunca lanza: cae al texto crudo si el QR no es una
 // etiqueta firmada. Se apoya en el vector Ed25519 compartido con el backend.
 
@@ -166,13 +166,15 @@ void main() {
     );
   });
 
-  testWidgets('Code128 anulado (revoked): verified=false y revoked', (
+  testWidgets('etiqueta permanente: si resuelve se ACEPTA (no hay "anulada")', (
     tester,
   ) async {
+    // Etiquetas globales y permanentes: nada se anula. Aunque llegue el flag
+    // legacy `revoked`, una etiqueta que resuelve es aceptable (verified=null).
     final resolver = FakeLabelResolver(
       resolutions: {
-        'LBL-ANULADA': const LabelResolution(
-          labelId: 'LBL-ANULADA',
+        'LBL-X': const LabelResolution(
+          labelId: 'LBL-X',
           resolved: true,
           unitId: 'U-7',
           revoked: true,
@@ -186,10 +188,9 @@ void main() {
         labelResolverProvider.overrideWithValue(resolver),
       ],
       (ref) async {
-        final scan = await resolveUnitScan(ref, 'LBL-ANULADA');
-        expect(scan.verified, isFalse);
-        expect(scan.revoked, isTrue);
-        expect(unitScanShortError(scan), 'Etiqueta anulada');
+        final scan = await resolveUnitScan(ref, 'LBL-X');
+        expect(scan.unitId, 'U-7');
+        expect(scan.verified, isNull); // resuelto por servidor, aceptado
       },
     );
   });

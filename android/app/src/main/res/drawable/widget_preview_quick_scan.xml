@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vista previa del widget en el selector (Android 7–11; en 12+ se usa
+     previewLayout). Tarjeta negra de marca, círculo rojo e ícono blanco. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#141414" />
+            <corners android:radius="16dp" />
+            <size android:width="110dp" android:height="64dp" />
+        </shape>
+    </item>
+    <item
+        android:width="56dp"
+        android:height="56dp"
+        android:gravity="center">
+        <shape android:shape="oval">
+            <solid android:color="#E30613" />
+        </shape>
+    </item>
+    <item
+        android:width="32dp"
+        android:height="32dp"
+        android:drawable="@drawable/ic_widget_scan"
+        android:gravity="center" />
+</layer-list>

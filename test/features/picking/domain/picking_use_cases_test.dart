@@ -2,14 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/emit_label_line.dart';
 import 'package:logistics_app/core/api/models/emit_labels_request.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
-import 'package:logistics_app/core/api/models/reprint_labels_request.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/submit_outcome.dart';
 import 'package:logistics_app/features/picking/domain/usecases/emit_labels.dart';
 import 'package:logistics_app/features/picking/domain/usecases/get_order_labels.dart';
 import 'package:logistics_app/features/picking/domain/usecases/get_signed_zpl.dart';
 import 'package:logistics_app/features/picking/domain/usecases/record_preparation_scan.dart';
-import 'package:logistics_app/features/picking/domain/usecases/reprint_labels.dart';
+import 'package:logistics_app/features/picking/domain/usecases/assign_order_vehicle.dart';
 
 import '../picking_test_harness.dart';
 
@@ -82,41 +81,24 @@ void main() {
     });
   });
 
-  group('ReprintLabels (Command)', () {
-    test('reenvía número de pedido y cuerpo con motivo', () async {
-      final repo = FakePickingRepository(
-        onReprintLabels: (_, _) async => [buildLabel(revoked: false)],
-      );
-      final body = ReprintLabelsRequest(
-        origin: 'LPZ',
-        destination: 'SCZ',
-        lines: const [EmitLabelLine(sku: 'SKU1', name: 'Uno', quantity: 1)],
-        reason: 'etiqueta dañada',
-      );
+  group('AssignOrderVehicle (Command)', () {
+    test('ata el pedido al vehículo en el backend', () async {
+      final repo = FakePickingRepository();
 
-      await ReprintLabels(repo).call('EXT-2', body);
+      await AssignOrderVehicle(repo).call('EXT-2', 'veh-uuid-1');
 
-      expect(repo.reprintCalls, 1);
-      expect(repo.lastReprintOrder, 'EXT-2');
-      expect(repo.lastReprintBody?.reason, 'etiqueta dañada');
+      expect(repo.assignVehicleCalls, 1);
+      expect(repo.lastAssignedOrder, 'EXT-2');
+      expect(repo.lastAssignedVehicleId, 'veh-uuid-1');
     });
 
-    test('propaga ApiException', () async {
+    test('propaga ApiException (vehículo inválido → 422)', () async {
       final repo = FakePickingRepository(
-        onReprintLabels: (_, _) async =>
-            throw const ApiException(status: 422, title: 'Inválido'),
+        assignVehicleError: const ApiException(status: 422, title: 'Inválido'),
       );
 
       expect(
-        () => ReprintLabels(repo).call(
-          'EXT-2',
-          const ReprintLabelsRequest(
-            origin: 'a',
-            destination: 'b',
-            lines: [],
-            reason: 'x',
-          ),
-        ),
+        () => AssignOrderVehicle(repo).call('EXT-2', 'no-existe'),
         throwsA(isA<ApiException>()),
       );
     });

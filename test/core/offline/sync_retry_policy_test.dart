@@ -3,8 +3,13 @@ import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/failure_reporter.dart';
 import 'package:logistics_app/core/offline/sync_retry_policy.dart';
 
-ApiException _status(int s, {bool connection = false}) =>
-    ApiException(status: s, title: 't', isConnectionError: connection);
+ApiException _status(int s, {bool connection = false, Duration? retryAfter}) =>
+    ApiException(
+      status: s,
+      title: 't',
+      isConnectionError: connection,
+      retryAfter: retryAfter,
+    );
 
 void main() {
   group('SyncRetryPolicy.isTransient', () {
@@ -39,6 +44,76 @@ void main() {
     expect(SyncRetryPolicy.backoffFor(3), const Duration(seconds: 40));
     expect(SyncRetryPolicy.backoffFor(50), SyncRetryPolicy.backoffMax);
     expect(SyncRetryPolicy.backoffFor(-3), const Duration(seconds: 5));
+  });
+
+  group('SyncRetryPolicy.retryAfterOf', () {
+    test('solo se aprovecha en 429 y 503', () {
+      const espera = Duration(seconds: 90);
+      expect(
+        SyncRetryPolicy.retryAfterOf(_status(429, retryAfter: espera)),
+        espera,
+      );
+      expect(
+        SyncRetryPolicy.retryAfterOf(_status(503, retryAfter: espera)),
+        espera,
+      );
+      // En otros estados la cabecera no significa "esperá tanto".
+      expect(
+        SyncRetryPolicy.retryAfterOf(_status(500, retryAfter: espera)),
+        isNull,
+      );
+      expect(
+        SyncRetryPolicy.retryAfterOf(_status(404, retryAfter: espera)),
+        isNull,
+      );
+    });
+
+    test('sin cabecera devuelve null', () {
+      expect(SyncRetryPolicy.retryAfterOf(_status(429)), isNull);
+    });
+  });
+
+  group('SyncRetryPolicy.delayFor', () {
+    test('sin Retry-After manda el backoff', () {
+      expect(SyncRetryPolicy.delayFor(0), const Duration(seconds: 5));
+      expect(
+        SyncRetryPolicy.delayFor(2, retryAfter: null),
+        const Duration(seconds: 20),
+      );
+    });
+
+    test('con Retry-After mayor que el backoff, gana el servidor', () {
+      expect(
+        SyncRetryPolicy.delayFor(0, retryAfter: const Duration(seconds: 120)),
+        const Duration(seconds: 120),
+      );
+    });
+
+    test('con Retry-After menor que el backoff, gana el backoff', () {
+      // El servidor pide 1 s pero ya van 4 intentos (80 s): no se martilla.
+      expect(
+        SyncRetryPolicy.delayFor(4, retryAfter: const Duration(seconds: 1)),
+        const Duration(seconds: 80),
+      );
+    });
+
+    test('un Retry-After enorme se recorta al tope', () {
+      expect(
+        SyncRetryPolicy.delayFor(0, retryAfter: const Duration(hours: 6)),
+        SyncRetryPolicy.retryAfterMax,
+      );
+    });
+
+    test('un Retry-After no positivo se ignora', () {
+      expect(
+        SyncRetryPolicy.delayFor(1, retryAfter: Duration.zero),
+        const Duration(seconds: 10),
+      );
+      expect(
+        SyncRetryPolicy.delayFor(1, retryAfter: const Duration(seconds: -5)),
+        const Duration(seconds: 10),
+      );
+    });
   });
 
   group('OutboxFailure.toJson', () {

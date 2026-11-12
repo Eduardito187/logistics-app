@@ -25,11 +25,43 @@ void main() {
     });
   });
 
+  group('corridorNodeLabel', () {
+    test('traduce el prefijo del nodo y capitaliza el resto', () {
+      expect(corridorNodeLabel('cd-santa-cruz'), 'CD Santa Cruz');
+      expect(corridorNodeLabel('cd-la-paz'), 'CD La Paz');
+      expect(corridorNodeLabel('cd-cochabamba'), 'CD Cochabamba');
+      expect(corridorNodeLabel('store-scz-centro'), 'Tienda SCZ Centro');
+      expect(corridorNodeLabel('hub-el-alto'), 'Hub El Alto');
+    });
+
+    test('las siglas cortas quedan en mayúsculas', () {
+      expect(corridorNodeLabel('LPB'), 'LPB');
+      expect(corridorNodeLabel('scz'), 'SCZ');
+      expect(corridorNodeLabel('store_cbb_norte'), 'Tienda CBB Norte');
+    });
+
+    test('tolera claves raras sin romperse', () {
+      expect(corridorNodeLabel(''), '');
+      expect(corridorNodeLabel('   '), '');
+      expect(corridorNodeLabel('--'), '--');
+      expect(corridorNodeLabel('CD-SCZ-01'), 'CD SCZ 01');
+    });
+  });
+
+  group('corridorPairLabel', () {
+    test('arma el par legible con la flecha', () {
+      expect(
+        corridorPairLabel('cd-santa-cruz', 'store-scz-centro'),
+        'CD Santa Cruz → Tienda SCZ Centro',
+      );
+    });
+  });
+
   group('vehicleClassLabel', () {
     test('traduce cada clase de vehículo', () {
       expect(vehicleClassLabel(VehicleClass.trailer), 'Tráiler');
       expect(vehicleClassLabel(VehicleClass.truck), 'Camión');
-      expect(vehicleClassLabel(VehicleClass.thirdParty), 'Tercero');
+      expect(vehicleClassLabel(VehicleClass.thirdParty), 'Terceros');
       expect(vehicleClassLabel(VehicleClass.$unknown), 'Desconocido');
     });
   });

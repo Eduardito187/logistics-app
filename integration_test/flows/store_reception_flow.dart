@@ -5,19 +5,19 @@ import 'package:logistics_app/features/store/presentation/controllers/shelf_loca
 import '../support/e2e_app.dart';
 
 /// Flujo 3: tienda — recepción con la tienda fija del usuario → escanear
-/// bultos → conciliar.
+/// productos → conciliar.
 void storeReceptionFlowTests() {
   group('Tienda: recepción contra manifiesto', () {
     setUp(e2eSetUp);
 
     testWidgets('abre la recepción, rechaza una etiqueta adulterada, recibe '
-        'los bultos y concilia', (tester) async {
+        'los productos y concilia', (tester) async {
       final h = await pumpE2eApp(
         tester,
         scans: [
           tamperedLabelQr, // firma inválida: no debe contarse
-          validLabelQr, // bulto 1 (etiqueta firmada)
-          'BULTO-2', // bulto 2 (código sin firma)
+          validLabelQr, // producto 1 (etiqueta firmada)
+          'PROD-2', // producto 2 (código sin firma)
         ],
       );
 
@@ -72,7 +72,7 @@ void storeReceptionFlowTests() {
       expect(find.text('Ubicación en estante'), findsNothing);
       expect(find.text('0/2'), findsOneWidget);
 
-      // --- Bulto 1: firmado; se guarda su ubicación en estante ---------------
+      // --- Producto 1: firmado; se guarda su ubicación en estante ---------------
       await tapVisible(tester, scanButton());
       await pumpUntilFound(tester, find.text('Ubicación en estante'));
       await tester.enterText(
@@ -85,7 +85,7 @@ void storeReceptionFlowTests() {
       await tapVisible(tester, find.text('Guardar'));
       await pumpUntilFound(tester, find.text('1/2'));
 
-      // --- Bulto 2: código simple; se omite la ubicación --------------------
+      // --- Producto 2: código simple; se omite la ubicación --------------------
       await tapVisible(tester, scanButton());
       await pumpUntilFound(tester, find.text('Ubicación en estante'));
       await tapVisible(tester, find.text('Omitir'));
@@ -101,8 +101,8 @@ void storeReceptionFlowTests() {
       await pumpUntilFound(tester, find.text('Recepción conciliada'));
       expect(scanButton(), findsNothing);
 
-      // Backend: solo los dos bultos válidos, por la cola offline real.
-      expect(h.backend.receivedUnits, [vectorUnitId, 'BULTO-2']);
+      // Backend: solo los dos productos válidos, por la cola offline real.
+      expect(h.backend.receivedUnits, [vectorUnitId, 'PROD-2']);
       expect(
         h.backend.receiveRequests.map((r) => r.destinationNodeId).toSet(),
         {'node-store'},

@@ -3,21 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
-import 'package:logistics_app/features/store/presentation/controllers/store_controllers.dart';
+import 'package:logistics_app/features/store/presentation/controllers/store_shipments_notifier.dart';
 import 'package:logistics_app/features/store/presentation/widgets/shipment_card.dart';
 import 'package:logistics_app/features/store/presentation/widgets/shipments_section.dart';
 
 import '../../store_fixtures.dart';
+import '../../store_test_harness.dart';
 
-// Sección con los envíos que llegan al nodo: datos, vacío y error.
+// Sección con los envíos que llegan al nodo: datos, vacío, error y el pie de
+// scroll infinito.
 
-Future<void> _pump(
+Future<FakeStoreShipments> _pump(
   WidgetTester tester,
-  Future<List<Shipment>> Function() load,
-) async {
+  Future<List<Shipment>> Function() load, {
+  bool hasMore = false,
+}) async {
+  final notifier = FakeStoreShipments(load, hasMore: hasMore);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [storeShipmentsProvider.overrideWith((ref) => load())],
+      overrides: [storeShipmentsPagedProvider.overrideWith(() => notifier)],
       child: MaterialApp(
         home: Scaffold(
           body: CustomScrollView(
@@ -28,6 +32,7 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+  return notifier;
 }
 
 void main() {
@@ -53,5 +58,24 @@ void main() {
       () async => throw const ApiException(status: 503, title: 'Caído'),
     );
     expect(find.text('No se pudo cargar'), findsOneWidget);
+  });
+
+  testWidgets('sin más páginas no hay pie de "cargar más"', (tester) async {
+    await _pump(tester, () async => [shipment()]);
+    expect(find.text('Cargar más envíos'), findsNothing);
+  });
+
+  testWidgets('con más páginas el pie pide la siguiente', (tester) async {
+    final notifier = await _pump(
+      tester,
+      () async => [shipment()],
+      hasMore: true,
+    );
+
+    await tester.tap(find.text('Cargar más envíos'));
+    await tester.pump();
+
+    expect(notifier.loadMoreCalls, 1);
+    expect(find.text('Cargando más envíos…'), findsOneWidget);
   });
 }

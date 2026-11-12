@@ -1,3 +1,5 @@
+import 'dart:io' show HttpDate;
+
 import 'package:dio/dio.dart';
 
 import '../api/models/problem_code.dart';
@@ -14,6 +16,7 @@ class ApiException implements Exception {
     this.code,
     this.fieldErrors = const {},
     this.isConnectionError = false,
+    this.retryAfter,
   });
 
   /// Código HTTP, o 0 si ni siquiera hubo respuesta (sin red).
@@ -32,6 +35,12 @@ class ApiException implements Exception {
   /// `true` cuando la causa es falta de conexión/timeout, no un 4xx/5xx.
   /// En offline-first esto significa "reintentar luego", no "falló el dato".
   final bool isConnectionError;
+
+  /// Espera que PIDE el servidor en la cabecera `Retry-After` (429 y 503).
+  /// `null` si la respuesta no la trae o viene con un valor ilegible. Es un
+  /// mínimo: la cola offline la combina con su propio backoff y toma el mayor
+  /// (ver `SyncRetryPolicy.delayFor`).
+  final Duration? retryAfter;
 
   bool get isValidation =>
       status == 422 || code == ProblemCode.validationFailed;
@@ -132,7 +141,30 @@ class ApiException implements Exception {
       type: problem['type'] as String?,
       code: rawCode is String ? ProblemCode.fromJson(rawCode) : null,
       fieldErrors: fieldErrors,
+      retryAfter: parseRetryAfter(response.headers.value('retry-after')),
     );
+  }
+
+  /// Lee la cabecera `Retry-After` (RFC 9110): segundos ("120") o fecha HTTP
+  /// ("Wed, 21 Oct 2026 07:28:00 GMT"). Devuelve `null` si viene vacía, no se
+  /// entiende o ya pasó (una fecha en el pasado no justifica esperar).
+  /// [now] existe para los tests; en producción es el reloj del teléfono.
+  static Duration? parseRetryAfter(String? raw, {DateTime? now}) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    final seconds = int.tryParse(value);
+    if (seconds != null) {
+      // Un valor negativo o cero no es una espera: se ignora.
+      return seconds > 0 ? Duration(seconds: seconds) : null;
+    }
+    try {
+      final until = HttpDate.parse(value);
+      final delta = until.difference(now ?? DateTime.now());
+      return delta > Duration.zero ? delta : null;
+    } on Object {
+      // Cabecera ilegible (o reloj del teléfono desfasado): manda el backoff.
+      return null;
+    }
   }
 
   static String _titleForStatus(int? status) {

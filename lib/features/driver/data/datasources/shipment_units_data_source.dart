@@ -5,9 +5,9 @@ import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 
-/// Bultos esperados de un envío (`GET /app/tracking/shipments/{id}/units`).
+/// Productos esperados de un envío (`GET /app/tracking/shipments/{id}/units`).
 /// Lo usa el escaneo de carga/descarga para avisar al instante cuando se lee un
-/// bulto ajeno y para mostrar "Bulto N/M".
+/// producto ajeno y para mostrar "Producto N/M".
 class ShipmentUnitsDataSource {
   const ShipmentUnitsDataSource(this._ref);
 

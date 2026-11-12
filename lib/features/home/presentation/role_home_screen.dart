@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/biometric/biometric_auto_prompt_gate.dart';
 import '../../../core/auth/session.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/brand/distrack_app_bar_logo.dart';
@@ -96,7 +97,11 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
               IconButton(
                 tooltip: 'Cerrar sesión',
                 icon: const AnimatedAppIcon(AppIcon.logout),
-                onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+                onPressed: () {
+                  // Logout manual: el login no abre la huella/Face ID solo.
+                  ref.read(biometricAutoPromptGateProvider).suppress();
+                  ref.read(sessionProvider.notifier).signOut();
+                },
               ),
               SizedBox(width: sidePadding - 4),
             ],

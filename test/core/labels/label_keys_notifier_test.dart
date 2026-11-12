@@ -1,30 +1,31 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/clients/labels_client.dart';
-import 'package:logistics_app/core/api/logistics_api.dart';
-import 'package:logistics_app/core/api/models/get_app_labels_public_keys_response.dart';
-import 'package:logistics_app/core/api/models/public_key.dart';
-import 'package:logistics_app/core/api/models/public_key_bundle.dart';
 import 'package:logistics_app/core/labels/label_key_store.dart';
 import 'package:logistics_app/core/labels/label_keys_notifier.dart';
+import 'package:logistics_app/core/labels/labels_open_mode.dart';
 import 'package:logistics_app/core/network/dio_client.dart';
 
 // [LabelKeysNotifier] combina claves embebidas + caché + backend con ROTACIÓN
 // (unión, nunca reemplazo). En test las embebidas están vacías
 // (String.fromEnvironment sin dart-define); se prueban la carga desde caché y
-// el refresh contra el backend (éxito, vacío y error -> estado intacto).
+// el refresh contra el backend (éxito, vacío, error y la señal `open`).
+//
+// refresh() lee el bundle por Dio CRUDO (el campo `open` no está en el modelo
+// generado), así que se mockea un HttpClientAdapter.
 
-/// Caché de claves en memoria (se saltea flutter_secure_storage).
+/// Caché de claves + flag `open` en memoria (se saltea flutter_secure_storage).
 class _FakeKeyStore extends LabelKeyStore {
   _FakeKeyStore([Map<int, String>? seed])
     : data = {...?seed},
       super(const FlutterSecureStorage());
 
   Map<int, String> data;
+  bool open = false;
 
   @override
   Future<Map<int, String>> read() async => Map<int, String>.of(data);
@@ -33,43 +34,70 @@ class _FakeKeyStore extends LabelKeyStore {
   Future<void> write(Map<int, String> keys) async {
     data = Map<int, String>.of(keys);
   }
-}
-
-/// LabelsClient de prueba: getLabelPublicKeys devuelve el bundle inyectado o
-/// lanza el error inyectado.
-class _FakeLabelsClient implements LabelsClient {
-  _FakeLabelsClient({this.bundle, this.error});
-
-  final PublicKeyBundle? bundle;
-  final Object? error;
 
   @override
-  Future<GetAppLabelsPublicKeysResponse> getLabelPublicKeys() async {
-    if (error != null) throw error!;
-    return GetAppLabelsPublicKeysResponse(data: bundle!);
+  Future<bool> readOpen() async => open;
+
+  @override
+  Future<void> writeOpen(bool value) async {
+    open = value;
+  }
+}
+
+/// Adapter de Dio que devuelve un JSON canned para cualquier GET, o lanza un
+/// error de conexión.
+class _FakeAdapter implements HttpClientAdapter {
+  _FakeAdapter({this.json, this.fail = false});
+
+  final String? json;
+  final bool fail;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (fail) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      );
+    }
+    return ResponseBody.fromString(
+      json!,
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  void close({bool force = false}) {}
 }
 
-class _FakeApi extends LogisticsApi {
-  _FakeApi(this._labelsClient) : super(Dio());
-
-  final LabelsClient _labelsClient;
-
-  @override
-  LabelsClient get labels => _labelsClient;
+Dio _fakeDio({String? json, bool fail = false}) {
+  return Dio(BaseOptions(baseUrl: 'http://test.local/api/v1'))
+    ..httpClientAdapter = _FakeAdapter(json: json, fail: fail);
 }
 
-ProviderContainer _container({
-  required LabelKeyStore store,
-  LogisticsApi? api,
+/// Bundle JSON como lo manda `GET /app/labels/public-keys`.
+String _bundle({
+  bool? open,
+  int? activeKeyId,
+  List<Map<String, Object?>> keys = const [],
 }) {
+  final data = <String, Object?>{'active_key_id': activeKeyId, 'keys': keys};
+  if (open != null) data['open'] = open;
+  return jsonEncode({'data': data});
+}
+
+ProviderContainer _container({required LabelKeyStore store, Dio? dio}) {
   final container = ProviderContainer(
     overrides: [
       labelKeyStoreProvider.overrideWithValue(store),
-      if (api != null) logisticsApiProvider.overrideWithValue(api),
+      if (dio != null) dioProvider.overrideWithValue(dio),
     ],
   );
   addTearDown(container.dispose);
@@ -84,7 +112,6 @@ void main() {
       final container = _container(store: _FakeKeyStore());
 
       expect(container.read(labelKeysProvider), isEmpty);
-      // Deja correr el microtask de carga de caché: sigue vacío.
       await pumpEventQueue();
       expect(container.read(labelKeysProvider), isEmpty);
     });
@@ -94,7 +121,6 @@ void main() {
         store: _FakeKeyStore(<int, String>{1: _b64(1)}),
       );
 
-      // Dispara build() y el microtask _loadCache.
       container.read(labelKeysProvider);
       await pumpEventQueue();
 
@@ -118,22 +144,24 @@ void main() {
   group('LabelKeysNotifier.refresh', () {
     test('fusiona las claves del backend y las persiste en caché', () async {
       final store = _FakeKeyStore();
-      final api = _FakeApi(
-        _FakeLabelsClient(
-          bundle: PublicKeyBundle(
+      final container = _container(
+        store: store,
+        dio: _fakeDio(
+          json: _bundle(
+            open: false,
             activeKeyId: 2,
-            keys: [PublicKey(id: 2, publicKey: _b64(2))],
+            keys: [
+              {'id': 2, 'public_key': _b64(2)},
+            ],
           ),
         ),
       );
-      final container = _container(store: store, api: api);
 
       container.read(labelKeysProvider);
       await container.read(labelKeysProvider.notifier).refresh();
 
       final state = container.read(labelKeysProvider);
       expect(state[2], base64.decode(_b64(2)));
-      // Se persistió en la caché para el próximo arranque offline.
       expect(await store.read(), <int, String>{2: _b64(2)});
     });
 
@@ -141,15 +169,17 @@ void main() {
       'une sin reemplazar: conserva la clave previa y suma la nueva',
       () async {
         final store = _FakeKeyStore(<int, String>{1: _b64(1)});
-        final api = _FakeApi(
-          _FakeLabelsClient(
-            bundle: PublicKeyBundle(
+        final container = _container(
+          store: store,
+          dio: _fakeDio(
+            json: _bundle(
               activeKeyId: 2,
-              keys: [PublicKey(id: 2, publicKey: _b64(2))],
+              keys: [
+                {'id': 2, 'public_key': _b64(2)},
+              ],
             ),
           ),
         );
-        final container = _container(store: store, api: api);
 
         container.read(labelKeysProvider);
         await pumpEventQueue(); // carga la clave 1 de la caché
@@ -157,45 +187,77 @@ void main() {
 
         final state = container.read(labelKeysProvider);
         expect(state.keys, containsAll(<int>[1, 2]));
-        // La caché quedó con la unión de ambas.
         expect(await store.read(), <int, String>{1: _b64(1), 2: _b64(2)});
       },
     );
 
-    test('un bundle vacío no cambia el estado ni la caché', () async {
-      final store = _FakeKeyStore();
-      final api = _FakeApi(
-        _FakeLabelsClient(
-          bundle: const PublicKeyBundle(activeKeyId: null, keys: []),
-        ),
-      );
-      final container = _container(store: store, api: api);
+    test(
+      'un bundle sin claves no cambia las claves (pero puede fijar open)',
+      () async {
+        final store = _FakeKeyStore();
+        final container = _container(
+          store: store,
+          dio: _fakeDio(json: _bundle(open: true, activeKeyId: null)),
+        );
 
-      container.read(labelKeysProvider);
-      await container.read(labelKeysProvider.notifier).refresh();
+        container.read(labelKeysProvider);
+        await container.read(labelKeysProvider.notifier).refresh();
 
-      expect(container.read(labelKeysProvider), isEmpty);
-      expect(await store.read(), isEmpty);
-    });
+        expect(container.read(labelKeysProvider), isEmpty);
+        expect(await store.read(), isEmpty);
+        // Modo abierto SÍ se fija aunque no haya claves.
+        expect(container.read(labelsOpenModeProvider), isTrue);
+      },
+    );
 
     test('un error del backend se traga y deja el estado intacto', () async {
       final store = _FakeKeyStore(<int, String>{1: _b64(1)});
-      final api = _FakeApi(
-        _FakeLabelsClient(
-          error: DioException(
-            requestOptions: RequestOptions(path: '/app/labels/public-keys'),
-            type: DioExceptionType.connectionError,
-          ),
-        ),
-      );
-      final container = _container(store: store, api: api);
+      final container = _container(store: store, dio: _fakeDio(fail: true));
 
       container.read(labelKeysProvider);
       await pumpEventQueue(); // carga la clave 1 de la caché
       await container.read(labelKeysProvider.notifier).refresh();
 
-      // Sigue estando la clave cacheada; el error no la borró.
       expect(container.read(labelKeysProvider).keys, <int>[1]);
     });
+
+    test(
+      'open:true fija el modo abierto; open:false lo deja firmado',
+      () async {
+        final openContainer = _container(
+          store: _FakeKeyStore(),
+          dio: _fakeDio(json: _bundle(open: true, activeKeyId: 1, keys: [])),
+        );
+        await openContainer.read(labelKeysProvider.notifier).refresh();
+        expect(openContainer.read(labelsOpenModeProvider), isTrue);
+
+        final signedContainer = _container(
+          store: _FakeKeyStore(),
+          dio: _fakeDio(
+            json: _bundle(
+              open: false,
+              activeKeyId: 1,
+              keys: [
+                {'id': 1, 'public_key': _b64(1)},
+              ],
+            ),
+          ),
+        );
+        await signedContainer.read(labelKeysProvider.notifier).refresh();
+        expect(signedContainer.read(labelsOpenModeProvider), isFalse);
+      },
+    );
+
+    test(
+      'active_key_id:0 también se toma como modo abierto (defensivo)',
+      () async {
+        final container = _container(
+          store: _FakeKeyStore(),
+          dio: _fakeDio(json: _bundle(activeKeyId: 0, keys: [])),
+        );
+        await container.read(labelKeysProvider.notifier).refresh();
+        expect(container.read(labelsOpenModeProvider), isTrue);
+      },
+    );
   });
 }

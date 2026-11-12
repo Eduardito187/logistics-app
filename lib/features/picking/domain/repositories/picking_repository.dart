@@ -2,8 +2,7 @@ import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
 import '../../../../core/api/models/preparation_scan_request.dart';
-import '../../../../core/api/models/reprint_labels_request.dart';
-import '../../../../core/api/models/shipment.dart';
+import '../entities/shipment_page.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/offline/offline_queue.dart';
 
@@ -14,12 +13,16 @@ import '../../../../core/offline/offline_queue.dart';
 /// Las lecturas y las escrituras con red propagan [ApiException] ante un error;
 /// el registro de escaneo es offline-first y devuelve el [SubmitOutcome] de la cola.
 abstract interface class PickingRepository {
-  /// Pedidos recibidos del backend, filtrados en el servidor por [status]
-  /// cuando se indica. El conjunto "por preparar/cargar" lo arma el caso de uso
+  /// Pedidos del backend filtrados en el servidor por [status], paginados por
+  /// CURSOR. El conjunto "por preparar/cargar" lo arma el caso de uso
   /// [ListOrdersToPrepare] (un pedido por estado, en paralelo).
-  Future<List<Shipment>> listShipments({ShipmentStatus? status});
+  Future<ShipmentPage> listShipments({
+    ShipmentStatus? status,
+    int page,
+    int perPage,
+  });
 
-  /// Etiquetas (unidades/bultos) ya emitidas del pedido.
+  /// Etiquetas (productos) ya emitidas del pedido.
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber);
   Future<DispatchLinesResponse> getOrderDispatchLines(String orderNumber);
 
@@ -35,11 +38,9 @@ abstract interface class PickingRepository {
     EmitLabelsRequest body,
   );
 
-  /// Revoca las etiquetas vigentes y emite un lote nuevo (motivo obligatorio).
-  Future<List<EmittedLabel>> reprintLabels(
-    String orderNumber,
-    ReprintLabelsRequest body,
-  );
+  /// Ata el pedido al vehículo EN EL BACKEND (queda como parada de su ruta).
+  /// Sin esto la asignación es solo local y el pedido sigue en "por preparar".
+  Future<void> assignVehicle(String orderNumber, String vehicleId);
 
   /// ZPL firmado por el backend (todas las etiquetas concatenadas).
   Future<String> getSignedZpl(String orderNumber);

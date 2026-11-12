@@ -10,7 +10,8 @@
     1. Copia el spec del backend a <tmp>/openapi/v1.yaml.
     2. Preprocesa a v1.json (anchors YAML + parameters de nivel path) con la
        Python de Windows si tiene PyYAML; si no, con la Python de WSL.
-    3. pub get con tool/api_gen/pubspec.yaml + pubspec.lock y el Dart 3.13 de
+    3. pub get con tool/api_gen/pubspec.gen.yaml + .gen.lock (copiados como
+       pubspec.yaml/.lock en la carpeta temporal) y el Dart 3.13 de
        C:\sdk\flutter (retrofit_generator ^10.2.12 no corre en Dart 3.8).
     4. dart run swagger_parser + parche `MetaSealed?` + build_runner build.
     5. dart format con el Dart 3.8 del proyecto (C:\flutter), --language-version=3.8.
@@ -111,8 +112,10 @@ if ($winPy) {
 
 # --- 3. Paquete de generacion -------------------------------------------------
 Step "[3/7] pub get (Dart de $GenFlutter) con tool/api_gen"
-Copy-Item (Join-Path $AppRoot 'tool\api_gen\pubspec.yaml') $Work
-Copy-Item (Join-Path $AppRoot 'tool\api_gen\pubspec.lock') $Work
+# Guardados como pubspec.gen.* para que VS Code / flutter pub get no los tomen
+# como proyecto anidado (exigen Dart 3.13 y fallaban con el Dart 3.8 del app).
+Copy-Item (Join-Path $AppRoot 'tool\api_gen\pubspec.gen.yaml') (Join-Path $Work 'pubspec.yaml')
+Copy-Item (Join-Path $AppRoot 'tool\api_gen\pubspec.gen.lock') (Join-Path $Work 'pubspec.lock')
 Copy-Item (Join-Path $AppRoot 'swagger_parser.yaml') $Work
 Push-Location $Work
 try {

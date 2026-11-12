@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/vehicle_live.dart';
 import '../../../core/icons/icons.dart';
+import '../../../core/power/power_status_notifier.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/supervisor_controllers.dart';
@@ -15,6 +16,9 @@ import 'widgets/fleet_map.dart';
 /// útil para el supervisor y en un teléfono de 1 GB cada refresco cuesta red,
 /// JSON y un reagrupado del mapa.
 const Duration fleetRefreshInterval = Duration(seconds: 30);
+
+/// Intervalo con ahorro de energía o batería < 20 % (menos radio y CPU).
+const Duration fleetRefreshIntervalSaving = Duration(seconds: 90);
 
 /// Flota en vivo: mapa OSM con la última posición conocida de cada camión.
 ///
@@ -95,7 +99,11 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
     // suscripciones de una ruta tapada y las reanuda en el build, que corre
     // después de `didChangeDependencies`; invalidar antes se perdía.
     if (refreshNow) scheduleMicrotask(_refresh);
-    _timer = Timer.periodic(fleetRefreshInterval, (_) => _refresh());
+    final saving = ref.read(powerStatusProvider).shouldSaveEnergy;
+    _timer = Timer.periodic(
+      saving ? fleetRefreshIntervalSaving : fleetRefreshInterval,
+      (_) => _refresh(),
+    );
   }
 
   void _refresh() {

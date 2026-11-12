@@ -1,4 +1,6 @@
 import 'package:logistics_app/core/api/models/address_confidence_level.dart';
+import 'package:logistics_app/core/api/models/delivery.dart';
+import 'package:logistics_app/core/api/models/delivery_status.dart';
 import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
 import 'package:logistics_app/core/api/models/node_reception_view_corridor.dart';
@@ -6,6 +8,8 @@ import 'package:logistics_app/core/api/models/node_reception_view_status.dart';
 import 'package:logistics_app/core/api/models/node_status.dart';
 import 'package:logistics_app/core/api/models/node_type.dart';
 import 'package:logistics_app/core/api/models/order_source.dart';
+import 'package:logistics_app/core/api/models/scan_event.dart';
+import 'package:logistics_app/core/api/models/scan_type.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/shipment_line.dart';
 import 'package:logistics_app/core/api/models/shipment_status.dart';
@@ -77,7 +81,7 @@ Shipment shipment({
   ],
 );
 
-/// Bulto esperado del envío.
+/// Producto esperado del envío.
 UnitTracking unit({
   String unitId = 'unit-1',
   String shipmentId = 'ship-1',
@@ -96,6 +100,56 @@ UnitTracking unit({
   sku: sku,
   productName: productName,
   productImageUrl: productImageUrl,
+);
+
+/// Escaneo registrado en el servidor (insumo de [delivery]).
+ScanEvent scanEvent({
+  String id = 'scan-1',
+  String deliveryId = 'delivery-1',
+  String unitId = 'unit-1',
+  ScanType type = ScanType.proofOfDelivery,
+}) => ScanEvent(
+  id: id,
+  deliveryId: deliveryId,
+  type: type,
+  unitId: unitId,
+  lat: -17.78,
+  lng: -63.18,
+  deviceId: 'device-1',
+  userId: 'user-1',
+  occurredAt: DateTime(2026, 3, 1, 11),
+  idempotencyKey: 'idem-$id',
+);
+
+/// Estado de la entrega de un envío tal como lo devuelve el servidor.
+///
+/// [podUnitIds] son los productos con prueba de entrega ya confirmada (lo que
+/// siembra el POD de mostrador); [otherUnitIds] son escaneos de otro tipo
+/// (carga/descarga), que NO son entregas.
+Delivery delivery({
+  String id = 'delivery-1',
+  String shipmentId = 'ship-1',
+  DeliveryStatus status = DeliveryStatus.inTransit,
+  List<String> podUnitIds = const [],
+  List<String> otherUnitIds = const [],
+  String? podConfirmation,
+}) => Delivery(
+  id: id,
+  shipmentId: shipmentId,
+  vehicleId: 'vehicle-1',
+  status: status,
+  podConfirmation: podConfirmation,
+  scans: [
+    for (final unitId in podUnitIds)
+      scanEvent(id: 'pod-$unitId', deliveryId: id, unitId: unitId),
+    for (final unitId in otherUnitIds)
+      scanEvent(
+        id: 'load-$unitId',
+        deliveryId: id,
+        unitId: unitId,
+        type: ScanType.load,
+      ),
+  ],
 );
 
 /// Vista de una recepción en un nodo.

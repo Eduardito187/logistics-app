@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: b09fb122-a063-448a-9f98-c86b13899a10
-  modified: 2026-10-15T06:43:01.610Z
+  modified: 2026-11-11T16:46:27.933Z
 ---
 
 El 2026-10-14 se dejaron los entornos para correr con el botón de play:
@@ -14,6 +14,13 @@ El 2026-10-14 se dejaron los entornos para correr con el botón de play:
 - `.vscode/launch.json` → 3 configs (dev debug / staging profile / production release).
 - `.run/*.run.xml` → 3 run configurations de Android Studio/IntelliJ (versionadas).
 
-**Pendiente de confirmar con el dueño** (puse valores tentativos): URL de **staging** la inventé (`logistics-staging.dismac.com.bo`); production salió de un comentario (`logistics.dismac.com.bo`). `LABEL_PUBLIC_KEYS` de staging/prod quedaron **vacías** (dev tiene la del test vector) — sin esa clave la verificación Ed25519 de etiquetas no valida. Falta que pase URLs y claves reales.
+**STAGING real (nov 2026):** `http://137.131.245.152:8110/api/v1` (servidor OCI, ver
+[[staging-server-access]]). Es **http en claro** → como staging corre en modo **profile**, hubo que
+whitelistear esa IP en `android/app/src/{profile,debug}/res/xml/network_security_config.xml` (el
+`base-config` sigue bloqueando cleartext; solo esa IP + 10.0.2.2/localhost pasan). **Release NO sirve para
+staging** (bloquea todo cleartext). `LABEL_PUBLIC_KEYS` de staging sigue **vacía** → el QR Ed25519 no valida
+hasta que el backend pase la clave pública de staging (el Code128 online sí anda). Production sigue
+tentativa (`logistics.dismac.com.bo`).
 
-dev apunta a `http://10.0.2.2:8110/api/v1` (alias del host desde el emulador Android). Ver [[wsl-run-toolchain]].
+dev apunta a `http://localhost:8110/api/v1` (antes `10.0.2.2`; por `adb reverse`). Ver [[wsl-run-toolchain]],
+[[device-run-usb-wsl]].

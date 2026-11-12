@@ -13,5 +13,11 @@
 	     en el Keychain (flutter_secure_storage), no en archivos. Ver docs/ios.md. -->
 	<key>com.apple.developer.default-data-protection</key>
 	<string>NSFileProtectionCompleteUntilFirstUserAuthentication</string>
+	<!-- App Group compartido con la extensión RouteLiveActivity: la app escribe los datos
+	     de los widgets de inicio (WidgetsChannel.swift) y la extensión los lee. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.bo.com.dismac.logisticsApp</string>
+	</array>
 </dict>
 </plist>

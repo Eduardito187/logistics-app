@@ -7,9 +7,11 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../controllers/settings_controllers.dart';
+import 'biometric_login_tile.dart';
 
 /// Sección de perfil: nombre, correo, roles y dispositivo actual del usuario,
-/// con acción para refrescar (`/app/auth/me`).
+/// con acción para refrescar (`/app/auth/me`) y el switch de ingreso con
+/// biometría ([BiometricLoginTile]).
 class ProfileSection extends ConsumerWidget {
   const ProfileSection({super.key});
 
@@ -81,6 +83,9 @@ class ProfileSection extends ConsumerWidget {
                   ],
                 ),
               ],
+              // Ingreso con huella / rostro (solo si el teléfono lo tiene).
+              const SizedBox(height: 4),
+              BiometricLoginTile(email: me.user.email, name: me.user.name),
             ],
           );
         },

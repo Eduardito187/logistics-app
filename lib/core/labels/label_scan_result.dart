@@ -5,8 +5,8 @@ import 'signed_label.dart';
 /// Resultado de escanear una etiqueta.
 ///
 /// La verificación offline Ed25519 ([verification]) es SIEMPRE la principal y la
-/// que decide si el bulto se acepta en terreno; nunca espera a la red. El campo
-/// [backendVerification] es OPCIONAL (best-effort): trae el contrahecheo del
+/// que decide si el producto se acepta en terreno; nunca espera a la red. El
+/// campo [backendVerification] es OPCIONAL (best-effort): trae el contrahecheo del
 /// backend (`POST /app/labels/verify`) cuando había red y la llamada respondió;
 /// es `null` si no se consultó (vía [LabelScanner.scan]) o si falló/no hubo red.
 class LabelScanResult {

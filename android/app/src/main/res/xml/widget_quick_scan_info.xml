@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Proveedor del widget "quick_scan" (WidgetKind en el paquete widgets).
+     updatePeriodMillis="0": sin refresco periódico (batería); el widget solo
+     cambia cuando la app manda datos por el canal bo.com.dismac/widgets.
+     targetCellWidth/Height, previewLayout y description son de API 31+ y
+     las versiones anteriores los ignoran (usan minWidth/minHeight y
+     previewImage). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_quick_scan_description"
+    android:initialLayout="@layout/widget_quick_scan"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:previewImage="@drawable/widget_preview_quick_scan"
+    android:previewLayout="@layout/widget_quick_scan"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

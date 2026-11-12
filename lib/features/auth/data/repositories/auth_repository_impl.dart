@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/auth/device_fingerprint.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/auth/token_store.dart';
 import '../../../../core/auth/user_role.dart';
@@ -14,6 +15,8 @@ import '../../domain/entities/login_result.dart';
 import '../../domain/entities/two_factor_enrollment.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
+import '../datasources/device_identity_reader.dart';
+import '../device_display_name.dart';
 
 /// Implementación del contrato de autenticación. Arma el pedido con el
 /// dispositivo, delega la llamada en el data source y, con la respuesta, mapea
@@ -31,10 +34,22 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final deviceId = await _ref.read(tokenStoreProvider).deviceId();
+    final installId = await _ref.read(tokenStoreProvider).deviceId();
+    // Una huella por instalación + usuario (ver `userDeviceFingerprint`): evita
+    // el "dispositivo dado de baja" al cambiar de usuario en el mismo teléfono.
+    final fingerprint = await userDeviceFingerprint(
+      installId: installId,
+      email: email,
+    );
     // Token FCM si ya se registró; viaja como device.push_token para que el
     // backend sepa a dónde notificar.
     final pushToken = _ref.read(pushTokenProvider);
+    // Nombre del equipo (modelo real) para la pantalla "Mis dispositivos": con
+    // el nombre fijo de antes todas las filas decían lo mismo y no se podía
+    // saber cuál revocar. Degradación segura y obligatoria: el lector no lanza
+    // ni tarda (ver `DeviceIdentityReader`) y, por si acaso, acá se cae al
+    // nombre genérico. El login NUNCA se rompe por no conocer el teléfono.
+    final deviceName = await _deviceName();
 
     final LoginRaw raw;
     try {
@@ -43,9 +58,9 @@ class AuthRepositoryImpl implements AuthRepository {
           email: email.trim(),
           password: password,
           device: Device(
-            fingerprint: deviceId,
+            fingerprint: fingerprint,
             platform: defaultTargetPlatform.name,
-            name: 'App interna',
+            name: deviceName,
             pushToken: pushToken,
           ),
         ),
@@ -112,6 +127,21 @@ class AuthRepositoryImpl implements AuthRepository {
     password: password,
   );
 
+  /// Nombre del equipo para `device.name`. Blindado: cualquier error del lector
+  /// cae al nombre genérico en vez de tumbar el login.
+  ///
+  /// Cuando el backend despliegue `X-Device-Model` / `X-Device-Os-Version`, se
+  /// usa la MISMA `DeviceIdentity` (ya trae `model` y `osVersion`) para armar
+  /// esas cabeceras: no hay que averiguar nada de nuevo.
+  Future<String> _deviceName() async {
+    try {
+      final identity = await _ref.read(deviceIdentityReaderProvider).read();
+      return deviceDisplayName(identity);
+    } on Object {
+      return genericDeviceName;
+    }
+  }
+
   /// Con la respuesta de éxito (login sin 2FA o verificación OK): resuelve el
   /// rol operativo, abre la sesión, pide abilities (`/me`, degradación segura) y
   /// refresca las claves de etiquetas.
@@ -128,6 +158,9 @@ class AuthRepositoryImpl implements AuthRepository {
       userName: response.user.name,
       role: role,
       storeNode: response.user.node,
+      // Vencimiento real del token: deja que la renovación proactiva caiga
+      // justo antes de vencer (sin esto se usa la política por antigüedad).
+      expiresAt: response.expiresAt,
     );
 
     // Con el Bearer ya puesto, pedimos las abilities del token (`/app/auth/me`)

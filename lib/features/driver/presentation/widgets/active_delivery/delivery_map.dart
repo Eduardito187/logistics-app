@@ -219,7 +219,10 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   /// el camión se mueva o el usuario toque el mapa otra vez.
   bool _autoFocused = false;
 
-  /// Chequea cada segundo si corresponde auto-enfocar.
+  /// Chequeo puntual del auto-enfoque: se programa para el instante exacto en
+  /// que se cumple la ventana de quietud (antes era un `Timer.periodic` de 1 s
+  /// que despertaba la CPU todo el turno, incluso con la app en segundo plano
+  /// mientras el foreground service del GPS mantiene vivo el proceso).
   Timer? _idleTimer;
 
   /// El camión se considera "en marcha" si se movió más que esto entre fixes
@@ -261,10 +264,35 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       if (!mounted) return;
       _prefetchTimer = Timer(_prefetchDelay, _prefetchTiles);
     });
-    // Chequeo liviano (1 s) de "todo quieto" para el auto-enfoque. No toca el
-    // GPS ni la red: solo compara marcas de tiempo y mueve la cámara si procede.
-    _idleTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    // El chequeo de "todo quieto" se programa a demanda (ver
+    // [_scheduleAutoFocusCheck]) cuando el camión se detiene o el usuario
+    // suelta el mapa: cero timers mientras nada cambia.
+  }
+
+  /// Programa UN chequeo del auto-enfoque para cuando se cumpla la ventana de
+  /// quietud (camión quieto y mapa sin tocar [_idleWindow]). Si no aplica
+  /// (modo seguir, ya enfocado, sin posición), no deja ningún timer.
+  void _scheduleAutoFocusCheck() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    if (!mounted || _follow || _autoFocused) return;
+    final since = _truckStillSince;
+    if (since == null) return;
+    final stillReady = since.add(_idleWindow);
+    final gestureReady = _lastGestureAt.add(_idleWindow);
+    final readyAt = stillReady.isAfter(gestureReady)
+        ? stillReady
+        : gestureReady;
+    var wait = readyAt.difference(DateTime.now());
+    // Mínimo 1 s: si ya pasó la ventana pero algo lo impide (animación de
+    // cámara en curso), se reintenta sin girar en un bucle apretado.
+    if (wait < const Duration(seconds: 1)) wait = const Duration(seconds: 1);
+    _idleTimer = Timer(wait, () {
+      _idleTimer = null;
+      if (!mounted) return;
       _maybeAutoFocus();
+      // Bloqueado por una animación en curso: se reintenta una vez más tarde.
+      if (!_autoFocused && _mover.isAnimating) _scheduleAutoFocusCheck();
     });
   }
 
@@ -310,6 +338,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       _truckStillAt = driver;
       _truckStillSince = DateTime.now();
       _autoFocused = false;
+      _scheduleAutoFocusCheck();
     }
   }
 
@@ -348,6 +377,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   void _toggleFollow(LatLng? driver) {
     setState(() => _follow = !_follow);
     if (_follow && driver != null) _followTo(driver);
+    _scheduleAutoFocusCheck();
   }
 
   void _zoomBy(double delta) {
@@ -473,6 +503,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       _lastGestureAt = DateTime.now();
       _autoFocused = false;
       if (_follow) setState(() => _follow = false);
+      _scheduleAutoFocusCheck();
     },
   );
 

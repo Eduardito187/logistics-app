@@ -38,6 +38,13 @@ class _FakeLabelPrinter implements LabelPrinter {
   @override
   Future<void> printZpl(String zpl, {PrinterConfig? to}) async {}
   @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async => const PrintOutcome.sent();
+  @override
   Future<List<PrinterDevice>> discover(PrinterTransport transport) async =>
       const [];
   @override

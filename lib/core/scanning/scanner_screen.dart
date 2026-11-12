@@ -9,10 +9,12 @@ import '../icons/icons.dart';
 import 'code_scanner.dart';
 import 'scan_feedback.dart';
 import 'scan_frame.dart';
+import 'scanner_paused_overlay.dart';
 
 export 'code_scanner.dart';
 export 'continuous_scanner.dart';
 export 'scan_feedback.dart';
+export 'scanner_paused_overlay.dart';
 
 /// Pantalla de escaneo a pantalla completa (EAN o QR). Devuelve el primer
 /// código leído con `Navigator.pop`. Botones grandes, overlay de guía y
@@ -47,7 +49,7 @@ const Size kScannerCameraResolution = Size(1280, 720);
 const int kScannerDetectionTimeoutMs = 250;
 
 /// Formatos que se buscan cuando la pantalla no restringe ninguno: los que usa
-/// la operación (QR firmado de bultos, Code128 de etiquetas/andenes, EAN/UPC
+/// la operación (QR firmado de productos, Code128 de etiquetas/andenes, EAN/UPC
 /// de productos). Con la lista vacía ML Kit / Vision prueban los ~13 formatos
 /// en cada cuadro: más CPU y más lecturas falsas.
 const List<BarcodeFormat> kDefaultScannerFormats = [
@@ -58,7 +60,7 @@ const List<BarcodeFormat> kDefaultScannerFormats = [
   BarcodeFormat.upcA,
 ];
 
-/// Formatos aceptados al escanear una ETIQUETA de bulto: el QR firmado (se
+/// Formatos aceptados al escanear una ETIQUETA de producto: el QR firmado (se
 /// verifica offline Ed25519) o el Code128 cuyo valor ES el `label_id` (se
 /// resuelve online, ver `LabelResolver`). Un único punto para todos los
 /// escaneos de etiqueta (chofer, tienda, transportista). NO usar para el QR de
@@ -93,10 +95,65 @@ class _ScannerScreenState extends State<ScannerScreen>
   );
   bool _handled = false;
 
+  /// Pausa por inactividad (ver [kScannerIdlePause]): cámara abierta sin leer
+  /// nada = batería tirada.
+  Timer? _idleTimer;
+  bool _idlePaused = false;
+
+  /// Falla de arranque de la cámara (permiso, hardware, en uso por otra app):
+  /// se muestra un mensaje en vez de dejar la pantalla NEGRA y colgada.
+  Object? _startError;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startCamera();
+    _armIdle();
+  }
+
+  /// Arranca la cámara explícitamente (mobile_scanner 7.x no garantiza el
+  /// auto-start con un controller propio). Si falla, se guarda el error para
+  /// mostrar un aviso con "Reintentar" en vez de una pantalla negra.
+  Future<void> _startCamera() async {
+    try {
+      await _controller.start();
+      if (mounted && _startError != null) setState(() => _startError = null);
+    } on MobileScannerException catch (e) {
+      // El widget pudo auto-arrancar la cámara: "ya iniciada" / "iniciando" no
+      // son fallas, no se muestran como error.
+      if (e.errorCode == MobileScannerErrorCode.controllerAlreadyInitialized ||
+          e.errorCode == MobileScannerErrorCode.controllerInitializing) {
+        if (mounted && _startError != null) setState(() => _startError = null);
+        return;
+      }
+      if (mounted) setState(() => _startError = e);
+    } on Object catch (e) {
+      if (mounted) setState(() => _startError = e);
+    }
+  }
+
+  Future<void> _retryCamera() async {
+    setState(() => _startError = null);
+    await _startCamera();
+  }
+
+  void _armIdle() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(kScannerIdlePause, _pauseForIdle);
+  }
+
+  void _pauseForIdle() {
+    _idleTimer = null;
+    if (!mounted || _idlePaused || _handled) return;
+    setState(() => _idlePaused = true);
+    unawaited(_controller.stop().catchError((Object _) {}));
+  }
+
+  void _resumeFromIdle() {
+    setState(() => _idlePaused = false);
+    unawaited(_controller.start().catchError((Object _) {}));
+    _armIdle();
   }
 
   @override
@@ -107,7 +164,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (!_controller.value.isInitialized) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        if (!_handled) unawaited(_controller.start());
+        if (!_handled && !_idlePaused) unawaited(_startCamera());
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
@@ -120,6 +177,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _idleTimer?.cancel();
     unawaited(_controller.dispose());
     super.dispose();
   }
@@ -163,9 +221,87 @@ class _ScannerScreenState extends State<ScannerScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          MobileScanner(controller: _controller, onDetect: _onDetect),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            // Error EN VIVO de la cámara (se desconecta, otra app la toma): se
+            // muestra el aviso en vez de una pantalla negra.
+            errorBuilder: (context, error) =>
+                _CameraError(error: error, onRetry: _retryCamera),
+          ),
           ScanFrame(helper: widget.helper),
+          // Error de ARRANQUE (permiso denegado, cámara en uso): mismo aviso.
+          if (_startError != null)
+            Positioned.fill(
+              child: _CameraError(error: _startError!, onRetry: _retryCamera),
+            ),
+          if (_idlePaused)
+            Positioned.fill(
+              child: ScannerPausedOverlay(onResume: _resumeFromIdle),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+/// Aviso de cámara (arranque fallido o error en vivo): en vez de una pantalla
+/// NEGRA colgada, explica qué pasó y ofrece reintentar. Cerrar con la flecha.
+class _CameraError extends StatelessWidget {
+  const _CameraError({required this.error, required this.onRetry});
+
+  final Object error;
+  final Future<void> Function() onRetry;
+
+  /// Mensaje para el operario según el tipo de falla de mobile_scanner.
+  String get _message {
+    final e = error;
+    if (e is MobileScannerException) {
+      switch (e.errorCode) {
+        case MobileScannerErrorCode.permissionDenied:
+          return 'La app no tiene permiso de cámara. Habilitalo en los '
+              'ajustes del teléfono y volvé a intentar.';
+        case MobileScannerErrorCode.unsupported:
+          return 'Este teléfono no soporta la cámara para escanear.';
+        default:
+          return 'No se pudo abrir la cámara. Puede estar en uso por otra app. '
+              'Cerrá la otra app y reintentá.';
+      }
+    }
+    return 'No se pudo abrir la cámara. Reintentá.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AnimatedAppIcon(
+                AppIcon.error,
+                state: AppIconState.error,
+                size: 48,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => onRetry(),
+                icon: const AnimatedAppIcon(AppIcon.syncing),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../power/motion_budget.dart';
 import '../theme/app_colors.dart';
 import 'app_icon_specs.dart';
 import 'app_icon_state.dart';
@@ -180,20 +181,36 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
   /// Aplica la transición de estado [from] → [to].
   void _enter(AppIconState? from, AppIconState to, {bool onMount = false}) {
     // Loops: solo en loading (o respiración ambiente en reposo). Se cortan al instante.
+    // La respiración es decorativa: con ahorro de energía o batería baja
+    // ([MotionBudget]) no se reproduce (la GPU no dibuja nada extra).
     final wantsLoop =
         to == AppIconState.loading ||
         (widget.ambient &&
+            MotionBudget.decorativeAllowed &&
             (to == AppIconState.idle || to == AppIconState.active));
     if (!wantsLoop || _reduce) {
       // Default (sin loop): si el controller no existe, no hay nada que parar.
       _loop?.stop();
       _loop?.value = 0;
     } else if (to == AppIconState.loading) {
-      // Loading: loop real mientras dure el estado (escaneo, sync, impresión…).
+      // Loading: loop real mientras dure el estado (escaneo, sync, impresión…),
+      // pero con TOPE ([MotionBudget.loadingCyclesFor], ~30 s; ~5 s con ahorro
+      // de energía). Antes era `repeat()` infinito: un ícono que quedaba en
+      // `loading` (pedido colgado, pantalla olvidada abierta) mantenía la GPU
+      // dibujando a 60 fps sin fin. Pasado el tope queda quieto, en su estado.
+      //
+      // El tope va con `repeat(count:)` y NO re-lanzando `forward(from: 0)` en
+      // cada `completed`: re-lanzar descarta el sobrante del frame en que
+      // terminó la vuelta, así cada vuelta dura "ciclo + lo que tarde el
+      // frame". Con frames lentos (gama baja con jank, o pumps de 1 s en test)
+      // el tope de ~30 s se estiraba hasta ~2x. `repeat` calcula la fase con el
+      // tiempo TOTAL transcurrido: el tope es de reloj, no de frames.
       _breaths = 0;
       final loop = _ensureLoop();
-      loop.duration = _loopDuration(_spec.loop);
-      loop.repeat();
+      final cycle = _loopDuration(_spec.loop);
+      loop.duration = cycle;
+      loop.value = 0;
+      loop.repeat(count: MotionBudget.loadingCyclesFor(cycle));
     } else if (from == null || from == AppIconState.loading || from != to) {
       // Respiración del botón central: unas pocas veces al quedar en reposo y
       // después quieto (invita al toque sin gastar batería en gama baja ni
@@ -251,8 +268,10 @@ class _AnimatedAppIconState extends State<AnimatedAppIcon>
   int _breaths = 0;
 
   void _onLoopStatus(AnimationStatus status) {
-    if (status != AnimationStatus.completed ||
-        widget.state == AppIconState.loading) {
+    if (status != AnimationStatus.completed) return;
+    if (widget.state == AppIconState.loading) {
+      // `repeat(count:)` llegó al tope: quieto en la pose de reposo del loop.
+      _loop?.value = 0;
       return;
     }
     _breaths++;
