@@ -11,13 +11,14 @@ import 'package:logistics_app/features/store/presentation/controllers/locally_re
 import 'package:logistics_app/features/store/presentation/controllers/selected_store_node_notifier.dart';
 import 'package:logistics_app/features/store/presentation/controllers/shelf_locations_notifier.dart';
 import 'package:logistics_app/features/store/presentation/controllers/store_controllers.dart';
+import 'package:logistics_app/features/store/presentation/controllers/store_shipments_notifier.dart';
 
 import '../../store_fixtures.dart';
 import '../../store_test_harness.dart';
 
 // Controllers del feature Tienda: los tres Notifier en memoria y los
-// FutureProviders de lectura (nodos, envíos, recepción, bultos). Las lecturas se
-// prueban cableando un repositorio falso vía `storeRepositoryProvider`.
+// FutureProviders de lectura (nodos, envíos, recepción, productos). Las
+// lecturas se prueban cableando un repositorio falso vía `storeRepositoryProvider`.
 
 ProviderContainer _container(FakeStoreRepository repo) {
   final container = ProviderContainer(
@@ -166,12 +167,33 @@ void main() {
     });
   });
 
-  group('storeShipmentsProvider', () {
+  group('storeShipmentsPagedProvider', () {
     test('con datos devuelve los envíos', () async {
       final container = _container(
         FakeStoreRepository(onListShipments: () async => [shipment()]),
       );
-      expect(await container.read(storeShipmentsProvider.future), hasLength(1));
+      final state = await container.read(storeShipmentsPagedProvider.future);
+      expect(state.shipments, hasLength(1));
+      expect(state.hasMore, isFalse);
+    });
+
+    test('pide la primera página con el tamaño de página de la app', () async {
+      final repo = FakeStoreRepository(onListShipments: () async => []);
+      final container = _container(repo);
+
+      await container.read(storeShipmentsPagedProvider.future);
+
+      expect(repo.shipmentPageRequests, [
+        (page: 1, perPage: kStoreShipmentsPageSize),
+      ]);
+    });
+
+    test('la vista de solo lectura expone la lista acumulada', () async {
+      final container = _container(
+        FakeStoreRepository(onListShipments: () async => [shipment()]),
+      );
+      await container.read(storeShipmentsPagedProvider.future);
+      expect(container.read(storeShipmentsProvider).value, hasLength(1));
     });
 
     test(
@@ -189,7 +211,7 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        await container.read(storeShipmentsProvider.future);
+        await container.read(storeShipmentsPagedProvider.future);
 
         expect(repo.listShipmentsNodeIds, ['mi-nodo']);
       },
@@ -199,14 +221,14 @@ void main() {
       final repo = FakeStoreRepository();
       final container = _container(repo);
 
-      final a = container.listen(storeShipmentsProvider, (_, _) {});
-      final b = container.listen(storeShipmentsProvider, (_, _) {});
-      await container.read(storeShipmentsProvider.future);
+      final a = container.listen(storeShipmentsPagedProvider, (_, _) {});
+      final b = container.listen(storeShipmentsPagedProvider, (_, _) {});
+      await container.read(storeShipmentsPagedProvider.future);
       a.close();
       b.close();
       // Volver a la pantalla dentro del plazo de caché: sin otro GET.
       await Future<void>.delayed(Duration.zero);
-      await container.read(storeShipmentsProvider.future);
+      await container.read(storeShipmentsPagedProvider.future);
 
       expect(repo.listShipmentsNodeIds, hasLength(1));
     });
@@ -223,16 +245,16 @@ void main() {
         overrides: [storeRepositoryProvider.overrideWithValue(repo)],
       );
 
-      final sub = container.listen(storeShipmentsProvider, (_, _) {});
+      final sub = container.listen(storeShipmentsPagedProvider, (_, _) {});
       await tester.pump();
       sub.close();
       await tester.pump(const Duration(seconds: 59));
-      container.listen(storeShipmentsProvider, (_, _) {}).close();
+      container.listen(storeShipmentsPagedProvider, (_, _) {}).close();
       await tester.pump();
       expect(repo.listShipmentsNodeIds, hasLength(1));
 
       await tester.pump(const Duration(seconds: 61));
-      container.listen(storeShipmentsProvider, (_, _) {});
+      container.listen(storeShipmentsPagedProvider, (_, _) {});
       await tester.pump();
       expect(repo.listShipmentsNodeIds, hasLength(2));
       container.dispose();
@@ -275,7 +297,7 @@ void main() {
         ),
       );
       await expectLater(
-        container.read(storeShipmentsProvider.future),
+        container.read(storeShipmentsPagedProvider.future),
         throwsA(isA<ApiException>()),
       );
     });
@@ -334,6 +356,72 @@ void main() {
         FakeStoreRepository(onGetShipmentUnits: (_) async => <UnitTracking>[]),
       );
       expect(await container.read(shipmentUnitsProvider('x').future), isEmpty);
+    });
+  });
+
+  group('deliveredUnitIdsProvider', () {
+    test('devuelve los productos con prueba de entrega del servidor', () async {
+      final repo = FakeStoreRepository(
+        onGetDeliveryState: (shipmentId) async =>
+            delivery(shipmentId: shipmentId, podUnitIds: ['u1', 'u2']),
+      );
+      final container = _container(repo);
+
+      expect(await container.read(deliveredUnitIdsProvider('ship-1').future), {
+        'u1',
+        'u2',
+      });
+    });
+
+    test('ignora los escaneos que no son entrega (carga/descarga)', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              delivery(podUnitIds: ['u1'], otherUnitIds: ['u2', 'u3']),
+        ),
+      );
+
+      expect(await container.read(deliveredUnitIdsProvider('ship-1').future), {
+        'u1',
+      });
+    });
+
+    test('sin entregas confirmadas devuelve conjunto vacío', () async {
+      final container = _container(
+        FakeStoreRepository(onGetDeliveryState: (_) async => delivery()),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
+    });
+
+    // Offline-first (regla 4): la consulta es solo un refuerzo contra la doble
+    // entrega; si falla, el retiro no se traba con un error.
+    test('error de API: conjunto vacío, no propaga', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              throw const ApiException(status: 503, title: 'Caído'),
+        ),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
+    });
+
+    test('sin red (fallo de transporte): conjunto vacío', () async {
+      final container = _container(
+        FakeStoreRepository(
+          onGetDeliveryState: (_) async =>
+              throw Exception('SocketException: sin red'),
+        ),
+      );
+      expect(
+        await container.read(deliveredUnitIdsProvider('ship-1').future),
+        isEmpty,
+      );
     });
   });
 }

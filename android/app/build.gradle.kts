@@ -109,4 +109,7 @@ flutter {
 dependencies {
     // Desugaring de la librería core para flutter_local_notifications.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // BiometricPrompt (huella/rostro) para el inicio de sesión biométrico.
+    // 1.1.0 = última estable compatible con AGP 8.7 / compileSdk 36.
+    implementation("androidx.biometric:biometric:1.1.0")
 }

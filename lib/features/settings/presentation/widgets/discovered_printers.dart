@@ -5,9 +5,10 @@ import '../../../../core/icons/icons.dart';
 import '../../../../core/printing/printer_config.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../controllers/printer_controllers.dart';
+import 'printer_option_card.dart';
 
-/// Lista de impresoras descubiertas por Bluetooth (emparejadas) o USB
-/// (conectadas). Elegir una la guarda como impresora activa.
+/// Impresoras por Bluetooth (emparejadas) o USB (conectadas) como tarjetas
+/// grandes: tocar una la elige. Debajo, "Buscar de nuevo".
 class DiscoveredPrinters extends ConsumerWidget {
   const DiscoveredPrinters({
     required this.transport,
@@ -26,31 +27,16 @@ class DiscoveredPrinters extends ConsumerWidget {
     final selectedAddress = selected?.transport == transport
         ? selected?.address
         : null;
-    final emptyMessage = transport == PrinterTransport.bluetooth
+    final bluetooth = transport == PrinterTransport.bluetooth;
+    final emptyMessage = bluetooth
         ? 'No hay impresoras emparejadas. Emparejá la Zebra desde los ajustes '
-              'de Bluetooth del dispositivo.'
-        : 'No hay impresoras USB conectadas. Conectá la Zebra por cable y '
-              'aceptá el permiso de USB.';
+              'de Bluetooth del teléfono y tocá "Buscar de nuevo".'
+        : 'No hay impresoras USB conectadas. Conectá la Zebra por cable, '
+              'aceptá el permiso de USB y tocá "Buscar de nuevo".';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () =>
-                ref.invalidate(discoveredPrintersProvider(transport)),
-            // Gira mientras busca impresoras.
-            icon: AnimatedAppIcon(
-              AppIcon.refresh,
-              state: devices.isLoading
-                  ? AppIconState.loading
-                  : AppIconState.idle,
-              excludeFromSemantics: true,
-            ),
-            label: const Text('Buscar'),
-          ),
-        ),
         AsyncValueView<List<PrinterDevice>>(
           value: devices,
           onRetry: () => ref.invalidate(discoveredPrintersProvider(transport)),
@@ -61,21 +47,33 @@ class DiscoveredPrinters extends ConsumerWidget {
                 child: Text(emptyMessage),
               );
             }
-            // Flutter 3.32: sin RadioGroup, cada tile lleva groupValue/onChanged.
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final device in found)
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    value: device.address,
-                    groupValue: selectedAddress,
-                    onChanged: (_) => onSelect(device.toConfig()),
-                    title: Text(device.name),
-                    subtitle: Text(device.address),
+                  PrinterOptionCard(
+                    icon: bluetooth ? AppIcon.bluetooth : AppIcon.usb,
+                    title: device.name,
+                    subtitle: device.address,
+                    selected: device.address == selectedAddress,
+                    onTap: () => onSelect(device.toConfig()),
                   ),
               ],
             );
           },
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56)),
+          onPressed: () =>
+              ref.invalidate(discoveredPrintersProvider(transport)),
+          // Gira mientras busca impresoras.
+          icon: AnimatedAppIcon(
+            AppIcon.refresh,
+            state: devices.isLoading ? AppIconState.loading : AppIconState.idle,
+            excludeFromSemantics: true,
+          ),
+          label: const Text('Buscar de nuevo'),
         ),
       ],
     );

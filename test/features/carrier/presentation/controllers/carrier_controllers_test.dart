@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/carrier.dart';
+import 'package:logistics_app/core/api/models/corridor_type.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/carrier/data/repositories/carrier_repository_impl.dart';
+import 'package:logistics_app/features/carrier/domain/models/carrier_corridor.dart';
 import 'package:logistics_app/features/carrier/presentation/controllers/carrier_controllers.dart';
 
 import '../../carrier_fixtures.dart';
@@ -90,6 +92,66 @@ void main() {
       );
       await expectLater(
         container.read(carrierSettlementsProvider('c1').future),
+        throwsA(isA<ApiException>()),
+      );
+    });
+  });
+
+  group('carrierCorridorsProvider', () {
+    test('deriva los corredores únicos de las liquidaciones', () async {
+      final container = _container(
+        FakeCarrierRepository(
+          onListSettlements: (_) async => [
+            settlement(
+              corridorFrom: 'cd-santa-cruz',
+              corridorTo: 'store-scz-centro',
+              corridorType: CorridorType.cdToStore,
+            ),
+            // Repetida: el mismo corredor no se lista dos veces.
+            settlement(
+              id: 's2',
+              corridorFrom: 'cd-santa-cruz',
+              corridorTo: 'store-scz-centro',
+              corridorType: CorridorType.cdToStore,
+            ),
+            settlement(id: 's3'),
+          ],
+        ),
+      );
+
+      final corridors = await container.read(
+        carrierCorridorsProvider('c1').future,
+      );
+      expect(corridors, hasLength(2));
+      expect(
+        corridors,
+        contains(
+          const CarrierCorridor(
+            from: 'cd-santa-cruz',
+            to: 'store-scz-centro',
+            type: CorridorType.cdToStore,
+          ),
+        ),
+      );
+    });
+
+    test('sin liquidaciones no hay corredores', () async {
+      final container = _container(FakeCarrierRepository());
+      expect(
+        await container.read(carrierCorridorsProvider('c1').future),
+        isEmpty,
+      );
+    });
+
+    test('propaga el error de API (la pantalla degrada a manual)', () async {
+      final container = _container(
+        FakeCarrierRepository(
+          onListSettlements: (_) async =>
+              throw const ApiException(status: 503, title: 'Caído'),
+        ),
+      );
+      await expectLater(
+        container.read(carrierCorridorsProvider('c1').future),
         throwsA(isA<ApiException>()),
       );
     });

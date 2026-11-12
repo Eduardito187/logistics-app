@@ -114,7 +114,7 @@ Future<_Harness> _pump(
     storeNodesProvider.overrideWith((ref) async => [_node, originNode()]),
     continuousScannerProvider.overrideWithValue(h.scanner.call),
     labelScannerProvider.overrideWithValue(labelScanner ?? LabelScanner(null)),
-    // El código escaneado representa al bulto (Code128): se resuelve con su
+    // El código escaneado representa al producto (Code128): se resuelve con su
     // propio valor como unit_id (el backend real lo mapea; acá se echo-ea).
     labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
     receiveUnitAtNodeProvider.overrideWith(

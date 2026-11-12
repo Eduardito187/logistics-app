@@ -1,4 +1,5 @@
 import '../../../../core/api/export.dart';
+import '../effective_stop_status.dart';
 
 /// Métricas del día del chofer calculadas en la app a partir de la ruta del
 /// día (`DriverRoute`). Las KPIs "oficiales" del backend se piden aparte.
@@ -15,17 +16,35 @@ class MyDayStats {
 
   /// Arma las métricas desde la ruta. El total sale de las paradas listadas
   /// (o de `totalStops` si la lista viene vacía).
-  factory MyDayStats.fromRoute(DriverRoute route) {
+  ///
+  /// [locallySettled] son las paradas que el chofer ya cerró EN ESTE TELÉFONO y
+  /// el backend todavía no sabe (sin señal quedan en la cola offline). Se cuenta
+  /// el estado EFECTIVO ([effectiveStopStatus]), el mismo criterio que la lista
+  /// de paradas y la entrega en curso: si no, "Mi día" seguiría contando como
+  /// pendiente una parada que el resto de la app ya dio por cerrada. Con señal
+  /// el mapa viene vacío y el resultado es el del backend, igual que antes.
+  factory MyDayStats.fromRoute(
+    DriverRoute route, [
+    Map<String, DriverRouteStopStatus> locallySettled = const {},
+  ]) {
     final stops = route.stops;
     final total = stops.isEmpty ? route.totalStops : stops.length;
-    final delivered = stops
-        .where((s) => s.status == DriverRouteStopStatus.completed)
-        .length;
-    final failed = stops
-        .where((s) => s.status == DriverRouteStopStatus.failed)
-        .length;
+    var delivered = 0;
+    var failed = 0;
+    for (final stop in stops) {
+      switch (effectiveStopStatus(stop, locallySettled)) {
+        case DriverRouteStopStatus.completed:
+          delivered++;
+        case DriverRouteStopStatus.failed:
+          failed++;
+        default:
+          break;
+      }
+    }
     final pending = (total - delivered - failed).clamp(0, total);
 
+    // Horarios y promedio: solo con los cierres que YA confirmó el backend
+    // (una parada resuelta sin señal todavía no tiene hora de cierre).
     final settled =
         stops
             .map((s) => s.settledAt)

@@ -7,7 +7,7 @@ import '../../../core/labels/signed_label.dart';
 import '../../../core/labels/verification_result.dart';
 import '../../../core/location/location_service.dart';
 
-/// Resultado de resolver una etiqueta escaneada a un bulto.
+/// Resultado de resolver una etiqueta escaneada a un producto.
 ///
 /// Dos simbologías: el **QR** firmado (se verifica offline Ed25519; [verified] =
 /// resultado de la firma) y el **Code128** cuyo valor ES el `label_id` (se
@@ -46,8 +46,8 @@ class UnitScan {
   final bool unreachable;
 }
 
-/// Resuelve una etiqueta escaneada a un bulto. QR firmado → verificación offline
-/// (sin red); Code128 (`label_id` sin firma) → resolución ONLINE contra el
+/// Resuelve una etiqueta escaneada a un producto. QR firmado → verificación
+/// offline (sin red); Code128 (`label_id` sin firma) → resolución ONLINE contra el
 /// backend. Nunca lanza. Un Code128 que el backend no reconoce, anula o que no
 /// se pudo consultar (sin señal) vuelve con `verified == false` (se rechaza).
 Future<UnitScan> resolveUnitScan(WidgetRef ref, String qr) async {

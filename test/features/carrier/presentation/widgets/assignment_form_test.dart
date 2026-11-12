@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/corridor_type.dart';
+import 'package:logistics_app/core/api/models/settlement.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/carrier/data/repositories/carrier_repository_impl.dart';
+import 'package:logistics_app/features/carrier/presentation/controllers/carrier_controllers.dart';
 import 'package:logistics_app/features/carrier/presentation/widgets/assignment_form.dart';
 import 'package:logistics_app/features/carrier/presentation/widgets/assignment_result.dart';
 
@@ -10,38 +13,38 @@ import '../../carrier_fixtures.dart';
 import '../../carrier_test_harness.dart';
 import '../../../../support/button_finders.dart';
 
-// Asignación por volumen: validación del formulario (corredor + volumen > 0),
-// resultado con tarifa, resultado sin tarifa y error de API.
+// Asignación por volumen: corredor elegido de la lista del transportista (o
+// escrito si todavía no tiene liquidaciones) + volumen > 0.
 
-Future<void> _pump(WidgetTester tester, FakeCarrierRepository repo) async {
+Future<List<Settlement>> _oneCorridor(String _) async => [
+  settlement(
+    corridorFrom: 'cd-santa-cruz',
+    corridorTo: 'store-scz-centro',
+    corridorType: CorridorType.cdToStore,
+  ),
+];
+
+Future<void> _pump(
+  WidgetTester tester,
+  FakeCarrierRepository repo, {
+  bool withCarrier = false,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [carrierRepositoryProvider.overrideWithValue(repo)],
       child: const MaterialApp(home: Scaffold(body: AssignmentForm())),
     ),
   );
+  if (withCarrier) {
+    ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    ).read(selectedCarrierProvider.notifier).select(carrier());
+  }
   await tester.pumpAndSettle();
 }
 
-Future<void> _fill(
-  WidgetTester tester, {
-  String from = 'LPB',
-  String to = 'SCZ',
-  String volume = '12.5',
-}) async {
-  await tester.enterText(
-    find.widgetWithText(TextField, 'Origen (código)'),
-    from,
-  );
-  await tester.enterText(
-    find.widgetWithText(TextField, 'Destino (código)'),
-    to,
-  );
-  await tester.enterText(
-    find.widgetWithText(TextField, 'Volumen (m³)'),
-    volume,
-  );
-}
+Future<void> _enterVolume(WidgetTester tester, String volume) =>
+    tester.enterText(find.widgetWithText(TextField, 'Volumen (m³)'), volume);
 
 Future<void> _submit(WidgetTester tester) async {
   final button = findButtonWithText<FilledButton>('Calcular asignación');
@@ -51,7 +54,27 @@ Future<void> _submit(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('con datos válidos consulta y muestra el resultado', (
+  testWidgets('con corredor elegido y volumen válido muestra el resultado', (
+    tester,
+  ) async {
+    final repo = FakeCarrierRepository(
+      onListSettlements: _oneCorridor,
+      onAssignForVolume: () async => assignment(tariffValue: tariff()),
+    );
+    await _pump(tester, repo, withCarrier: true);
+
+    expect(find.text('CD Santa Cruz → Tienda SCZ Centro'), findsOneWidget);
+    await _enterVolume(tester, '12.5');
+    await _submit(tester);
+
+    expect(find.byType(AssignmentResult), findsOneWidget);
+    expect(find.text('Vehículo sugerido'), findsOneWidget);
+    expect(find.text('Camión'), findsOneWidget);
+    expect(repo.lastCorridorFrom, 'cd-santa-cruz');
+    expect(repo.lastCorridorType, CorridorType.cdToStore);
+  });
+
+  testWidgets('sin corredor ni volumen no consulta (validación)', (
     tester,
   ) async {
     var called = false;
@@ -60,52 +83,32 @@ void main() {
       FakeCarrierRepository(
         onAssignForVolume: () async {
           called = true;
-          return assignment(tariffValue: tariff());
-        },
-      ),
-    );
-
-    await _fill(tester);
-    await _submit(tester);
-
-    expect(called, isTrue);
-    expect(find.byType(AssignmentResult), findsOneWidget);
-    expect(find.text('Vehículo sugerido'), findsOneWidget);
-    expect(find.text('Camión'), findsOneWidget);
-  });
-
-  testWidgets('sin corredor/volumen no consulta (validación)', (tester) async {
-    var called = false;
-    await _pump(
-      tester,
-      FakeCarrierRepository(
-        onAssignForVolume: () async {
-          called = true;
           return assignment();
         },
       ),
     );
 
-    // Botón sin llenar nada.
     await _submit(tester);
 
     expect(called, isFalse);
     expect(find.byType(AssignmentResult), findsNothing);
   });
 
-  testWidgets('volumen cero o negativo no consulta', (tester) async {
+  testWidgets('con corredor pero volumen cero no consulta', (tester) async {
     var called = false;
     await _pump(
       tester,
       FakeCarrierRepository(
+        onListSettlements: _oneCorridor,
         onAssignForVolume: () async {
           called = true;
           return assignment();
         },
       ),
+      withCarrier: true,
     );
 
-    await _fill(tester, volume: '0');
+    await _enterVolume(tester, '0');
     await _submit(tester);
 
     expect(called, isFalse);
@@ -114,10 +117,14 @@ void main() {
   testWidgets('asignación sin tarifa muestra el aviso', (tester) async {
     await _pump(
       tester,
-      FakeCarrierRepository(onAssignForVolume: () async => assignment()),
+      FakeCarrierRepository(
+        onListSettlements: _oneCorridor,
+        onAssignForVolume: () async => assignment(),
+      ),
+      withCarrier: true,
     );
 
-    await _fill(tester);
+    await _enterVolume(tester, '12.5');
     await _submit(tester);
 
     expect(
@@ -130,12 +137,14 @@ void main() {
     await _pump(
       tester,
       FakeCarrierRepository(
+        onListSettlements: _oneCorridor,
         onAssignForVolume: () async =>
             throw const ApiException(status: 500, title: 'x', detail: 'Falló'),
       ),
+      withCarrier: true,
     );
 
-    await _fill(tester);
+    await _enterVolume(tester, '12.5');
     await _submit(tester);
 
     expect(find.text('No se pudo cargar'), findsOneWidget);

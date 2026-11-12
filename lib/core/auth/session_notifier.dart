@@ -29,6 +29,13 @@ class SessionNotifier extends Notifier<Session?> {
   /// revocación. Con ella, un solo cierre corre aunque lleguen N 401.
   bool _closing = false;
 
+  /// Momento del último login REAL (credenciales contra el backend) en este
+  /// arranque. `null` tras [restore], [signOut] o sin login. Lo usa el
+  /// interceptor de Dio para no confundir el desfase del caché del backend
+  /// (dispositivo recién re-asignado a otro usuario) con una baja real.
+  DateTime? _freshSignInAt;
+  DateTime? get freshSignInAt => _freshSignInAt;
+
   TokenStore get _store => ref.read(tokenStoreProvider);
   AuthHeadersNotifier get _headers => ref.read(authHeadersProvider.notifier);
 
@@ -62,26 +69,38 @@ class SessionNotifier extends Notifier<Session?> {
           ? abilities.whereType<String>().toList()
           : const [],
       storeNode: _nodeFrom(snapshot['storeNode']),
+      tokenExpiresAt: _dateFrom(snapshot['tokenExpiresAt']),
+      tokenIssuedAt: _dateFrom(snapshot['tokenIssuedAt']),
     );
     return true;
   }
 
   /// Login contra el backend: guarda el token y lo pone en las cabeceras.
+  ///
+  /// [expiresAt] es el `expires_at` que devuelve el login: con él el refresh
+  /// proactivo renueva el token justo antes de que venza (ver
+  /// `TokenRefreshNotifier`). Es opcional porque el backend puede no mandarlo;
+  /// sin él se usa la política de respaldo por antigüedad del token.
   Future<void> signIn({
     required String token,
     required String userName,
     required UserRole role,
     List<String> abilities = const [],
     Node? storeNode,
+    DateTime? expiresAt,
   }) async {
     await _store.writeToken(token);
     _headers.setToken(token);
+    final now = DateTime.now();
+    _freshSignInAt = now;
     final session = Session(
       userName: userName,
       role: role,
       token: token,
       abilities: abilities,
       storeNode: storeNode,
+      tokenExpiresAt: expiresAt,
+      tokenIssuedAt: now,
     );
     state = session;
     await _persist(session);
@@ -96,6 +115,8 @@ class SessionNotifier extends Notifier<Session?> {
         'role': session.role.name,
         'abilities': session.abilities,
         'storeNode': session.storeNode?.toJson(),
+        'tokenExpiresAt': session.tokenExpiresAt?.toIso8601String(),
+        'tokenIssuedAt': session.tokenIssuedAt?.toIso8601String(),
       });
     } on Object {
       // Sin copia la sesión sigue en memoria; solo no sobrevivirá un reinicio.
@@ -133,10 +154,15 @@ class SessionNotifier extends Notifier<Session?> {
       token: current.token,
       abilities: abilities,
       storeNode: storeNode,
+      tokenExpiresAt: current.tokenExpiresAt,
+      tokenIssuedAt: current.tokenIssuedAt,
     );
     state = updated;
     unawaited(_persist(updated));
   }
+
+  static DateTime? _dateFrom(Object? raw) =>
+      raw is String ? DateTime.tryParse(raw) : null;
 
   static Node? _nodeFrom(Object? raw) {
     if (raw is! Map<String, Object?>) return null;
@@ -153,10 +179,30 @@ class SessionNotifier extends Notifier<Session?> {
     state = Session(userName: 'dev.${role.name}', role: role);
   }
 
+  /// Renovación en vuelo. El refresh puede dispararse desde varios lados a la
+  /// vez (el botón de ajustes, el timer de vencimiento y el regreso a primer
+  /// plano): sin esto se emitirían dos tokens y el primero quedaría revocado
+  /// mientras alguna request todavía lo usa. Con esto, los llamadores
+  /// simultáneos esperan la MISMA renovación.
+  Future<void>? _refreshing;
+
+  /// `true` si hay una renovación de token en curso.
+  bool get isRefreshing => _refreshing != null;
+
   /// Rota el token del dispositivo contra el backend (`/app/auth/refresh`):
   /// emite uno nuevo y revoca el anterior, conservando la sesión. Lanza
   /// [ApiException] si no hay sesión real o falla la renovación.
-  Future<void> refreshToken() async {
+  ///
+  /// Si ya hay una renovación en curso devuelve ESA (nunca dos en paralelo).
+  Future<void> refreshToken() {
+    final pending = _refreshing;
+    if (pending != null) return pending;
+    final run = _doRefresh().whenComplete(() => _refreshing = null);
+    _refreshing = run;
+    return run;
+  }
+
+  Future<void> _doRefresh() async {
     final current = state;
     if (current == null || current.token == null) {
       throw const ApiException(
@@ -167,15 +213,25 @@ class SessionNotifier extends Notifier<Session?> {
     }
     try {
       final response = await ref.read(logisticsApiProvider).auth.appRefresh();
+      // Mientras la renovación estaba en vuelo pudo cerrarse la sesión (401) o
+      // entrar otro usuario: ese token nuevo ya no es de nadie, no se aplica.
+      final latest = state;
+      if (latest == null || latest.token != current.token) return;
       await _store.writeToken(response.token);
       _headers.setToken(response.token);
-      state = Session(
-        userName: current.userName,
-        role: current.role,
+      final updated = Session(
+        userName: latest.userName,
+        role: latest.role,
         token: response.token,
-        abilities: current.abilities,
-        storeNode: current.storeNode,
+        abilities: latest.abilities,
+        storeNode: latest.storeNode,
+        tokenExpiresAt: response.expiresAt,
+        tokenIssuedAt: DateTime.now(),
       );
+      state = updated;
+      // El vencimiento nuevo también se persiste: tras reiniciar la app, el
+      // refresh proactivo sabe cuándo renovar sin volver a la red.
+      await _persist(updated);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
@@ -191,6 +247,7 @@ class SessionNotifier extends Notifier<Session?> {
     final bool hadToken;
     try {
       hadToken = state?.token != null;
+      _freshSignInAt = null;
       // Primero lo que ve el usuario: sin sesión → el router lleva al login AL
       // INSTANTE (antes esperaba hasta 3 s de drenado + 4 s de revocación).
       // El Bearer sigue en las cabeceras para el trabajo de abajo.

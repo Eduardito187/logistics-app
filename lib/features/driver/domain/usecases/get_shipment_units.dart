@@ -4,8 +4,8 @@ import '../../../../core/api/export.dart';
 import '../../data/repositories/shipment_units_repository_impl.dart';
 import '../repositories/shipment_units_repository.dart';
 
-/// Query (CQRS): bultos esperados de un envío (para validar la pertenencia de
-/// cada bulto escaneado en la carga/descarga).
+/// Query (CQRS): productos esperados de un envío (para validar la pertenencia
+/// de cada producto escaneado en la carga/descarga).
 class GetShipmentUnits {
   const GetShipmentUnits(this._repo);
 

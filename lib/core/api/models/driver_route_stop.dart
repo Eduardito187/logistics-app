@@ -27,6 +27,7 @@ class DriverRouteStop {
     this.lat,
     this.lng,
     this.settledAt,
+    this.unitIds,
   });
 
   factory DriverRouteStop.fromJson(Map<String, Object?> json) =>
@@ -59,6 +60,13 @@ class DriverRouteStop {
   final DriverRouteStopStatus status;
   @JsonKey(name: 'settled_at')
   final DateTime? settledAt;
+
+  /// Bultos esperados de la parada (ids de unidad). Es la fuente AUTORITATIVA
+  /// de cuántos bultos hay que entregar: la cantidad de PRODUCTO (`items[].
+  /// quantity`) no es la cantidad de bultos. `null` si el backend todavía no lo
+  /// manda. (Campo aditivo agregado a mano; al regenerar el cliente viene solo.)
+  @JsonKey(name: 'unit_ids')
+  final List<String>? unitIds;
 
   Map<String, Object?> toJson() => _$DriverRouteStopToJson(this);
 }

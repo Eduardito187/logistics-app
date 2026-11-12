@@ -1,7 +1,10 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
+import 'package:logistics_app/core/printing/network_interface_info.dart';
+import 'package:logistics_app/core/printing/network_printer_identity.dart';
 import 'package:logistics_app/core/printing/printer_config.dart';
+import 'package:logistics_app/core/printing/wifi_printer_scanner.dart';
 
 // LabelPrinter: selección/persistencia de impresora y validación de los
 // errores de impresión POR TRANSPORTE que se detectan ANTES de tocar el
@@ -119,8 +122,42 @@ void main() {
   });
 
   group('LabelPrinter.discover', () {
-    test('WiFi no tiene descubrimiento: lista vacía', () async {
+    test('WiFi sin scanner configurado: lista vacía', () async {
       expect(await printer.discover(PrinterTransport.wifi), isEmpty);
+    });
+
+    test('WiFi con scanner: barre la red y devuelve PrinterDevice', () async {
+      // Scanner real con seams falsos: nada toca la red.
+      final scanner = WifiPrinterScanner(
+        listInterfaces: () async => const [
+          NetworkInterfaceInfo(name: 'wlan0', ip: '192.168.1.50'),
+        ],
+        probe: (host, port, timeout) async =>
+            host == '192.168.1.9' || host == '192.168.1.10',
+        identify: (host, timeout) async => host == '192.168.1.9'
+            ? const NetworkPrinterIdentity(name: 'Zebra ZD421', isZebra: true)
+            : null,
+      );
+      final withScanner = LabelPrinter(storage, wifiScanner: scanner);
+
+      final devices = await withScanner.discover(PrinterTransport.wifi);
+
+      expect(devices.map((d) => d.transport).toSet(), {PrinterTransport.wifi});
+      expect(devices.map((d) => (d.address, d.name)), [
+        ('192.168.1.9:9100', 'Zebra ZD421'),
+        ('192.168.1.10:9100', 'WiFi 192.168.1.10'),
+      ]);
+    });
+
+    test('WiFi con scanner sin red local: lista vacía', () async {
+      final scanner = WifiPrinterScanner(
+        listInterfaces: () async => const [],
+        probe: (host, port, timeout) async => true,
+        identify: (host, timeout) async => null,
+      );
+      final withScanner = LabelPrinter(storage, wifiScanner: scanner);
+
+      expect(await withScanner.discover(PrinterTransport.wifi), isEmpty);
     });
 
     test('Bluetooth degrada a lista vacía sin plugin disponible', () async {

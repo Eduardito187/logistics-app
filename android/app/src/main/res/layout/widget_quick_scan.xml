@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget "Escanear" (todos los roles): SOLO el ícono del escáner, grande y
+     centrado (pedido del dueño: más simple y entendible). Tocarlo abre el
+     escaneo del rol; sin sesión abre la app en el login. El texto vive solo en
+     contentDescription (lectores de pantalla). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:clipToOutline="true"
+    android:padding="6dp">
+
+    <ImageView
+        android:id="@+id/widget_action"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_button_bg"
+        android:contentDescription="@string/widget_action_scan"
+        android:padding="14dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_scan"
+        android:tint="@color/widget_on_accent" />
+</FrameLayout>

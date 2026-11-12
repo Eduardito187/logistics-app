@@ -55,6 +55,14 @@ class SignedLabel {
       issuedAt: _int(decoded, 'ts'),
     );
 
+    // Etiqueta ABIERTA (k:0): no lleva firma real. El backend manda `s` como un
+    // marcador de 64 bytes en cero, pero no dependemos de su contenido ni de que
+    // venga: una etiqueta abierta NUNCA debe descartarse por la firma. Se usa un
+    // relleno en cero y se ignora `s`.
+    if (payload.isOpen) {
+      return SignedLabel(payload, List<int>.filled(signatureBytes, 0));
+    }
+
     return SignedLabel(payload, _base64UrlDecode(_string(decoded, 's')));
   }
 

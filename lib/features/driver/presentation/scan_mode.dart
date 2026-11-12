@@ -1,2 +1,2 @@
-/// Modo de escaneo de bultos del chofer.
+/// Modo de escaneo de productos del chofer.
 enum ScanMode { load, unload }

@@ -61,12 +61,12 @@ class LabelVerifier {
   final Ed25519 _algorithm = Ed25519();
 
   /// Resultados ya calculados por (clave, mensaje, firma). El escaneo continuo
-  /// relee la misma etiqueta varias veces (cámara apoyada sobre el bulto) y la
+  /// relee la misma etiqueta varias veces (cámara apoyada sobre el producto) y la
   /// verificación Ed25519 en Dart puro cuesta milisegundos en el isolate de UI;
   /// el resultado es determinista, así que se reusa. Tope chico (LRU simple).
   final Map<String, VerificationResult> _cache = <String, VerificationResult>{};
 
-  /// Entradas máximas de [_cache] (~ una descarga grande de bultos).
+  /// Entradas máximas de [_cache] (~ una descarga grande de productos).
   static const int cacheSize = 256;
 
   Future<VerificationResult> verify(SignedLabel label) async {

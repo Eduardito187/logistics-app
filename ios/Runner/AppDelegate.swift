@@ -48,6 +48,16 @@ let kSyncTaskIdentifier = "bo.com.dismac.logisticsApp.sync"
         // iPhone 6/6 Plus/SE 1ra gen: 1–2 GB. Se trata como gama baja ≤ 1,5 GB.
         result(["totalMb": totalMb, "lowRam": totalMb <= 1536])
       }
+      // Canales nativos propios (sin paquetes de pub): huella/Face ID, Live
+      // Activity de la ruta (Dynamic Island), accesos directos del ícono y
+      // estado de batería / modo de bajo consumo.
+      let messenger = controller.binaryMessenger
+      BiometricChannel.register(messenger: messenger)
+      LiveUpdatesChannel.register(messenger: messenger)
+      AppShortcutsChannel.register(messenger: messenger)
+      PowerChannel.register(messenger: messenger)
+      NetworkChannel.register(messenger: messenger)
+      WidgetsChannel.register(messenger: messenger)
     }
 
     // Notificaciones locales/push en primer plano (flutter_local_notifications,
@@ -55,5 +65,27 @@ let kSyncTaskIdentifier = "bo.com.dismac.logisticsApp.sync"
     UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Deep link de los widgets de inicio (distrack://open?route=…,
+  /// distrack://navigate?daddr=…). Lo que no es distrack:// sigue a super
+  /// (plugins).
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if WidgetsChannel.handle(url: url) { return true }
+    return super.application(app, open: url, options: options)
+  }
+
+  /// Acceso directo del ícono (mantener presionado). El canal guarda la ruta
+  /// hasta que Dart la pida, así cubre también el arranque en frío.
+  override func application(
+    _ application: UIApplication,
+    performActionFor shortcutItem: UIApplicationShortcutItem,
+    completionHandler: @escaping (Bool) -> Void
+  ) {
+    completionHandler(AppShortcutsChannel.handle(shortcutItem))
   }
 }

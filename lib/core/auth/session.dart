@@ -6,6 +6,7 @@ import 'user_role.dart';
 // importan `auth/session.dart`.
 export 'session_expired_notifier.dart';
 export 'session_notifier.dart';
+export 'token_refresh_notifier.dart';
 
 /// Datos de la sesión actual del usuario (modelo inmutable).
 ///
@@ -18,6 +19,8 @@ class Session {
     this.token,
     this.abilities = const [],
     this.storeNode,
+    this.tokenExpiresAt,
+    this.tokenIssuedAt,
   });
 
   final String userName;
@@ -35,6 +38,16 @@ class Session {
   /// `null` para roles sin tienda o si el backend no la asignó. El rol tienda
   /// opera SOLO sobre este nodo (el backend lo exige con 403).
   final Node? storeNode;
+
+  /// Vencimiento del token (`expires_at` del login o del refresh). `null` si el
+  /// backend no lo informó o si el login no lo pasó: en ese caso el refresh
+  /// proactivo cae a su política de respaldo (ver `TokenRefreshNotifier`).
+  final DateTime? tokenExpiresAt;
+
+  /// Momento en que se emitió el token vigente (login o último refresh). Lo usa
+  /// el refresh proactivo para no renovar dos veces seguidas cuando no se
+  /// conoce el vencimiento.
+  final DateTime? tokenIssuedAt;
 
   /// ¿La sesión tiene este permiso? Chequeo plano contra las abilities del
   /// token. Con abilities vacías devuelve `false`; la regla de "no ocultar

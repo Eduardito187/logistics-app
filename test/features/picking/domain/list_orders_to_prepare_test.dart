@@ -34,7 +34,7 @@ void main() {
       final result = await ListOrdersToPrepare(repo).call();
 
       // Primero lo planificado (ya tiene ruta), después lo recibido.
-      expect(result.map((s) => s.externalId), ['B', 'A']);
+      expect(result.items.map((s) => s.externalId), ['B', 'A']);
     });
 
     test('filtra en el servidor: un pedido por estado, en paralelo', () async {
@@ -57,7 +57,7 @@ void main() {
 
       final result = await ListOrdersToPrepare(repo).call();
 
-      expect(result.map((s) => s.externalId), ['A']);
+      expect(result.items.map((s) => s.externalId), ['A']);
     });
 
     test('dentro de cada estado preserva el orden del servidor', () async {
@@ -81,7 +81,7 @@ void main() {
 
       final result = await ListOrdersToPrepare(repo).call();
 
-      expect(result.map((s) => s.externalId), [
+      expect(result.items.map((s) => s.externalId), [
         'planned-1',
         'planned-2',
         'received-1',
@@ -91,7 +91,7 @@ void main() {
     test('lista vacía del backend devuelve lista vacía', () async {
       final repo = FakePickingRepository(onListShipments: () async => []);
 
-      expect(await ListOrdersToPrepare(repo).call(), isEmpty);
+      expect((await ListOrdersToPrepare(repo).call()).items, isEmpty);
     });
 
     test('si todo está en estados terminales devuelve vacío', () async {
@@ -102,7 +102,7 @@ void main() {
         ],
       );
 
-      expect(await ListOrdersToPrepare(repo).call(), isEmpty);
+      expect((await ListOrdersToPrepare(repo).call()).items, isEmpty);
     });
 
     test('propaga la ApiException del repositorio', () async {

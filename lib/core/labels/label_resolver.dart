@@ -59,7 +59,7 @@ class LabelResolution {
 
   final String labelId;
 
-  /// `true` si el backend reconoció la etiqueta y pudo mapearla a un bulto.
+  /// `true` si el backend reconoció la etiqueta y pudo mapearla a un producto.
   /// `false` = etiqueta inexistente o no resoluble (se rechaza en terreno).
   final bool resolved;
 
@@ -73,15 +73,17 @@ class LabelResolution {
   final int? pieceIndex;
   final int? pieceTotal;
 
-  /// `true` si la etiqueta fue anulada (reimpresa/dada de baja): se rechaza aun
-  /// cuando resuelve. Aditivo del backend; `false` si todavía no lo manda.
+  /// Etiquetas GLOBALES y PERMANENTES (decisión del dueño, nov 2026): una
+  /// etiqueta NUNCA se anula. El backend ya no manda `revoked`; se deja el campo
+  /// por compatibilidad pero SIEMPRE es `false` y NO afecta la validez.
   final bool revoked;
 
   /// Pedido de la etiqueta (para contexto / "no es de este pedido"). Aditivo.
   final String? orderNumber;
 
-  /// Aceptable en terreno: el backend la reconoció y no está anulada.
-  bool get accepted => resolved && !revoked && unitId != null;
+  /// Aceptable en terreno: el backend reconoció la etiqueta (resuelve) y tiene
+  /// producto. Nada se rechaza por "anulada" (las etiquetas son permanentes).
+  bool get accepted => resolved && unitId != null;
 }
 
 class LabelResolver {

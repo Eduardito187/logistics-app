@@ -14,6 +14,7 @@ import '../domain/entities/my_day_stats.dart';
 import '../domain/route_km_today.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/fleet_ops_controllers.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
 import 'widgets/active_delivery/delivery_status_card.dart';
 
@@ -28,10 +29,14 @@ class MyDayScreen extends ConsumerWidget {
       title: 'Mi día',
       builder: (context, vehicleId) {
         final route = ref.watch(driverRouteProvider);
+        // Paradas cerradas en este teléfono que el backend aún no sabe: las
+        // métricas usan el estado efectivo, como el resto de las pantallas.
+        final locallySettled = ref.watch(locallySettledStopsProvider);
         return AsyncValueView<DriverRoute>(
           value: route,
           onRetry: () => ref.invalidate(driverRouteProvider),
-          data: (data) => _MyDayBody(stats: MyDayStats.fromRoute(data)),
+          data: (data) =>
+              _MyDayBody(stats: MyDayStats.fromRoute(data, locallySettled)),
         );
       },
     );
@@ -169,7 +174,9 @@ class _RouteKmCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final readings = ref.watch(vehicleOdometerReadingsProvider);
+    // Solo las lecturas de HOY: la resta llegada − salida no necesita más (y
+    // así no se baja el historial del camión para una tarjeta de apoyo).
+    final readings = ref.watch(todayOdometerReadingsProvider);
     return readings.maybeWhen(
       data: (data) {
         final km = routeKmToday(data, DateTime.now());

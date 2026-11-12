@@ -72,9 +72,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         sizing: StackFit.expand,
         index: index,
         children: [
-          // Inicio y Tareas son livianas: siempre vivas (estado/scroll).
-          const RoleHomeScreen(),
-          const AllTasksScreen(),
+          // Inicio y Tareas son livianas: siempre vivas (estado/scroll), pero
+          // con sus animaciones en PAUSA mientras no se ven: un IndexedStack
+          // no apaga los tickers de las pestañas ocultas (a diferencia del
+          // Navigator), y un ícono en loop seguiría dibujando sin que nadie lo
+          // vea (GPU = batería).
+          TickerMode(enabled: index == 0, child: const RoleHomeScreen()),
+          TickerMode(enabled: index == 1, child: const AllTasksScreen()),
           // Las pesadas o con efectos al iniciar (GPS/mapa en el centro,
           // impresora Bluetooth en Perfil, polling en Avisos) se construyen
           // SOLO cuando están activas: así no corren en segundo plano al

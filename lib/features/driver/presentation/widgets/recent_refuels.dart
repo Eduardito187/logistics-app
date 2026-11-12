@@ -29,9 +29,11 @@ class RecentRefuels extends ConsumerWidget {
         onRetry: () => ref.invalidate(vehicleRefuelsProvider),
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
+            // Lista acotada a los últimos [recentHistoryDays] días: vacía es un
+            // resultado válido (camión sin cargas recientes), no un error.
+            return EmptyState(
               icon: AppIcon.fuel,
-              title: 'Sin cargas registradas',
+              title: 'Sin cargas en los últimos $recentHistoryDays días',
               message: 'Las cargas que registres aparecerán aquí.',
             );
           }

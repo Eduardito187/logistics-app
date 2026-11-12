@@ -13,7 +13,7 @@ class PreparationState {
     this.lane,
   });
 
-  /// Identidades de bulto (label_id) ya preparadas en esta sesión.
+  /// Identidades de producto (label_id) ya preparadas en esta sesión.
   final Set<String> preparedUnitIds;
 
   /// Vehículo/carril asignado para abrir la entrega al preparar.

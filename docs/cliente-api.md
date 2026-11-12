@@ -94,9 +94,11 @@ generado está excluido del analyzer (`analysis_options.yaml`: `lib/core/api/**`
 ## Problemas conocidos
 
 - **`Found duplicate object name: DataN`** en la salida de swagger_parser: es normal, así renumera.
-- **`pub get` falla con `--enforce-lockfile`**: alguien cambió `tool/api_gen/pubspec.yaml` sin
-  regenerar el lock. Correr `C:\sdk\flutter\bin\dart.bat pub get` dentro de `tool/api_gen/`, borrar
-  su `.dart_tool/` y regenerar con `-DryRun` para ver si cambió la salida.
+- **`pub get` falla con `--enforce-lockfile`**: alguien cambió `tool/api_gen/pubspec.gen.yaml` (se guarda con `.gen` para que el IDE no le corra
+  `pub get` con el Dart 3.8) sin
+  regenerar el lock. En una carpeta temporal, copiar `pubspec.gen.yaml` como `pubspec.yaml`, correr
+  `C:\sdk\flutter\bin\dart.bat pub get`, copiar el `pubspec.lock` resultante a
+  `tool/api_gen/pubspec.gen.lock` y regenerar con `-DryRun` para ver si cambió la salida.
 - **Subir versiones del generador** (`swagger_parser`, `retrofit_generator`, `json_serializable`)
   puede cambiar el código generado. Hacerlo en un cambio aparte y revisar el diff de `-DryRun`.
 - **wslpath / WSL apagado**: el preprocesado necesita la distro `Ubuntu-22.04` con `python3-yaml`, o

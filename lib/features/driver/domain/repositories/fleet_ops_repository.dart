@@ -23,12 +23,22 @@ abstract interface class FleetOpsRepository {
   /// Precio de combustible vigente para un tipo de combustible.
   Future<FuelPrice> getCurrentFuelPrice({required FuelType fuelType});
 
-  /// Cargas de combustible recientes del vehículo (más nuevas primero).
-  Future<List<Refuel>> listVehicleRefuels({required String vehicleId});
+  /// Cargas de combustible del vehículo en el rango `[from, to]` (fechas de
+  /// calendario, inclusive), más nuevas primero. El rango es obligatorio: sin
+  /// él el backend devuelve el historial COMPLETO del camión.
+  Future<List<Refuel>> listVehicleRefuels({
+    required String vehicleId,
+    required DateTime from,
+    required DateTime to,
+  });
 
-  /// Lecturas de odómetro recientes del vehículo (más nuevas primero).
+  /// Lecturas de odómetro del vehículo en el rango `[from, to]` (fechas de
+  /// calendario, inclusive), más nuevas primero. El rango es obligatorio por lo
+  /// mismo que en [listVehicleRefuels].
   Future<List<OdometerReading>> listOdometerReadings({
     required String vehicleId,
+    required DateTime from,
+    required DateTime to,
   });
 
   /// Mantenimiento preventivo por vencer o vencido (más urgente primero).

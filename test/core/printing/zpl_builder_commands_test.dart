@@ -73,7 +73,7 @@ void main() {
       );
       // QR: payload completo firmado.
       expect(zpl, contains('^FDLA,$qr^FS'));
-      // Code128: solo el id corto del bulto, NO el JSON.
+      // Code128: solo el id corto del producto, NO el JSON.
       expect(zpl, contains('^FO30,450^BCN,80,Y,N,N^FDLBL-42^FS'));
     });
 

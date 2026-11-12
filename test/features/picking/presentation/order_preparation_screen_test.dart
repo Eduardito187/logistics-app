@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/emitted_label.dart';
+import 'package:logistics_app/core/api/models/vehicle.dart';
 import 'package:logistics_app/core/location/location_service.dart';
+import 'package:logistics_app/features/picking/data/available_vehicles.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/printing/label_printer.dart';
+import 'package:logistics_app/core/printing/printer_config.dart';
+import 'package:logistics_app/core/widgets/empty_state.dart';
 import 'package:logistics_app/features/picking/data/repositories/picking_repository_impl.dart';
 import 'package:logistics_app/features/picking/domain/entities/preparation_state.dart';
 import 'package:logistics_app/features/picking/presentation/controllers/preparation_controller.dart';
 import 'package:logistics_app/features/picking/presentation/order_preparation_screen.dart';
-import 'package:logistics_app/features/picking/presentation/widgets/label_batch_sheet.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/progress_card.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/unit_tile.dart';
 
@@ -42,6 +45,10 @@ Future<FakeLabelPrinter> _pump(
         pickingRepositoryProvider.overrideWithValue(repo),
         labelPrinterProvider.overrideWithValue(fakePrinter),
         locationServiceProvider.overrideWithValue(FakeLocationService()),
+        // El selector de vehículos no pega a la red en test.
+        availableVehiclesProvider.overrideWith(
+          (ref) async => const <Vehicle>[],
+        ),
         if (seedState != null)
           preparationControllerProvider(
             orderNumber,
@@ -55,11 +62,6 @@ Future<FakeLabelPrinter> _pump(
   await tester.pumpAndSettle();
   return fakePrinter;
 }
-
-Finder _sheetFields() => find.descendant(
-  of: find.byType(LabelBatchSheet),
-  matching: find.byType(TextField),
-);
 
 void main() {
   testWidgets('sin etiquetas: muestra la LISTA de productos del pedido', (
@@ -110,9 +112,11 @@ void main() {
     expect(find.text('0/2'), findsOneWidget); // ninguna preparada aún
   });
 
-  testWidgets('las etiquetas revocadas no cuentan como unidades vigentes', (
+  testWidgets('etiquetas PERMANENTES: todas cuentan (ninguna se anula)', (
     tester,
   ) async {
+    // Ya no hay etiquetas "revocadas": el backend no las anula y la app las
+    // cuenta todas. El flag legacy `revoked` no excluye nada.
     await _pump(
       tester,
       repo: FakePickingRepository(
@@ -123,8 +127,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Productos (1)'), findsOneWidget);
-    expect(find.byType(UnitTile), findsOneWidget);
+    expect(find.text('Productos (2)'), findsOneWidget);
+    expect(find.byType(UnitTile), findsNWidgets(2));
   });
 
   testWidgets('error de red al cargar muestra "No se pudo cargar"', (
@@ -158,7 +162,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // No se abre ningún formulario de origen/destino/SKU.
-    expect(find.byType(LabelBatchSheet), findsNothing);
+    expect(find.text('Origen'), findsNothing);
+    expect(find.text('Destino'), findsNothing);
     expect(repo.emitOrderCalls, 1);
     expect(repo.lastEmitOrderNumber, 'EXT-1');
     expect(repo.emitCalls, 0); // nunca el emit explícito (legado)
@@ -264,39 +269,79 @@ void main() {
     expect(find.text('Seleccioná una impresora en Ajustes.'), findsOneWidget);
   });
 
-  testWidgets('reimprimir lote: pide motivo y confirma', (tester) async {
+  testWidgets('sin vehículo NO marca preparadas: primero pide asignarlo', (
+    tester,
+  ) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [
+        buildLabel(labelId: 'L1', sku: 'SKU1'),
+        buildLabel(labelId: 'L2', sku: 'SKU2'),
+      ],
+    );
+    await _pump(tester, repo: repo); // sin vehículo asignado
+
+    expect(find.text('0/2'), findsOneWidget);
+    await tester.tap(find.text('Marcar como preparadas'));
+    await tester.pumpAndSettle();
+
+    // Acción limitada: avisa y NO marca nada.
+    expect(
+      find.text('Asigná el vehículo antes de marcar como preparadas.'),
+      findsOneWidget,
+    );
+    expect(find.text('0/2'), findsOneWidget);
+  });
+
+  testWidgets('con vehículo asignado, el botón marca TODAS como preparadas', (
+    tester,
+  ) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [
+        buildLabel(labelId: 'L1', sku: 'SKU1'),
+        buildLabel(labelId: 'L2', sku: 'SKU2'),
+      ],
+    );
+    await _pump(
+      tester,
+      repo: repo,
+      seedState: const PreparationState(vehicleId: '904U10', lane: '904U10'),
+    );
+
+    expect(find.text('0/2'), findsOneWidget);
+    await tester.tap(find.text('Marcar como preparadas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2/2'), findsOneWidget);
+    // Ya no faltan: el botón desaparece.
+    expect(find.text('Marcar como preparadas'), findsNothing);
+  });
+
+  testWidgets('NO hay escaneo de producto en la preparación', (tester) async {
+    final repo = FakePickingRepository(
+      onGetOrderLabels: (_) async => [buildLabel(labelId: 'L1', sku: 'SKU1')],
+    );
+    await _pump(tester, repo: repo);
+
+    // Lo único que se escanea son las etiquetas: acá no se escanea el producto.
+    expect(find.text('Verificar productos con escaneo'), findsNothing);
+  });
+
+  testWidgets('etiquetas permanentes: NO existe "Anular y emitir de nuevo"', (
+    tester,
+  ) async {
     final repo = FakePickingRepository(
       onGetOrderLabels: (_) async => [
         buildLabel(labelId: 'L1', sku: 'SKU1'),
         buildLabel(labelId: 'L2', sku: 'SKU1'),
       ],
-      onReprintLabels: (_, _) async => [buildLabel(labelId: 'NEW')],
     );
     await _pump(tester, repo: repo);
 
-    await tester.tap(find.text('Anular y emitir de nuevo'));
-    await tester.pumpAndSettle();
-
-    // Líneas pre-cargadas por SKU (SKU1 x2); sólo faltan origen/destino/motivo.
-    await tester.enterText(_sheetFields().at(0), 'LPZ'); // origen
-    await tester.enterText(_sheetFields().at(1), 'SCZ'); // destino
-    await tester.enterText(_sheetFields().at(2), 'dañada'); // motivo
-    final reprintSubmit = find.descendant(
-      of: find.byType(LabelBatchSheet),
-      matching: findButtonWithText<FilledButton>('Reimprimir'),
-    );
-    await tester.ensureVisible(reprintSubmit);
-    await tester.tap(reprintSubmit);
-    await tester.pumpAndSettle();
-
-    expect(repo.reprintCalls, 1);
-    expect(repo.lastReprintBody?.reason, 'dañada');
-    expect(repo.lastReprintBody?.lines.single.sku, 'SKU1');
-    expect(repo.lastReprintBody?.lines.single.quantity, 2);
-    expect(
-      find.text('Lote reimpreso: se emitieron etiquetas nuevas.'),
-      findsOneWidget,
-    );
+    // Una etiqueta nunca se invalida ni se regenera: el botón no existe.
+    expect(find.text('Anular y emitir de nuevo'), findsNothing);
+    expect(find.text('Reemitir'), findsNothing);
+    // Se puede volver a imprimir la MISMA etiqueta.
+    expect(find.text('Imprimir todas las etiquetas'), findsOneWidget);
   });
 
   testWidgets('reimprimir una unidad ya preparada imprime su ZPL', (
@@ -328,4 +373,143 @@ void main() {
     expect(printer.printed, ['ZPL_L1']);
     expect(find.text('Etiqueta enviada a la impresora.'), findsOneWidget);
   });
+
+  testWidgets('impresión sin confirmación (9100): mensaje veraz', (
+    tester,
+  ) async {
+    final labels = <EmittedLabel>[buildLabel(labelId: 'L1', zpl: 'ZPL_L1')];
+    final printer = FakeLabelPrinter()
+      ..outcome = const PrintOutcome.sentUnconfirmed();
+    await _pump(
+      tester,
+      printer: printer,
+      repo: FakePickingRepository(onGetOrderLabels: (_) async => labels),
+      seedState: const PreparationState(
+        preparedUnitIds: {'L1'},
+        vehicleId: 'V1',
+        lane: 'A1',
+      ),
+    );
+
+    final btn = find.text('Imprimir de nuevo');
+    await tester.ensureVisible(btn);
+    await tester.pump();
+    await tester.tap(btn);
+    await tester.pumpAndSettle();
+
+    expect(printer.printed, ['ZPL_L1']);
+    // Viaja el dibujo de la etiqueta por si la impresora es de oficina.
+    expect(printer.renders.single, isNotNull);
+    expect(
+      find.text(
+        'Enviado. Esta impresora no confirma la impresión; revisá que haya '
+        'salido.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Etiqueta enviada a la impresora.'), findsNothing);
+  });
+
+  testWidgets('la impresora rechaza: se muestra el motivo, no "Ajustes"', (
+    tester,
+  ) async {
+    final labels = <EmittedLabel>[buildLabel(labelId: 'L1', zpl: 'ZPL_L1')];
+    final printer = _RejectingPrinter();
+    await _pump(
+      tester,
+      printer: printer,
+      repo: FakePickingRepository(onGetOrderLabels: (_) async => labels),
+      seedState: const PreparationState(
+        preparedUnitIds: {'L1'},
+        vehicleId: 'V1',
+        lane: 'A1',
+      ),
+    );
+
+    final btn = find.text('Imprimir de nuevo');
+    await tester.ensureVisible(btn);
+    await tester.pump();
+    await tester.tap(btn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('La impresora está ocupada.'), findsOneWidget);
+    expect(find.text('Seleccioná una impresora en Ajustes.'), findsNothing);
+  });
+
+  group('código que no es un número de pedido', () {
+    // Bug: el QR de una etiqueta llegaba como número y el header mostraba
+    // `Pedido {"v":1,…}` con "El pedido no tiene productos".
+    Future<List<String>> pumpInvalid(
+      WidgetTester tester,
+      String orderNumber,
+    ) async {
+      final calls = <String>[];
+      await _pump(
+        tester,
+        orderNumber: orderNumber,
+        repo: FakePickingRepository(
+          onGetOrderLabels: (o) async {
+            calls.add('labels:$o');
+            return const [];
+          },
+          onGetOrderDispatchLines: (o) async {
+            calls.add('lines:$o');
+            return buildDispatchLines(orderReference: o);
+          },
+        ),
+      );
+      return calls;
+    }
+
+    testWidgets('JSON de etiqueta: título "Pedido" y aviso, sin repositorio', (
+      tester,
+    ) async {
+      final calls = await pumpInvalid(tester, '{"v":1}');
+
+      expect(find.text('Pedido'), findsOneWidget);
+      expect(find.textContaining('{"v"'), findsNothing);
+      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+      expect(
+        find.text(
+          'Volvé atrás y escaneá la etiqueta de un producto del pedido.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('El pedido no tiene productos'), findsNothing);
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('texto con espacios: mismo aviso, sin repositorio', (
+      tester,
+    ) async {
+      final calls = await pumpInvalid(tester, 'hola mundo');
+
+      expect(find.text('Pedido'), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsOneWidget);
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('un número válido SÍ consulta el pedido', (tester) async {
+      final calls = await pumpInvalid(tester, 'DIS-123456');
+
+      expect(find.text('Pedido DIS-123456'), findsOneWidget);
+      expect(find.text('Ese código no es un número de pedido'), findsNothing);
+      expect(calls, contains('labels:DIS-123456'));
+    });
+  });
+}
+
+/// Impresora que rechaza el trabajo con un motivo propio.
+class _RejectingPrinter extends FakeLabelPrinter {
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async {
+    printed.add(zpl);
+    throw const PrinterException('La impresora está ocupada.');
+  }
 }

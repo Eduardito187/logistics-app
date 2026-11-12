@@ -27,7 +27,7 @@ class CheapestTariffResult extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (tariff.carrierName != null) Text(tariff.carrierName!),
-          Text('${tariff.corridorFrom} → ${tariff.corridorTo}'),
+          Text(corridorPairLabel(tariff.corridorFrom, tariff.corridorTo)),
           Text(corridorTypeLabel(tariff.corridorType)),
           Text(vehicleClassLabel(tariff.vehicleClass)),
           const SizedBox(height: 4),

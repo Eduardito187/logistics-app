@@ -15,6 +15,9 @@ import '../network/api_exception.dart';
 /// Solo 429/5xx suman a `attempts` (el servidor respondió y no pudo): estar
 /// días sin señal NO agota la fila. Al llegar a [maxServerAttempts] la fila
 /// pasa a `failed` (`retries_exhausted`) para no martillar un endpoint roto.
+///
+/// Cuando el servidor dice CUÁNTO esperar (`Retry-After` en un 429 o un 503),
+/// esa espera se respeta como mínimo: ver [delayFor] y [retryAfterOf].
 abstract final class SyncRetryPolicy {
   /// Tope de respuestas 429/5xx por fila antes de darla por perdida. Con el
   /// drenado periódico cada 15 min, ~50 intentos son varias horas de backend
@@ -32,6 +35,11 @@ abstract final class SyncRetryPolicy {
   /// Primer escalón del backoff y techo.
   static const Duration backoffBase = Duration(seconds: 5);
   static const Duration backoffMax = Duration(minutes: 10);
+
+  /// Tope de lo que se respeta de un `Retry-After`. El servidor puede pedir
+  /// horas (p. ej. una cuota diaria); no se deja un timer en primer plano tanto
+  /// tiempo: pasado este plazo reintenta igual el drenado periódico/de fondo.
+  static const Duration retryAfterMax = Duration(minutes: 30);
 
   /// `true` si conviene dejar la fila pendiente y reintentar luego.
   static bool isTransient(ApiException e) =>
@@ -52,5 +60,26 @@ abstract final class SyncRetryPolicy {
     final exp = math.min(math.max(attempts, 0), 16);
     final ms = backoffBase.inMilliseconds * (1 << exp);
     return Duration(milliseconds: math.min(ms, backoffMax.inMilliseconds));
+  }
+
+  /// Espera real antes del próximo reintento: el backoff de [backoffFor] o lo
+  /// que pidió el servidor en `Retry-After`, el MAYOR de los dos.
+  ///
+  /// El `Retry-After` es un mínimo del servidor (429 de rate limit, 503 en
+  /// mantenimiento): martillar antes solo gasta batería y suma 429. Se respeta
+  /// hasta [retryAfterMax]; de ahí no se pasa (ver su comentario).
+  static Duration delayFor(int attempts, {Duration? retryAfter}) {
+    final backoff = backoffFor(attempts);
+    if (retryAfter == null || retryAfter <= Duration.zero) return backoff;
+    final asked = retryAfter > retryAfterMax ? retryAfterMax : retryAfter;
+    return asked > backoff ? asked : backoff;
+  }
+
+  /// `Retry-After` aprovechable de [e]: solo cuando el servidor lo manda con un
+  /// 429 o un 503 (los casos en que la cabecera significa "esperá tanto"). En
+  /// cualquier otro estado se ignora y manda el backoff.
+  static Duration? retryAfterOf(ApiException e) {
+    if (e.status != 429 && e.status != 503) return null;
+    return e.retryAfter;
   }
 }

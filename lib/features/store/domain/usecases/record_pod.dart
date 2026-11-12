@@ -4,7 +4,7 @@ import '../../../../core/api/models/proof_of_delivery_request.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/offline/offline_queue.dart';
 
-/// Command: registra la prueba de entrega (POD) de un bulto en mostrador.
+/// Command: registra la prueba de entrega (POD) de un producto en mostrador.
 /// Escritura de terreno: por la regla offline-first pasa por
 /// `offlineQueueProvider.submit` y nunca espera a la red. La foto de evidencia
 /// se encola aparte con [EnqueueDeliveryPhoto].

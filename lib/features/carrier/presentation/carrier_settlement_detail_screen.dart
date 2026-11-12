@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/settlement.dart';
+import '../../../core/auth/session.dart';
 import '../../../core/commands/command_feedback.dart';
 import '../../../core/commands/command_outcome.dart';
 import '../../../core/network/api_exception.dart';
@@ -11,6 +12,7 @@ import '../domain/usecases/approve_settlement.dart';
 import '../domain/usecases/dispute_settlement.dart';
 import '../domain/usecases/pay_settlement.dart';
 import 'controllers/carrier_controllers.dart';
+import 'widgets/settlement_actions_permissions.dart';
 import 'widgets/settlement_detail.dart';
 
 /// Detalle de una liquidación con las acciones aprobar / disputar / pagar.
@@ -111,6 +113,10 @@ class _CarrierSettlementDetailScreenState
   @override
   Widget build(BuildContext context) {
     final fetched = ref.watch(carrierSettlementProvider(widget.settlementId));
+    // Acciones financieras: se muestran solo si el usuario tiene el permiso.
+    final permissions = SettlementActionsPermissions.fromSession(
+      ref.watch(sessionProvider),
+    );
     final seed = widget.initial;
     // Primera carga con semilla de la lista: se muestra ya, sin spinner. Un
     // error sí se muestra (con reintento) aunque haya semilla.
@@ -126,6 +132,7 @@ class _CarrierSettlementDetailScreenState
         data: (data) => SettlementDetail(
           settlement: data,
           busy: _busy,
+          permissions: permissions,
           onApprove: _approve,
           onDispute: _dispute,
           onPay: _pay,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../power/motion_budget.dart';
 import '../theme/app_colors.dart';
 
 /// Loader de marca: el isotipo DisTrack con un pulso suave de escala y opacidad,
@@ -35,7 +36,11 @@ class _BrandLoaderState extends State<BrandLoader>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reduced = MediaQuery.disableAnimationsOf(context);
+    // Con ahorro de energía / batería baja el isotipo queda quieto (el pulso
+    // es decorativo: el texto/estado ya dice que está cargando).
+    final reduced =
+        MediaQuery.disableAnimationsOf(context) ||
+        !MotionBudget.decorativeAllowed;
     if (reduced == _reducedMotion && _controller != null) {
       return;
     }

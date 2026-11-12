@@ -23,7 +23,7 @@ class DeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final name = device.name ?? platformLabel(device.platform);
+    final name = deviceNameLabel(device.name, device.platform);
 
     return SectionCard(
       child: Column(
@@ -70,8 +70,11 @@ class DeviceCard extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: isCurrent
+                    // "Este teléfono" (no "este dispositivo"): junto al modelo
+                    // real deja clarísimo cuál es el que tiene en la mano y
+                    // cuál es el que perdió.
                     ? const StatusPill(
-                        'Este dispositivo',
+                        'Este teléfono',
                         tone: PillTone.info,
                         icon: AppIcon.success,
                       )

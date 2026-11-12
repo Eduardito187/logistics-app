@@ -31,7 +31,9 @@ void main() {
     expect(find.textContaining('Diésel'), findsOneWidget);
   });
 
-  testWidgets('sin cargas muestra el estado vacío', (tester) async {
+  // Camión sin cargas en la ventana que baja el teléfono (últimos 30 días):
+  // estado vacío que lo dice, no un error.
+  testWidgets('sin cargas recientes muestra el estado vacío', (tester) async {
     await pumpScoped(
       tester,
       overrides: [
@@ -41,6 +43,9 @@ void main() {
         body: SingleChildScrollView(child: RecentRefuels()),
       ),
     );
-    expect(find.text('Sin cargas registradas'), findsOneWidget);
+    expect(
+      find.text('Sin cargas en los últimos $recentHistoryDays días'),
+      findsOneWidget,
+    );
   });
 }

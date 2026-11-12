@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/session.dart';
+import 'core/home_widgets/home_widgets_provider.dart';
+import 'core/labels/label_keys_notifier.dart';
+import 'core/live_updates/route_live_updates_provider.dart';
+import 'core/shortcuts/app_shortcuts_provider.dart';
 import 'core/monitoring/crash_session_binder.dart';
 import 'core/offline/offline_queue.dart';
+import 'core/power/power_status_notifier.dart';
 import 'core/push/push_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -27,6 +34,18 @@ class LogisticsApp extends ConsumerWidget {
     // Crashlytics: usuario seudónimo, rol y tienda al iniciar/cerrar sesión.
     ref.listen(crashSessionBinderProvider, (_, _) {});
 
+    // Energía del teléfono (batería / ahorro): se mantiene vivo toda la sesión
+    // para que el GPS del chofer, el polling y las animaciones decorativas se
+    // recorten con ahorro de energía o batería < 20 %. Sin canal nativo
+    // (tests/escritorio) queda "desconocido" = comportamiento normal.
+    ref.listen(powerStatusProvider, (_, _) {});
+    // Ruta en vivo del chofer (Live Updates Android 16 / Dynamic Island iOS) y
+    // accesos directos del ícono según el rol de la sesión.
+    ref.listen(routeLiveUpdatesProvider, (_, _) {});
+    ref.listen(appShortcutsProvider, (_, _) {});
+    // Widgets de la pantalla de inicio: contenido por rol, vacíos al salir.
+    ref.listen(homeWidgetsProvider, (_, _) {});
+
     // Al tocar una notificación entrante, ir a la bandeja.
     ref.listen(pushTapProvider, (_, next) {
       if (next.hasValue) {
@@ -43,6 +62,11 @@ class LogisticsApp extends ConsumerWidget {
     ref.listen(sessionProvider, (previous, next) {
       if (previous == null && next != null) {
         messengerKey.currentState?.clearSnackBars();
+        // Refresca claves de etiquetas y el MODO ABIERTO en cada sesión activa
+        // (login Y restauración al reabrir la app), no solo al iniciar sesión.
+        // Así, si el backend está en modo abierto, el escáner no vuelve a
+        // verificar firma al reabrir y NINGUNA etiqueta se marca inválida.
+        unawaited(ref.read(labelKeysProvider.notifier).refresh());
       }
     });
 

@@ -10,7 +10,7 @@ import '../../../../core/location/location_service.dart';
 import '../../../../core/widgets/app_snack.dart';
 import 'signed_label_result.dart';
 
-/// Resultado de verificar un QR de bulto: la etiqueta válida o el motivo
+/// Resultado de verificar un QR de producto: la etiqueta válida o el motivo
 /// (corto, para el aviso sobre la cámara del escaneo continuo).
 typedef LabelCheck = ({SignedLabelResult? label, String? error});
 
@@ -54,16 +54,14 @@ Future<LabelCheck> verifyLabelQr(WidgetRef ref, String qr) async {
     }
   }
   // No es un QR → Code128 (el valor ES el `label_id`): se resuelve ONLINE. Sin
-  // red no es validable; no reconocida o anulada → se rechaza.
+  // red no es validable. Etiquetas PERMANENTES: nada se "anula"; solo se
+  // rechaza la que el backend NO reconoce.
   final res = await resolveLabelId(ref, qr);
   if (res == null) {
     return (label: null, error: 'Sin señal para validar la etiqueta');
   }
   if (!res.accepted) {
-    return (
-      label: null,
-      error: res.revoked ? 'Etiqueta anulada' : 'Etiqueta no reconocida',
-    );
+    return (label: null, error: 'Etiqueta no reconocida');
   }
   return (
     label: SignedLabelResult(
@@ -76,7 +74,7 @@ Future<LabelCheck> verifyLabelQr(WidgetRef ref, String qr) async {
 }
 
 /// Calienta el GPS al abrir la cámara (sin esperar, nunca lanza): al leer cada
-/// bulto [prefetchCarrierFix] ya encuentra una posición fresca en caché.
+/// producto [prefetchCarrierFix] ya encuentra una posición fresca en caché.
 void warmUpCarrierLocation(WidgetRef ref) {
   try {
     ref.read(locationServiceProvider).prefetch();
@@ -85,7 +83,7 @@ void warmUpCarrierLocation(WidgetRef ref) {
   }
 }
 
-/// Posición para el registro de un bulto (≤ 1,5 s; casi inmediata tras
+/// Posición para el registro de un producto (≤ 1,5 s; casi inmediata tras
 /// [warmUpCarrierLocation]). Nunca falla: sin permiso, plugin o señal devuelve
 /// `null` (lat/lng van en cero).
 Future<GpsFix?> prefetchCarrierFix(WidgetRef ref) async {
@@ -96,7 +94,7 @@ Future<GpsFix?> prefetchCarrierFix(WidgetRef ref) async {
   }
 }
 
-/// Resumen al cerrar la cámara: cuántos bultos quedaron registrados en la
+/// Resumen al cerrar la cámara: cuántos productos quedaron registrados en la
 /// tanda. Flota ENCIMA del botón del pie ([kBottomActionClearance]).
 void showCarrierBatchSummary(BuildContext context, String message) {
   showSuccessSnack(context, message, bottomClearance: kBottomActionClearance);

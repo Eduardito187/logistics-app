@@ -6,4 +6,6 @@ library;
 export 'printer_config_data.dart';
 export 'printer_device.dart';
 export 'printer_exception.dart';
+export 'printer_language.dart';
+export 'printer_protocol.dart';
 export 'printer_transport.dart';

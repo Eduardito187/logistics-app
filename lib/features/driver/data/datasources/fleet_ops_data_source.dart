@@ -66,11 +66,19 @@ class FleetOpsDataSource {
     }
   }
 
-  Future<List<Refuel>> listVehicleRefuels({required String vehicleId}) async {
+  /// [from]/[to] acotan el historial que baja el teléfono (el endpoint los
+  /// acepta; sin ellos devuelve todas las cargas del camión).
+  Future<List<Refuel>> listVehicleRefuels({
+    required String vehicleId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
     final api = _ref.read(logisticsApiProvider);
     try {
       final response = await api.fleetOps.listFleetRefuels(
         vehicleId: vehicleId,
+        from: from,
+        to: to,
       );
       return [...response.data]
         ..sort((a, b) => b.refueledAt.compareTo(a.refueledAt));
@@ -79,13 +87,18 @@ class FleetOpsDataSource {
     }
   }
 
+  /// [from]/[to] acotan el historial, igual que en [listVehicleRefuels].
   Future<List<OdometerReading>> listOdometerReadings({
     required String vehicleId,
+    required DateTime from,
+    required DateTime to,
   }) async {
     final api = _ref.read(logisticsApiProvider);
     try {
       final response = await api.fleetOps.listFleetOdometerReadings(
         vehicleId: vehicleId,
+        from: from,
+        to: to,
       );
       return [...response.data]..sort((a, b) => b.readAt.compareTo(a.readAt));
     } on DioException catch (e) {

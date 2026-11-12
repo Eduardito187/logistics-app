@@ -10,7 +10,7 @@ import 'package:logistics_app/features/store/presentation/widgets/open_reception
 import '../../store_fixtures.dart';
 import '../../../../support/button_finders.dart';
 
-// Panel para abrir una recepción: lista los bultos esperados, pide el nodo de
+// Panel para abrir una recepción: lista los productos esperados, pide el nodo de
 // origen (excluyendo el destino) y llama a onOpen con origen + ids esperados.
 
 final _dest = storeNode();

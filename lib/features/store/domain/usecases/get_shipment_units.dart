@@ -4,7 +4,7 @@ import '../../../../core/api/models/unit_tracking.dart';
 import '../../data/repositories/store_repository_impl.dart';
 import '../repositories/store_repository.dart';
 
-/// Query: bultos esperados de un envío (per-bulto).
+/// Query: productos esperados de un envío (uno por unidad física).
 class GetShipmentUnits {
   const GetShipmentUnits(this._repo);
 

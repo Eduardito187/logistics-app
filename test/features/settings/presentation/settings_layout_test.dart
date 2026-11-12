@@ -21,7 +21,7 @@ import 'package:logistics_app/features/settings/presentation/widgets/printer_sec
 
 import '../../../support/screen_sizes.dart';
 
-// Layout de Ajustes (perfil, impresora con Bluetooth/WiFi/USB, sesión) y de
+// Layout de Ajustes (perfil, tarjeta de impresora activa, sesión) y de
 // "Mis dispositivos" en los 4 tamaños con letra 1.3x, con textos largos. Un
 // desborde hace fallar el test solo.
 
@@ -52,6 +52,13 @@ const _printer = PrinterConfig(
 class _FakeLabelPrinter implements LabelPrinter {
   @override
   Future<void> printZpl(String zpl, {PrinterConfig? to}) async {}
+  @override
+  Future<PrintOutcome> printLabel({
+    required String zpl,
+    LabelRenderer? render,
+    String? jobName,
+    PrinterConfig? to,
+  }) async => const PrintOutcome.sent();
   @override
   Future<List<PrinterDevice>> discover(PrinterTransport transport) async =>
       const [];
@@ -111,25 +118,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Las tres opciones de conexión, y WiFi muestra su formulario.
+    // Estado primero: la impresora activa con sus dos botones y, al abrir
+    // las opciones avanzadas, "Olvidar impresora".
     await tester.scrollUntilVisible(
       find.text('Imprimir prueba'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('Bluetooth'));
+    expect(find.text('Zebra · Bluetooth'), findsOneWidget);
+    expect(find.text('Cambiar'), findsOneWidget);
+    await tester.ensureVisible(find.text('Opciones avanzadas'));
     await tester.pumpAndSettle();
-    expect(find.text('Bluetooth'), findsOneWidget);
-    expect(find.text('USB'), findsOneWidget);
-    await tester.tap(find.text('WiFi'));
+    await tester.tap(find.text('Opciones avanzadas'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('IP de la impresora'));
+    await tester.ensureVisible(find.text('Olvidar impresora'));
     await tester.pumpAndSettle();
-    expect(find.text('IP de la impresora'), findsOneWidget);
-    await tester.ensureVisible(find.text('USB'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('USB'));
-    await tester.pumpAndSettle();
+    expect(find.text('Olvidar impresora'), findsOneWidget);
 
     // En tablet las secciones no se estiran de borde a borde.
     final section = tester.getRect(find.byType(PrinterSection));
@@ -183,7 +187,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Este dispositivo'), findsOneWidget);
+    expect(find.text('Este teléfono'), findsOneWidget);
     // Lista perezosa: no construye las 12 tarjetas de una.
     if (screen != TestScreen.tabletPortrait) {
       expect(find.byType(DeviceCard).evaluate().length, lessThan(12));
