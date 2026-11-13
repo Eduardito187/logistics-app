@@ -146,7 +146,7 @@ class _LabelPreviewSheetState extends ConsumerState<_LabelPreviewSheet> {
         return;
       }
       final label = widget.label;
-      final producto = widget.productName ?? 'SKU ${label.sku}';
+      final producto = widget.productName ?? label.sku;
       await ref
           .read(shareServiceProvider)
           .shareImagePng(

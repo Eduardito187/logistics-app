@@ -7,6 +7,7 @@ import 'package:logistics_app/core/api/models/shipment_status.dart';
 import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/widgets/empty_state.dart';
+import 'package:logistics_app/features/picking/presentation/controllers/locally_assigned_orders.dart';
 import 'package:logistics_app/features/picking/presentation/orders_worklist_screen.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/order_card.dart';
 
@@ -77,6 +78,35 @@ void main() {
     expect(find.text('Pedido EXT-1'), findsOneWidget);
     expect(find.text('Pedido EXT-2'), findsOneWidget);
   });
+
+  testWidgets(
+    'oculta el pedido ASIGNADO localmente (no reaparece aunque siga PLANNED)',
+    (tester) async {
+      // El backend sigue devolviendo EXT-1 como PLANNED tras asignarlo, pero la
+      // worklist lo oculta en cuanto se marca asignado (offline-invisible).
+      await _pump(
+        tester,
+        () async => [
+          buildShipment(externalId: 'EXT-1', status: ShipmentStatus.planned),
+          buildShipment(externalId: 'EXT-2', status: ShipmentStatus.planned),
+        ],
+      );
+      expect(find.byType(OrderCard), findsNWidgets(2));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OrdersWorklistScreen)),
+      );
+      container
+          .read(locallyAssignedOrdersProvider.notifier)
+          .markAssigned('EXT-1');
+      await tester.pumpAndSettle();
+
+      // EXT-1 desapareció; EXT-2 sigue. La lista disminuyó.
+      expect(find.byType(OrderCard), findsOneWidget);
+      expect(find.text('Pedido EXT-1'), findsNothing);
+      expect(find.text('Pedido EXT-2'), findsOneWidget);
+    },
+  );
 
   testWidgets('sin pedidos muestra el EmptyState', (tester) async {
     await _pump(tester, () async => const <Shipment>[]);

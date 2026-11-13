@@ -211,7 +211,7 @@ void main() {
     // Robusto: scrollear al SKU del primer producto (evita `.first` sobre un
     // match vacío a mitad del drag).
     await tester.scrollUntilVisible(
-      find.text('SKU ${skus.first}'),
+      find.text(skus.first),
       200,
       scrollable: unitsScroll,
     );
@@ -237,7 +237,7 @@ void main() {
     }
 
     // Se puede llegar a la última unidad scrolleando (sin desbordes).
-    final last = find.text('SKU ${skus.last}');
+    final last = find.text(skus.last);
     await tester.scrollUntilVisible(
       last,
       600,

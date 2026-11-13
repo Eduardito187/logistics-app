@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -59,6 +60,12 @@ class _PodScreenState extends ConsumerState<PodScreen> {
   /// de N productos se entrega escaneando los N productos (no uno solo).
   final List<String> _unitIds = <String>[];
 
+  /// SKU de cada producto escaneado (por `unit_id`), cuando se pudo leer de la
+  /// etiqueta (QR). Sirve para la guardia anti-duplicados por SKU: dos etiquetas
+  /// DISTINTAS del MISMO producto (misma orden + mismo SKU, p. ej. tras una
+  /// re-emisión) no pueden sumar una entrega de más.
+  final Map<String, String> _skuByUnitId = <String, String>{};
+
   /// Cantidad de productos esperados del envío, o `null` si todavía no se pudo
   /// saber (sin red / el backend aún no la expone). Con `null` no se exige un
   /// total: alcanza con ≥1 producto para poder cerrar (offline-first).
@@ -90,7 +97,14 @@ class _PodScreenState extends ConsumerState<PodScreen> {
       (sum, item) => sum + item.quantity,
     );
     if (unitIds != null && unitIds.isNotEmpty) {
-      _expectedCount = unitIds.length;
+      // El total NUNCA puede superar la cantidad real de productos del pedido.
+      // Unidades DUPLICADAS (misma orden+SKU, distinto id, p. ej. tras una
+      // re-emisión) inflan `unit_ids`, pero la suma de cantidades de los ítems
+      // es el tope real a entregar. Se toma el MENOR: así una etiqueta duplicada
+      // no suma un producto de más. (Si no hay ítems, manda `unit_ids`.)
+      _expectedCount = fromItems > 0
+          ? math.min(unitIds.length, fromItems)
+          : unitIds.length;
     } else if (fromItems > 0) {
       _expectedCount = fromItems;
     } else {
@@ -147,7 +161,10 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                         unitId: _unitIds[i],
                         onRemove: _busy
                             ? null
-                            : () => setState(() => _unitIds.removeAt(i)),
+                            : () => setState(() {
+                                _skuByUnitId.remove(_unitIds[i]);
+                                _unitIds.removeAt(i);
+                              }),
                       ),
                   ],
                   const SizedBox(height: 12),
@@ -312,12 +329,53 @@ class _PodScreenState extends ConsumerState<PodScreen> {
       showInfoSnack(context, 'Etiqueta no válida');
       return;
     }
-    // Mismo producto escaneado dos veces: avisar y no duplicar.
+    // Mismo producto escaneado dos veces (MISMA etiqueta): avisar y no duplicar.
     if (_unitIds.contains(unitId)) {
       showInfoSnack(context, 'Ese producto ya lo escaneaste.');
       return;
     }
-    setState(() => _unitIds.add(unitId));
+    // Guardia anti-DUPLICADOS por SKU: una etiqueta distinta del MISMO producto
+    // (misma orden y mismo SKU, otro id) no puede sumar una entrega de más. Si
+    // ya se escanearon todas las unidades que el pedido tiene de ese SKU, se
+    // rechaza. Solo aplica si se conoce el SKU de la etiqueta (QR) y el pedido
+    // lista ese SKU; si no, no bloquea (offline-first, Code128 sin SKU).
+    final sku = _skuOf(qr);
+    if (sku != null) {
+      final expectedForSku = _expectedQtyForSku(sku);
+      if (expectedForSku != null) {
+        final alreadyForSku = _skuByUnitId.values.where((s) => s == sku).length;
+        if (alreadyForSku >= expectedForSku) {
+          showInfoSnack(
+            context,
+            'Ese producto ($sku) ya está completo: esa etiqueta está duplicada.',
+          );
+          return;
+        }
+      }
+    }
+    setState(() {
+      _unitIds.add(unitId);
+      if (sku != null) _skuByUnitId[unitId] = sku;
+    });
+  }
+
+  /// SKU de la etiqueta del QR, o `null` si no se puede leer (Code128 sin SKU,
+  /// o no es un QR de etiqueta): en ese caso la guardia por SKU no aplica.
+  String? _skuOf(String qr) {
+    try {
+      return SignedLabel.fromQrContent(qr).payload.sku;
+    } on LabelFormatException {
+      return null;
+    }
+  }
+
+  /// Cantidad de unidades que el pedido tiene del [sku] (suma de las cantidades
+  /// de los ítems con ese SKU), o `null` si el pedido no lista ese SKU (no se
+  /// puede acotar por SKU → no bloquea).
+  int? _expectedQtyForSku(String sku) {
+    final matching = widget.stop.items.where((i) => i.sku == sku);
+    if (matching.isEmpty) return null;
+    return matching.fold<int>(0, (sum, i) => sum + i.quantity);
   }
 
   /// Pertenencia POR ORDEN: la etiqueta pertenece a la parada si su `o`
@@ -499,7 +557,14 @@ class _PodScreenState extends ConsumerState<PodScreen> {
               lng: fix?.lng ?? 0,
               occurredAt: now,
               confirmation: _confirmation!,
-              photoPath: photo != null ? 'pendiente' : null,
+              // La foto va por SU cola (`enqueueDeliveryPhotoProvider`) y el
+              // backend la LIGA al envío cuando llega (queda `pod_photo_pending`
+              // hasta entonces). NUNCA mandar una ruta inventada: el backend
+              // rechaza con 422 (`errors.photo_path`) un `photo_path` que no
+              // existe en disco de evidencia. Se OMITE y la entrega sale igual
+              // (opción A, offline-first); antes mandaba `'pendiente'` y el POD
+              // fallaba con "No se pudo registrar".
+              photoPath: null,
             ).toJson(),
             label: _unitIds.length > 1
                 ? 'POD · $cliente · producto ${i + 1}/${_unitIds.length}'

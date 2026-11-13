@@ -89,6 +89,75 @@ void main() {
     );
   });
 
+  testWidgets(
+    'etiquetas DUPLICADAS del mismo producto: muestra 1 por producto, no 4',
+    (tester) async {
+      // 2 productos (COL, BAS) con 2 etiquetas CADA uno (re-emisión: otro id y
+      // otra línea, pero MISMA identidad física SKU/unidad/pieza). Debe mostrar
+      // 2 productos, no 4: las duplicadas se colapsan a la más reciente.
+      EmittedLabel full(String id, String sku, int ln, int emittedAt) =>
+          EmittedLabel(
+            orderNumber: 'EXT-1',
+            labelId: id,
+            keyId: 0,
+            sku: sku,
+            lineNumber: ln,
+            qrContent:
+                '{"v":1,"t":"PKG","k":0,"id":"$id","o":"EXT-1","ln":$ln,'
+                '"sku":"$sku","u":[1,1],"pc":[1,1],"org":"CD01","dst":"C",'
+                '"ts":$emittedAt,"s":""}',
+            zpl: '^XA^XZ',
+            emittedAt: emittedAt,
+            revoked: false,
+          );
+      await _pump(
+        tester,
+        repo: FakePickingRepository(
+          onGetOrderLabels: (_) async => [
+            full('OLD-COL', 'COL-QUEEN-ORT', 1, 1700000000),
+            full('OLD-BAS', 'BAS-QUEEN', 2, 1700000000),
+            full('NEW-COL', 'COL-QUEEN-ORT', 2, 1700000100), // duplicada
+            full('NEW-BAS', 'BAS-QUEEN', 1, 1700000100), // duplicada
+          ],
+        ),
+      );
+
+      expect(find.text('Productos (2)'), findsOneWidget);
+      expect(tester.widgetList(find.byType(UnitTile)).length, 2);
+    },
+  );
+
+  testWidgets(
+    'producto de CANTIDAD 2 (unidades distintas): NO se colapsa, muestra 2',
+    (tester) async {
+      // Mismo SKU pero unidades DISTINTAS (u 1/2 y 2/2): son 2 productos físicos
+      // legítimos, no duplicados → se muestran los dos.
+      EmittedLabel unit(String id, int idx) => EmittedLabel(
+        orderNumber: 'EXT-1',
+        labelId: id,
+        keyId: 0,
+        sku: 'BAS-QUEEN',
+        lineNumber: 1,
+        qrContent:
+            '{"v":1,"t":"PKG","k":0,"id":"$id","o":"EXT-1","ln":1,'
+            '"sku":"BAS-QUEEN","u":[$idx,2],"pc":[1,1],"org":"CD01","dst":"C",'
+            '"ts":1700000000,"s":""}',
+        zpl: '^XA^XZ',
+        emittedAt: 1700000000,
+        revoked: false,
+      );
+      await _pump(
+        tester,
+        repo: FakePickingRepository(
+          onGetOrderLabels: (_) async => [unit('U1', 1), unit('U2', 2)],
+        ),
+      );
+
+      expect(find.text('Productos (2)'), findsOneWidget);
+      expect(tester.widgetList(find.byType(UnitTile)).length, 2);
+    },
+  );
+
   testWidgets('con etiquetas muestra progreso y una fila por unidad', (
     tester,
   ) async {

@@ -15,6 +15,7 @@ import '../../../core/widgets/section_card.dart';
 import '../domain/usecases/conduct_checklist.dart';
 import '../domain/usecases/record_odometer.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/inspection_history_controller.dart';
 import 'driver_vehicle_gate.dart';
 import 'inspection_history_screen.dart';
 
@@ -187,6 +188,11 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             performedOn: DateTime.now(),
             notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
           );
+      // El checklist quedó registrado: se refresca el historial del vehículo
+      // para que el recordatorio AMARILLO "Revisá el camión hoy" del inicio
+      // desaparezca al instante (ya se inspeccionó hoy). Sin esto, el inicio
+      // seguía con el historial viejo en caché y el aviso no se iba.
+      ref.invalidate(inspectionHistoryProvider(vehicleId));
       // Odómetro de salida: secundario respecto a la inspección. Se registra si
       // se cargó un valor; un fallo (p. ej. menor al último) NO frena el
       // checklist, solo se avisa suave.
