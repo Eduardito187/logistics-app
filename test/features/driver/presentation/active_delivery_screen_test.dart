@@ -43,7 +43,16 @@ DriverRoute _route({
   completedStops: completed,
   stopsRemaining: 5 - completed,
   currentStop: current,
-  stops: stops ?? [_stop],
+  // 5 paradas reales (todas pendientes salvo la en curso) para que
+  // RouteProgress.total (que cuenta sobre `stops`) coincida con totalStops. El
+  // relleno NO tiene coordenadas → no afecta el mapa ni el encuadre.
+  stops:
+      stops ??
+      [
+        _stop, // seq 2, la parada en curso (con coords)
+        for (var s = 1; s <= 5; s++)
+          if (s != 2) buildStop(id: 's$s', sequence: s),
+      ],
 );
 
 Shipment _shipment({String? phone = '+591 70000001'}) => Shipment(
@@ -160,7 +169,9 @@ void main() {
     await _pump(tester);
 
     // Estado + resumen del cliente: visibles SIN abrir nada (el mapa manda).
-    expect(find.text('Parada 2 de 5'), findsOneWidget);
+    // "Parada N de M": N = ordinal de la entrega en el avance (atendidas+1), no
+    // la secuencia; con 0 atendidas en este fixture, es la 1ª de 5.
+    expect(find.text('Parada 1 de 5'), findsOneWidget);
     expect(find.text('Llegada 14:05'), findsOneWidget);
     expect(find.text('En camino a Ana Pérez'), findsOneWidget);
     expect(find.byType(RouteProgressBar), findsOneWidget);
@@ -230,15 +241,42 @@ void main() {
     expect(find.byType(FailedDeliveryScreen), findsOneWidget);
   });
 
-  testWidgets('entrega cerrada: ofrece pasar a la siguiente', (tester) async {
+  testWidgets('parada ya resuelta: ofrece pasar a la siguiente', (tester) async {
+    // "Siguiente entrega" solo aparece cuando la parada EN SÍ está resuelta
+    // (estado efectivo), no por el estado de la entrega del envío: así una 7ª
+    // parada pendiente que el backend reporta como "delivered" NO ofrece pasar
+    // ni se marca sola al tocar.
+    final doneStop = buildStop(
+      sequence: 2,
+      shipmentId: 'ship-9',
+      status: DriverRouteStopStatus.completed,
+      lat: -17.78,
+      lng: -63.18,
+    );
     await _pump(
       tester,
-      overrides: _overrides(delivery: DeliveryStatus.delivered),
+      overrides: _overrides(route: _route(current: doneStop, stops: [doneStop])),
     );
 
     expect(find.text('Siguiente entrega'), findsOneWidget);
     expect(find.text('Entregar'), findsNothing);
   });
+
+  testWidgets(
+    'parada pendiente que el backend reporta "delivered" NO ofrece pasar',
+    (tester) async {
+      // El bug del dueño: con 6/7 entregados, la 7ª pendiente mostraba
+      // "Siguiente entrega" y al tocarla la marcaba entregada. Ahora, aunque la
+      // entrega del envío figure "delivered", la parada pendiente pide Entregar.
+      await _pump(
+        tester,
+        overrides: _overrides(delivery: DeliveryStatus.delivered),
+      );
+
+      expect(find.text('Entregar'), findsOneWidget);
+      expect(find.text('Siguiente entrega'), findsNothing);
+    },
+  );
 
   testWidgets('Ayuda: llamar, navegar y reportar inconvenientes, sin chat', (
     tester,

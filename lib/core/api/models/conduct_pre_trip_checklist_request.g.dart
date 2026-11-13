@@ -14,6 +14,7 @@ ConductPreTripChecklistRequest _$ConductPreTripChecklistRequestFromJson(
   items: Map<String, bool>.from(json['items'] as Map),
   performedOn: DateTime.parse(json['performed_on'] as String),
   notes: json['notes'] as String?,
+  routeId: json['route_id'] as String?,
 );
 
 Map<String, dynamic> _$ConductPreTripChecklistRequestToJson(
@@ -24,4 +25,5 @@ Map<String, dynamic> _$ConductPreTripChecklistRequestToJson(
   'items': instance.items,
   'performed_on': instance.performedOn.toIso8601String(),
   'notes': instance.notes,
+  'route_id': instance.routeId,
 };

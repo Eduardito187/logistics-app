@@ -22,6 +22,9 @@ PreTripChecklist _$PreTripChecklistFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['performed_on'] as String),
       notes: json['notes'] as String?,
+      routeId: json['route_id'] as String?,
+      plate: json['plate'] as String?,
+      driverName: json['driver_name'] as String?,
     );
 
 Map<String, dynamic> _$PreTripChecklistToJson(PreTripChecklist instance) =>
@@ -34,4 +37,7 @@ Map<String, dynamic> _$PreTripChecklistToJson(PreTripChecklist instance) =>
       'pending': instance.pending,
       'performed_on': instance.performedOn?.toIso8601String(),
       'notes': instance.notes,
+      'route_id': instance.routeId,
+      'plate': instance.plate,
+      'driver_name': instance.driverName,
     };

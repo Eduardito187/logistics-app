@@ -54,16 +54,72 @@ class DeliveryStateCard extends ConsumerWidget {
               if (delivery.podConfirmation != null)
                 InfoRow(
                   icon: AppIcon.verified,
-                  text: 'Confirmación: ${delivery.podConfirmation!}',
+                  text: 'Firma/confirmación: ${delivery.podConfirmation!}',
                 ),
               if (reason != null)
                 InfoRow(
                   icon: AppIcon.error,
                   text: 'Motivo de falla: ${_failureReasonLabel(reason)}',
                 ),
+              // Foto de la entrega ya registrada (la devuelve el backend como
+              // URL): se muestra al reentrar a una parada entregada.
+              if (delivery.podPhotoUrl != null) ...[
+                const SizedBox(height: 10),
+                _PodPhoto(url: delivery.podPhotoUrl!),
+              ],
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Foto de la entrega (POD) ya registrada, servida por el backend. Se decodifica
+/// chica (no a resolución de cámara) y, si falla la descarga, muestra un ícono
+/// neutro: nunca un error que alarme (es evidencia histórica, no una acción).
+class _PodPhoto extends StatelessWidget {
+  const _PodPhoto({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        url,
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        cacheWidth: 800,
+        semanticLabel: 'Foto de la entrega',
+        errorBuilder: (context, _, _) => _PodPhotoFallback(),
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : const _PodPhotoFallback(loading: true),
+      ),
+    );
+  }
+}
+
+class _PodPhotoFallback extends StatelessWidget {
+  const _PodPhotoFallback({this.loading = false});
+
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 180,
+      alignment: Alignment.center,
+      color: scheme.surfaceContainerHighest,
+      child: AnimatedAppIcon(
+        AppIcon.image,
+        size: 40,
+        state: loading ? AppIconState.loading : AppIconState.idle,
+        color: scheme.outline,
+        semanticLabel: loading ? 'Cargando foto' : 'Foto de la entrega',
       ),
     );
   }

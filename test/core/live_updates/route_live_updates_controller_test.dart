@@ -114,13 +114,13 @@ void main() {
     expect(service.calls, ['start']);
   });
 
-  test('solo distancia: máximo un update cada 30 s', () {
+  test('solo distancia: máximo un update cada 10 s (tiempo real a pedido)', () {
     final c = build();
     c.onStatus(_status(meters: 2300));
-    now = now.add(const Duration(seconds: 10));
+    now = now.add(const Duration(seconds: 5));
     c.onStatus(_status(meters: 2000));
-    expect(service.calls, ['start'], reason: 'antes de 30 s no se publica');
-    now = now.add(const Duration(seconds: 25));
+    expect(service.calls, ['start'], reason: 'antes de 10 s no se publica');
+    now = now.add(const Duration(seconds: 6)); // 11 s desde el primer envío
     c.onStatus(_status(meters: 1700));
     expect(service.calls, ['start', 'update']);
     expect(service.payloads.last!.remainingText, '1,7 km');

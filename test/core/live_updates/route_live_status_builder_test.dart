@@ -61,7 +61,8 @@ void main() {
     expect(status.customer.endsWith('…'), isTrue);
     expect(status.title, 'Parada 2 de 3 · Llega 09:05');
     expect(status.subText, 'A 2,3 km');
-    expect(status.chipText, '2/3 · 09:05');
+    // El chip/isla muestra ENTREGADAS/total (sin hora): 1 entregada de 3.
+    expect(status.chipText, '1/3');
     expect(status.lat, -17.7);
   });
 
@@ -72,7 +73,7 @@ void main() {
     )!;
     expect(status.state, RouteLiveState.arriving);
     expect(status.title, 'Llegaste · Parada 2 de 3');
-    expect(status.chipText, '2/3 · Llegó');
+    expect(status.chipText, '1/3');
     expect(status.subText, isNull);
   });
 
@@ -93,8 +94,8 @@ void main() {
     expect(status.completedCount, 2);
     // Sin nombre de cliente cae a la dirección.
     expect(status.customer, 'Av. Busch');
-    // Sin ETA el chip muestra el avance.
-    expect(status.chipText, '3/3');
+    // El chip muestra las ENTREGADAS (2 de 3), no la parada en curso (3).
+    expect(status.chipText, '2/3');
     expect(status.title, 'Parada 3 de 3');
   });
 
@@ -112,11 +113,52 @@ void main() {
     expect(status.progress, 1);
   });
 
-  test('ruta completada en el backend → finalizada', () {
+  test('backend dice "completada" pero queda una pendiente → NO finaliza', () {
+    // El backend marca la ruta completed de más. Item por item: mientras haya
+    // una parada pendiente, la isla muestra ESA parada, no "Ruta completada"
+    // (si no, se contradecía con la pantalla de entrega, que re-verifica).
     final status = routeLiveStatusFor(
       route: _route(status: DriverRouteStatus.completed, completed: 3),
     )!;
-    expect(status.state, RouteLiveState.finished);
+    expect(status.state, isNot(RouteLiveState.finished));
+    expect(status.stopId, 's2'); // la primera pendiente por secuencia
+  });
+
+  test('todas las paradas no-pendientes → finaliza (sin mirar route.status)', () {
+    // Sin ninguna pendiente (aunque el backend diga inProgress) → terminada.
+    final route = buildRoute(
+      status: DriverRouteStatus.inProgress,
+      totalStops: 2,
+      stops: [
+        buildStop(id: 'a', status: DriverRouteStopStatus.completed),
+        buildStop(id: 'b', sequence: 2, status: DriverRouteStopStatus.failed),
+      ],
+    );
+    expect(routeLiveStatusFor(route: route)!.state, RouteLiveState.finished);
+  });
+
+  test('entregas FUERA DE ORDEN: el título va por avance, no por secuencia', () {
+    // 7 paradas, 6 atendidas (seq 2..7), pendiente la seq 1. El chofer hizo 6 y
+    // va en la 7ª; NO debe decir "Parada 1 de 7" (la secuencia), sino "7 de 7".
+    final route = buildRoute(
+      totalStops: 7,
+      completedStops: 6,
+      stops: [
+        buildStop(id: 's1', sequence: 1, customerName: 'Pendiente'),
+        for (var i = 2; i <= 7; i++)
+          buildStop(
+            id: 's$i',
+            sequence: i,
+            status: DriverRouteStopStatus.completed,
+          ),
+      ],
+    );
+    final status = routeLiveStatusFor(route: route)!;
+    expect(status.stopIndex, 1); // la parada pendiente ES la secuencia 1
+    expect(status.completedCount, 6);
+    expect(status.deliveryPosition, 7); // pero el avance dice 7ª
+    expect(status.title, 'Parada 7 de 7');
+    expect(status.chipText, '6/7'); // la isla: 6 entregadas de 7
   });
 
   test('sameContentAs ignora metros que no cambian el texto', () {

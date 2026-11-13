@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/auth/session.dart';
 import 'package:logistics_app/core/auth/user_role.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/push/push_service.dart';
@@ -85,6 +86,7 @@ class _FakeQueue implements OfflineQueue {
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async {
     submitted.add((kind: kind, payload: payload));
     return SubmitOutcome.queued;

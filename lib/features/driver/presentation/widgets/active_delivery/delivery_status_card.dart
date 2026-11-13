@@ -5,6 +5,7 @@ import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/route_navigation.dart';
+import '../../../domain/route_progress.dart';
 
 final DateFormat _hour = DateFormat.Hm('es');
 
@@ -17,11 +18,16 @@ class DeliveryStatusCard extends StatelessWidget {
     super.key,
     required this.route,
     required this.stop,
+    required this.progress,
     this.remaining,
   });
 
   final DriverRoute route;
   final DriverRouteStop stop;
+
+  /// Avance de la ruta calculado item por item (fuente única); de acá sale el
+  /// "de M" y la barra de progreso, para no contradecir al resto de la app.
+  final RouteProgress progress;
 
   /// Estimación en vivo hasta la parada; `null` sin posición del camión.
   final RemainingEstimate? remaining;
@@ -29,7 +35,16 @@ class DeliveryStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = route.totalStops > 0 ? route.totalStops : route.stops.length;
+    // Total, posición y barra de la MISMA fuente (RouteProgress item por item):
+    // así "de M", el ordinal y el relleno NUNCA se contradicen (antes el total
+    // salía de route.totalStops y el avance de las paradas listadas → si el
+    // backend mandaba distinto, divergían, justo lo que RouteProgress evita).
+    final total = progress.total > 0 ? progress.total : route.stops.length;
+    // "Parada N de M": N = ordinal de ESTA entrega en el avance del día
+    // (atendidas + 1), NO la secuencia de la parada. Con entregas fuera de orden
+    // la secuencia confunde ("Parada 1 de 7" con 6 ya hechas): el chofer va en
+    // la 7ª. Coincide con el contador de la isla (6/7 hechas → vas en la 7).
+    final position = total == 0 ? 1 : (progress.attended + 1).clamp(1, total);
     final eta = stop.etaAt;
     final customer = stop.customerName ?? 'el cliente';
 
@@ -43,7 +58,7 @@ class DeliveryStatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Parada ${stop.sequence} de $total',
+              'Parada $position de $total',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: AppColors.success,
                 fontWeight: FontWeight.w700,
@@ -78,7 +93,7 @@ class DeliveryStatusCard extends StatelessWidget {
             const SizedBox(height: 10),
             RouteProgressBar(
               total: total,
-              completed: route.completedStops.clamp(0, total),
+              completed: progress.attended.clamp(0, total),
             ),
             const SizedBox(height: 10),
             Text(
@@ -200,33 +215,77 @@ class RouteProgressBar extends StatelessWidget {
     if (total <= 0) {
       return const SizedBox(height: 8);
     }
-    if (total > 12) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: LinearProgressIndicator(
-          value: completed / total,
-          minHeight: 8,
-          color: done,
-          backgroundColor: todo,
-        ),
-      );
-    }
-    return Semantics(
-      label: '$completed de $total paradas atendidas',
-      child: Row(
-        children: [
-          for (var i = 0; i < total; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
-            Expanded(
-              child: Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: i < completed ? done : todo,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    final target = (completed / total).clamp(0.0, 1.0).toDouble();
+    // El avance se ANIMA hacia su nuevo valor (antes saltaba de golpe al cerrar
+    // una entrega). TweenAnimationBuilder interpola desde el valor anterior al
+    // nuevo en cada reconstrucción.
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: reduce ? target : 0.0, end: target),
+      duration: reduce ? Duration.zero : const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        if (total > 12) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              color: done,
+              backgroundColor: todo,
             ),
-          ],
+          );
+        }
+        // Barra en tramos: la fracción animada (0..total) llena cada tramo de
+        // izquierda a derecha, con el último tramo pintándose parcialmente.
+        final filled = value * total;
+        return Semantics(
+          label: '$completed de $total paradas atendidas',
+          child: Row(
+            children: [
+              for (var i = 0; i < total; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: _SegmentBar(
+                    // Cuánto de ESTE tramo está lleno (0..1).
+                    fill: (filled - i).clamp(0.0, 1.0).toDouble(),
+                    done: done,
+                    todo: todo,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Un tramo de la barra de progreso: fondo "por hacer" y, encima, un relleno
+/// "hecho" cuya fracción [fill] (0..1) permite animar el llenado tramo a tramo.
+class _SegmentBar extends StatelessWidget {
+  const _SegmentBar({
+    required this.fill,
+    required this.done,
+    required this.todo,
+  });
+
+  final double fill;
+  final Color done;
+  final Color todo;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        children: [
+          Container(height: 8, color: todo),
+          FractionallySizedBox(
+            widthFactor: fill,
+            child: Container(height: 8, color: done),
+          ),
         ],
       ),
     );

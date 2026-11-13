@@ -84,9 +84,22 @@ class RouteLiveStatus {
   /// "3/8": parada en curso sobre el total.
   String get counterText => '$stopIndex/$stopCount';
 
+  /// Contador de AVANCE para la pastilla/chip de la cámara: "6/7" = paradas
+  /// ATENDIDAS / total (`completedCount` = entregadas + fallidas, como la barra
+  /// de progreso). Sube al cerrar una parada. Es el avance de la ruta, no sólo
+  /// las entregadas (el desglose entregada/fallida vive en "Mi ruta"). Pedido
+  /// del dueño: sólo el ícono del camión + la cantidad, SIN la hora.
+  String get attendedCounterText => '$completedCount/$stopCount';
+
+  /// Ordinal de ESTA entrega en el avance del día (atendidas + 1): con entregas
+  /// fuera de orden, mostrar la SECUENCIA de la parada pendiente (p. ej. 1)
+  /// confundía ("Parada 1 de 7" con 6 hechas). Va con el contador de la isla.
+  int get deliveryPosition =>
+      stopCount == 0 ? 1 : (completedCount + 1).clamp(1, stopCount);
+
   /// Título de la notificación.
   String get title {
-    final stop = 'Parada $stopIndex de $stopCount';
+    final stop = 'Parada $deliveryPosition de $stopCount';
     switch (state) {
       case RouteLiveState.onTheWay:
         final eta = etaText;
@@ -117,22 +130,11 @@ class RouteLiveStatus {
     return remaining == null ? null : 'A $remaining';
   }
 
-  /// Texto corto del chip de la barra de estado (Android 16) / Dynamic Island
-  /// compacta. Lleva avance + hora ("1/7 · 08:15") para que el chip muestre
-  /// CONTENIDO (no solo la hora): es lo que se ve en la isla del sistema.
-  String get chipText {
-    switch (state) {
-      case RouteLiveState.onTheWay:
-        final eta = etaText;
-        return eta == null ? counterText : '$counterText · $eta';
-      case RouteLiveState.arriving:
-        return '$counterText · Llegó';
-      case RouteLiveState.delivering:
-        return '$counterText · Entrega';
-      case RouteLiveState.finished:
-        return 'Listo';
-    }
-  }
+  /// Texto corto del chip de la barra de estado (Android 16) / isla compacta:
+  /// SOLO el contador de ENTREGAS ("6/7"), sin la hora (pedido del dueño). El
+  /// ícono del camión lo pone el nativo. Al terminar la ruta, "Listo".
+  String get chipText =>
+      state == RouteLiveState.finished ? 'Listo' : attendedCounterText;
 
   /// Cambio que se publica al instante (sin esperar el intervalo mínimo):
   /// otra parada, otro estado, otro avance, otro cliente u otra ETA.

@@ -9,6 +9,7 @@ import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/features/driver/domain/repositories/fleet_repository.dart';
 import 'package:logistics_app/features/driver/domain/usecases/conduct_checklist.dart';
@@ -269,6 +270,7 @@ class FakeOfflineQueue implements OfflineQueue {
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async {
     lastKind = kind;
     submissions.add(payload);
@@ -325,6 +327,7 @@ class FakeConductChecklist extends ConductChecklist {
   final Object? error;
   Map<String, bool>? lastItems;
   String? lastDriverId;
+  String? lastRouteId;
 
   @override
   Future<Data5?> call({
@@ -333,9 +336,11 @@ class FakeConductChecklist extends ConductChecklist {
     required Map<String, bool> items,
     required DateTime performedOn,
     String? notes,
+    String? routeId,
   }) async {
     lastItems = items;
     lastDriverId = driverId;
+    lastRouteId = routeId;
     if (error != null) throw error!;
     return result;
   }

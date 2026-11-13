@@ -17,8 +17,11 @@ class DriverHomeInspectionReminder extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vehicleId = ref.watch(assignedVehicleIdProvider);
     if (vehicleId == null) return const SizedBox.shrink();
+    // Ruta del día en curso (si hay): habilita el recordatorio POR RUTA.
+    final currentRouteId = ref.watch(driverRouteProvider).value?.id;
     return DailyInspectionReminder(
       vehicleId: vehicleId,
+      currentRouteId: currentRouteId,
       onTap: () => context.push('/driver/checklist'),
     );
   }

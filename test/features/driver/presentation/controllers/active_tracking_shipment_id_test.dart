@@ -9,7 +9,8 @@ import 'package:logistics_app/features/driver/presentation/controllers/driver_tr
 import '../../support/driver_test_support.dart';
 
 // Selección del envío a rastrear automáticamente: parada en curso o primera
-// pendiente; null cuando no hay parada activa (señal para detener el rastreo).
+// pendiente; si ya no quedan pendientes se sigue rastreando el ÚLTIMO envío
+// (regreso al CD). null solo mientras no hay ruta o la ruta no tiene paradas.
 
 Future<String?> _resolve(DriverRoute route) async {
   final container = ProviderContainer(
@@ -36,12 +37,14 @@ void main() {
     expect(container.read(activeTrackingShipmentIdProvider), isNull);
   });
 
-  test('null cuando la ruta está completada', () async {
+  test('la ruta "completada" por el backend con una parada pendiente la rastrea', () async {
+    // El backend dice completada pero una parada sigue pendiente (el bug del
+    // dueño): el seguimiento NO debe apagarse, debe rastrear esa parada.
     final route = buildRoute(
       status: DriverRouteStatus.completed,
-      stops: [buildStop(status: DriverRouteStopStatus.pending)],
+      stops: [buildStop(shipmentId: 'ship-1', status: DriverRouteStopStatus.pending)],
     );
-    expect(await _resolve(route), isNull);
+    expect(await _resolve(route), 'ship-1');
   });
 
   test('usa el envío de la parada en curso si está pendiente', () async {
@@ -95,14 +98,28 @@ void main() {
     },
   );
 
-  test('null cuando no hay ninguna parada pendiente', () async {
+  test('sin pendientes sigue rastreando el ÚLTIMO envío (regreso al CD)', () async {
+    // Todas las paradas atendidas: el camión vuelve al centro de distribución y
+    // debe seguir rastreándose (hasta cerrar sesión). Se asocia al último envío.
     final route = buildRoute(
       status: DriverRouteStatus.inProgress,
       stops: [
-        buildStop(status: DriverRouteStopStatus.completed),
-        buildStop(id: 's2', sequence: 2, status: DriverRouteStopStatus.failed),
+        buildStop(
+          shipmentId: 'ship-1',
+          status: DriverRouteStopStatus.completed,
+        ),
+        buildStop(
+          id: 's2',
+          shipmentId: 'ship-2',
+          sequence: 2,
+          status: DriverRouteStopStatus.failed,
+        ),
       ],
     );
-    expect(await _resolve(route), isNull);
+    expect(await _resolve(route), 'ship-2');
+  });
+
+  test('null cuando la ruta no tiene paradas', () async {
+    expect(await _resolve(buildEmptyRoute()), isNull);
   });
 }

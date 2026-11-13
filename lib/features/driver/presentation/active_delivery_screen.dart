@@ -7,6 +7,7 @@ import '../../../core/icons/icons.dart';
 import '../../../core/navigation/app_nav.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../domain/route_progress.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
@@ -38,11 +39,22 @@ void _closeOrHome(BuildContext context, WidgetRef ref) {
 /// mapa) y los botones del paso: entregar con foto, escanear productos, no se
 /// pudo.
 /// "Ayuda" reúne llamar, navegar y reportar problemas.
-class ActiveDeliveryScreen extends ConsumerWidget {
+class ActiveDeliveryScreen extends ConsumerStatefulWidget {
   const ActiveDeliveryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActiveDeliveryScreen> createState() =>
+      _ActiveDeliveryScreenState();
+}
+
+class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
+  /// Ya se re-verificó el estado "ruta terminada" con un refresco. Evita un
+  /// bucle de refrescos y que se pida de más: un solo fetch por episodio
+  /// "terminada".
+  bool _reverifiedFinish = false;
+
+  @override
+  Widget build(BuildContext context) {
     return DriverVehicleGate(
       title: 'Entrega en curso',
       immersive: true,
@@ -56,7 +68,23 @@ class ActiveDeliveryScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(driverRouteProvider),
           data: (data) {
             final stop = currentStopOf(data, settled);
-            if (stop == null) return _RouteFinished(route: data);
+            if (stop == null) {
+              // La ruta PARECE terminada. Puede ser un estado STALE: el prefetch
+              // del inicio cacheó un fetch transitorio del backend (sin parada
+              // pendiente) y la pantalla mostraba "Sin entregas" hasta recargar
+              // a mano. Se re-verifica UNA sola vez con un refresco en segundo
+              // plano (un fetch, solo al verse terminada) antes de darla por
+              // terminada. Si tras el refresco sigue sin parada, es real.
+              if (!_reverifiedFinish) {
+                _reverifiedFinish = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) ref.invalidate(driverRouteProvider);
+                });
+              }
+              return _RouteFinished(route: data);
+            }
+            // Hay parada en curso: re-armar el chequeo para el próximo episodio.
+            _reverifiedFinish = false;
             return _ActiveDelivery(route: data, stop: stop);
           },
         );
@@ -144,7 +172,16 @@ class _LiveStatusCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fix = ref.watch(deliveryDriverFixProvider).value;
     final remaining = remainingToStop(route, stop, fix);
-    return DeliveryStatusCard(route: route, stop: stop, remaining: remaining);
+    // Avance item por item (incluye lo resuelto en este teléfono): misma fuente
+    // que el resumen y la lista, para que la barra no se contradiga.
+    final settled = ref.watch(locallySettledStopsProvider);
+    final progress = RouteProgress.of(route, settled);
+    return DeliveryStatusCard(
+      route: route,
+      stop: stop,
+      progress: progress,
+      remaining: remaining,
+    );
   }
 }
 

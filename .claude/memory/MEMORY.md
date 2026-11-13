@@ -1,5 +1,6 @@
 - [App solo consume el backend](app-scope-backend-consumer.md) — la app nunca integra servicios externos; medir completitud por cobertura de endpoints /app/*
 - [Estado de cobertura del API](app-api-coverage-state.md) — endpoints /app/* útiles consumidos (+issues, +push-token); contrato rutas/tareas; roles incl. admin
+- [Contrato unificado de errores (RFC 7807)](unified-error-contract.md) — nov 2026: todos los errores en application/problem+json; app lee detail ?? error.message y ramifica por code; 500 en español; codes de dominio en $unknown (pendiente regen si hay que ramificar)
 - [Generación del cliente API](api-client-generation.md) — swagger_parser + preprocesado JSON (anchors/params), retrofit pinneado, cómo regenerar
 - [Método de agentes en paralelo](parallel-agents-method.md) — carpetas disjuntas + contrato de rutas/tareas que el coordinador cablea al final
 - [Toolchain Android en WSL (histórico)](wsl-run-toolchain.md) — SOLO WSL; en Windows ver windows-native-toolchain
@@ -14,8 +15,10 @@
 - [Fases de optimización (RAM/pantallas/velocidad)](perf-responsive-phase.md) — base común + memoria por RAM; **fase 512 MB (nov 2026)**: tier isVeryLowEnd (10 MB img), halo camión estático, íconos con controllers perezosos; pendientes de dispositivo: SkSL, subset de fuentes
 - [Cierre del roadmap de 19 puntos](roadmap-19-cierre.md) — estado final, decisiones (iOS sí, sin SQLCipher, overrides workmanager), pendientes del usuario y backend
 - [Rebrand a DisTrack](distrack-rebrand.md) — oct 2026: nombre DisTrack, paleta (#E30613/#141414/#FFB000/#F3F3F1), fuentes Barlow, assets/brand, íconos/splash generados, logo SVG en login/header, rojo neutralizado
-- [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost para el backend; puertos rotan, device offline al dormir, cuidado con dispositivos ajenos en mDNS
+- [Correr en teléfono por ADB inalámbrico](device-run-wireless-adb.md) — WSL→Honor por WiFi, adb reverse 8110 + localhost; +Windows nativo (adb.exe, adb servers WSL≠Windows, tasks.json ruta relativa, tcpip 5555, mDNS bloqueado en red corporativa, leer DB con Python); puertos rotan
+- [Peso del APK (split por ABI)](apk-size-split-abi.md) — nov 2026: 94.5 MB era universal (4 ABIs); arm64 split = 32.7 MB; --target-platform no basta, usar --split-per-abi; cómo medir/instalar liviano
 - [Correr en teléfono por USB desde WSL](device-run-usb-wsl.md) — usbipd se cae (OnePlus 15 CPH2749); fix = registrar GUID de interfaz ADB en Windows; WSL es NAT → build APK en WSL + install/launch con adb.exe de Windows
+- [Acceso al servidor de staging](staging-server-access.md) — backend staging en OCI vía `ssh oci`; stack Docker (app/web/worker/postgres…); leer logs por `docker logs`, artisan/psql en contenedores
 - [500 en login staging (2FA/APP_KEY)](staging-login-500-2fa-appkey.md) — "Error del servidor" = 5xx real del backend; chofer/supervisor 500 por secreto 2FA con APP_KEY viejo (DecryptException); diagnóstico por curl+roles+logs y fix
 - [Fixes de rendimiento/estabilidad post-rebrand](perf-rebrand-stability-fixes.md) — storm de conectividad (causa del calor), splash cableado, GPS driver aislado, push listeners, "sesión expiró" (/auth/me fuera del 401-logout), robustez
 - [Regla de comunicación de git](git-communication-rule.md) — NUNCA commitear/pushear sin pedido explícito en el turno; avisar toda acción de git con el hash
@@ -38,4 +41,6 @@
 - [Auditoría completa y backlog del backend](backend-audit-2026-11-12.md) — nov 2026: 29 pedidos priorizados; estado del pedido que no avanzaba (384 arrastrados), fuga de liquidaciones, POD de tienda con foto falsa; qué falta cablear tras el deploy
 - [Corredores = slugs, no códigos de nodo](carrier-corridor-slugs.md) — `cd-santa-cruz` da 200 y `CD-SCZ-01` da 404; no hay endpoint que los liste; CorridorType/VehicleClass son enums
 - [Decir "producto", nunca "bulto"](vocabulario-producto-no-bulto.md) — prohibida la palabra bulto/bultos en UI y comentarios; siempre producto/productos (identificadores en inglés no se tocan)
+- [Checklist por ruta + hora de entrega](checklist-por-ruta-y-hora-entrega.md) — nov 2026: inspección pre-salida POR RUTA (no diaria) con auto-upgrade sin regresión (route_id opcional); hora de entrega en paradas (settledAt); estado "al día" + historial con placa; campos aditivos del cliente a mano; getDiagnostics = analizador sin correr flutter
+- [Tracking/conteo del chofer: fuente única item-por-item](driver-tracking-count-single-source.md) — nov 2026: etiquetas quedan "Cargada" tras POD (bug backend Loaded→Delivered descartado) + "6 de 7 completada" (completed_stops cuenta fallidas); app → RouteProgress item-por-item (nunca completedStops/status), acciones ocultas al entregar, mapa con paradas marcadas+leyenda, barra animada, rastreo sigue hasta el CD
 - [PROHIBIDO mutar etiquetas](no-label-mutations-rule.md) — el agente NO revoca/re-emite/emite etiquetas (no tiene permiso ni autoridad); re-emitir revocó etiquetas en uso del dueño; arreglos van del lado del app (modo abierto) o al dueño/backend

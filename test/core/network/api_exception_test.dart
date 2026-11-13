@@ -313,6 +313,84 @@ void main() {
       );
       expect(e.code, ProblemCode.$unknown);
     });
+
+    test('formato unificado: detail y error.message presentes -> usa detail', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 422,
+          data: {
+            'title': 'Regla de negocio',
+            'status': 422,
+            'code': 'business_rule_violation',
+            'detail': 'La orden no es a crédito.',
+            'error': {
+              'code': 'business_rule_violation',
+              'message': 'La orden no es a crédito.',
+            },
+          },
+        ),
+      );
+      expect(e.detail, 'La orden no es a crédito.');
+      expect(e.message, 'La orden no es a crédito.');
+      // code de dominio no está en el enum generado -> cae en $unknown, pero
+      // NO es null: el motivo igual se muestra por detail.
+      expect(e.code, ProblemCode.$unknown);
+    });
+  });
+
+  group('fromDio: respaldo en el `error` anidado (shape viejo / 207 por ítem)', () {
+    test('sin detail de nivel superior -> toma error.message', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 404,
+          data: {
+            'error': {
+              'code': 'delivery_not_found',
+              'message': 'No hay entrega para ese envío.',
+            },
+          },
+        ),
+      );
+      expect(e.detail, 'No hay entrega para ese envío.');
+      expect(e.message, 'No hay entrega para ese envío.');
+    });
+
+    test('sin code de nivel superior -> toma error.code (parseado)', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 409,
+          data: {
+            'error': {'code': 'conflict', 'message': 'Choca con el estado.'},
+          },
+        ),
+      );
+      expect(e.code, ProblemCode.conflict);
+      expect(e.isConflict, isTrue);
+    });
+
+    test('detail de nivel superior gana sobre error.message', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 422,
+          data: {
+            'detail': 'Motivo de arriba',
+            'error': {'message': 'Motivo anidado'},
+          },
+        ),
+      );
+      expect(e.detail, 'Motivo de arriba');
+    });
+
+    test('error anidado no-Map -> se ignora sin romper', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 400,
+          data: {'detail': 'ok', 'error': 'no soy un mapa'},
+        ),
+      );
+      expect(e.detail, 'ok');
+      expect(e.code, isNull);
+    });
   });
 
   group('fromDio: respuesta mal formada o parcial', () {

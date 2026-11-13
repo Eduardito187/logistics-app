@@ -13,6 +13,7 @@ import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/core/live_updates/route_live_notification.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/power/power_channel.dart';
 import 'package:logistics_app/core/power/power_status.dart';
@@ -111,6 +112,7 @@ class _FakeQueue implements OfflineQueue {
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async {
     submitted.add((kind: kind, payload: payload, label: label));
     return SubmitOutcome.queued;

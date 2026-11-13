@@ -38,6 +38,31 @@ void main() {
         'No se pudo registrar. Intentá de nuevo.',
       );
     });
+    test('failed con failureDetail -> muestra el motivo real del backend', () {
+      expect(
+        submitOutcomeMessage(
+          SubmitOutcome.failed,
+          failureDetail: 'no hay entrega abierta para el envío X',
+        ),
+        'no hay entrega abierta para el envío X',
+      );
+    });
+    test('failureDetail vacío/espacios -> cae al genérico', () {
+      expect(
+        submitOutcomeMessage(SubmitOutcome.failed, failureDetail: '   '),
+        'No se pudo registrar. Intentá de nuevo.',
+      );
+    });
+    test('failureDetail se ignora si NO falló (sent/queued)', () {
+      expect(
+        submitOutcomeMessage(SubmitOutcome.sent, failureDetail: 'x'),
+        'Registrado.',
+      );
+      expect(
+        submitOutcomeMessage(SubmitOutcome.queued, failureDetail: 'x'),
+        'Registrado.',
+      );
+    });
   });
 
   group('submitOutcomeColor', () {
@@ -72,6 +97,34 @@ void main() {
       await _pumpAndShow(tester, SubmitOutcome.failed);
       expect(
         find.text('No se pudo registrar. Intentá de nuevo.'),
+        findsOneWidget,
+      );
+      expect(_snackBar(tester).backgroundColor, AppColors.danger);
+    });
+
+    testWidgets('failed con failureDetail muestra el motivo real', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showSubmitOutcome(
+                  context,
+                  SubmitOutcome.failed,
+                  failureDetail: 'no hay entrega abierta para el envío X',
+                ),
+                child: const Text('go'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pump();
+      expect(
+        find.text('no hay entrega abierta para el envío X'),
         findsOneWidget,
       );
       expect(_snackBar(tester).backgroundColor, AppColors.danger);

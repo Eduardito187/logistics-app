@@ -7,8 +7,10 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../domain/route_progress.dart';
 import '../domain/usecases/assemble_daily_route.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
 import 'odometer_screen.dart';
 import 'widgets/route_list.dart';
@@ -74,15 +76,16 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
             // Cuando ya no quedan paradas pendientes, se ofrece cerrar la ruta
             // tomando el odómetro de LLEGADA al centro de distribución (el
             // odómetro solo se pide al salir —en el checklist— y al llegar).
-            final allDone = data.stops.every(
-              (s) => s.status != DriverRouteStopStatus.pending,
-            );
+            // Item por item con el estado efectivo (incluye lo resuelto en este
+            // teléfono), igual que el resumen y la entrega en curso.
+            final settled = ref.watch(locallySettledStopsProvider);
+            final allDone = RouteProgress.of(data, settled).isComplete;
             return Column(
               children: [
                 RouteSummary(route: data),
                 Expanded(
                   child: _showMap
-                      ? RouteMap(route: data)
+                      ? RouteMap(route: data, settled: settled)
                       : RouteList(route: data),
                 ),
                 if (allDone)
@@ -90,14 +93,15 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
                     top: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      // Solo aparece cuando YA se atendieron todas las paradas
+                      // (item por item). Sin texto explicativo: el botón lleva al
+                      // odómetro de llegada y eso ya deja clara la intención.
                       child: SizedBox(
                         height: 56,
                         child: FilledButton.icon(
                           onPressed: _finishRoute,
                           icon: const AnimatedAppIcon(AppIcon.speed),
-                          label: const Text(
-                            'Finalizar ruta (odómetro de llegada)',
-                          ),
+                          label: const Text('Cerrar ruta del día'),
                         ),
                       ),
                     ),

@@ -48,13 +48,15 @@ class DeliveryActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(
-      deliveryStateProvider(stop.shipmentId).select((d) => d.value?.status),
-    );
+    // "Cerrada" se decide por el estado EFECTIVO de ESTA parada: lo que el
+    // chofer resolvió en este teléfono (POD/fallida ya hacen `settle`) o el
+    // estado de la parada del backend. NUNCA por `deliveryStateProvider` (el
+    // estado de la ENTREGA del envío): si el backend devolvía el envío como
+    // "delivered" por su cuenta, aparecía "Siguiente entrega" para una parada
+    // que el chofer NO había entregado y, al tocarla, la marcaba entregada.
+    final settled = ref.watch(locallySettledStopsProvider);
     final closed =
-        stop.status != DriverRouteStopStatus.pending ||
-        status == DeliveryStatus.delivered ||
-        status == DeliveryStatus.failed;
+        effectiveStopStatus(stop, settled) != DriverRouteStopStatus.pending;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -71,22 +73,11 @@ class DeliveryActionsBar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: closed
                   ? FilledButton.icon(
-                      onPressed: () {
-                        // Si el cierre lo sabe el estado de la entrega pero la
-                        // ruta todavía no, se avanza ya (sin esperar a la red).
-                        if (status == DeliveryStatus.delivered ||
-                            status == DeliveryStatus.failed) {
-                          ref
-                              .read(locallySettledStopsProvider.notifier)
-                              .settle(
-                                stop.id,
-                                status == DeliveryStatus.failed
-                                    ? DriverRouteStopStatus.failed
-                                    : DriverRouteStopStatus.completed,
-                              );
-                        }
-                        ref.invalidate(driverRouteProvider);
-                      },
+                      // La parada YA está resuelta (el POD/fallida hicieron
+                      // `settle`): este botón solo refresca la ruta para pasar a
+                      // la siguiente. NUNCA marca la parada por su cuenta (eso
+                      // entregaba paradas que el chofer no había entregado).
+                      onPressed: () => ref.invalidate(driverRouteProvider),
                       icon: const AnimatedAppIcon(AppIcon.arrowForward),
                       label: const Text('Siguiente entrega'),
                     )

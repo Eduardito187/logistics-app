@@ -15,6 +15,8 @@ import '../../../../../core/map/osm_tile_layer.dart';
 import '../../../../../core/map/tile_prefetch.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/route_navigation.dart';
+// Reexporta effectiveStopStatus (la regla vive en domain).
+import '../../controllers/locally_settled_stops.dart';
 import '../map_motion.dart';
 import '../map_zoom_buttons.dart';
 import '../radar_pulse.dart';
@@ -239,11 +241,12 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   /// centro/zoom inicial solo cuentan al crear el mapa).
   MapOptions? _options;
 
-  // Capas estáticas memoizadas y la clave (ruta, parada, color) con que se
-  // armaron.
+  // Capas estáticas memoizadas y la clave (ruta, parada, color, resueltas) con
+  // que se armaron.
   DriverRoute? _layersRoute;
   DriverRouteStop? _layersStop;
   Color? _layersColor;
+  Map<String, DriverRouteStopStatus>? _layersSettled;
   List<LatLng> _upcoming = const [];
   List<DriverRouteStop> _upcomingStops = const [];
   Widget? _streetsLayer;
@@ -391,27 +394,44 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     );
   }
 
-  /// Arma (una vez por ruta/parada/color) el trazo, las paradas siguientes y
-  /// sus capas. Con la misma ruta, parada y color no hace nada.
-  void _ensureStaticLayers(Color lineColor) {
+  /// Arma (una vez por ruta/parada/color/resueltas) el trazo, las paradas
+  /// siguientes, las YA marcadas y sus capas. Con la misma clave no hace nada.
+  void _ensureStaticLayers(
+    Color lineColor,
+    Map<String, DriverRouteStopStatus> settled,
+  ) {
     if (identical(_layersRoute, widget.route) &&
         identical(_layersStop, widget.stop) &&
-        _layersColor == lineColor) {
+        _layersColor == lineColor &&
+        identical(_layersSettled, settled)) {
       return;
     }
     _layersRoute = widget.route;
     _layersStop = widget.stop;
     _layersColor = lineColor;
+    _layersSettled = settled;
     final streets = simplifiedRoutePoints(widget.route.routeGeometry);
+    // Paradas SIGUIENTES (aún pendientes por estado efectivo, sin la actual).
     _upcomingStops = [
       for (final s in widget.route.stops)
         if (s.id != widget.stop.id &&
-            s.status == DriverRouteStopStatus.pending &&
+            effectiveStopStatus(s, settled) ==
+                DriverRouteStopStatus.pending &&
             s.lat != null &&
             s.lng != null)
           s,
     ];
     _upcoming = [for (final s in _upcomingStops) LatLng(s.lat!, s.lng!)];
+    // Paradas YA MARCADAS (entregadas o fallidas, sin la actual): se muestran
+    // en el mapa con su color (verde/rojo) para reflejar el avance del día.
+    final resolvedStops = [
+      for (final s in widget.route.stops)
+        if (s.id != widget.stop.id &&
+            s.lat != null &&
+            s.lng != null &&
+            effectiveStopStatus(s, settled) != DriverRouteStopStatus.pending)
+          s,
+    ];
     // Trazo con glow: línea ancha translúcida de marca por debajo y una fina
     // sólida de marca encima (StrokeCap.round por defecto en flutter_map v7).
     _streetsLayer = streets.length >= 2
@@ -428,17 +448,36 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
         : null;
     final destination = _destination;
     const upcomingSize = 30.0;
+    const resolvedSize = 26.0;
     const destSize = 52.0;
     _stopsLayer = MarkerLayer(
       markers: [
-        // Paradas siguientes: pines chicos numerados, coloreados por estado.
+        // Paradas YA marcadas: pines más chicos con su color (verde entregada /
+        // rojo fallida), para ver de un vistazo lo recorrido del día.
+        for (final s in resolvedStops)
+          Marker(
+            point: LatLng(s.lat!, s.lng!),
+            width: resolvedSize,
+            height: StopPin.heightFor(resolvedSize),
+            alignment: Alignment.topCenter,
+            child: StopPin(
+              stop: s,
+              size: resolvedSize,
+              status: effectiveStopStatus(s, settled),
+            ),
+          ),
+        // Paradas siguientes: pines chicos numerados (azul = pendiente).
         for (final s in _upcomingStops)
           Marker(
             point: LatLng(s.lat!, s.lng!),
             width: upcomingSize,
             height: StopPin.heightFor(upcomingSize),
             alignment: Alignment.topCenter,
-            child: StopPin(stop: s, size: upcomingSize),
+            child: StopPin(
+              stop: s,
+              size: upcomingSize,
+              status: effectiveStopStatus(s, settled),
+            ),
           ),
         // Destino: pin teardrop destacado de marca con glow y el pin de lugar.
         if (destination != null)
@@ -555,8 +594,10 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       }
     }
     // El trazo y la línea directa van en rojo de marca para el look con glow
-    // sobre el mapa oscuro.
-    _ensureStaticLayers(AppColors.brand);
+    // sobre el mapa oscuro. Las capas se rearmam si cambian las paradas
+    // resueltas en este teléfono (una entrega más se refleja en el mapa).
+    final settled = ref.watch(locallySettledStopsProvider);
+    _ensureStaticLayers(AppColors.brand, settled);
 
     return LayoutBuilder(
       builder: (context, constraints) {

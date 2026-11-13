@@ -17,6 +17,9 @@ class PreTripChecklist {
     this.pending,
     this.performedOn,
     this.notes,
+    this.routeId,
+    this.plate,
+    this.driverName,
   });
 
   factory PreTripChecklist.fromJson(Map<String, Object?> json) =>
@@ -37,6 +40,21 @@ class PreTripChecklist {
   @JsonKey(name: 'performed_on')
   final DateTime? performedOn;
   final String? notes;
+
+  /// Ruta/viaje a la que se ligó esta inspección (UUID). Permite el checklist
+  /// POR RUTA (una inspección por salida). `null` en registros viejos o si no se
+  /// ligó. (Campos aditivos agregados a mano; al regenerar el cliente vienen
+  /// solos — ver docs/backend-requests/2026-11-13-checklist-por-ruta-y-placa.md.)
+  @JsonKey(name: 'route_id')
+  final String? routeId;
+
+  /// Placa del vehículo inspeccionado (para el historial). `null` si el vehículo
+  /// ya no existe en flota.
+  final String? plate;
+
+  /// Nombre del chofer que firmó la inspección. `null` si ya no existe en flota.
+  @JsonKey(name: 'driver_name')
+  final String? driverName;
 
   Map<String, Object?> toJson() => _$PreTripChecklistToJson(this);
 }

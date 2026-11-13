@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9a85d4dc-6dee-4d1d-8426-868a6db4e45d
-  modified: 2026-11-13T02:34:30.476Z
+  modified: 2026-11-13T14:55:03.329Z
 ---
 
 Batch de endurecimiento del reparto (nov 2026, probado en staging con el teléfono):
@@ -33,4 +33,55 @@ Batch de endurecimiento del reparto (nov 2026, probado en staging con el teléfo
 
 **Guardia anti-DUPLICADOS por SKU en el POD (12-nov).** Por la re-emisión de etiquetas quedaron DUPLICADAS (misma orden+SKU, distinto `unit_id`); el dedup por `unit_id` no las cachaba y escanear 2 de la misma contaba 2 entregas. Fixes en `pod_screen.dart`: (1) `_expectedCount = min(unit_ids.length, suma de cantidades de ítems)` cuando se conocen ambos → el total nunca supera la cantidad real del pedido (una unidad duplicada no suma); (2) guardia por SKU en `_scanUnit`: si ya se escanearon todas las unidades del pedido para ese SKU (de `stop.items`), rechaza "esa etiqueta está duplicada". Solo aplica si se conoce el SKU del QR y el pedido lista ese SKU (Code128/SKU ajeno → no bloquea, offline-first). Tests nuevos en `pod_screen_test`. Ver [[no-label-mutations-rule]], [[label-key-rotation-footgun]].
 
-Relacionado: [[windows-native-toolchain]], [[run-environments-config]] (footgun del `10.0.2.2` en debug físico).
+**Mostrar el MOTIVO real del rechazo en el POD (13-nov).** El dueño pedía ver POR
+QUÉ falla la entrega en vez de "No se pudo registrar. Intentá de nuevo." (genérico
+que obligaba a leer la cola por USB). Fix app: `OfflineQueue.submit` ahora acepta
+`onReject(ApiException)` (opcional, no-rompedor) que corre SOLO en un 4xx permanente
+(`SubmitOutcome.failed`), NO en transitorios (sin red/401/429/5xx → queued). El POD
+(`pod_screen.dart`) captura `error.message` (= el `detail` del backend, gracias al
+contrato unificado [[unified-error-contract]]) y lo pasa a `showSubmitOutcome(...,
+failureDetail:)` → el chofer ve el motivo real en el SnackBar. `submitOutcomeMessage`
+toma `failureDetail` opcional; vacío → genérico. Tests en `submit_feedback_test` y
+`offline_queue_test`. Diagnóstico ya NO depende de sacar la DB del teléfono.
+
+**Error real vigente (13-nov, leído de `outbox_actions.last_error`):** el POD de
+Valeria Rojas (envío 01a1c719-8163-…) da **"no hay entrega abierta para el envío
+…"** = MISMA clase que el eslabón de dominio: la entrega no está abierta
+(OpenDelivery no se disparó al asignar, o el backend no está deployado). El app NO
+la abre solo → es del BACKEND (logistics-42, ya avisado con el error exacto). Otro
+POD viejo (01a1c719-8152-…) daba "transición inválida a Delivered desde DELIVERED"
+= ya estaba entregado y el reintento con otra idempotency_key choca (se pidió al
+backend que ese caso devuelva 200 idempotente). La foto NO es la causa: el POD manda
+`photo_url: null` y falla ANTES de evaluar la foto. El dueño quiere además la foto
+INLINE con el POD (multipart/base64) por robustez — pendiente de que el backend dé
+el formato; NO arregla el "no hay entrega abierta".
+
+**EL NUDO = DEPLOY (13-nov, confirmado con el backend logistics-42).** Todos los
+arreglos del POD (auto-abrir entrega al asignar vehículo, AUTO-ABRIR en el propio POD
+tomando el camión de la ruta del chofer si no hay entrega, guard relajado, idempotente
+ya-Delivered, casing cosmético) viven en el WORKING TREE del backend del dueño, **sin
+commitear/deployar**. Mientras no se deploye el backend de STAGING
+(137.131.245.152:8110), el "no hay entrega abierta" sigue. El dueño debe: (1) commit +
+deploy, y (2) correr el comando artisan NUEVO para reconciliar en lote (lo corre EL
+DUEÑO o el agente por `ssh oci` + docker exec, NO el app):
+`php artisan logistics:execution:open-missing-deliveries [--force] [--shipment=<uuid>]`
+(dry-run sin --force; abre en Loaded las entregas faltantes de envíos en ruta; NO
+re-emite etiquetas). El "casing Delivered vs DELIVERED" era SÓLO cosmético (el guard
+compara identidad de enum, no strings); ya normalizaron el mensaje.
+
+**Foto del POD — DOS flujos listos en backend (pendiente deploy), inline DIFERIDO.** El
+backend soporta: (A) INLINE = POST /app/deliveries/proof-of-delivery como
+**multipart/form-data** con campo `photo` (archivo) → liga la foto en la misma
+transacción; (B) APARTE = POST /app/deliveries/photos → `photo_path` → POD con ese path
+(flujo B = el confiable para offline/cola, el que usa el app HOY vía
+`enqueueDeliveryPhotoProvider`). Límites inline: sólo imagen, 10 MB máx. **El app YA
+optimiza** antes de subir (`kEvidencePhotoMaxWidth=1600`, `kEvidencePhotoQuality=70` →
+~0.5-1.5 MB, EXIF respetado por image_picker), así que la foto ya sube bien hoy, sólo
+que en 2º paso. **Decisión: NO cablear el inline durante el incendio del deploy** (tocar
+el POD, el flujo más crítico, mete bugs; además la foto NO era la causa, el POD falla
+ANTES por la entrega no abierta). Plan: destrabar entregas (deploy) → confirmar → recién
+ahí cablear inline como best-effort additivo (online 1 request; offline/falla → flujo B
+de cola). Pendiente del dueño: "ya deployé" + OK para el inline.
+
+Relacionado: [[unified-error-contract]], [[apk-size-split-abi]], [[staging-server-access]],
+[[windows-native-toolchain]], [[run-environments-config]] (footgun del `10.0.2.2` en debug físico).

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/icons/icons.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/offline/sync_queue_provider.dart';
 import 'package:logistics_app/core/widgets/brand_loader.dart';
@@ -45,6 +46,7 @@ class _FakeOfflineQueue implements OfflineQueue {
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async => SubmitOutcome.sent;
 
   @override

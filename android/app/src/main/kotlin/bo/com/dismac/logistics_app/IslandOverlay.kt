@@ -61,6 +61,12 @@ object IslandOverlay {
     private const val MUTED = 0xFFB9B9B9.toInt()
     private const val BUTTON_DARK = 0xFF262626.toInt()
 
+    // Verde de "entregado" para el festejo del camión al subir el contador.
+    private const val GREEN = 0xFF2E9E5B.toInt()
+
+    // Duración del festejo del camión (verde → rojo) al registrar una entrega.
+    private const val CELEBRATE_MS = 2500L
+
     // Borde apenas visible: separa la isla de fondos oscuros sin "marco".
     private const val HAIRLINE = 0x1FFFFFFF
     private const val AMBER_SOFT = 0x29FFB000
@@ -90,7 +96,11 @@ object IslandOverlay {
     private var navigateButton: TextView? = null
     private var animator: ValueAnimator? = null
     private var truckAnimator: ValueAnimator? = null
+    private var celebrateAnimator: ValueAnimator? = null
     private var expanded = false
+
+    // Último contador de entregas visto: si sube, el camión festeja.
+    private var lastCompleted = -1
 
     // Destino de "Navegar".
     private var lat: Double? = null
@@ -143,6 +153,9 @@ object IslandOverlay {
         animator = null
         truckAnimator?.cancel()
         truckAnimator = null
+        celebrateAnimator?.cancel()
+        celebrateAnimator = null
+        lastCompleted = -1
         val view = root
         if (view != null) {
             try {
@@ -337,26 +350,69 @@ object IslandOverlay {
         anim.start()
     }
 
-    private fun bind(args: Map<*, *>) {
-        val stopIndex = (args["stopIndex"] as? Number)?.toInt() ?: 0
-        val stopCount = (args["stopCount"] as? Number)?.toInt() ?: 0
-        val status = args["status"] as? String
-        val eta = args["etaText"] as? String
-        val chip = args["chip"] as? String
-        val counter = "$stopIndex/$stopCount"
-        val second = when {
-            status == "on_the_way" && !eta.isNullOrEmpty() -> eta
-            !chip.isNullOrEmpty() && chip != counter -> chip
-            else -> null
+    /**
+     * Festejo al registrar una entrega (sube el contador): el camión se pone
+     * VERDE y vuelve a su rojo en ~2,5 s, y el contador da un bote corto. Barato
+     * (solo propiedades de la vista) y acotado; se cancela al ocultar la isla.
+     */
+    private fun celebrate() {
+        celebrateAnimator?.cancel()
+        if (truckIcon != null) {
+            val anim = ValueAnimator.ofObject(android.animation.ArgbEvaluator(), GREEN, RED)
+            anim.duration = CELEBRATE_MS
+            anim.addUpdateListener {
+                (truckIcon ?: return@addUpdateListener).setColorFilter(it.animatedValue as Int)
+            }
+            anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    // Solo si sigue siendo el festejo vigente (otro pudo arrancar).
+                    if (celebrateAnimator === anim) {
+                        truckIcon?.setColorFilter(RED)
+                        celebrateAnimator = null
+                    }
+                }
+            })
+            celebrateAnimator = anim
+            anim.start()
         }
-        val compact = if (second == null) counter else "$counter · $second"
-        compactText?.text = compact
-        root?.contentDescription = args["title"] as? String ?: compact
+        if (compactText != null) {
+            val bump = ValueAnimator.ofFloat(1f, 1.3f)
+            bump.duration = 180L
+            bump.repeatCount = 1
+            bump.repeatMode = ValueAnimator.REVERSE
+            bump.addUpdateListener {
+                val s = it.animatedValue as Float
+                val c = compactText ?: return@addUpdateListener
+                c.scaleX = s
+                c.scaleY = s
+            }
+            bump.addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    compactText?.scaleX = 1f
+                    compactText?.scaleY = 1f
+                }
+            })
+            bump.start()
+        }
+    }
+
+    private fun bind(args: Map<*, *>) {
+        val completed = (args["completed"] as? Number)?.toInt() ?: 0
+        val stopCount = (args["stopCount"] as? Number)?.toInt() ?: 0
+        // Compacta: SOLO el contador de ENTREGAS ("6/7"), sin la hora, ajustado
+        // a su contenido (pedido del dueño). El ícono del camión va al lado.
+        val counter = if (stopCount > 0) "$completed/$stopCount" else "$completed"
+        compactText?.text = counter
+        root?.contentDescription = args["title"] as? String ?: counter
+        // Al ENTREGAR (sube el contador) el camión festeja: verde → rojo + un
+        // bote del contador, un par de segundos. No en la primera foto.
+        if (lastCompleted in 0 until completed) celebrate()
+        lastCompleted = completed
 
         // Encabezado expandido: el título ("Parada 3 de 7 · Llega 08:15"); sin
         // título, el mismo contador de la pastilla (nunca queda vacío).
         val title = args["title"] as? String
-        titleText?.text = if (title.isNullOrEmpty()) compact else title
+        titleText?.text = if (title.isNullOrEmpty()) counter else title
         customer = args["customer"] as? String ?: ""
         customerText?.apply {
             text = customer

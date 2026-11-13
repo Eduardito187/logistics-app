@@ -1,27 +1,42 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../../domain/route_progress.dart';
+import '../controllers/locally_settled_stops.dart';
 import '../driver_route_status.dart';
 
 /// Resumen de avance de la ruta: un anillo de progreso con gradiente de marca
-/// (entregadas/total), los conteos (entregadas / por hacer) y el badge del
-/// estado general. Estilo DisTrack.
-class RouteSummary extends StatelessWidget {
+/// (entregadas/total), los conteos (entregadas / fallidas / por hacer) y el
+/// badge del estado general. Estilo DisTrack.
+///
+/// El avance se calcula ITEM POR ITEM con [RouteProgress] (estado efectivo de
+/// cada parada, incluyendo lo resuelto en este teléfono), nunca con los
+/// conteos agregados del backend: así el anillo coincide SIEMPRE con la lista de
+/// paradas y con la detección de "ruta completada" (antes el resumen decía 5/7
+/// y la lista mostraba 6 entregadas).
+class RouteSummary extends ConsumerWidget {
   const RouteSummary({super.key, required this.route});
 
   final DriverRoute route;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final total = route.totalStops;
-    final completed = route.completedStops;
-    final remaining = route.stopsRemaining;
+    final settled = ref.watch(locallySettledStopsProvider);
+    final progress = RouteProgress.of(route, settled);
+    final total = progress.total;
+    final completed = progress.delivered;
+    final remaining = progress.pending;
+    final failed = progress.failed;
+    // El anillo refleja las ENTREGADAS (coincide con el número del centro
+    // "X/Y listas"); el estado "completada" se decide por [isComplete] (sin
+    // paradas pendientes), no por el conteo del backend.
     final double fraction = total > 0
         ? (completed / total).clamp(0.0, 1.0).toDouble()
         : 0.0;
@@ -80,10 +95,15 @@ class RouteSummary extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: StatusPill(
-                    routeStatusLabel(route.status),
-                    tone: route.status == DriverRouteStatus.completed
-                        ? PillTone.success
-                        : PillTone.info,
+                    // "Completada" se decide item por item (sin pendientes), no
+                    // por `route.status` del backend (podía decirlo de más con
+                    // una parada fallida/reprogramada).
+                    progress.isComplete
+                        ? 'Completada'
+                        : progress.attended > 0
+                        ? 'En curso'
+                        : routeStatusLabel(route.status),
+                    tone: progress.isComplete ? PillTone.success : PillTone.info,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -91,6 +111,13 @@ class RouteSummary extends StatelessWidget {
                   color: AppColors.success,
                   text: '$completed entregadas',
                 ),
+                if (failed > 0) ...[
+                  const SizedBox(height: 4),
+                  _CountRow(
+                    color: AppColors.danger,
+                    text: '$failed no entregadas',
+                  ),
+                ],
                 const SizedBox(height: 4),
                 _CountRow(
                   color: AppColors.accent,

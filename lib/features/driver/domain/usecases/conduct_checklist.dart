@@ -17,6 +17,8 @@ class ConductChecklist {
     required Map<String, bool> items,
     required DateTime performedOn,
     String? notes,
+    // Ruta/viaje del día: liga la inspección a esa ruta (checklist por ruta).
+    String? routeId,
   }) => _repo.conductPreTripChecklist(
     ConductPreTripChecklistRequest(
       vehicleId: vehicleId,
@@ -24,6 +26,7 @@ class ConductChecklist {
       items: items,
       performedOn: performedOn,
       notes: notes,
+      routeId: routeId,
     ),
   );
 }

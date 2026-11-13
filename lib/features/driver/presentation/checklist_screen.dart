@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
@@ -9,6 +10,7 @@ import '../../../core/layout/responsive_body.dart';
 import '../../../core/api/export.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/brand_loader.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
@@ -61,6 +63,11 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
   final TextEditingController _km = TextEditingController();
   bool _busy = false;
 
+  /// El chofer pidió REHACER la inspección aunque ya la hizo hoy (p. ej. sale a
+  /// una segunda ruta). Mientras el backend no ligue el checklist a la ruta
+  /// (ver pedido), esto permite inspeccionar de nuevo a demanda.
+  bool _forceForm = false;
+
   @override
   void dispose() {
     _notes.dispose();
@@ -75,7 +82,8 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
       builder: (context, vehicleId) {
         // Dentro del gate el crew ya está resuelto: el chofer que firma es el
         // asignado al camión (no se elige de una lista).
-        final driver = ref.watch(myCrewProvider).value?.driver;
+        final crew = ref.watch(myCrewProvider).value;
+        final driver = crew?.driver;
         if (driver == null) {
           return const EmptyState(
             icon: AppIcon.personOff,
@@ -83,12 +91,56 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             message: 'El camión no tiene un chofer asignado para firmar.',
           );
         }
-        return _buildForm(context, vehicleId, driver);
+        // Si la inspección de la SALIDA ACTUAL ya está hecha (y el chofer no
+        // pidió rehacerla), se muestra el estado "al día" en vez del formulario.
+        // El criterio es POR RUTA si el backend ya etiqueta `route_id`; si no,
+        // cae a DIARIO (auto-upgrade sin regresión).
+        final routeAsync = ref.watch(driverRouteProvider);
+        final currentRouteId = routeAsync.value?.id;
+        final history = ref.watch(inspectionHistoryProvider(vehicleId));
+        final items = history.value;
+        final done = items == null
+            ? null
+            : inspectionForCurrentRoute(items, currentRouteId, DateTime.now());
+        final perRoute = items != null && perRouteChecklistMode(items);
+        // En modo POR RUTA, no mostrar el formulario hasta tener la ruta en
+        // curso: un checklist enviado sin `route_id` (ruta aún cargando) nunca
+        // cuadraría con la ruta → el estado "al día" no aparecería y el
+        // recordatorio seguiría pidiéndolo pese a haberlo hecho. Se espera.
+        if (perRoute && currentRouteId == null && routeAsync.isLoading) {
+          return const Center(
+            child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
+          );
+        }
+        if (done != null && !_forceForm) {
+          return _AlDiaView(
+            performedAt: done.performedOn,
+            passed: done.passed ?? false,
+            plate: done.plate ?? crew?.vehicle.plate,
+            driverName: done.driverName,
+            // En modo POR RUTA una segunda ruta ya muestra el formulario sola
+            // (otro route_id): no hace falta "Rehacer". En modo diario sí, para
+            // una segunda salida del mismo día.
+            allowRedo: !perRoute,
+            onRedo: () => setState(() => _forceForm = true),
+            onHistory: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const InspectionHistoryScreen(),
+              ),
+            ),
+          );
+        }
+        return _buildForm(context, vehicleId, driver, currentRouteId);
       },
     );
   }
 
-  Widget _buildForm(BuildContext context, String vehicleId, Driver driver) {
+  Widget _buildForm(
+    BuildContext context,
+    String vehicleId,
+    Driver driver,
+    String? routeId,
+  ) {
     final passedCount = _checks.values.where((v) => v).length;
     return ResponsiveBody(
       maxWidth: AppBreakpoints.maxFormWidth,
@@ -149,7 +201,9 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _busy ? null : () => _submit(vehicleId, driver.id),
+            onPressed: _busy
+                ? null
+                : () => _submit(vehicleId, driver.id, routeId),
             icon: AnimatedAppIcon(
               AppIcon.save,
               state: _busy ? AppIconState.loading : AppIconState.idle,
@@ -173,7 +227,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     );
   }
 
-  Future<void> _submit(String vehicleId, String driverId) async {
+  Future<void> _submit(String vehicleId, String driverId, String? routeId) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -187,6 +241,8 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             items: Map<String, bool>.from(_checks),
             performedOn: DateTime.now(),
             notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            // Liga la inspección a la ruta del día (checklist por ruta).
+            routeId: routeId,
           );
       // El checklist quedó registrado: se refresca el historial del vehículo
       // para que el recordatorio AMARILLO "Revisá el camión hoy" del inicio
@@ -262,5 +318,109 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+}
+
+/// Hora de la inspección creada una vez (no en cada build).
+final DateFormat _checklistHourFormat = DateFormat.Hm('es');
+
+/// Estado "al día" del checklist: la inspección de hoy YA está hecha. En vez del
+/// formulario (que se repetiría) se muestra un éxito, al estilo del
+/// "Todo al día" de mantenimiento, con la hora y la placa del camión. Deja
+/// rehacer la inspección a demanda (p. ej. una segunda ruta del día; ligarlo a
+/// la ruta es un pendiente del backend) y ver el historial.
+class _AlDiaView extends StatelessWidget {
+  const _AlDiaView({
+    required this.performedAt,
+    required this.passed,
+    required this.plate,
+    required this.driverName,
+    required this.allowRedo,
+    required this.onRedo,
+    required this.onHistory,
+  });
+
+  final DateTime? performedAt;
+  final bool passed;
+  final String? plate;
+  final String? driverName;
+
+  /// Mostrar el botón "Rehacer": solo en modo DIARIO (una segunda salida del
+  /// mismo día). En modo por ruta, otra ruta ya muestra el formulario sola.
+  final bool allowRedo;
+  final VoidCallback onRedo;
+  final VoidCallback onHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final time = performedAt == null
+        ? null
+        : _checklistHourFormat.format(performedAt!.toLocal());
+    final detalle = [
+      if (plate != null) 'camión $plate',
+      if (time != null) 'a las $time',
+    ].join(' ');
+    return ResponsiveBody(
+      maxWidth: AppBreakpoints.maxFormWidth,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const SizedBox(height: 24),
+          const Center(
+            child: AnimatedAppIcon(
+              AppIcon.verified,
+              size: 72,
+              state: AppIconState.success,
+              color: AppColors.success,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Camión al día',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ya hiciste la inspección de hoy'
+            '${detalle.isEmpty ? '' : ' ($detalle)'}. '
+            '${passed ? 'Apto para salir.' : 'Quedó con observaciones.'}',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (driverName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Firmó: $driverName',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 28),
+          // Para una SEGUNDA salida del mismo día (modo diario): rehacer. En modo
+          // por ruta no aparece (otra ruta ya pide su propia inspección).
+          if (allowRedo) ...[
+            FilledButton.icon(
+              onPressed: onRedo,
+              icon: const AnimatedAppIcon(AppIcon.checklist),
+              label: const Text('Rehacer inspección (otra salida)'),
+            ),
+            const SizedBox(height: 12),
+          ],
+          OutlinedButton.icon(
+            onPressed: onHistory,
+            icon: const AnimatedAppIcon(AppIcon.orders),
+            label: const Text('Ver historial de inspecciones'),
+          ),
+        ],
+      ),
+    );
   }
 }

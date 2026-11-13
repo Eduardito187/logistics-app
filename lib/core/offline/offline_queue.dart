@@ -56,12 +56,20 @@ class OfflineQueue {
   ///
   /// [kind] debe existir en `offlineHandlers`. [payload] es el cuerpo de la
   /// request serializable a JSON. [label] es texto legible para la UI de sync.
+  /// [onReject] (opcional) se invoca con el [ApiException] cuando el backend
+  /// RECHAZA la acción con un 4xx permanente (resultado [SubmitOutcome.failed]),
+  /// para que la UI pueda mostrar el MOTIVO real (`e.message` = el `detail` del
+  /// backend) en vez del genérico "No se pudo registrar". NO se llama en fallos
+  /// transitorios (sin red, 401/429/5xx: eso queda `queued` y se reintenta). Si
+  /// el rechazo llega después del presupuesto de espera, la fila ya devolvió
+  /// `queued` y este callback no corre (offline-invisible: se mostró "Registrado").
   Future<SubmitOutcome> submit({
     required String kind,
     required Map<String, Object?> payload,
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async {
     // El `kind` debe existir en el dispatcher. Se valida ANTES de persistir: un
     // kind desconocido es un error de programación (no un dato de terreno) y
@@ -115,6 +123,7 @@ class OfflineQueue {
       kind: kind,
       payload: payloadWithKey,
       occurredAt: when,
+      onReject: onReject,
     ).whenComplete(() => _inFlight.remove(id));
     final budget = _submitWaitBudget;
     if (budget <= Duration.zero) {
@@ -145,6 +154,7 @@ class OfflineQueue {
     required String kind,
     required Map<String, Object?> payload,
     required DateTime occurredAt,
+    void Function(ApiException error)? onReject,
   }) async {
     try {
       await _run(id, kind, payload);
@@ -166,8 +176,11 @@ class OfflineQueue {
         return SubmitOutcome.queued;
       }
       // Error de datos (4xx permanente): no sirve reintentar, se marca fallida
-      // y se reporta (el usuario no ve la cola: offline invisible).
+      // y se reporta (el usuario no ve la cola: offline invisible). Se avisa el
+      // MOTIVO real a la UI (si pidió `onReject`) para mostrarlo en vez del
+      // genérico.
       await _db.markFailed(id, e.message);
+      onReject?.call(e);
       await _report(
         id: id,
         kind: kind,

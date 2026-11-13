@@ -170,7 +170,24 @@ class StopTimelineTile extends StatelessWidget {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             DeliveryBadge(status: status),
-                            if (stop.etaAt != null) _EtaChip(at: stop.etaAt!),
+                            // Parada resuelta con hora confirmada por el backend:
+                            // se muestra la HORA DE ENTREGA (o de la fallida). Si
+                            // sigue pendiente, la hora estimada (ETA).
+                            if (status != DriverRouteStopStatus.pending &&
+                                stop.settledAt != null)
+                              _TimeChip(
+                                label: status == DriverRouteStopStatus.completed
+                                    ? 'Entregada'
+                                    : 'Fallida',
+                                at: stop.settledAt!,
+                                color: stopColor(status),
+                                icon: status == DriverRouteStopStatus.completed
+                                    ? AppIcon.success
+                                    : AppIcon.error,
+                              )
+                            else if (status == DriverRouteStopStatus.pending &&
+                                stop.etaAt != null)
+                              _EtaChip(at: stop.etaAt!),
                           ],
                         ),
                       ],
@@ -210,6 +227,46 @@ class _EtaChip extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Fila de hora real de la parada (entregada/fallida): ícono del estado + "HH:mm"
+/// en el color del estado. Deja claro A QUÉ HORA se entregó (o falló) la parada.
+class _TimeChip extends StatelessWidget {
+  const _TimeChip({
+    required this.label,
+    required this.at,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final DateTime at;
+  final Color color;
+  final AppIcon icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedAppIcon(
+          icon,
+          size: 18,
+          color: color,
+          excludeFromSemantics: true,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$label ${formatTime(at)}',
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
         ),

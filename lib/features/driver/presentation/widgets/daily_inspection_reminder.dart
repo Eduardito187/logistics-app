@@ -14,9 +14,15 @@ class DailyInspectionReminder extends ConsumerWidget {
     super.key,
     required this.vehicleId,
     required this.onTap,
+    this.currentRouteId,
   });
 
   final String vehicleId;
+
+  /// Ruta del día en curso (si hay). Con el checklist POR RUTA, el recordatorio
+  /// se muestra cuando FALTA la inspección de ESA ruta; sin backend por ruta,
+  /// cae al criterio diario.
+  final String? currentRouteId;
 
   /// Acción al tocar: el coordinador lo manda al checklist pre-salida.
   final VoidCallback onTap;
@@ -25,10 +31,21 @@ class DailyInspectionReminder extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(inspectionHistoryProvider(vehicleId));
     // En cargando/error NO se muestra nada (es un recordatorio, no un dato
-    // crítico que el chofer deba resolver). Solo se muestra si HAY datos y la
-    // inspección de hoy falta.
+    // crítico que el chofer deba resolver). Solo se muestra si HAY datos y falta
+    // la inspección de la salida actual.
     final show = history.maybeWhen(
-      data: (items) => !inspectionDoneToday(items, DateTime.now()),
+      data: (items) {
+        // En modo por ruta sin ruta asignada todavía no se molesta al chofer.
+        if (perRouteChecklistMode(items) && currentRouteId == null) {
+          return false;
+        }
+        return inspectionForCurrentRoute(
+              items,
+              currentRouteId,
+              DateTime.now(),
+            ) ==
+            null;
+      },
       orElse: () => false,
     );
     if (!show) return const SizedBox.shrink();
