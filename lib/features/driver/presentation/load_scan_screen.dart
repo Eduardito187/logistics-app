@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_pill.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/locally_loaded_units.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
 import 'scan_mode.dart';
 import 'scan_units_screen.dart';
@@ -25,21 +26,56 @@ class LoadScanScreen extends ConsumerWidget {
       builder: (context, vehicleId) {
         final deliveries = ref.watch(vehicleDeliveriesProvider);
         final loaded = ref.watch(locallyLoadedUnitsProvider);
+        // La hoja de ruta (ya cargada y compartida por toda la sección del
+        // chofer: no es otra llamada) aporta lo que la lista de carga no trae:
+        // cliente, nº de pedido y el estado EFECTIVO de cada parada.
+        final route = ref.watch(driverRouteProvider).value;
+        final settled = ref.watch(locallySettledStopsProvider);
+        final stopByShipment = <String, DriverRouteStop>{
+          for (final stop in route?.stops ?? const <DriverRouteStop>[])
+            stop.shipmentId: stop,
+        };
         return AsyncValueView<List<Delivery>>(
           value: deliveries,
           onRetry: () => ref.invalidate(vehicleDeliveriesProvider),
-          data: (list) {
-            if (list.isEmpty) {
+          data: (all) {
+            if (all.isEmpty) {
               return const EmptyState(
                 icon: AppIcon.receive,
                 title: 'Sin envíos',
                 message: 'No hay envíos asignados a este vehículo.',
               );
             }
+            // Honestidad de datos: lo ya ENTREGADO (o fallido) no se "carga al
+            // camión". Se excluye por el estado de la entrega y por el estado
+            // efectivo de su parada (incluye lo resuelto en este teléfono).
+            final list = [
+              for (final delivery in all)
+                if (!_alreadyResolved(
+                  delivery,
+                  stopByShipment[delivery.shipmentId],
+                  settled,
+                ))
+                  delivery,
+            ];
+            if (list.isEmpty) {
+              return const EmptyState(
+                icon: AppIcon.success,
+                title: 'Nada por cargar',
+                message: 'Los envíos de este vehículo ya fueron entregados.',
+              );
+            }
             return AdaptiveCardRows(
               itemCount: list.length,
               itemBuilder: (context, i) {
                 final delivery = list[i];
+                final stop = stopByShipment[delivery.shipmentId];
+                // La entrega ya trae cliente y pedido; la hoja de ruta es el
+                // respaldo (backend anterior).
+                final customer = delivery.customerName ?? stop?.customerName;
+                final order = delivery.orderReference ?? stop?.orderReference;
+                final scans =
+                    '${effectiveScanCount(delivery, loaded[delivery.shipmentId])} escaneo(s)';
                 return Card(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -47,11 +83,22 @@ class LoadScanScreen extends ConsumerWidget {
                       vertical: 8,
                     ),
                     leading: const AnimatedAppIcon(AppIcon.receive, size: 32),
-                    // Nº de secuencia, NO el uuid del envío (el backend aún no
-                    // devuelve una referencia legible aquí).
-                    title: Text('Envío ${i + 1}'),
-                    subtitle: Text(
-                      '${effectiveScanCount(delivery, loaded[delivery.shipmentId])} escaneo(s)',
+                    // Descriptivo: cliente y nº de pedido (de la hoja de ruta).
+                    // Solo si el envío no está en la ruta cae al nº de orden en
+                    // la lista (nunca el uuid).
+                    title: Text(
+                      customer ??
+                          (order != null ? 'Pedido $order' : 'Envío ${i + 1}'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (customer != null && order != null)
+                          Text('Pedido $order'),
+                        Text(scans),
+                      ],
                     ),
                     trailing: StatusPill(
                       _label(delivery.status),
@@ -82,6 +129,21 @@ class LoadScanScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+/// `true` si el envío ya no tiene nada que cargar: la entrega está cerrada
+/// (entregada/fallida) o su parada ya se resolvió (backend o este teléfono).
+bool _alreadyResolved(
+  Delivery delivery,
+  DriverRouteStop? stop,
+  Map<String, DriverRouteStopStatus> settled,
+) {
+  if (delivery.status == DeliveryStatus.delivered ||
+      delivery.status == DeliveryStatus.failed) {
+    return true;
+  }
+  return stop != null &&
+      effectiveStopStatus(stop, settled) != DriverRouteStopStatus.pending;
 }
 
 String _label(DeliveryStatus status) => switch (status) {

@@ -24,6 +24,7 @@ class UnitTracking {
     this.productImageUrl,
     this.pieceIndex,
     this.pieceTotal,
+    this.labelId,
   });
 
   factory UnitTracking.fromJson(Map<String, Object?> json) =>
@@ -57,6 +58,12 @@ class UnitTracking {
   final int? pieceIndex;
   @JsonKey(name: 'piece_total')
   final int? pieceTotal;
+
+  /// Campo aditivo agregado A MANO (el backend ya lo manda; pendiente
+  /// regenerar): id de la etiqueta emitida (ULID del QR / Code128 impreso);
+  /// null si el producto aún no tiene etiqueta.
+  @JsonKey(name: 'label_id')
+  final String? labelId;
 
   Map<String, Object?> toJson() => _$UnitTrackingToJson(this);
 }

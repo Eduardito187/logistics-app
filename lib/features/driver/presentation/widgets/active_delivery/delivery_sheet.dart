@@ -148,11 +148,17 @@ class _EvidenceSection extends ConsumerWidget {
           for (final e in items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: Text(_kindLabel(e.kind))),
-                  const SizedBox(width: 12),
-                  _validationPill(e.status),
+                  Row(
+                    children: [
+                      Expanded(child: Text(_kindLabel(e.kind))),
+                      const SizedBox(width: 12),
+                      _validationPill(e.status),
+                    ],
+                  ),
+                  if (e.url != null) _EvidenceImage(url: e.url!),
                 ],
               ),
             ),
@@ -176,7 +182,10 @@ class _EvidenceSection extends ConsumerWidget {
         byKind[e.kind] = e;
         order.add(e.kind);
       } else if (_severity(e.status) > _severity(existing.status)) {
-        byKind[e.kind] = e;
+        // Gana el estado más grave, sin perder una imagen ya disponible.
+        byKind[e.kind] = e.url == null ? e.withUrl(existing.url) : e;
+      } else if (existing.url == null && e.url != null) {
+        byKind[e.kind] = existing.withUrl(e.url);
       }
     }
     return [for (final k in order) byKind[k]!];
@@ -218,6 +227,36 @@ class _EvidenceSection extends ConsumerWidget {
     ),
     _ => const StatusPill('Validando…', icon: AppIcon.pending),
   };
+}
+
+/// Imagen de una evidencia (firma, foto, documento). El enlace es temporal y
+/// firmado: si venció o el archivo no está, no se muestra nada (queda la fila
+/// con su estado).
+class _EvidenceImage extends StatelessWidget {
+  const _EvidenceImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ColoredBox(
+          // Fondo claro fijo: la firma es trazo oscuro sobre transparente.
+          color: Colors.white,
+          child: Image.network(
+            url,
+            height: 150,
+            fit: BoxFit.contain,
+            cacheWidth: 800,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Cliente, teléfono (con llamar) y dirección (con navegar). El teléfono sale

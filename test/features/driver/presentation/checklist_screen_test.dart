@@ -60,10 +60,8 @@ void main() {
     expect(find.text('Registrar checklist'), findsNothing);
     expect(find.byType(SwitchListTile), findsNothing);
 
-    // Rehacer la inspección (segunda salida) vuelve a mostrar el formulario.
-    await tester.tap(find.text('Rehacer inspección (otra salida)'));
-    await tester.pumpAndSettle();
-    expect(find.text('Registrar checklist'), findsOneWidget);
+    // Sin botón "Rehacer": la inspección es por ruta (otra ruta la pide sola).
+    expect(find.textContaining('Rehacer'), findsNothing);
   });
 
   testWidgets('no pide elegir chofer: el botón está habilitado de entrada', (

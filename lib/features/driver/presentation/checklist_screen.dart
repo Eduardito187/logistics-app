@@ -63,11 +63,6 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
   final TextEditingController _km = TextEditingController();
   bool _busy = false;
 
-  /// El chofer pidió REHACER la inspección aunque ya la hizo hoy (p. ej. sale a
-  /// una segunda ruta). Mientras el backend no ligue el checklist a la ruta
-  /// (ver pedido), esto permite inspeccionar de nuevo a demanda.
-  bool _forceForm = false;
-
   @override
   void dispose() {
     _notes.dispose();
@@ -112,17 +107,12 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
           );
         }
-        if (done != null && !_forceForm) {
+        if (done != null) {
           return _AlDiaView(
             performedAt: done.performedOn,
             passed: done.passed ?? false,
             plate: done.plate ?? crew?.vehicle.plate,
             driverName: done.driverName,
-            // En modo POR RUTA una segunda ruta ya muestra el formulario sola
-            // (otro route_id): no hace falta "Rehacer". En modo diario sí, para
-            // una segunda salida del mismo día.
-            allowRedo: !perRoute,
-            onRedo: () => setState(() => _forceForm = true),
             onHistory: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const InspectionHistoryScreen(),
@@ -326,17 +316,14 @@ final DateFormat _checklistHourFormat = DateFormat.Hm('es');
 
 /// Estado "al día" del checklist: la inspección de hoy YA está hecha. En vez del
 /// formulario (que se repetiría) se muestra un éxito, al estilo del
-/// "Todo al día" de mantenimiento, con la hora y la placa del camión. Deja
-/// rehacer la inspección a demanda (p. ej. una segunda ruta del día; ligarlo a
-/// la ruta es un pendiente del backend) y ver el historial.
+/// "Todo al día" de mantenimiento, con la hora y la placa del camión. No hay
+/// "Rehacer": una nueva ruta de salida pide su propia inspección sola.
 class _AlDiaView extends StatelessWidget {
   const _AlDiaView({
     required this.performedAt,
     required this.passed,
     required this.plate,
     required this.driverName,
-    required this.allowRedo,
-    required this.onRedo,
     required this.onHistory,
   });
 
@@ -344,11 +331,6 @@ class _AlDiaView extends StatelessWidget {
   final bool passed;
   final String? plate;
   final String? driverName;
-
-  /// Mostrar el botón "Rehacer": solo en modo DIARIO (una segunda salida del
-  /// mismo día). En modo por ruta, otra ruta ya muestra el formulario sola.
-  final bool allowRedo;
-  final VoidCallback onRedo;
   final VoidCallback onHistory;
 
   @override
@@ -404,16 +386,9 @@ class _AlDiaView extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 28),
-          // Para una SEGUNDA salida del mismo día (modo diario): rehacer. En modo
-          // por ruta no aparece (otra ruta ya pide su propia inspección).
-          if (allowRedo) ...[
-            FilledButton.icon(
-              onPressed: onRedo,
-              icon: const AnimatedAppIcon(AppIcon.checklist),
-              label: const Text('Rehacer inspección (otra salida)'),
-            ),
-            const SizedBox(height: 12),
-          ],
+          // Sin botón "Rehacer" (pedido del dueño): la inspección es POR RUTA.
+          // Una nueva ruta de salida sin su inspección muestra el formulario
+          // sola (otro `route_id`).
           OutlinedButton.icon(
             onPressed: onHistory,
             icon: const AnimatedAppIcon(AppIcon.orders),

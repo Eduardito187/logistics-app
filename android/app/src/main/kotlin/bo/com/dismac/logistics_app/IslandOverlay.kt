@@ -399,9 +399,13 @@ object IslandOverlay {
     private fun bind(args: Map<*, *>) {
         val completed = (args["completed"] as? Number)?.toInt() ?: 0
         val stopCount = (args["stopCount"] as? Number)?.toInt() ?: 0
-        // Compacta: SOLO el contador de ENTREGAS ("6/7"), sin la hora, ajustado
-        // a su contenido (pedido del dueño). El ícono del camión va al lado.
-        val counter = if (stopCount > 0) "$completed/$stopCount" else "$completed"
+        // Compacta: el texto corto que arma Dart (`chip`: "4/7" = la misma
+        // parada que dice la tarjeta "Parada 4 de 7"; "Listo" al terminar), sin
+        // la hora. Así la isla nunca contradice a la vista ni a la notificación.
+        // Respaldo si no llega `chip`: parada en curso sobre el total.
+        val chip = (args["chip"] as? String)?.takeIf { it.isNotEmpty() }
+        val current = (completed + 1).coerceAtMost(stopCount.coerceAtLeast(1))
+        val counter = chip ?: if (stopCount > 0) "$current/$stopCount" else "$current"
         compactText?.text = counter
         root?.contentDescription = args["title"] as? String ?: counter
         // Al ENTREGAR (sube el contador) el camión festeja: verde → rojo + un

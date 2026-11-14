@@ -84,13 +84,6 @@ class RouteLiveStatus {
   /// "3/8": parada en curso sobre el total.
   String get counterText => '$stopIndex/$stopCount';
 
-  /// Contador de AVANCE para la pastilla/chip de la cámara: "6/7" = paradas
-  /// ATENDIDAS / total (`completedCount` = entregadas + fallidas, como la barra
-  /// de progreso). Sube al cerrar una parada. Es el avance de la ruta, no sólo
-  /// las entregadas (el desglose entregada/fallida vive en "Mi ruta"). Pedido
-  /// del dueño: sólo el ícono del camión + la cantidad, SIN la hora.
-  String get attendedCounterText => '$completedCount/$stopCount';
-
   /// Ordinal de ESTA entrega en el avance del día (atendidas + 1): con entregas
   /// fuera de orden, mostrar la SECUENCIA de la parada pendiente (p. ej. 1)
   /// confundía ("Parada 1 de 7" con 6 hechas). Va con el contador de la isla.
@@ -131,10 +124,13 @@ class RouteLiveStatus {
   }
 
   /// Texto corto del chip de la barra de estado (Android 16) / isla compacta:
-  /// SOLO el contador de ENTREGAS ("6/7"), sin la hora (pedido del dueño). El
-  /// ícono del camión lo pone el nativo. Al terminar la ruta, "Listo".
-  String get chipText =>
-      state == RouteLiveState.finished ? 'Listo' : attendedCounterText;
+  /// "4/7" = la MISMA parada que dicen la tarjeta del chofer y la notificación
+  /// ("Parada 4 de 7"), sin la hora. Antes mostraba las atendidas ("3/7") y el
+  /// dueño lo leía como desactualizado frente a "Parada 4 de 7": un solo número
+  /// en todos lados. El ícono del camión lo pone el nativo. Al terminar, "Listo".
+  String get chipText => state == RouteLiveState.finished
+      ? 'Listo'
+      : '$deliveryPosition/$stopCount';
 
   /// Cambio que se publica al instante (sin esperar el intervalo mínimo):
   /// otra parada, otro estado, otro avance, otro cliente u otra ETA.

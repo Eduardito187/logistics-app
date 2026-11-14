@@ -20,7 +20,12 @@ class DeliveryStatusCard extends StatelessWidget {
     required this.stop,
     required this.progress,
     this.remaining,
+    this.legFraction = 0,
   });
+
+  /// Avance del tramo hacia ESTA parada (0..1, por distancia): pinta su tramo
+  /// de la barra en verde claro a medida que el camión se acerca.
+  final double legFraction;
 
   final DriverRoute route;
   final DriverRouteStop stop;
@@ -94,6 +99,7 @@ class DeliveryStatusCard extends StatelessWidget {
             RouteProgressBar(
               total: total,
               completed: progress.attended.clamp(0, total),
+              legFraction: legFraction,
             ),
             const SizedBox(height: 10),
             Text(
@@ -202,10 +208,16 @@ class RouteProgressBar extends StatelessWidget {
     super.key,
     required this.total,
     required this.completed,
+    this.legFraction = 0,
   });
 
   final int total;
   final int completed;
+
+  /// Avance del tramo EN CURSO (el siguiente a los completados), de 0 a 1: se
+  /// pinta en verde claro de izquierda a derecha según la distancia que falta a
+  /// la parada. Al entregar, ese tramo pasa a "hecho" como siempre.
+  final double legFraction;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +229,21 @@ class RouteProgressBar extends StatelessWidget {
     }
     final reduce = MediaQuery.disableAnimationsOf(context);
     final target = (completed / total).clamp(0.0, 1.0).toDouble();
+    final legTarget = legFraction.clamp(0.0, 1.0).toDouble();
+    // El tramo en curso avanza SUAVE hasta cada nueva muestra de distancia (que
+    // llega cada ~10 s): sin saltos, para que no parezca un lag. La `key` por
+    // `completed` lo reinicia en 0 al pasar a la parada siguiente (si no, el
+    // tramo nuevo arrancaría lleno y se "despintaría").
+    return TweenAnimationBuilder<double>(
+      key: ValueKey<int>(completed),
+      tween: Tween<double>(begin: reduce ? legTarget : 0.0, end: legTarget),
+      duration: reduce ? Duration.zero : const Duration(milliseconds: 1800),
+      curve: Curves.easeInOut,
+      builder: (context, leg, _) => _bar(reduce, target, leg, done, todo),
+    );
+  }
+
+  Widget _bar(bool reduce, double target, double leg, Color done, Color todo) {
     // El avance se ANIMA hacia su nuevo valor (antes saltaba de golpe al cerrar
     // una entrega). TweenAnimationBuilder interpola desde el valor anterior al
     // nuevo en cada reconstrucción.
@@ -249,6 +276,8 @@ class RouteProgressBar extends StatelessWidget {
                   child: _SegmentBar(
                     // Cuánto de ESTE tramo está lleno (0..1).
                     fill: (filled - i).clamp(0.0, 1.0).toDouble(),
+                    // Solo el tramo en curso lleva avance por distancia.
+                    leg: i == completed ? leg : 0,
                     done: done,
                     todo: todo,
                   ),
@@ -264,16 +293,26 @@ class RouteProgressBar extends StatelessWidget {
 
 /// Un tramo de la barra de progreso: fondo "por hacer" y, encima, un relleno
 /// "hecho" cuya fracción [fill] (0..1) permite animar el llenado tramo a tramo.
+/// Entre ambos, el avance por distancia [leg] (0..1) en verde claro.
 class _SegmentBar extends StatelessWidget {
   const _SegmentBar({
     required this.fill,
     required this.done,
     required this.todo,
+    this.leg = 0,
   });
 
   final double fill;
+  final double leg;
   final Color done;
   final Color todo;
+
+  /// Verde claro del tramo "en camino" (se distingue del "hecho").
+  static final Color _legColor = Color.lerp(
+    AppColors.success,
+    Colors.white,
+    0.35,
+  )!;
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +321,11 @@ class _SegmentBar extends StatelessWidget {
       child: Stack(
         children: [
           Container(height: 8, color: todo),
+          if (leg > 0)
+            FractionallySizedBox(
+              widthFactor: leg,
+              child: Container(height: 8, color: _legColor),
+            ),
           FractionallySizedBox(
             widthFactor: fill,
             child: Container(height: 8, color: done),

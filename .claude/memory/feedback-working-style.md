@@ -5,10 +5,11 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 9a85d4dc-6dee-4d1d-8426-868a6db4e45d
-  modified: 2026-11-13T18:49:27.729Z
+  modified: 2026-11-14T13:41:50.183Z
 ---
 
 - **Agentes en paralelo y "concluir al 100%":** cuando pide algo grande quiere que se reparta en agentes simultáneos y se termine todo, no por partes. Ver [[parallel-agents-method]].
+- **Excepción: si dice "trabajá vos solo, sin agentes", no lanzar ninguno** (2026-11-14: "para todos estos puntos quiero que trabajes tú solo sin ayudas de agentes", con un lote grande de chofer + tienda). El reparto en agentes es el default solo mientras no pida lo contrario en ese pedido.
 - **Decidir sin preguntar de más:** "tomá las decisiones que sean necesarias". Decidir con criterio, dejarlas explícitas en el reporte (para que pueda revertir) y preguntar solo lo irreversible o que es suyo (credenciales, cuentas, publicar).
 - **Lo que falte del backend:** documentarlo en `docs/backend-requests/` y, si hay sesión del backend activa, mandárselo; él lo pasa al agente del backend y trae la respuesta.
 - **Reportar con números** (tests, tamaños, analyze) y ser honesto con lo no verificado (hardware real, push sin credenciales).

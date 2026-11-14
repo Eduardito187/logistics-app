@@ -21,6 +21,7 @@ UnitTracking _$UnitTrackingFromJson(Map<String, dynamic> json) => UnitTracking(
   productImageUrl: json['product_image_url'] as String?,
   pieceIndex: (json['piece_index'] as num?)?.toInt(),
   pieceTotal: (json['piece_total'] as num?)?.toInt(),
+  labelId: json['label_id'] as String?,
 );
 
 Map<String, dynamic> _$UnitTrackingToJson(UnitTracking instance) =>
@@ -37,4 +38,5 @@ Map<String, dynamic> _$UnitTrackingToJson(UnitTracking instance) =>
       'product_image_url': instance.productImageUrl,
       'piece_index': instance.pieceIndex,
       'piece_total': instance.pieceTotal,
+      'label_id': instance.labelId,
     };

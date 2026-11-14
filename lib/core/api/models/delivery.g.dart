@@ -20,6 +20,8 @@ Delivery _$DeliveryFromJson(Map<String, dynamic> json) => Delivery(
   failureReason: json['failure_reason'] == null
       ? null
       : FailureReason.fromJson(json['failure_reason'] as String),
+  orderReference: json['order_reference'] as String?,
+  customerName: json['customer_name'] as String?,
 );
 
 Map<String, dynamic> _$DeliveryToJson(Delivery instance) => <String, dynamic>{
@@ -31,5 +33,7 @@ Map<String, dynamic> _$DeliveryToJson(Delivery instance) => <String, dynamic>{
   'pod_photo_url': instance.podPhotoUrl,
   'pod_photo_path': instance.podPhotoPath,
   'failure_reason': instance.failureReason,
+  'order_reference': instance.orderReference,
+  'customer_name': instance.customerName,
   'scans': instance.scans,
 };

@@ -7,6 +7,7 @@ import '../../../core/icons/icons.dart';
 import '../../../core/navigation/app_nav.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../domain/entities/route_navigation.dart';
 import '../domain/route_progress.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/locally_settled_stops.dart';
@@ -162,14 +163,24 @@ class _ActiveDelivery extends ConsumerWidget {
 /// Tarjeta de estado que sí observa la posición en vivo: es el único widget que
 /// se reconstruye con cada fix del GPS para recalcular lo que falta a la parada.
 /// Aislarla evita reconstruir el mapa padre, la hoja y la barra de acciones.
-class _LiveStatusCard extends ConsumerWidget {
+class _LiveStatusCard extends ConsumerStatefulWidget {
   const _LiveStatusCard({required this.route, required this.stop});
 
   final DriverRoute route;
   final DriverRouteStop stop;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LiveStatusCard> createState() => _LiveStatusCardState();
+}
+
+class _LiveStatusCardState extends ConsumerState<_LiveStatusCard> {
+  /// Avance del tramo hacia la parada en curso (ver [LegProgress]).
+  final LegProgress _leg = LegProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    final route = widget.route;
+    final stop = widget.stop;
     final fix = ref.watch(deliveryDriverFixProvider).value;
     final remaining = remainingToStop(route, stop, fix);
     // Avance item por item (incluye lo resuelto en este teléfono): misma fuente
@@ -181,7 +192,64 @@ class _LiveStatusCard extends ConsumerWidget {
       stop: stop,
       progress: progress,
       remaining: remaining,
+      legFraction: _leg.sample(
+        stopId: stop.id,
+        remaining: remaining,
+        now: DateTime.now(),
+      ),
     );
+  }
+}
+
+/// Avance del TRAMO hacia la parada en curso, de 0 a 1, para pintar su tramo
+/// de la barra a medida que el camión se acerca.
+///
+/// - El 100 % del tramo es la mayor distancia vista hacia ESA parada (la del
+///   primer fix, salvo que el camión se aleje): no hace falta otro dato ni otra
+///   llamada al backend, sale del mismo cálculo de "Faltan X km".
+/// - Se MUESTREA como mucho cada [interval] (10 s): el GPS llega cada segundo y
+///   mover la barra en cada fix se vería nerviosa; entre muestras la barra anima
+///   suave hasta el nuevo valor.
+/// - Nunca retrocede (un salto de GPS no despinta lo ya avanzado) y se reinicia
+///   al cambiar de parada.
+class LegProgress {
+  LegProgress({this.interval = const Duration(seconds: 10)});
+
+  final Duration interval;
+
+  String? _stopId;
+  double? _startMeters;
+  double _fraction = 0;
+  DateTime? _sampledAt;
+
+  double sample({
+    required String stopId,
+    required RemainingEstimate? remaining,
+    required DateTime now,
+  }) {
+    if (_stopId != stopId) {
+      _stopId = stopId;
+      _startMeters = null;
+      _fraction = 0;
+      _sampledAt = null;
+    }
+    if (remaining == null) return _fraction;
+    final meters = remaining.meters;
+    final start = _startMeters;
+    if (start == null || meters > start) _startMeters = meters;
+    // Dentro de la geocerca: tramo completo ya, sin esperar la próxima muestra.
+    if (arrivedAtStop(remaining)) {
+      _sampledAt = now;
+      return _fraction = 1;
+    }
+    final at = _sampledAt;
+    if (at != null && now.difference(at) < interval) return _fraction;
+    _sampledAt = now;
+    final total = _startMeters!;
+    if (total <= 0) return _fraction;
+    final next = (1 - meters / total).clamp(0.0, 1.0).toDouble();
+    if (next > _fraction) _fraction = next;
+    return _fraction;
   }
 }
 

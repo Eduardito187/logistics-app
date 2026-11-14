@@ -15,6 +15,37 @@ typedef RouteKmToday = ({int? traveledKm, int? departureKm, int? arrivalKm});
 /// año/mes/día que `readAt` en local) y devuelve su diferencia. Nunca lanza.
 ///
 /// Lecturas de otro día se ignoran; otras fuentes (`manual`, `refuel`…) también.
+/// `true` si la SALIDA en curso ya tiene su odómetro de LLEGADA: hay una lectura
+/// `arrival` de hoy posterior a la última `departure` de hoy (o hay llegada y
+/// ninguna salida registrada). Con esto se oculta "Cerrar ruta del día" una vez
+/// cerrada, y vuelve a aparecer en una segunda salida del día (su checklist
+/// registra una `departure` nueva, posterior a la llegada anterior).
+bool arrivalRecordedForCurrentTrip(List<OdometerReading> readings, DateTime now) {
+  final today = now.toLocal();
+  DateTime? departureAt;
+  DateTime? arrivalAt;
+  for (final reading in readings) {
+    final readAt = reading.readAt.toLocal();
+    if (readAt.year != today.year ||
+        readAt.month != today.month ||
+        readAt.day != today.day) {
+      continue;
+    }
+    switch (reading.source) {
+      case OdometerReadingSource.departure:
+        if (departureAt == null || readAt.isAfter(departureAt)) {
+          departureAt = readAt;
+        }
+      case OdometerReadingSource.arrival:
+        if (arrivalAt == null || readAt.isAfter(arrivalAt)) arrivalAt = readAt;
+      default:
+        break;
+    }
+  }
+  if (arrivalAt == null) return false;
+  return departureAt == null || arrivalAt.isAfter(departureAt);
+}
+
 RouteKmToday routeKmToday(List<OdometerReading> readings, DateTime now) {
   final today = now.toLocal();
   OdometerReading? departure;

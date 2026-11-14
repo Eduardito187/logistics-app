@@ -27,6 +27,7 @@ Shipment _$ShipmentFromJson(Map<String, dynamic> json) => Shipment(
   lat: (json['lat'] as num?)?.toDouble(),
   lng: (json['lng'] as num?)?.toDouble(),
   destinationNodeId: json['destination_node_id'] as String?,
+  deliveryMode: json['delivery_mode'] as String?,
 );
 
 Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
@@ -45,5 +46,6 @@ Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
   'address_confidence_level': instance.addressConfidenceLevel,
   'status': instance.status,
   'destination_node_id': instance.destinationNodeId,
+  'delivery_mode': instance.deliveryMode,
   'lines': instance.lines,
 };

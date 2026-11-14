@@ -59,7 +59,9 @@ Shipment shipment({
   String? customerDocumentId = '12345678',
   String? customerPhone,
   int lines = 2,
+  String? deliveryMode,
 }) => Shipment(
+  deliveryMode: deliveryMode,
   id: id,
   source: OrderSource.sap,
   externalId: externalId,

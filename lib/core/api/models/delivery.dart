@@ -22,7 +22,16 @@ class Delivery {
     this.podPhotoUrl,
     this.podPhotoPath,
     this.failureReason,
+    this.orderReference,
+    this.customerName,
   });
+
+  /// Campos aditivos agregados A MANO (el backend ya los manda en la lista de
+  /// entregas del vehículo; pendiente regenerar el cliente).
+  @JsonKey(name: 'order_reference')
+  final String? orderReference;
+  @JsonKey(name: 'customer_name')
+  final String? customerName;
 
   factory Delivery.fromJson(Map<String, Object?> json) =>
       _$DeliveryFromJson(json);

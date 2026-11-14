@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
+import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
+import 'package:logistics_app/core/scanning/scanner_screen.dart';
 import 'package:logistics_app/features/store/presentation/controllers/store_shipments_notifier.dart';
 import 'package:logistics_app/features/store/presentation/counter_pickup_screen.dart';
 import 'package:logistics_app/features/store/presentation/widgets/pickup_card.dart';
+import 'package:logistics_app/features/store/presentation/widgets/pickup_label_sheet.dart';
 
+import '../../../support/fake_code_scanner.dart';
+import '../../../support/fake_label_resolver.dart';
 import '../store_fixtures.dart';
 import '../store_test_harness.dart';
 
@@ -17,6 +22,8 @@ Future<FakeStoreShipments> _pump(
   WidgetTester tester,
   Future<List<Shipment>> Function() load, {
   bool hasMore = false,
+  FakeCodeScanner? scanner,
+  FakeLabelResolver? resolver,
 }) async {
   final notifier = FakeStoreShipments(load, hasMore: hasMore);
   await tester.pumpWidget(
@@ -24,6 +31,9 @@ Future<FakeStoreShipments> _pump(
       overrides: [
         ...syncBadgeOverrides(),
         storeShipmentsPagedProvider.overrideWith(() => notifier),
+        if (scanner != null)
+          codeScannerProvider.overrideWithValue(scanner.call),
+        if (resolver != null) labelResolverProvider.overrideWithValue(resolver),
       ],
       child: const MaterialApp(home: CounterPickupScreen()),
     ),
@@ -32,7 +42,202 @@ Future<FakeStoreShipments> _pump(
   return notifier;
 }
 
+Future<void> _search(WidgetTester tester, String text) async {
+  await tester.enterText(
+    find.widgetWithText(TextField, 'Código del pedido'),
+    text,
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapScanLabel(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Escanear etiqueta'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('solo recojos de cliente: los traslados a tienda no aparecen', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      () async => [
+        shipment(customerName: 'Ana Pérez', deliveryMode: 'store_pickup'),
+        shipment(
+          id: 'ship-2',
+          customerName: 'Traslado CD',
+          deliveryMode: 'transfer',
+        ),
+      ],
+    );
+
+    expect(find.byType(PickupCard), findsOneWidget);
+    expect(find.text('Ana Pérez'), findsOneWidget);
+    expect(find.text('Traslado CD'), findsNothing);
+  });
+
+  group('buscar por código del pedido', () {
+    Future<List<Shipment>> two() async => [
+      shipment(customerName: 'Ana Pérez', externalId: 'DM-1001'),
+      shipment(
+        id: 'ship-2',
+        customerName: 'Luis Gómez',
+        externalId: 'DM-2002',
+        customerDocumentId: '7654321',
+      ),
+    ];
+
+    testWidgets('filtra por código, sin importar mayúsculas', (tester) async {
+      await _pump(tester, two);
+
+      await _search(tester, 'dm-2002');
+
+      expect(find.byType(PickupCard), findsOneWidget);
+      expect(find.text('Luis Gómez'), findsOneWidget);
+      expect(find.text('Ana Pérez'), findsNothing);
+    });
+
+    testWidgets('también encuentra por cliente o documento', (tester) async {
+      await _pump(tester, two);
+
+      await _search(tester, 'ana');
+      expect(find.text('Ana Pérez'), findsOneWidget);
+      expect(find.text('Luis Gómez'), findsNothing);
+
+      await _search(tester, '7654');
+      expect(find.text('Luis Gómez'), findsOneWidget);
+      expect(find.text('Ana Pérez'), findsNothing);
+    });
+
+    testWidgets('sin coincidencias avisa y borrar vuelve a la lista', (
+      tester,
+    ) async {
+      await _pump(tester, two);
+
+      await _search(tester, 'NO-EXISTE');
+      expect(find.text('Pedido no encontrado'), findsOneWidget);
+      expect(find.byType(PickupCard), findsNothing);
+
+      await tester.tap(find.byTooltip('Borrar búsqueda'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PickupCard), findsNWidgets(2));
+    });
+  });
+
+  group('escanear una etiqueta', () {
+    Future<List<Shipment>> one() async => [
+      shipment(
+        customerName: 'Ana Pérez',
+        externalId: 'DM-1001',
+        customerPhone: '70000000',
+      ),
+      shipment(id: 'ship-2', customerName: 'Luis Gómez', externalId: 'DM-2'),
+    ];
+
+    testWidgets('muestra el pedido, el producto y el cliente a entregar', (
+      tester,
+    ) async {
+      final scanner = FakeCodeScanner(['LBL-9']);
+      await _pump(
+        tester,
+        one,
+        scanner: scanner,
+        resolver: FakeLabelResolver(
+          resolutions: {
+            'LBL-9': const LabelResolution(
+              labelId: 'LBL-9',
+              resolved: true,
+              unitId: 'unit-1',
+              shipmentId: 'ship-1',
+              sku: 'TV-55',
+              productName: 'Televisor 55"',
+              orderNumber: 'DM-1001',
+            ),
+          },
+        ),
+      );
+
+      await _tapScanLabel(tester);
+
+      expect(scanner.requestedTitles, ['Escanear etiqueta']);
+      expect(find.text('Pedido DM-1001'), findsWidgets);
+      expect(find.text('Televisor 55"'), findsOneWidget);
+      expect(find.text('SKU TV-55'), findsOneWidget);
+      expect(find.text('Teléfono: 70000000'), findsOneWidget);
+      expect(find.text('Entregar este pedido'), findsOneWidget);
+    });
+
+    testWidgets('pedido que no es de la tienda: lo dice y no ofrece entregar', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        one,
+        scanner: FakeCodeScanner(['LBL-7']),
+        resolver: FakeLabelResolver(
+          resolutions: {
+            'LBL-7': const LabelResolution(
+              labelId: 'LBL-7',
+              resolved: true,
+              unitId: 'unit-x',
+              shipmentId: 'ship-otro',
+              orderNumber: 'DM-OTRO',
+            ),
+          },
+        ),
+      );
+
+      await _tapScanLabel(tester);
+
+      expect(find.text('Pedido DM-OTRO'), findsOneWidget);
+      expect(
+        find.text('Este pedido no figura entre los recojos de tu tienda.'),
+        findsOneWidget,
+      );
+      expect(find.text('Entregar este pedido'), findsNothing);
+    });
+
+    testWidgets('etiqueta no reconocida o sin señal: aviso, sin hoja', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        one,
+        scanner: FakeCodeScanner(['LBL-??', 'LBL-9']),
+        resolver: FakeLabelResolver(),
+      );
+
+      await _tapScanLabel(tester);
+      expect(find.text('Etiqueta no reconocida.'), findsOneWidget);
+      expect(find.byType(PickupLabelSheet), findsNothing);
+    });
+
+    testWidgets('sin señal no se puede consultar la etiqueta', (tester) async {
+      await _pump(
+        tester,
+        one,
+        scanner: FakeCodeScanner(['LBL-9']),
+        resolver: FakeLabelResolver(offline: true),
+      );
+
+      await _tapScanLabel(tester);
+
+      expect(
+        find.text('No se pudo consultar la etiqueta. Intentá de nuevo.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('cancelar el escaneo no hace nada', (tester) async {
+      await _pump(tester, one, scanner: FakeCodeScanner([null]));
+
+      await _tapScanLabel(tester);
+
+      expect(find.byType(PickupLabelSheet), findsNothing);
+      expect(find.byType(PickupCard), findsNWidgets(2));
+    });
+  });
+
   testWidgets('con datos muestra una tarjeta por envío', (tester) async {
     await _pump(
       tester,

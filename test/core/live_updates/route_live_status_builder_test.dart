@@ -61,8 +61,8 @@ void main() {
     expect(status.customer.endsWith('…'), isTrue);
     expect(status.title, 'Parada 2 de 3 · Llega 09:05');
     expect(status.subText, 'A 2,3 km');
-    // El chip/isla muestra ENTREGADAS/total (sin hora): 1 entregada de 3.
-    expect(status.chipText, '1/3');
+    // El chip/isla dice la MISMA parada que el título (sin hora): 2 de 3.
+    expect(status.chipText, '2/3');
     expect(status.lat, -17.7);
   });
 
@@ -73,7 +73,7 @@ void main() {
     )!;
     expect(status.state, RouteLiveState.arriving);
     expect(status.title, 'Llegaste · Parada 2 de 3');
-    expect(status.chipText, '1/3');
+    expect(status.chipText, '2/3');
     expect(status.subText, isNull);
   });
 
@@ -94,8 +94,8 @@ void main() {
     expect(status.completedCount, 2);
     // Sin nombre de cliente cae a la dirección.
     expect(status.customer, 'Av. Busch');
-    // El chip muestra las ENTREGADAS (2 de 3), no la parada en curso (3).
-    expect(status.chipText, '2/3');
+    // El chip coincide con el título: va en la parada 3 de 3.
+    expect(status.chipText, '3/3');
     expect(status.title, 'Parada 3 de 3');
   });
 
@@ -158,7 +158,7 @@ void main() {
     expect(status.completedCount, 6);
     expect(status.deliveryPosition, 7); // pero el avance dice 7ª
     expect(status.title, 'Parada 7 de 7');
-    expect(status.chipText, '6/7'); // la isla: 6 entregadas de 7
+    expect(status.chipText, '7/7'); // la isla: la misma parada que el título
   });
 
   test('sameContentAs ignora metros que no cambian el texto', () {

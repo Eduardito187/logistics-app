@@ -21,6 +21,59 @@ OdometerReading _reading({
 void main() {
   final now = DateTime(2026, 11, 11, 18, 30);
 
+  // Oculta "Cerrar ruta del día" cuando la salida en curso ya tiene su llegada.
+  group('arrivalRecordedForCurrentTrip', () {
+    OdometerReading at(OdometerReadingSource source, int hour) => _reading(
+      km: 12000 + hour,
+      source: source,
+      readAt: DateTime(2026, 11, 11, hour),
+    );
+
+    test('sin llegada → false', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+        ], now),
+        isFalse,
+      );
+      expect(arrivalRecordedForCurrentTrip(const [], now), isFalse);
+    });
+
+    test('llegada posterior a la salida → true', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+          at(OdometerReadingSource.arrival, 13),
+        ], now),
+        isTrue,
+      );
+    });
+
+    test('segunda salida del día: vuelve a faltar la llegada', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+          at(OdometerReadingSource.arrival, 13),
+          at(OdometerReadingSource.departure, 14),
+        ], now),
+        isFalse,
+      );
+    });
+
+    test('una llegada de ayer no cuenta', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          _reading(
+            km: 11900,
+            source: OdometerReadingSource.arrival,
+            readAt: DateTime(2026, 11, 10, 17),
+          ),
+        ], now),
+        isFalse,
+      );
+    });
+  });
+
   group('routeKmToday', () {
     test('salida y llegada presentes → recorrido = llegada − salida', () {
       final readings = [

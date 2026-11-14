@@ -30,6 +30,7 @@ class Shipment {
     this.lat,
     this.lng,
     this.destinationNodeId,
+    this.deliveryMode,
   });
 
   factory Shipment.fromJson(Map<String, Object?> json) =>
@@ -64,6 +65,12 @@ class Shipment {
   /// UUID del nodo destino del envío (network_nodes). Null mientras el ingest/SAP no lo pueble.
   @JsonKey(name: 'destination_node_id')
   final String? destinationNodeId;
+
+  /// Campo aditivo agregado A MANO (el backend ya lo manda; pendiente regenerar
+  /// el cliente): `home_delivery` | `store_pickup` | `transfer`. Al regenerar
+  /// saldrá como enum `DeliveryMode`: ajustar `isStorePickup` (store feature).
+  @JsonKey(name: 'delivery_mode')
+  final String? deliveryMode;
   final List<ShipmentLine> lines;
 
   Map<String, Object?> toJson() => _$ShipmentToJson(this);
