@@ -52,3 +52,4 @@
 - [Reglas: ciudad, alcance por rol, consulta](business-rules-city-scope-lookup.md) — personal por ciudad + almacén central; preparador solo su ciudad; tienda solo entrega al cliente; "Consultar pedido" para TODOS; chofer N salidas/día con inspección y odómetro por salida
 - [Arranques en blanco por isolates en release](release-isolate-hang-blank-screens.md) — logo/lista vacíos "a veces" solo en dispositivo: SVG y Dio usan isolate en release; fix = BrandVector (.vec) + decodificar en el hilo principal
 - [Rol planificador y planificación](planner-role-and-planning.md) — UserRole.planner, canPlan (planificador+admin), supervisor solo mira; asistente de viajes espera al backend; preferencias de UI del dueño (selects, sin UUID, sin "SKU")
+- [Tiempo real por sockets](realtime-sockets-contract.md) — el dueño quiere sockets, no refresco por tiempo; hub+bus por temas (user/fleet/planning), contrato pedido al backend, polling solo de respaldo

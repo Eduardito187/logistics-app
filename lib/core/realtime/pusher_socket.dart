@@ -4,9 +4,10 @@ import 'dart:io';
 
 /// Conexión mínima a un servidor de sockets con protocolo Pusher (Soketi).
 ///
-/// Solo lo que la app necesita: conectarse, suscribirse a UN canal privado
-/// (con la firma que da el backend) y recibir sus eventos. Sin dependencias:
-/// usa el `WebSocket` de `dart:io`. La reconexión la decide quien la usa.
+/// Solo lo que la app necesita: conectarse, suscribirse a canales (los
+/// privados, con la firma que da el backend) y recibir sus eventos. Sin
+/// dependencias: usa el `WebSocket` de `dart:io`. La reconexión la decide
+/// quien la usa.
 abstract class RealtimeSocket {
   Stream<Object?> get messages;
   void send(String data);
@@ -40,29 +41,41 @@ class _IoSocket implements RealtimeSocket {
   Future<void> close() => _socket.close();
 }
 
-/// Un evento recibido en el canal.
-typedef RealtimeEvent = ({String name, Map<String, Object?> data});
+/// Un evento recibido en un canal.
+typedef RealtimeEvent = ({
+  String channel,
+  String name,
+  Map<String, Object?> data,
+});
 
 /// Firma la suscripción a un canal privado (`"<key>:<firma>"`).
 typedef ChannelAuthorizer =
     Future<String> Function(String socketId, String channel);
 
-/// Sesión de un canal privado: conecta, se suscribe y entrega los eventos.
-/// [done] se completa cuando la conexión se cae o se cierra.
-class PusherChannelSession {
-  PusherChannelSession._(this._socket, this._subscription, this._events);
+/// Una conexión con varios canales: conecta, suscribe/desuscribe y entrega
+/// los eventos de los canales suscritos. [done] se completa cuando la
+/// conexión se cae o se cierra.
+class PusherConnection {
+  PusherConnection._(this._socket, this._authorize);
 
   final RealtimeSocket _socket;
-  final StreamSubscription<Object?> _subscription;
-  final StreamController<RealtimeEvent> _events;
+  final ChannelAuthorizer _authorize;
+  final StreamController<RealtimeEvent> _events =
+      StreamController<RealtimeEvent>.broadcast();
+  final Set<String> _channels = {};
+  StreamSubscription<Object?>? _subscription;
+  String? _socketId;
 
   Stream<RealtimeEvent> get events => _events.stream;
 
   /// Se completa cuando la conexión termina (caída o [close]).
   Future<void> get done => _events.done;
 
+  /// Canales suscritos en este momento.
+  Set<String> get channels => Set.unmodifiable(_channels);
+
   Future<void> close() async {
-    await _subscription.cancel();
+    await _subscription?.cancel();
     try {
       await _socket.close();
     } on Object {
@@ -71,17 +84,18 @@ class PusherChannelSession {
     if (!_events.isClosed) await _events.close();
   }
 
-  /// URL de conexión del protocolo Pusher.
+  /// URL de conexión del protocolo Pusher. El servidor de sockets se publica
+  /// por el MISMO host y puerto que la API ([api]); `wss` si la API es https.
   static Uri endpoint({
-    required String host,
-    required int port,
+    required Uri api,
     required String key,
-    required bool tls,
+    String path = '/app',
   }) => Uri(
-    scheme: tls ? 'wss' : 'ws',
-    host: host,
-    port: port,
-    path: '/app/$key',
+    scheme: api.scheme == 'https' ? 'wss' : 'ws',
+    host: api.host,
+    port: api.hasPort ? api.port : null,
+    path:
+        '${path.endsWith('/') ? path.substring(0, path.length - 1) : path}/$key',
     queryParameters: const {
       'protocol': '7',
       'client': 'distrack',
@@ -89,82 +103,108 @@ class PusherChannelSession {
     },
   );
 
-  /// Conecta a [uri] y se suscribe a [channel]. Lanza si la conexión o la
-  /// firma fallan (quien llama decide si reintenta).
-  static Future<PusherChannelSession> open({
+  /// Conecta a [uri] y espera el saludo del servidor. Lanza si la conexión
+  /// falla (quien llama decide si reintenta).
+  static Future<PusherConnection> open({
     required Uri uri,
-    required String channel,
     required ChannelAuthorizer authorize,
     RealtimeSocketConnector connect = connectIoSocket,
   }) async {
     final socket = await connect(uri);
-    final events = StreamController<RealtimeEvent>.broadcast();
+    final connection = PusherConnection._(socket, authorize);
     final ready = Completer<void>();
-
-    Future<void> onMessage(Object? raw) async {
-      if (raw is! String) return;
-      final Object? decoded;
-      try {
-        decoded = jsonDecode(raw);
-      } on FormatException {
-        return;
-      }
-      if (decoded is! Map) return;
-      final name = decoded['event'];
-      if (name is! String) return;
-      final data = _dataOf(decoded['data']);
-      switch (name) {
-        case 'pusher:connection_established':
-          final socketId = data['socket_id'];
-          if (socketId is! String) return;
-          try {
-            final auth = await authorize(socketId, channel);
-            socket.send(
-              jsonEncode({
-                'event': 'pusher:subscribe',
-                'data': {'auth': auth, 'channel': channel},
-              }),
-            );
-          } on Object catch (error, stack) {
-            if (!ready.isCompleted) ready.completeError(error, stack);
-          }
-        case 'pusher_internal:subscription_succeeded':
-          if (!ready.isCompleted) ready.complete();
-        case 'pusher:ping':
-          socket.send(jsonEncode({'event': 'pusher:pong', 'data': {}}));
-        case 'pusher:error':
-          if (!ready.isCompleted) {
-            ready.completeError(StateError('pusher:error ${data['message']}'));
-          }
-        default:
-          // Eventos propios del canal (no los internos del protocolo).
-          if (!name.startsWith('pusher') && decoded['channel'] == channel) {
-            if (!events.isClosed) events.add((name: name, data: data));
-          }
-      }
-    }
-
-    final subscription = socket.messages.listen(
-      onMessage,
+    connection._subscription = socket.messages.listen(
+      (raw) => connection._onMessage(raw, ready),
       onError: (Object error, StackTrace stack) {
         if (!ready.isCompleted) ready.completeError(error, stack);
-        if (!events.isClosed) unawaited(events.close());
+        if (!connection._events.isClosed) unawaited(connection._events.close());
       },
       onDone: () {
         if (!ready.isCompleted) {
           ready.completeError(StateError('socket cerrado'));
         }
-        if (!events.isClosed) unawaited(events.close());
+        if (!connection._events.isClosed) unawaited(connection._events.close());
       },
     );
-    final session = PusherChannelSession._(socket, subscription, events);
     try {
       await ready.future.timeout(const Duration(seconds: 20));
     } on Object {
-      await session.close();
+      await connection.close();
       rethrow;
     }
-    return session;
+    return connection;
+  }
+
+  /// Se suscribe a [channel] (firmándolo si es privado). Lanza si la firma
+  /// falla: ese canal queda sin suscribir y la conexión sigue.
+  Future<void> subscribe(String channel) async {
+    final socketId = _socketId;
+    if (socketId == null || _events.isClosed) {
+      throw StateError('sin conexión');
+    }
+    if (!_channels.add(channel)) return;
+    try {
+      final auth = channel.startsWith('private-')
+          ? await _authorize(socketId, channel)
+          : null;
+      // Mientras se firmaba pudo cerrarse o desuscribirse.
+      if (_events.isClosed || !_channels.contains(channel)) return;
+      _socket.send(
+        jsonEncode({
+          'event': 'pusher:subscribe',
+          'data': {'auth': ?auth, 'channel': channel},
+        }),
+      );
+    } on Object {
+      _channels.remove(channel);
+      rethrow;
+    }
+  }
+
+  void unsubscribe(String channel) {
+    if (!_channels.remove(channel) || _events.isClosed) return;
+    _socket.send(
+      jsonEncode({
+        'event': 'pusher:unsubscribe',
+        'data': {'channel': channel},
+      }),
+    );
+  }
+
+  void _onMessage(Object? raw, Completer<void> ready) {
+    if (raw is! String) return;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return;
+    }
+    if (decoded is! Map) return;
+    final name = decoded['event'];
+    if (name is! String) return;
+    final data = _dataOf(decoded['data']);
+    switch (name) {
+      case 'pusher:connection_established':
+        final socketId = data['socket_id'];
+        if (socketId is! String) return;
+        _socketId = socketId;
+        if (!ready.isCompleted) ready.complete();
+      case 'pusher:ping':
+        _socket.send(jsonEncode({'event': 'pusher:pong', 'data': {}}));
+      case 'pusher:error':
+        if (!ready.isCompleted) {
+          ready.completeError(StateError('pusher:error ${data['message']}'));
+        }
+      default:
+        // Eventos propios de un canal suscrito (no los internos del protocolo).
+        final channel = decoded['channel'];
+        if (!name.startsWith('pusher') &&
+            channel is String &&
+            _channels.contains(channel) &&
+            !_events.isClosed) {
+          _events.add((channel: channel, name: name, data: data));
+        }
+    }
   }
 
   /// `data` llega como texto JSON o ya como objeto.

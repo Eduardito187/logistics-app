@@ -145,6 +145,9 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
     required String planId,
     required String shipmentId,
   }) => _remote.removeShipmentFromPlan(planId: planId, shipmentId: shipmentId);
+
+  @override
+  Future<void> deletePlan(String planId) => _remote.deletePlan(planId);
 }
 
 /// Provider del repositorio expuesto con el **tipo interfaz**: la presentación

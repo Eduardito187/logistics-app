@@ -38,7 +38,7 @@ la evidencia de entregas (firmas) NO se muestra en la ficha de una persona (dato
 daban 422 por `user_ids: []` (ahora Dio directo sin la clave); mantenimiento ofrece "Pasarlos a otro camión"
 solo si el camión tiene pedidos (`pendingOrdersOf`). Avisos de la empresa DENTRO de Notificaciones
 (`InboxSection`), refresco solo: push en primer plano (`pushArrivedProvider`), al volver a la app y cada 20 s.
-**Pendiente backend:** sockets (Reverb, canal por usuario) y confirmar push FCM al enviar un aviso.
+Los sockets ya están (ver [[realtime-sockets-contract]]); el refresco por tiempo es solo respaldo.
 
 **Preferencias de UI que fijó el dueño:** filtros como SELECT (ciudad, estado, rol), nunca input de texto ni
 chips para eso; ningún UUID a la vista; el SKU va solo, sin la palabra "SKU"; foto del producto en los

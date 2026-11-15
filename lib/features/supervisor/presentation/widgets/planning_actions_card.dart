@@ -9,6 +9,7 @@ import '../../../../core/api/models/auto_plan_run_status.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/plan_status.dart';
 import '../../../../core/icons/icons.dart';
+import '../../../../core/realtime/realtime_bus.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../domain/usecases/generate_daily_plan.dart';
@@ -19,8 +20,9 @@ import '../controllers/supervisor_controllers.dart';
 /// Acciones del planificador sobre el día: planificar (automático, en segundo
 /// plano) y publicar todos los planes que todavía no se publicaron.
 ///
-/// Mientras la planificación corre, consulta su estado cada [pollEvery] y al
-/// terminar refresca la lista de planes.
+/// Mientras la planificación corre, su avance llega en tiempo real; sin
+/// socket consulta su estado cada [pollEvery]. Al terminar refresca la lista
+/// de planes.
 class PlanningActionsCard extends ConsumerStatefulWidget {
   const PlanningActionsCard({
     super.key,
@@ -58,9 +60,14 @@ class _PlanningActionsCardState extends ConsumerState<PlanningActionsCard> {
 
   /// Sigue la corrida: mientras esté en curso vuelve a consultarla; cuando
   /// termina, la lista de planes se pide de nuevo.
+  ///
+  /// Con tiempo real el avance llega por socket (lo escucha la pantalla de
+  /// planes); la consulta cada [PlanningActionsCard.pollEvery] es solo el
+  /// respaldo cuando no hay socket.
   void _follow(AutoPlanRun? previous, AutoPlanRun? run) {
     _poll?.cancel();
     if (_running(run)) {
+      if (ref.read(realtimeTopicLiveProvider(RealtimeTopic.planning))) return;
       _poll = Timer(widget.pollEvery, () {
         if (mounted) ref.invalidate(dailyPlanRunProvider);
       });
@@ -137,6 +144,12 @@ class _PlanningActionsCardState extends ConsumerState<PlanningActionsCard> {
     ref.listen<AsyncValue<AutoPlanRun?>>(
       dailyPlanRunProvider,
       (previous, next) => _follow(previous?.value, next.value),
+    );
+    // Se conectó o se cayó el socket: se consulta una vez (por lo que se haya
+    // perdido) y eso reacomoda el respaldo.
+    ref.listen(
+      realtimeTopicLiveProvider(RealtimeTopic.planning),
+      (_, _) => ref.invalidate(dailyPlanRunProvider),
     );
     final theme = Theme.of(context);
     final run = ref.watch(dailyPlanRunProvider).value;

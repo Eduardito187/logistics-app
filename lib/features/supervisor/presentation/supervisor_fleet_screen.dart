@@ -6,13 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/models/vehicle_live.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/power/power_status_notifier.dart';
+import '../../../core/realtime/pusher_socket.dart';
+import '../../../core/realtime/realtime_bus.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/supervisor_controllers.dart';
 import 'widgets/fleet_map.dart';
 
-/// Cada cuánto se piden de nuevo las posiciones de la flota mientras la
-/// pantalla está a la vista. 30 s: la telemetría no cambia más rápido de forma
+/// RESPALDO sin tiempo real: cada cuánto se piden de nuevo las posiciones de
+/// la flota mientras la pantalla está a la vista. 30 s: la telemetría no cambia más rápido de forma
 /// útil para el supervisor y en un teléfono de 1 GB cada refresco cuesta red,
 /// JSON y un reagrupado del mapa.
 const Duration fleetRefreshInterval = Duration(seconds: 30);
@@ -22,7 +24,11 @@ const Duration fleetRefreshIntervalSaving = Duration(seconds: 90);
 
 /// Flota en vivo: mapa OSM con la última posición conocida de cada camión.
 ///
-/// Refresco automático cada [fleetRefreshInterval], que se **detiene**:
+/// Las posiciones llegan EN TIEMPO REAL por socket (evento `fleet.position`,
+/// se aplica sobre la lista sin volver a pedirla; `fleet.removed` quita un
+/// camión dado de baja). Solo si no hay socket se
+/// refresca cada [fleetRefreshInterval]. La escucha y el refresco se
+/// **detienen**:
 /// - con la app en segundo plano (pantalla apagada, otra app encima), y
 /// - cuando otra pantalla tapa a esta (p. ej. se abrió un detalle encima):
 ///   el `Navigator` apaga el `TickerMode` de las rutas tapadas.
@@ -41,6 +47,12 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
     with WidgetsBindingObserver {
   Timer? _timer;
 
+  /// Deja de escuchar el tema de flota (`null` = no está escuchando).
+  void Function()? _stopRealtime;
+
+  /// Las posiciones están llegando por socket.
+  bool _live = false;
+
   /// Ciudad elegida en el filtro; `null` = todo el país.
   String? _city;
 
@@ -57,6 +69,7 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     _appActive = lifecycle == null || _isActive(lifecycle);
+    _live = ref.read(realtimeTopicLiveProvider(RealtimeTopic.fleet));
   }
 
   @override
@@ -83,30 +96,65 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _timer = null;
+    _stopRealtime?.call();
+    _stopRealtime = null;
     super.dispose();
   }
 
   static bool _isActive(AppLifecycleState state) =>
       state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
 
-  /// Arranca o detiene el timer según la visibilidad y el estado de la app.
+  /// Arranca o detiene la escucha en tiempo real y el refresco de respaldo
+  /// según la visibilidad y el estado de la app.
   void _syncPolling({required bool refreshNow}) {
     final shouldRun = _appActive && (_visible ?? false);
     if (!shouldRun) {
       _timer?.cancel();
       _timer = null;
+      _stopRealtime?.call();
+      _stopRealtime = null;
       return;
     }
-    if (_timer != null) return;
+    _stopRealtime ??= ref
+        .read(realtimeBusProvider)
+        .listen(RealtimeTopic.fleet, _onFleetEvent);
     // En una microtarea (al terminar el frame en curso): Riverpod pausa las
     // suscripciones de una ruta tapada y las reanuda en el build, que corre
     // después de `didChangeDependencies`; invalidar antes se perdía.
     if (refreshNow) scheduleMicrotask(_refresh);
+    if (_live) {
+      // Con socket no se refresca por tiempo.
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer != null) return;
     final saving = ref.read(powerStatusProvider).shouldSaveEnergy;
     _timer = Timer.periodic(
       saving ? fleetRefreshIntervalSaving : fleetRefreshInterval,
       (_) => _refresh(),
     );
+  }
+
+  /// Posición nueva de un camión: se aplica sobre la lista, sin pedirla.
+  void _onFleetEvent(RealtimeEvent event) {
+    if (!mounted) return;
+    switch (event.name) {
+      case 'fleet.position':
+        try {
+          ref
+              .read(fleetLiveProvider.notifier)
+              .apply(VehicleLive.fromJson(event.data));
+        } on Object {
+          // Evento incompleto: se pide la lista entera.
+          _refresh();
+        }
+      case 'fleet.removed':
+        final vehicleId = event.data['vehicle_id'];
+        if (vehicleId is String) {
+          ref.read(fleetLiveProvider.notifier).remove(vehicleId);
+        }
+    }
   }
 
   void _refresh() {
@@ -118,6 +166,12 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Se conectó (o se cayó) el socket: al conectar se pide una vez, por lo
+    // que se haya perdido; al caerse vuelve el refresco de respaldo.
+    ref.listen(realtimeTopicLiveProvider(RealtimeTopic.fleet), (_, live) {
+      _live = live;
+      _syncPolling(refreshNow: live);
+    });
     final fleet = ref.watch(fleetLiveProvider);
 
     return Scaffold(

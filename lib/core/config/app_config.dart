@@ -70,17 +70,6 @@ class AppConfig {
     'FIREBASE_IOS_BUNDLE_ID',
   );
 
-  /// Avisos en tiempo real (servidor de sockets, protocolo Pusher). Host
-  /// vacío = sin tiempo real: la app sigue con el refresco por push y por
-  /// tiempo. Cada entorno define los suyos en `config/<entorno>.json`.
-  static const String socketHost = String.fromEnvironment('SOCKET_HOST');
-  static const int socketPort = int.fromEnvironment(
-    'SOCKET_PORT',
-    defaultValue: 6001,
-  );
-  static const String socketKey = String.fromEnvironment('SOCKET_KEY');
-  static const bool socketTls = bool.fromEnvironment('SOCKET_TLS');
-
   /// ¿Están las cuatro credenciales de Firebase? Si no, el push no arranca.
   static bool get isFirebaseConfigured =>
       firebaseApiKey.isNotEmpty &&

@@ -107,4 +107,7 @@ abstract interface class SupervisorRepository {
     required String planId,
     required String shipmentId,
   });
+
+  /// Borra un plan sin publicar (sus pedidos quedan libres).
+  Future<void> deletePlan(String planId);
 }

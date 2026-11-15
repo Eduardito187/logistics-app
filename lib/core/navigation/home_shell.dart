@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../realtime/inbox_realtime.dart';
+import '../realtime/realtime_hub.dart';
 import '../../features/carrier/presentation/carrier_pickup_screen.dart';
 import '../../features/driver/presentation/active_delivery_screen.dart';
 import '../../features/home/presentation/all_tasks_screen.dart';
@@ -58,9 +58,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final Session? session = ref.watch(sessionProvider);
-    // Avisos en tiempo real mientras el usuario está adentro (si el entorno
+    // Conexión de tiempo real mientras el usuario está adentro (si el entorno
     // tiene sockets; si no, no hace nada).
-    ref.watch(inboxRealtimeProvider);
+    ref.watch(realtimeHubProvider);
     if (session == null) {
       return const SizedBox.shrink();
     }

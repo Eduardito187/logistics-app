@@ -31,10 +31,9 @@ default de `app_config.dart` = `http://10.0.2.2:8110` (alias SOLO del emulador) 
 `--dart-define-from-file=config/staging.json` (debug está whitelisteado para esa IP en el
 network_security_config). Pasó: recompilé sin el define y el login no conectaba.
 
-**Avisos en tiempo real (nov 2026):** claves nuevas en `config/*.json`: `SOCKET_HOST`, `SOCKET_PORT`,
-`SOCKET_KEY`, `SOCKET_TLS` (servidor Soketi, protocolo Pusher). Host o key vacíos = sin tiempo real (la app
-sigue con push + refresco cada 20 s). Dev: `localhost:6001`, key `dismaclocalkey`, sin TLS — en el teléfono
-hace falta `adb reverse tcp:6001 tcp:6001` (igual que el 8110). Staging y producción quedaron VACÍOS: el
-backend todavía no tiene servidor de sockets ahí (su endpoint de auth da 503). Cliente propio sin
-dependencias en `lib/core/realtime/` (canal `private-user.{id}`, evento `inbox.updated`), activo solo con
-sesión y app en primer plano.
+**Avisos en tiempo real (nov 2026):** SIN claves en `config/*.json` (las `SOCKET_*` se quitaron). La app pide
+`GET /app/broadcasting/config` → `{enabled, key, cluster, path}` y conecta al MISMO host y puerto que la API:
+`ws(s)://<host API>[:puerto]/app/<key>` (wss si la API es https); la clave cambia por entorno, nunca fija.
+`enabled:false`, 503 o 404 = sin tiempo real (sigue push + refresco cada 20 s). En el teléfono basta el
+`adb reverse` del 8110. Cliente propio sin dependencias en `lib/core/realtime/` (canal `private-user.{id}`,
+evento `inbox.updated`, seam `realtimeEndpointProvider`), activo solo con sesión y app en primer plano.

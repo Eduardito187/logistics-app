@@ -409,6 +409,16 @@ extension SupervisorTripPlanning on SupervisorRemoteDataSource {
       throw ApiException.fromDio(e);
     }
   }
+
+  /// Borra un plan SIN publicar; sus pedidos quedan libres para otro viaje.
+  /// El backend responde 409 si ya está publicado.
+  Future<void> deletePlan(String planId) async {
+    try {
+      await _ref.read(dioProvider).delete<void>('/app/plans/$planId');
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }
 
 final supervisorRemoteDataSourceProvider = Provider<SupervisorRemoteDataSource>(

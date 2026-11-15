@@ -7,6 +7,7 @@ import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../lookup/domain/usecases/find_order.dart';
 import '../../domain/usecases/assign_shipment_to_plan.dart';
+import '../../domain/usecases/delete_plan.dart';
 import '../../domain/usecases/publish_plan.dart';
 import '../../domain/usecases/remove_shipment_from_plan.dart';
 import '../supervisor_labels.dart';
@@ -159,6 +160,44 @@ class _PlanEditorState extends ConsumerState<PlanEditor> {
     );
   }
 
+  /// Borra el plan (solo sin publicar): sus pedidos quedan sin camión. Al
+  /// terminar se cierra el detalle, que ya no existe.
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar el plan?'),
+        content: const Text(
+          'El viaje se borra y sus pedidos quedan sin camión para '
+          'asignarlos a otro viaje.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(deletePlanProvider)(widget.plan.id);
+      if (!mounted) return;
+      ref.invalidate(plansProvider);
+      showSuccessSnack(context, 'Plan eliminado.');
+      await Navigator.of(context).maybePop();
+    } on Object catch (error) {
+      if (mounted) showErrorSnack(context, error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -224,6 +263,15 @@ class _PlanEditorState extends ConsumerState<PlanEditor> {
           onPressed: _busy || _dirty || _stops.isEmpty ? null : _publish,
           icon: const AnimatedAppIcon(AppIcon.send, excludeFromSemantics: true),
           label: const Text('Publicar plan'),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+            minimumSize: const Size.fromHeight(48),
+          ),
+          onPressed: _busy ? null : _delete,
+          child: const Text('Eliminar plan'),
         ),
       ],
     );

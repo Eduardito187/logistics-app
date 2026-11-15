@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/plan.dart';
+import '../../../core/realtime/realtime_bus.dart';
+import '../../../core/realtime/realtime_listener.dart';
 import '../../../core/widgets/async_value_view.dart';
 import 'controllers/planning_controllers.dart';
 import 'controllers/supervisor_controllers.dart';
@@ -40,18 +42,38 @@ class SupervisorPlanDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalle del plan')),
-      body: RefreshIndicator(
-        onRefresh: () async {
+      // En tiempo real: si este plan cambia en otro teléfono, se vuelve a
+      // pedir (los cambios sin guardar del editor no se pisan).
+      body: RealtimeListener(
+        topic: RealtimeTopic.planning,
+        onEvent: (event) {
+          if (event.name != 'plans.updated') return;
+          final changed = event.data['plan_id'];
+          if (changed is String && changed != planId) return;
+          if (changed == planId && event.data['deleted'] == true) {
+            // Lo borraron (desde otro teléfono): el detalle ya no existe.
+            // Si lo borró este mismo teléfono, la pantalla ya se cerró.
+            if (ModalRoute.of(context)?.isActive ?? false) {
+              Navigator.of(context).maybePop();
+            }
+            return;
+          }
           ref.invalidate(planDetailProvider(planId));
           ref.invalidate(planEtaProvider(planId));
         },
-        child: AsyncValueView<Plan>(
-          value: shown,
-          onRetry: () => ref.invalidate(planDetailProvider(planId)),
-          data: (data) => PlanDetailBody(
-            plan: data,
-            planId: planId,
-            canPlan: ref.watch(canPlanProvider),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(planDetailProvider(planId));
+            ref.invalidate(planEtaProvider(planId));
+          },
+          child: AsyncValueView<Plan>(
+            value: shown,
+            onRetry: () => ref.invalidate(planDetailProvider(planId)),
+            data: (data) => PlanDetailBody(
+              plan: data,
+              planId: planId,
+              canPlan: ref.watch(canPlanProvider),
+            ),
           ),
         ),
       ),

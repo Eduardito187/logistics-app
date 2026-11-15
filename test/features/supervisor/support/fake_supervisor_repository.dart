@@ -260,4 +260,12 @@ class FakeSupervisorRepository implements SupervisorRepository {
     if (writeError != null) throw writeError!;
     removed.add((planId: planId, shipmentId: shipmentId));
   }
+
+  final List<String> deletedPlans = [];
+
+  @override
+  Future<void> deletePlan(String planId) async {
+    if (writeError != null) throw writeError!;
+    deletedPlans.add(planId);
+  }
 }
