@@ -5,6 +5,8 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'shipment_status_counts.dart';
+import 'trip_candidate_anchor.dart';
+import 'trip_capacity.dart';
 
 part 'list_meta.g.dart';
 
@@ -13,6 +15,8 @@ part 'list_meta.g.dart';
 class ListMeta {
   const ListMeta({
     required this.count,
+    this.anchor,
+    this.capacity,
     this.page,
     this.perPage,
     this.total,
@@ -31,6 +35,10 @@ class ListMeta {
 
   factory ListMeta.fromJson(Map<String, Object?> json) =>
       _$ListMetaFromJson(json);
+
+  /// Only in GET /app/plans/candidates. Point the distances were measured from.
+  final TripCandidateAnchor? anchor;
+  final TripCapacity? capacity;
 
   /// Number of items in this response.
   final int count;

@@ -38,6 +38,9 @@ class Delivery {
     this.storeDropNodeId,
     this.podPhotoPending,
     this.failureReason,
+    this.withShortage,
+    this.shortageClosedAt,
+    this.shortageCloseReason,
     this.storeDropMissingUnits,
   });
 
@@ -100,6 +103,18 @@ class Delivery {
   @JsonKey(name: 'failure_reason')
   final FailureReason? failureReason;
   final List<ScanEvent> scans;
+
+  /// Traspaso cerrado con faltantes: entregado aunque no llegaron todos los productos (conciliación con diferencias o cierre manual de oficina).
+  @JsonKey(name: 'with_shortage')
+  final bool? withShortage;
+
+  /// Cuándo se cerró con faltantes.
+  @JsonKey(name: 'shortage_closed_at')
+  final DateTime? shortageClosedAt;
+
+  /// Motivo del cierre manual de oficina. Null si lo cerró la conciliación de la tienda.
+  @JsonKey(name: 'shortage_close_reason')
+  final String? shortageCloseReason;
 
   /// Productos que el chofer declaró que no pudo dejar en la tienda. Vacío si dejó el pedido completo.
   @JsonKey(name: 'store_drop_missing_units')

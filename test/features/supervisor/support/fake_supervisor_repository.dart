@@ -6,17 +6,20 @@ import 'package:logistics_app/core/api/models/plan.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/stops3.dart';
 import 'package:logistics_app/core/api/models/strategy.dart';
+import 'package:logistics_app/core/api/models/trip_candidate_list.dart';
+import 'package:logistics_app/core/api/models/trip_sequence_suggestion.dart';
 import 'package:logistics_app/core/api/models/vehicle_live.dart';
 import 'package:logistics_app/core/api/models/vehicle_telemetry_summary.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/supervisor/domain/repositories/supervisor_repository.dart';
 
 /// Repositorio falso del supervisor para tests: devuelve valores en memoria y,
 /// si el `*Error` correspondiente está seteado, lo lanza (para probar el estado
 /// de error). Registra argumentos/llamadas para las aserciones.
 ///
-/// Las operaciones de escritura (generar/publicar/asignar/reordenar) lanzan
-/// [UnimplementedError]: la app de campo del supervisor es SOLO lectura; esas
-/// acciones son de oficina (admin del backend) y ninguna pantalla debe llamarlas.
+/// Las escrituras de planificación (planificar/publicar/asignar/reordenar) se
+/// registran: solo las usan el planificador y el administrador; el supervisor
+/// es SOLO lectura y ninguna de sus pantallas debe llamarlas.
 class FakeSupervisorRepository implements SupervisorRepository {
   // Flota en vivo.
   List<VehicleLive> fleet = const [];
@@ -134,19 +137,40 @@ class FakeSupervisorRepository implements SupervisorRepository {
     return planEtaValue!;
   }
 
-  // --- Escrituras NO usadas por la app de campo (solo lectura). ---
+  // --- Planificación (planificador / administrador). ---
+
+  /// Corrida automática del día; `null` = ese día no se planificó (404).
+  AutoPlanRun? run;
+
+  /// Corrida que devuelve "planificar el día" (y queda como [run]).
+  AutoPlanRun? runAfterGenerate;
+  final List<DateTime> generatedDays = [];
+  final List<String> publishedIds = [];
+  final List<({String planId, String shipmentId})> assigned = [];
+  final List<({String planId, List<String> order})> reordered = [];
+  Object? writeError;
 
   @override
   Future<AutoPlanRun> getDailyPlanRun({
     required DateTime date,
     required Strategy strategy,
-  }) => throw UnimplementedError('No usado por la app (solo lectura).');
+  }) async {
+    final current = run;
+    if (current == null) {
+      throw const ApiException(status: 404, title: 'Sin corrida');
+    }
+    return current;
+  }
 
   @override
   Future<AutoPlanRun> generateDailyPlan({
     required DateTime planDate,
     required GenerateDailyPlanRequestStrategy strategy,
-  }) => throw UnimplementedError('No usado por la app (solo lectura).');
+  }) async {
+    if (writeError != null) throw writeError!;
+    generatedDays.add(planDate);
+    return run = runAfterGenerate!;
+  }
 
   @override
   Future<Plan> generatePlanProposal({
@@ -154,21 +178,86 @@ class FakeSupervisorRepository implements SupervisorRepository {
     required String vehicleId,
     required DateTime departAt,
     required List<Stops3> stops,
-  }) => throw UnimplementedError('No usado por la app (solo lectura).');
+  }) => throw UnimplementedError('No usado por la app.');
 
   @override
-  Future<void> publishPlan(String planId) =>
-      throw UnimplementedError('No usado por la app (solo lectura).');
+  Future<void> publishPlan(String planId) async {
+    if (writeError != null) throw writeError!;
+    publishedIds.add(planId);
+  }
 
   @override
   Future<void> assignShipmentToPlan({
     required String planId,
     required String shipmentId,
-  }) => throw UnimplementedError('No usado por la app (solo lectura).');
+  }) async {
+    if (writeError != null) throw writeError!;
+    assigned.add((planId: planId, shipmentId: shipmentId));
+  }
 
   @override
   Future<void> reorderPlanStops({
     required String planId,
     required List<String> orderedShipmentIds,
-  }) => throw UnimplementedError('No usado por la app (solo lectura).');
+  }) async {
+    if (writeError != null) throw writeError!;
+    reordered.add((planId: planId, order: orderedShipmentIds));
+  }
+
+  // --- Armado de viajes. ---
+
+  /// Pedidos cercanos que devuelve el backend, según lo ya elegido.
+  TripCandidateList Function(List<String> selected, String query)? candidates;
+  TripSequenceSuggestion? suggestion;
+  final List<List<String>> candidateCalls = [];
+  final List<List<String>> suggestionCalls = [];
+  final List<({String vehicleId, List<String> shipmentIds})> createdTrips = [];
+  final List<({String planId, String shipmentId})> removed = [];
+
+  /// Si se setea, crear el viaje falla con esto (p. ej. [TripAlreadyPlanned]).
+  Object? createTripError;
+
+  @override
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    List<String> selected = const [],
+    String query = '',
+  }) async {
+    candidateCalls.add(selected);
+    return candidates!(selected, query);
+  }
+
+  @override
+  Future<TripSequenceSuggestion> suggestTripSequence({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) async {
+    suggestionCalls.add(shipmentIds);
+    return suggestion!;
+  }
+
+  @override
+  Future<Plan> createTrip({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) async {
+    if (createTripError != null) throw createTripError!;
+    createdTrips.add((vehicleId: vehicleId, shipmentIds: shipmentIds));
+    return planValue!;
+  }
+
+  @override
+  Future<void> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
+  }) async {
+    if (writeError != null) throw writeError!;
+    removed.add((planId: planId, shipmentId: shipmentId));
+  }
 }

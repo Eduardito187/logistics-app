@@ -15,6 +15,7 @@ GeneratePlanProposalRequest _$GeneratePlanProposalRequestFromJson(
   stops: (json['stops'] as List<dynamic>)
       .map((e) => Stops3.fromJson(e as Map<String, dynamic>))
       .toList(),
+  optimize: json['optimize'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$GeneratePlanProposalRequestToJson(
@@ -24,4 +25,5 @@ Map<String, dynamic> _$GeneratePlanProposalRequestToJson(
   'vehicle_id': instance.vehicleId,
   'depart_at': instance.departAt.toIso8601String(),
   'stops': instance.stops,
+  'optimize': instance.optimize,
 };

@@ -24,6 +24,7 @@ const Map<UserRole, List<HomeWidgetKind>> kRoleHomeWidgetKinds = {
   UserRole.store: [HomeWidgetKind.storeReceptions, HomeWidgetKind.quickScan],
   UserRole.carrier: [HomeWidgetKind.quickScan],
   UserRole.supervisor: [HomeWidgetKind.supervisorSummary],
+  UserRole.planner: [HomeWidgetKind.supervisorSummary],
   UserRole.admin: [HomeWidgetKind.supervisorSummary],
 };
 

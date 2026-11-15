@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/api/export.dart';
@@ -88,26 +89,66 @@ class _StaffDocumentsTabState extends ConsumerState<StaffDocumentsTab>
   @override
   bool get wantKeepAlive => true;
 
+  Future<XFile?> _takePhoto() => ref.read(photoPickerProvider)(
+    maxWidth: kEvidencePhotoMaxWidth,
+    imageQuality: kEvidencePhotoQuality,
+  );
+
+  /// Pide tipo y número, y saca la foto. El carnet y la licencia llevan DOS
+  /// fotos (anverso y reverso): se guardan como dos archivos del mismo
+  /// documento, cada uno con su lado.
   Future<void> _add() async {
-    final type = await showDialog<String>(
+    final form = await showDialog<StaffDocumentForm>(
       context: context,
-      builder: (_) => const _DocumentTypeDialog(),
+      builder: (_) => const _DocumentDialog(),
     );
-    if (type == null || !mounted) return;
-    final photo = await ref.read(photoPickerProvider)(
-      maxWidth: kEvidencePhotoMaxWidth,
-      imageQuality: kEvidencePhotoQuality,
-    );
-    if (photo == null || !mounted) return;
+    if (form == null || !mounted) return;
+    final front = await _takePhoto();
+    if (front == null || !mounted) return;
+    XFile? back;
+    if (form.twoSides) {
+      final goOn = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Ahora el reverso'),
+          content: const Text('Dale vuelta al documento y sacá la otra foto.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Sacar foto del reverso'),
+            ),
+          ],
+        ),
+      );
+      if (goOn != true || !mounted) return;
+      back = await _takePhoto();
+      // Sin el reverso no se guarda nada: el documento quedaría a medias.
+      if (back == null || !mounted) return;
+    }
     setState(() => _uploading = true);
     try {
-      await ref
-          .read(adminRemoteDataSourceProvider)
-          .uploadStaffDocument(
-            widget.userId,
-            documentType: type,
-            file: File(photo.path),
-          );
+      final source = ref.read(adminRemoteDataSourceProvider);
+      await source.uploadStaffDocument(
+        widget.userId,
+        documentType: form.type,
+        reference: form.reference,
+        side: form.twoSides ? StaffDocumentSide.front : null,
+        file: File(front.path),
+      );
+      if (back != null) {
+        await source.uploadStaffDocument(
+          widget.userId,
+          documentType: form.type,
+          reference: form.reference,
+          side: StaffDocumentSide.back,
+          file: File(back.path),
+        );
+      }
       if (!mounted) return;
       showSuccessSnack(context, 'Documento guardado.');
       unawaited(_list.currentState?.reload());
@@ -155,68 +196,112 @@ class _StaffDocumentsTabState extends ConsumerState<StaffDocumentsTab>
   }
 }
 
-/// Pide el tipo del documento antes de sacarle la foto.
-class _DocumentTypeDialog extends StatefulWidget {
-  const _DocumentTypeDialog();
+/// Lo que se carga de un documento antes de fotografiarlo.
+typedef StaffDocumentForm = ({String type, String? reference, bool twoSides});
+
+/// Tipos de documento que se ofrecen. Los de dos caras piden anverso y
+/// reverso.
+const List<({String label, bool twoSides})> staffDocumentTypes = [
+  (label: 'Carnet de identidad', twoSides: true),
+  (label: 'Licencia de conducir', twoSides: true),
+  (label: 'Contrato', twoSides: false),
+  (label: 'Certificado médico', twoSides: false),
+];
+
+/// Pide el tipo (de una lista) y el número del documento antes de sacarle la
+/// foto.
+class _DocumentDialog extends StatefulWidget {
+  const _DocumentDialog();
 
   @override
-  State<_DocumentTypeDialog> createState() => _DocumentTypeDialogState();
+  State<_DocumentDialog> createState() => _DocumentDialogState();
 }
 
-class _DocumentTypeDialogState extends State<_DocumentTypeDialog> {
-  final TextEditingController _type = TextEditingController();
+class _DocumentDialogState extends State<_DocumentDialog> {
+  final TextEditingController _other = TextEditingController();
+  final TextEditingController _reference = TextEditingController();
 
-  static const List<String> _suggested = [
-    'Carnet de identidad',
-    'Licencia de conducir',
-    'Contrato',
-    'Certificado médico',
-  ];
+  /// Valor del desplegable para un documento que no está en la lista.
+  static const String _otherKey = 'Otro documento';
+
+  String? _type;
 
   @override
   void dispose() {
-    _type.dispose();
+    _other.dispose();
+    _reference.dispose();
     super.dispose();
   }
 
+  bool get _twoSides =>
+      staffDocumentTypes.any((t) => t.label == _type && t.twoSides);
+
   void _accept() {
-    final value = _type.text.trim();
-    if (value.isNotEmpty) Navigator.of(context).pop(value);
+    final type = _type == _otherKey ? _other.text.trim() : (_type ?? '');
+    if (type.isEmpty) return;
+    final reference = _reference.text.trim();
+    Navigator.of(context).pop((
+      type: type,
+      reference: reference.isEmpty ? null : reference,
+      twoSides: _twoSides,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('¿Qué documento es?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final option in _suggested)
-                ActionChip(
-                  label: Text(option),
-                  onPressed: () => setState(() => _type.text = option),
+      title: const Text('Agregar documento'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _type,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Tipo de documento'),
+              items: [
+                for (final type in staffDocumentTypes)
+                  DropdownMenuItem(value: type.label, child: Text(type.label)),
+                const DropdownMenuItem(
+                  value: _otherKey,
+                  child: Text(_otherKey),
                 ),
+              ],
+              onChanged: (value) => setState(() => _type = value),
+            ),
+            if (_type == _otherKey) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _other,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(labelText: '¿Qué documento?'),
+              ),
             ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _type,
-            onSubmitted: (_) => _accept(),
-            decoration: const InputDecoration(labelText: 'Tipo de documento'),
-          ),
-        ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _reference,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Número del documento',
+              ),
+            ),
+            if (_twoSides) ...[
+              const SizedBox(height: 12),
+              const Text('Se piden dos fotos: anverso y reverso.'),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(onPressed: _accept, child: const Text('Sacar foto')),
+        FilledButton(
+          onPressed: _type == null ? null : _accept,
+          child: Text(_twoSides ? 'Sacar foto del anverso' : 'Sacar foto'),
+        ),
       ],
     );
   }
@@ -252,7 +337,7 @@ class _DocumentCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  [title, ?staffSideLabel(document.side)].join(' · '),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -384,14 +469,15 @@ class _PhotoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = photo.url;
-    final title =
-        photo.label ??
-        switch (photo.kind) {
-          StaffPhotoKind.profile => 'Foto de perfil',
-          StaffPhotoKind.document => 'Documento',
-          StaffPhotoKind.evidence => 'Evidencia de entrega',
-          _ => 'Foto',
-        };
+    // El backend manda un código en `label`: se muestra en español.
+    final title = switch (photo.kind) {
+      StaffPhotoKind.profile => 'Foto de perfil',
+      StaffPhotoKind.document => [
+        photo.label ?? 'Documento',
+        ?staffSideLabel(photo.side),
+      ].join(' · '),
+      _ => 'Foto',
+    };
     return SectionCard(
       onTap: url == null
           ? null

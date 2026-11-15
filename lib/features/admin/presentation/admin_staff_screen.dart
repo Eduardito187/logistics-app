@@ -39,6 +39,8 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
     Role.tienda,
     Role.transportista,
     Role.supervisor,
+    Role.planificador,
+    Role.admin,
   ];
 
   @override
@@ -54,15 +56,19 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
         filters: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _chip('Todos', null),
-                  for (final role in _filters)
-                    _chip(staffRoleLabel(role.json ?? ''), role),
-                ],
-              ),
+            DropdownButtonFormField<Role?>(
+              value: _role,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Rol'),
+              items: [
+                const DropdownMenuItem(child: Text('Todos los roles')),
+                for (final role in _filters)
+                  DropdownMenuItem(
+                    value: role,
+                    child: Text(staffRoleLabel(role.json ?? '')),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _role = value),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -104,15 +110,6 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
       ),
     );
   }
-
-  Widget _chip(String label, Role? role) => Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: ChoiceChip(
-      label: Text(label),
-      selected: _role == role,
-      onSelected: (_) => setState(() => _role = role),
-    ),
-  );
 }
 
 /// Tarjeta de una persona: foto/inicial, nombre, rol, ciudad y tienda.

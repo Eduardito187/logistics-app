@@ -30,6 +30,8 @@ void main() {
       UserRole.store,
       UserRole.carrier,
       UserRole.supervisor,
+      // Planificador: arma y publica los planes (nov 2026).
+      UserRole.planner,
     };
     for (final task in tasks) {
       expect(task.roles, isNotEmpty, reason: 'tarea ${task.id} sin roles');
@@ -41,11 +43,15 @@ void main() {
     }
   });
 
-  test('las rutas /admin son SOLO del administrador', () {
+  test('las rutas /admin son del administrador (y tres del planificador)', () {
+    // Envíos, reprogramar y calendario también son trabajo del planificador.
+    const shared = {'admin-shipments', 'admin-reschedule', 'admin-calendar'};
     for (final task in tasks.where((t) => t.route.startsWith('/admin'))) {
       expect(
         task.roles,
-        {UserRole.admin},
+        shared.contains(task.id)
+            ? {UserRole.planner, UserRole.admin}
+            : {UserRole.admin},
         reason: 'tarea ${task.id} de administración visible para otro rol',
       );
     }

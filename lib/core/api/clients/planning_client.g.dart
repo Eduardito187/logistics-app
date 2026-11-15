@@ -97,6 +97,82 @@ class _PlanningClient implements PlanningClient {
   }
 
   @override
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    int? page = 1,
+    int? perPage = 50,
+    List<String>? selected,
+    String? q,
+    DateTime? departAt,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'date': date.toIso8601String(),
+      r'vehicle_id': vehicleId,
+      r'page': page,
+      r'per_page': perPage,
+      r'selected': selected,
+      r'q': q,
+      r'depart_at': departAt?.toIso8601String(),
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<TripCandidateList>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/plans/candidates',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late TripCandidateList _value;
+    try {
+      _value = TripCandidateList.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<TripSequenceSuggestionEnvelope> suggestTripSequence({
+    required SuggestTripSequenceRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<TripSequenceSuggestionEnvelope>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/plans/suggest-sequence',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late TripSequenceSuggestionEnvelope _value;
+    try {
+      _value = TripSequenceSuggestionEnvelope.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<AutoPlanRunEnvelope> getDailyPlanRun({
     required DateTime date,
     required Strategy strategy,
@@ -276,7 +352,7 @@ class _PlanningClient implements PlanningClient {
   @override
   Future<PlanEnvelope> assignShipmentToPlan({
     required String planId,
-    required AppPlansPlanIdStopsRequestBody body,
+    required AssignShipmentToPlanRequest body,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
@@ -288,6 +364,36 @@ class _PlanningClient implements PlanningClient {
           .compose(
             _dio.options,
             '/app/plans/${planId}/stops',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PlanEnvelope _value;
+    try {
+      _value = PlanEnvelope.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PlanEnvelope> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<PlanEnvelope>(
+      Options(method: 'DELETE', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/plans/${planId}/stops/${shipmentId}',
             queryParameters: queryParameters,
             data: _data,
           )

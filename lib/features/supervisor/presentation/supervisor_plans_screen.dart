@@ -6,11 +6,15 @@ import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import 'controllers/planning_controllers.dart';
 import 'controllers/supervisor_controllers.dart';
 import 'widgets/plan_card.dart';
+import 'widgets/planning_actions_card.dart';
 import 'widgets/plans_date_bar.dart';
 
-/// Rutas/planes en curso: lista de planes del día con su estado y ETA.
+/// Rutas/planes en curso: lista de planes del día con su estado y ETA. Quien
+/// planifica (planificador, administrador) además ve las acciones del día:
+/// planificar y publicar.
 class SupervisorPlansScreen extends ConsumerWidget {
   const SupervisorPlansScreen({super.key});
 
@@ -18,12 +22,14 @@ class SupervisorPlansScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plans = ref.watch(plansProvider);
     final date = ref.watch(plansDateProvider);
+    final canPlan = ref.watch(canPlanProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rutas en curso')),
+      appBar: AppBar(title: Text(canPlan ? 'Planificación' : 'Rutas en curso')),
       body: Column(
         children: [
           PlansDateBar(date: date),
+          if (canPlan) PlanningActionsCard(date: date),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(plansProvider),
@@ -34,13 +40,14 @@ class SupervisorPlansScreen extends ConsumerWidget {
                   if (data.isEmpty) {
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 80),
+                      children: [
+                        const SizedBox(height: 80),
                         EmptyState(
                           icon: AppIcon.plans,
                           title: 'Sin planes para este día',
-                          message:
-                              'Elige otra fecha o espera a que se publique la planificación.',
+                          message: canPlan
+                              ? 'Tocá "Planificar el día" para armarlos.'
+                              : 'Elige otra fecha o espera a que se publique la planificación.',
                         ),
                       ],
                     );

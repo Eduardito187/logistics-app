@@ -50,3 +50,5 @@
 - [Rol admin en la app](admin-role-in-app.md) — nov 2026: el admin SÍ entra a la app; fase 1 hecha (pantallas del supervisor); resto espera backend + regen del cliente; ficha de personal única por tabs
 - [Las decisiones del dueño son finales](owner-decisions-are-final.md) — implementar TAL CUAL lo que decide; no dejar mi alternativa ni el flujo viejo "como control" (pasó con la recepción de tienda)
 - [Reglas: ciudad, alcance por rol, consulta](business-rules-city-scope-lookup.md) — personal por ciudad + almacén central; preparador solo su ciudad; tienda solo entrega al cliente; "Consultar pedido" para TODOS; chofer N salidas/día con inspección y odómetro por salida
+- [Arranques en blanco por isolates en release](release-isolate-hang-blank-screens.md) — logo/lista vacíos "a veces" solo en dispositivo: SVG y Dio usan isolate en release; fix = BrandVector (.vec) + decodificar en el hilo principal
+- [Rol planificador y planificación](planner-role-and-planning.md) — UserRole.planner, canPlan (planificador+admin), supervisor solo mira; asistente de viajes espera al backend; preferencias de UI del dueño (selects, sin UUID, sin "SKU")

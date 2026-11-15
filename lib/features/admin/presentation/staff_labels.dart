@@ -14,6 +14,17 @@ String staffRolesText(List<String>? roles) {
 bool staffIsDriver(String? driverId, List<String>? roles) =>
     driverId != null || (roles?.contains(UserRole.driver.backendKey) ?? false);
 
+/// Cara de un documento de dos caras, o `null` si es de una sola.
+String? staffSideLabel(StaffDocumentSide? side) => switch (side) {
+  StaffDocumentSide.front => 'Anverso',
+  StaffDocumentSide.back => 'Reverso',
+  _ => null,
+};
+
+/// `true` si la persona trabaja en una tienda (solo a ella se le asigna una).
+bool staffIsStore(List<String>? roles) =>
+    roles?.contains(UserRole.store.backendKey) ?? false;
+
 /// Fecha corta `dd/MM/yyyy` en hora local.
 String staffDate(DateTime date) {
   final d = date.toLocal();

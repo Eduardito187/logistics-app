@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'plan_origin_node.dart';
 import 'plan_status.dart';
 import 'planned_stop.dart';
 import 'route_geometry.dart';
@@ -18,12 +19,24 @@ class Plan {
     required this.vehicleId,
     required this.status,
     required this.stops,
+    this.originNode,
+    this.distanceKm,
+    this.durationMinutes,
     this.plate,
     this.driverName,
     this.routeGeometry,
   });
 
   factory Plan.fromJson(Map<String, Object?> json) => _$PlanFromJson(json);
+
+  @JsonKey(name: 'origin_node')
+  final PlanOriginNode? originNode;
+
+  /// Total of the stored route geometry. Null until it is computed.
+  @JsonKey(name: 'distance_km')
+  final double? distanceKm;
+  @JsonKey(name: 'duration_minutes')
+  final int? durationMinutes;
 
   /// Plate of the plan's truck (Fleet). Null if unknown.
   final String? plate;

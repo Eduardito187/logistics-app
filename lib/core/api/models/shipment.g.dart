@@ -46,6 +46,11 @@ Shipment _$ShipmentFromJson(Map<String, dynamic> json) => Shipment(
         ),
   originDepartment: json['origin_department'] as String?,
   destinationDepartment: json['destination_department'] as String?,
+  deliveryEvidence: json['delivery_evidence'] == null
+      ? null
+      : ShipmentDeliveryEvidence.fromJson(
+          json['delivery_evidence'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
@@ -72,4 +77,5 @@ Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
   'origin_node': instance.originNode,
   'origin_department': instance.originDepartment,
   'destination_department': instance.destinationDepartment,
+  'delivery_evidence': instance.deliveryEvidence,
 };

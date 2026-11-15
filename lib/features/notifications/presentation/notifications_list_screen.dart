@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,8 +9,10 @@ import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/push/push_arrived.dart';
+import '../data/datasources/inbox_remote_data_source.dart';
 import 'controllers/notifications_controller.dart';
-import 'widgets/inbox_entry_card.dart';
+import 'widgets/inbox_section.dart';
 import 'widgets/notification_tile.dart';
 import 'widgets/push_status_card.dart';
 
@@ -19,11 +23,55 @@ import 'widgets/push_status_card.dart';
 /// en teléfonos chicos la tarjeta se desplaza con la lista en vez de dejarle
 /// poco alto, y el estado vacío/error también se puede refrescar tirando. El
 /// contenido pasa por debajo del footer flotante (padding inferior).
-class NotificationsListScreen extends ConsumerWidget {
-  const NotificationsListScreen({super.key});
+///
+/// Se mantiene AL DÍA sola mientras está a la vista: cuando llega un push,
+/// al volver a la app y cada [refreshEvery]. Los avisos de la empresa van en
+/// esta misma pantalla (son una notificación más).
+class NotificationsListScreen extends ConsumerStatefulWidget {
+  const NotificationsListScreen({
+    super.key,
+    this.refreshEvery = const Duration(seconds: 20),
+  });
+
+  final Duration refreshEvery;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsListScreen> createState() =>
+      _NotificationsListScreenState();
+}
+
+class _NotificationsListScreenState
+    extends ConsumerState<NotificationsListScreen> {
+  Timer? _timer;
+  AppLifecycleListener? _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(widget.refreshEvery, (_) => _refresh());
+    _lifecycle = AppLifecycleListener(onResume: _refresh);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _lifecycle?.dispose();
+    super.dispose();
+  }
+
+  /// Vuelve a pedir las dos bandejas. La lista actual sigue visible mientras
+  /// llega la nueva (sin spinner).
+  void _refresh() {
+    if (!mounted) return;
+    ref.invalidate(notificationsListProvider);
+    ref.invalidate(inboxPreviewProvider);
+    ref.invalidate(inboxUnreadCountProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Llegó un push con la app abierta: refrescar ya.
+    ref.listen(pushArrivedProvider, (_, _) => _refresh());
     final notifications = ref.watch(notificationsListProvider);
     final limit = ref.watch(notificationsLimitProvider);
 
@@ -31,7 +79,10 @@ class NotificationsListScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Notificaciones')),
       body: ResponsiveBody(
         child: RefreshIndicator(
-          onRefresh: () => ref.refresh(notificationsListProvider.future),
+          onRefresh: () {
+            ref.invalidate(inboxPreviewProvider);
+            return ref.refresh(notificationsListProvider.future);
+          },
           child: CustomScrollView(
             // Permite tirar para refrescar aunque la lista no llene la pantalla.
             physics: const AlwaysScrollableScrollPhysics(),
@@ -41,11 +92,8 @@ class NotificationsListScreen extends ConsumerWidget {
                 sliver: SliverToBoxAdapter(child: PushStatusCard()),
               ),
               // Avisos que el administrador le envió al usuario (por rol, por
-              // tienda o a él): su bandeja propia.
-              const SliverPadding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                sliver: SliverToBoxAdapter(child: InboxEntryCard()),
-              ),
+              // tienda o a él), en esta misma pantalla.
+              const SliverToBoxAdapter(child: InboxSection()),
               ...switch (notifications) {
                 // Con datos (también mientras recarga): lista perezosa.
                 AsyncValue(:final value?, hasError: false) =>

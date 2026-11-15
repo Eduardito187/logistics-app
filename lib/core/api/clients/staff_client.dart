@@ -12,6 +12,8 @@ import '../models/accepted_envelope.dart';
 import '../models/app_broadcasts_request_body.dart';
 import '../models/app_staff_user_id_node_request_body.dart';
 import '../models/app_staff_user_id_profile_request_body.dart';
+import '../models/broadcast_auth_request.dart';
+import '../models/broadcast_auth_response.dart';
 import '../models/department.dart';
 import '../models/get_app_broadcasts_response.dart';
 import '../models/get_app_inbox_response.dart';
@@ -27,6 +29,7 @@ import '../models/post_app_staff_user_id_photo_response.dart';
 import '../models/put_app_staff_user_id_node_response.dart';
 import '../models/put_app_staff_user_id_profile_response.dart';
 import '../models/role.dart';
+import '../models/staff_document_side.dart';
 import '../models/type3.dart';
 
 part 'staff_client.g.dart';
@@ -98,6 +101,8 @@ abstract class StaffClient {
   ///
   /// [documentType] - Tipo libre, p. ej. carnet_identidad, licencia, contrato.
   ///
+  /// [side] - Opcional. Cara del documento de dos caras (carnet, licencia); sin el campo = documento de una sola cara.
+  ///
   /// [file] - pdf, jpg, jpeg, png o webp; máx. 10 MB.
   @MultiPart()
   @POST('/app/staff/{userId}/documents')
@@ -109,6 +114,7 @@ abstract class StaffClient {
     @Part(name: 'issued_on') DateTime? issuedOn,
     @Part(name: 'expires_on') DateTime? expiresOn,
     @Part(name: 'note') String? note,
+    @Part(name: 'side') StaffDocumentSide? side,
   });
 
   /// Activity history of a staff member, most recent first.
@@ -133,7 +139,7 @@ abstract class StaffClient {
     @Query('cursor') String? cursor,
   });
 
-  /// Photos of a staff member (profile, document images, evidence captured).
+  /// Photos of a staff member (profile and staff document images; never delivery evidence).
   ///
   /// [userId] - Id del usuario de la app (entero).
   ///
@@ -176,6 +182,14 @@ abstract class StaffClient {
   Future<PostAppStaffUserIdPhotoResponse> uploadStaffPhoto({
     @Path('userId') required int userId,
     @Part(name: 'photo') required File photo,
+  });
+
+  /// Sign the subscription to a private real-time channel (Pusher protocol).
+  ///
+  /// La app se suscribe a `private-user.{id}` (su propio id) y recibe el evento `inbox.updated` con `{unread}` (schema InboxUpdatedEvent) cada vez que cambia su bandeja interna. Solo se autoriza el canal del propio usuario. Sin servidor de sockets en el entorno responde 503 y la app sigue con su refresco normal.
+  @POST('/app/broadcasting/auth')
+  Future<BroadcastAuthResponse> authorizeBroadcastChannel({
+    @Body() required BroadcastAuthRequest body,
   });
 
   /// Internal notices sent to staff, with recipient and read counts.

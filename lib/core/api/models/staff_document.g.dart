@@ -22,6 +22,9 @@ StaffDocument _$StaffDocumentFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['expires_on'] as String),
       expired: json['expired'] as bool?,
       note: json['note'] as String?,
+      side: json['side'] == null
+          ? null
+          : StaffDocumentSide.fromJson(json['side'] as String),
       mimeType: json['mime_type'] as String?,
       url: json['url'] as String?,
       createdAt: json['created_at'] == null
@@ -39,6 +42,7 @@ Map<String, dynamic> _$StaffDocumentToJson(StaffDocument instance) =>
       'expires_on': instance.expiresOn?.toIso8601String(),
       'expired': instance.expired,
       'note': instance.note,
+      'side': instance.side,
       'mime_type': instance.mimeType,
       'url': instance.url,
       'created_at': instance.createdAt?.toIso8601String(),

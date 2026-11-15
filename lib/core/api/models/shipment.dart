@@ -9,6 +9,7 @@ import 'delivery_mode.dart';
 import 'order_lookup_node_ref.dart';
 import 'order_source.dart';
 import 'shipment_address_parts.dart';
+import 'shipment_delivery_evidence.dart';
 import 'shipment_line.dart';
 import 'shipment_progress.dart';
 import 'shipment_status.dart';
@@ -41,6 +42,7 @@ class Shipment {
     this.originNode,
     this.originDepartment,
     this.destinationDepartment,
+    this.deliveryEvidence,
   });
 
   factory Shipment.fromJson(Map<String, Object?> json) =>
@@ -97,6 +99,10 @@ class Shipment {
   /// Código del departamento del destino (el del nodo destino, o el de la ciudad de entrega a domicilio); null mientras no se resuelve.
   @JsonKey(name: 'destination_department')
   final String? destinationDepartment;
+
+  /// Cómo se entregó: qué evidencia quedó de la entrega. Null si el envío no está entregado. Viene en la lista y en la ficha de /app/shipments.
+  @JsonKey(name: 'delivery_evidence')
+  final ShipmentDeliveryEvidence? deliveryEvidence;
 
   Map<String, Object?> toJson() => _$ShipmentToJson(this);
 }

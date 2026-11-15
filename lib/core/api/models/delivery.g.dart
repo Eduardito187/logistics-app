@@ -42,6 +42,11 @@ Delivery _$DeliveryFromJson(Map<String, dynamic> json) => Delivery(
   failureReason: json['failure_reason'] == null
       ? null
       : FailureReason.fromJson(json['failure_reason'] as String),
+  withShortage: json['with_shortage'] as bool?,
+  shortageClosedAt: json['shortage_closed_at'] == null
+      ? null
+      : DateTime.parse(json['shortage_closed_at'] as String),
+  shortageCloseReason: json['shortage_close_reason'] as String?,
   storeDropMissingUnits: (json['store_drop_missing_units'] as List<dynamic>?)
       ?.map((e) => StoreDropMissingUnit.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -71,5 +76,8 @@ Map<String, dynamic> _$DeliveryToJson(Delivery instance) => <String, dynamic>{
   'pod_photo_pending': instance.podPhotoPending,
   'failure_reason': instance.failureReason,
   'scans': instance.scans,
+  'with_shortage': instance.withShortage,
+  'shortage_closed_at': instance.shortageClosedAt?.toIso8601String(),
+  'shortage_close_reason': instance.shortageCloseReason,
   'store_drop_missing_units': instance.storeDropMissingUnits,
 };

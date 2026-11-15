@@ -7,6 +7,7 @@ import '../../../core/api/export.dart' hide Type;
 import '../../../core/api/models/type.dart' as api show Type;
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/network/null_body_strip_interceptor.dart';
 import '../domain/entities/admin_vehicle.dart';
 import '../domain/entities/maintenance_result.dart';
 import '../../../core/widgets/paged.dart';
@@ -179,6 +180,8 @@ class AdminRemoteDataSource {
 
   Future<Paged<StaffPhoto>> listStaffPhotos(int userId, int page) =>
       _guard(() async {
+        // El backend solo devuelve la foto de perfil y los documentos de la
+        // persona: la evidencia de entregas es del pedido (dato del cliente).
         final res = await _api.staff.listStaffPhotos(
           userId: userId,
           page: page,
@@ -194,6 +197,7 @@ class AdminRemoteDataSource {
     required File file,
     DateTime? expiresOn,
     String? reference,
+    StaffDocumentSide? side,
   }) => _guard(
     () async => (await _api.staff.uploadStaffDocument(
       userId: userId,
@@ -201,8 +205,21 @@ class AdminRemoteDataSource {
       file: file,
       expiresOn: expiresOn,
       reference: reference == null || reference.isEmpty ? null : reference,
+      side: side,
     )).data,
   );
+
+  /// Cuántos pedidos tiene HOY este camión sin terminar (asignados o ya
+  /// cargados). Hasta una página: alcanza para saber si hay que reasignar.
+  Future<int> pendingOrdersOf(String vehicleId) => _guard(() async {
+    final res = await _api.shipments.listShipments(
+      page: 1,
+      perPage: pageSize,
+      vehicleId: vehicleId,
+      status: const [ShipmentStatus.planned, ShipmentStatus.inExecution],
+    );
+    return res.data.length;
+  });
 
   /// Guarda los datos personales del formulario (cualquier rol). El backend
   /// solo cambia lo que viene en el cuerpo y un `null` BORRA el campo: por eso
@@ -240,6 +257,11 @@ class AdminRemoteDataSource {
             'emergency_contact_phone': emergencyContactPhone,
             if (changeCity) 'city': city?.json,
           },
+          // Acá un `null` es "borrar el campo": que no lo quite el
+          // interceptor que limpia los nulos del cuerpo.
+          options: Options(
+            extra: const {NullBodyStripInterceptor.keepNullsKey: true},
+          ),
         );
   });
 
@@ -326,18 +348,26 @@ class AdminRemoteDataSource {
     String? nodeId,
     List<int>? userIds,
   }) => _guard(() async {
-    final res = await _api.staff.sendStaffBroadcast(
-      body: AppBroadcastsRequestBody(
-        audience: Audience(
-          role: role,
-          nodeId: nodeId,
-          userIds: userIds ?? const [],
-        ),
-        title: title,
-        body: body,
-      ),
-    );
-    return res.data?.recipientCount ?? 0;
+    // Dio directo: el cuerpo generado manda SIEMPRE `user_ids` (vacío si el
+    // aviso va a un rol o a una tienda) y el backend lo rechaza con "debe
+    // tener al menos 1 elemento". Acá viaja solo la audiencia elegida.
+    final res = await _ref
+        .read(dioProvider)
+        .post<Map<String, Object?>>(
+          '/app/broadcasts',
+          data: <String, Object?>{
+            'audience': <String, Object?>{
+              if (role != null) 'role': role.json,
+              'node_id': ?nodeId,
+              if (userIds != null && userIds.isNotEmpty) 'user_ids': userIds,
+            },
+            'title': title,
+            'body': body,
+          },
+        );
+    final data = res.data?['data'];
+    final count = data is Map ? data['recipient_count'] : null;
+    return count is num ? count.toInt() : 0;
   });
 
   /// Avisos ya enviados (más recientes primero).

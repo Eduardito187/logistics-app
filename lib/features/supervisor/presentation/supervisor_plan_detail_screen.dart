@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/plan.dart';
 import '../../../core/widgets/async_value_view.dart';
+import 'controllers/planning_controllers.dart';
 import 'controllers/supervisor_controllers.dart';
 import 'widgets/plan_detail_body.dart';
 
-/// Detalle (solo lectura) de un plan de ruta: datos del plan y camión, su ETA
-/// y la secuencia de paradas. La generación/publicación/edición de planes es
-/// tarea de oficina (admin del backend), no de la app de campo.
+/// Detalle de un plan de ruta: datos del plan y camión, su ETA y la secuencia
+/// de paradas. Para el supervisor es de solo lectura; el planificador y el
+/// administrador pueden ordenar, completar y publicar un plan sin publicar.
 ///
 /// [initial] es el plan de la lista (llega por `extra` al tocar la tarjeta):
 /// se muestra al instante mientras el detalle fresco llega, sin spinner. El
@@ -47,7 +48,11 @@ class SupervisorPlanDetailScreen extends ConsumerWidget {
         child: AsyncValueView<Plan>(
           value: shown,
           onRetry: () => ref.invalidate(planDetailProvider(planId)),
-          data: (data) => PlanDetailBody(plan: data, planId: planId),
+          data: (data) => PlanDetailBody(
+            plan: data,
+            planId: planId,
+            canPlan: ref.watch(canPlanProvider),
+          ),
         ),
       ),
     );

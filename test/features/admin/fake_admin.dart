@@ -22,6 +22,7 @@ class FakeAdmin implements AdminRemoteDataSource {
     this.photos = const [],
     this.broadcasts = const [],
     this.calendar = const [],
+    this.shipments = const [],
     this.preview,
     this.error,
   });
@@ -35,6 +36,8 @@ class FakeAdmin implements AdminRemoteDataSource {
   List<StaffPhoto> photos;
   List<StaffBroadcast> broadcasts;
   List<Days> calendar;
+  List<Shipment> shipments;
+  final List<({String city, ShipmentStatus? status})> shipmentFilters = [];
   RescheduleShipmentsResult? preview;
 
   /// Si se setea, las lecturas y escrituras fallan con este error.
@@ -72,7 +75,22 @@ class FakeAdmin implements AdminRemoteDataSource {
     })
   >
   sent = [];
-  final List<({int userId, String type, String path})> uploads = [];
+  final List<
+    ({
+      int userId,
+      String type,
+      String path,
+      String? reference,
+      StaffDocumentSide? side,
+    })
+  >
+  uploads = [];
+
+  /// Pedidos sin terminar por camión (para la hoja de mantenimiento).
+  int pendingOrders = 0;
+
+  @override
+  Future<int> pendingOrdersOf(String vehicleId) async => pendingOrders;
 
   void _fail() {
     final e = error;
@@ -126,9 +144,16 @@ class FakeAdmin implements AdminRemoteDataSource {
     required File file,
     DateTime? expiresOn,
     String? reference,
+    StaffDocumentSide? side,
   }) async {
     _fail();
-    uploads.add((userId: userId, type: documentType, path: file.path));
+    uploads.add((
+      userId: userId,
+      type: documentType,
+      path: file.path,
+      reference: reference,
+      side: side,
+    ));
     return StaffDocument(id: 'doc-new', documentType: documentType);
   }
 
@@ -161,6 +186,18 @@ class FakeAdmin implements AdminRemoteDataSource {
       city: city,
       changeCity: changeCity,
     ));
+  }
+
+  @override
+  Future<Paged<Shipment>> listShipments({
+    String query = '',
+    String city = '',
+    ShipmentStatus? status,
+    int page = 1,
+  }) async {
+    _fail();
+    shipmentFilters.add((city: city, status: status));
+    return _all(shipments);
   }
 
   @override

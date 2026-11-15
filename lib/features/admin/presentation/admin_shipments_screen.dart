@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/models/department.dart';
 import '../../../core/api/models/shipment.dart';
 import '../../../core/api/models/shipment_status.dart';
 import '../../../core/icons/icons.dart';
@@ -10,6 +9,7 @@ import '../../../core/widgets/section_card.dart';
 import '../../picking/presentation/widgets/shipment_status_pill.dart';
 import '../data/admin_remote_data_source.dart';
 import '../../../core/widgets/paged_search_list.dart';
+import 'staff_labels.dart';
 import 'widgets/shipment_detail_sheet.dart';
 
 /// Envíos de toda la operación para el administrador: buscar por código de
@@ -23,11 +23,8 @@ class AdminShipmentsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
-  final TextEditingController _cityController = TextEditingController();
-  Timer? _cityDebounce;
-
-  /// Ciudad aplicada al filtro (ya recortada).
-  String _city = '';
+  /// `null` = todas las ciudades.
+  Department? _city;
 
   /// `null` = todos los estados.
   ShipmentStatus? _status;
@@ -38,22 +35,8 @@ class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
     ('En ruta', ShipmentStatus.inExecution),
     ('Entregados', ShipmentStatus.delivered),
     ('Fallidos', ShipmentStatus.failed),
+    ('Cancelados', ShipmentStatus.cancelled),
   ];
-
-  @override
-  void dispose() {
-    _cityDebounce?.cancel();
-    _cityController.dispose();
-    super.dispose();
-  }
-
-  void _onCityChanged(String text) {
-    _cityDebounce?.cancel();
-    _cityDebounce = Timer(const Duration(milliseconds: 350), () {
-      final city = text.trim();
-      if (city != _city && mounted) setState(() => _city = city);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,24 +52,31 @@ class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
         filters: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _cityController,
-              onChanged: _onCityChanged,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                labelText: 'Ciudad',
-                hintText: 'Santa Cruz, La Paz…',
-              ),
+            DropdownButtonFormField<Department?>(
+              value: _city,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Ciudad'),
+              items: [
+                const DropdownMenuItem(child: Text('Todas las ciudades')),
+                for (final department in staffDepartments)
+                  DropdownMenuItem(
+                    value: department,
+                    child: Text(departmentLabel(department)),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _city = value),
             ),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _chip('Todos', null),
-                  for (final (label, status) in _filters) _chip(label, status),
-                ],
-              ),
+            DropdownButtonFormField<ShipmentStatus?>(
+              value: _status,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Estado'),
+              items: [
+                const DropdownMenuItem(child: Text('Todos los estados')),
+                for (final (label, status) in _filters)
+                  DropdownMenuItem(value: status, child: Text(label)),
+              ],
+              onChanged: (value) => setState(() => _status = value),
             ),
           ],
         ),
@@ -94,7 +84,8 @@ class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
             .read(adminRemoteDataSourceProvider)
             .listShipments(
               query: query,
-              city: _city,
+              // Código del departamento: filtra por la ciudad de destino.
+              city: _city?.json ?? '',
               status: _status,
               page: page,
             ),
@@ -102,15 +93,6 @@ class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
       ),
     );
   }
-
-  Widget _chip(String label, ShipmentStatus? status) => Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: ChoiceChip(
-      label: Text(label),
-      selected: _status == status,
-      onSelected: (_) => setState(() => _status = status),
-    ),
-  );
 }
 
 /// Tarjeta de un envío: pedido, cliente, dirección y estado. Abre el detalle.

@@ -16,6 +16,8 @@ enum Role {
   transportista('transportista'),
   @JsonValue('supervisor')
   supervisor('supervisor'),
+  @JsonValue('planificador')
+  planificador('planificador'),
   @JsonValue('admin')
   admin('admin'),
 

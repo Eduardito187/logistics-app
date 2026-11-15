@@ -11,8 +11,8 @@ Audience _$AudienceFromJson(Map<String, dynamic> json) => Audience(
       ? null
       : StaffRoleName.fromJson(json['role'] as String),
   nodeId: json['node_id'] as String?,
-  userIds: (json['user_ids'] as List<dynamic>)
-      .map((e) => (e as num).toInt())
+  userIds: (json['user_ids'] as List<dynamic>?)
+      ?.map((e) => (e as num).toInt())
       .toList(),
 );
 

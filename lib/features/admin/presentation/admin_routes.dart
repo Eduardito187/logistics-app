@@ -21,7 +21,7 @@ const List<RoleTask> adminTasks = [
     subtitle: 'Buscar por pedido, cliente o ciudad',
     appIcon: AppIcon.receive,
     route: '/admin/shipments',
-    roles: {UserRole.admin},
+    roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
     id: 'admin-staff',
@@ -45,7 +45,7 @@ const List<RoleTask> adminTasks = [
     subtitle: 'Por camión o por ciudad',
     appIcon: AppIcon.swap,
     route: '/admin/reschedule',
-    roles: {UserRole.admin},
+    roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
     id: 'admin-calendar',
@@ -53,7 +53,7 @@ const List<RoleTask> adminTasks = [
     subtitle: 'Fechas bloqueadas',
     appIcon: AppIcon.myDay,
     route: '/admin/calendar',
-    roles: {UserRole.admin},
+    roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
     id: 'admin-broadcasts',

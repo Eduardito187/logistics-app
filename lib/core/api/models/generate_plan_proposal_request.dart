@@ -15,6 +15,7 @@ class GeneratePlanProposalRequest {
     required this.vehicleId,
     required this.departAt,
     required this.stops,
+    this.optimize = false,
   });
 
   factory GeneratePlanProposalRequest.fromJson(Map<String, Object?> json) =>
@@ -29,6 +30,9 @@ class GeneratePlanProposalRequest {
   @JsonKey(name: 'depart_at')
   final DateTime departAt;
   final List<Stops3> stops;
+
+  /// false keeps the received stop order; true lets the routing engine reorder.
+  final bool optimize;
 
   Map<String, Object?> toJson() => _$GeneratePlanProposalRequestToJson(this);
 }

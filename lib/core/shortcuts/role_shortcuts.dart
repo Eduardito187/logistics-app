@@ -22,6 +22,7 @@ const Map<UserRole, List<String>> kRoleShortcutTaskIds = {
   UserRole.store: ['store-pickup'],
   UserRole.carrier: ['carrier-pickup', 'carrier-deliver'],
   UserRole.supervisor: ['sup-fleet', 'sup-alerts', 'sup-dashboard'],
+  UserRole.planner: ['sup-plans', 'sup-fleet'],
   UserRole.admin: ['sup-fleet', 'sup-alerts', 'sup-dashboard'],
 };
 

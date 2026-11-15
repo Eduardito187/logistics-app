@@ -21,6 +21,7 @@ const List<RoleTask> lookupTasks = [
       UserRole.store,
       UserRole.carrier,
       UserRole.supervisor,
+      UserRole.planner,
       UserRole.admin,
     },
   ),

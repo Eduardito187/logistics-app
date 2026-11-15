@@ -33,6 +33,10 @@ class HomePrefetcher {
         prefetch(ref, dashboardMetricsProvider); // incluye los planes del día
         prefetch(ref, vehiclePlatesProvider); // sin "salto" UUID → placa
         prefetch(ref, alertsProvider);
+      case UserRole.planner:
+        ref.read(plansDateProvider.notifier).rollOverIfNewDay();
+        prefetch(ref, plansProvider);
+        prefetch(ref, vehiclePlatesProvider);
       case UserRole.store:
         prefetch(ref, storeShipmentsProvider);
       case UserRole.picker:

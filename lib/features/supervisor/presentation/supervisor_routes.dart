@@ -9,6 +9,7 @@ import 'supervisor_dashboard_screen.dart';
 import 'supervisor_fleet_screen.dart';
 import 'supervisor_plan_detail_screen.dart';
 import 'supervisor_plans_screen.dart';
+import 'trip_builder_screen.dart';
 
 /// Tarjetas de inicio del rol supervisor (torre de control en el bolsillo).
 const List<RoleTask> supervisorTasks = [
@@ -17,7 +18,7 @@ const List<RoleTask> supervisorTasks = [
     label: 'Tablero del día',
     appIcon: AppIcon.dashboard,
     route: '/supervisor/dashboard',
-    roles: {UserRole.supervisor, UserRole.admin},
+    roles: {UserRole.supervisor, UserRole.planner, UserRole.admin},
     accent: true,
   ),
   RoleTask(
@@ -25,14 +26,32 @@ const List<RoleTask> supervisorTasks = [
     label: 'Flota en vivo',
     appIcon: AppIcon.fleet,
     route: '/supervisor/fleet',
-    roles: {UserRole.supervisor, UserRole.admin},
+    roles: {UserRole.supervisor, UserRole.planner, UserRole.admin},
   ),
+  // El supervisor MIRA las rutas; planificador y administrador además las
+  // arman y publican (misma pantalla, con las acciones según el rol).
   RoleTask(
     id: 'sup-plans',
     label: 'Rutas en curso',
     appIcon: AppIcon.plans,
     route: '/supervisor/plans',
-    roles: {UserRole.supervisor, UserRole.admin},
+    roles: {UserRole.supervisor},
+  ),
+  RoleTask(
+    id: 'plan-day',
+    label: 'Planificación',
+    subtitle: 'Armar, ajustar y publicar los planes',
+    appIcon: AppIcon.plans,
+    route: '/supervisor/plans',
+    roles: {UserRole.planner, UserRole.admin},
+  ),
+  RoleTask(
+    id: 'plan-trip',
+    label: 'Armar un viaje',
+    subtitle: 'Qué pedidos lleva cada camión',
+    appIcon: AppIcon.route,
+    route: '/supervisor/trips/new',
+    roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
     id: 'sup-alerts',
@@ -56,6 +75,10 @@ final List<RouteBase> supervisorRoutes = [
   GoRoute(
     path: '/supervisor/plans',
     builder: (context, state) => const SupervisorPlansScreen(),
+  ),
+  GoRoute(
+    path: '/supervisor/trips/new',
+    builder: (context, state) => const TripBuilderScreen(),
   ),
   GoRoute(
     path: '/supervisor/alerts',

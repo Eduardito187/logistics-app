@@ -1,3 +1,5 @@
+import '../../../../core/api/models/trip_candidate_list.dart';
+import '../../../../core/api/models/trip_sequence_suggestion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
@@ -96,6 +98,53 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
     planId: planId,
     orderedShipmentIds: orderedShipmentIds,
   );
+
+  @override
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    List<String> selected = const [],
+    String query = '',
+  }) => _remote.listTripCandidates(
+    date: date,
+    vehicleId: vehicleId,
+    departAt: departAt,
+    selected: selected,
+    query: query,
+  );
+
+  @override
+  Future<TripSequenceSuggestion> suggestTripSequence({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) => _remote.suggestTripSequence(
+    date: date,
+    vehicleId: vehicleId,
+    departAt: departAt,
+    shipmentIds: shipmentIds,
+  );
+
+  @override
+  Future<Plan> createTrip({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) => _remote.createTrip(
+    date: date,
+    vehicleId: vehicleId,
+    departAt: departAt,
+    shipmentIds: shipmentIds,
+  );
+
+  @override
+  Future<void> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
+  }) => _remote.removeShipmentFromPlan(planId: planId, shipmentId: shipmentId);
 }
 
 /// Provider del repositorio expuesto con el **tipo interfaz**: la presentación

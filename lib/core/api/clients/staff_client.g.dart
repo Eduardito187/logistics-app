@@ -143,6 +143,7 @@ class _StaffClient implements StaffClient {
     DateTime? issuedOn,
     DateTime? expiresOn,
     String? note,
+    StaffDocumentSide? side,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
@@ -170,6 +171,9 @@ class _StaffClient implements StaffClient {
     }
     if (note != null) {
       _data.fields.add(MapEntry('note', note));
+    }
+    if (side != null) {
+      _data.fields.add(MapEntry('side', side.toJson()));
     }
     final _options = _setStreamType<PostAppStaffUserIdDocumentsResponse>(
       Options(
@@ -376,6 +380,36 @@ class _StaffClient implements StaffClient {
     late PostAppStaffUserIdPhotoResponse _value;
     try {
       _value = PostAppStaffUserIdPhotoResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<BroadcastAuthResponse> authorizeBroadcastChannel({
+    required BroadcastAuthRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<BroadcastAuthResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/broadcasting/auth',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late BroadcastAuthResponse _value;
+    try {
+      _value = BroadcastAuthResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

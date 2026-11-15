@@ -275,33 +275,37 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
             ),
             label: const Text('Enviarle un aviso'),
           ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Tienda asignada',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  node?.name ?? 'Sin tienda asignada',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+          // La tienda se asigna SOLO al personal de tienda; el camión, solo al
+          // chofer. El resto de los roles no muestra ninguna de las dos.
+          if (staffIsStore(_profile.roles)) ...[
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Tienda asignada',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    node?.name ?? 'Sin tienda asignada',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                if (node?.city != null) Text(node!.city!, style: muted),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _assignNode,
-                  icon: const AnimatedAppIcon(
-                    AppIcon.pickupStore,
-                    excludeFromSemantics: true,
+                  if (node?.city != null) Text(node!.city!, style: muted),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _assignNode,
+                    icon: const AnimatedAppIcon(
+                      AppIcon.pickupStore,
+                      excludeFromSemantics: true,
+                    ),
+                    label: Text(
+                      node == null ? 'Asignar a una tienda' : 'Cambiar tienda',
+                    ),
                   ),
-                  label: Text(
-                    node == null ? 'Asignar a una tienda' : 'Cambiar tienda',
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           if (isDriver) ...[
             const SizedBox(height: 16),
             SectionCard(

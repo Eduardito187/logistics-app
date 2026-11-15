@@ -6,16 +6,20 @@ import 'package:logistics_app/core/auth/user_role.dart';
 
 void main() {
   group('UserRole (propiedades de cada valor)', () {
-    test('existen exactamente los seis roles esperados (incluye admin)', () {
-      expect(UserRole.values, [
-        UserRole.driver,
-        UserRole.picker,
-        UserRole.store,
-        UserRole.carrier,
-        UserRole.supervisor,
-        UserRole.admin,
-      ]);
-    });
+    test(
+      'existen exactamente los roles esperados (incluye planificador y admin)',
+      () {
+        expect(UserRole.values, [
+          UserRole.driver,
+          UserRole.picker,
+          UserRole.store,
+          UserRole.carrier,
+          UserRole.supervisor,
+          UserRole.planner,
+          UserRole.admin,
+        ]);
+      },
+    );
 
     test('backendKey de cada rol coincide con la clave del backend', () {
       expect(UserRole.driver.backendKey, 'chofer');
@@ -28,7 +32,7 @@ void main() {
 
     test('label (texto de UI en español) de cada rol', () {
       expect(UserRole.driver.label, 'Chofer');
-      expect(UserRole.picker.label, 'Preparador / andén');
+      expect(UserRole.picker.label, 'Preparador');
       expect(UserRole.store.label, 'Tienda');
       expect(UserRole.carrier.label, 'Transportista externo');
       expect(UserRole.supervisor.label, 'Supervisor');

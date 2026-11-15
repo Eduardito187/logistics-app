@@ -9,5 +9,9 @@
   "FIREBASE_PROJECT_ID": "",
   "FIREBASE_IOS_API_KEY": "",
   "FIREBASE_IOS_APP_ID": "",
-  "FIREBASE_IOS_BUNDLE_ID": ""
+  "FIREBASE_IOS_BUNDLE_ID": "",
+  "SOCKET_HOST": "localhost",
+  "SOCKET_PORT": 6001,
+  "SOCKET_KEY": "dismaclocalkey",
+  "SOCKET_TLS": false
 }

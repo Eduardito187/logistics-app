@@ -3,13 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/app_plans_plan_id_sequence_request_body.dart';
-import '../../../../core/api/models/app_plans_plan_id_stops_request_body.dart';
+import '../../../../core/api/models/assign_shipment_to_plan_request.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
+import '../../../../core/api/models/auto_plan_run_envelope.dart';
 import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/generate_daily_plan_request.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/generate_plan_proposal_request.dart';
 import '../../../../core/api/models/plan.dart';
+import '../../../../core/api/models/plan_envelope.dart';
+import '../../../../core/api/models/trip_candidate_list.dart';
+import '../../../../core/api/models/trip_sequence_suggestion.dart';
+import '../../../../core/api/models/trip_sequence_suggestion_envelope.dart';
+import '../../domain/trip_already_planned.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/stops3.dart';
 import '../../../../core/api/models/strategy.dart';
@@ -192,17 +198,24 @@ class SupervisorRemoteDataSource {
     required DateTime planDate,
     required GenerateDailyPlanRequestStrategy strategy,
   }) async {
+    // El backend valida `plan_date` como `Y-m-d` estricto y el cliente
+    // generado manda fecha-hora ISO: va por Dio directo, reusando los modelos
+    // generados para armar el cuerpo y leer la respuesta.
+    final body =
+        GenerateDailyPlanRequest(
+            planDate: planDate,
+            strategy: strategy,
+          ).toJson()
+          ..['plan_date'] =
+              '${planDate.year.toString().padLeft(4, '0')}-'
+              '${planDate.month.toString().padLeft(2, '0')}-'
+              '${planDate.day.toString().padLeft(2, '0')}'
+          ..removeWhere((key, value) => value == null);
     try {
       final response = await _ref
-          .read(logisticsApiProvider)
-          .planning
-          .generateDailyPlan(
-            body: GenerateDailyPlanRequest(
-              planDate: planDate,
-              strategy: strategy,
-            ),
-          );
-      return response.data;
+          .read(dioProvider)
+          .post<Map<String, Object?>>('/app/plans/auto', data: body);
+      return AutoPlanRunEnvelope.fromJson(response.data!).data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
@@ -256,7 +269,7 @@ class SupervisorRemoteDataSource {
           .planning
           .assignShipmentToPlan(
             planId: planId,
-            body: AppPlansPlanIdStopsRequestBody(shipmentId: shipmentId),
+            body: AssignShipmentToPlanRequest(shipmentId: shipmentId),
           );
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
@@ -278,6 +291,120 @@ class SupervisorRemoteDataSource {
               orderedShipmentIds: orderedShipmentIds,
             ),
           );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+}
+
+extension SupervisorTripPlanning on SupervisorRemoteDataSource {
+  static String _ymd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  // Estos tres van por Dio directo: llevan fechas de calendario (`Y-m-d`) y
+  // la lista `selected` separada por comas, que el cliente generado serializa
+  // de otra forma. Las respuestas se leen con los modelos generados.
+
+  /// Pedidos que se pueden sumar al viaje, ordenados por cercanía al último
+  /// elegido (o a la base del camión si todavía no hay ninguno).
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    List<String> selected = const [],
+    String query = '',
+  }) async {
+    try {
+      final res = await _ref
+          .read(dioProvider)
+          .get<Map<String, Object?>>(
+            '/app/plans/candidates',
+            queryParameters: <String, Object?>{
+              'date': _ymd(date),
+              'vehicle_id': vehicleId,
+              'depart_at': departAt.toUtc().toIso8601String(),
+              if (selected.isNotEmpty) 'selected': selected.join(','),
+              if (query.isNotEmpty) 'q': query,
+              'per_page': 50,
+            },
+          );
+      return TripCandidateList.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Orden que recomienda el backend para esos pedidos (camino más corto
+  /// respetando la hora que pidió cada cliente). No guarda nada.
+  Future<TripSequenceSuggestion> suggestTripSequence({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) async {
+    try {
+      final res = await _ref
+          .read(dioProvider)
+          .post<Map<String, Object?>>(
+            '/app/plans/suggest-sequence',
+            data: <String, Object?>{
+              'date': _ymd(date),
+              'vehicle_id': vehicleId,
+              'depart_at': departAt.toUtc().toIso8601String(),
+              'shipment_ids': shipmentIds,
+            },
+          );
+      return TripSequenceSuggestionEnvelope.fromJson(res.data!).data;
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Crea el viaje (plan en borrador) con las paradas EN ESE ORDEN. Si el
+  /// camión ya tiene plan ese día lanza [TripAlreadyPlanned] con su id.
+  Future<Plan> createTrip({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  }) async {
+    try {
+      final res = await _ref
+          .read(dioProvider)
+          .post<Map<String, Object?>>(
+            '/app/plans',
+            data: <String, Object?>{
+              'plan_date': _ymd(date),
+              'vehicle_id': vehicleId,
+              'depart_at': departAt.toUtc().toIso8601String(),
+              'stops': [
+                for (final id in shipmentIds) {'shipment_id': id},
+              ],
+            },
+          );
+      return PlanEnvelope.fromJson(res.data!).data;
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      if (e.response?.statusCode == 409 && body is Map) {
+        final planId = body['plan_id'];
+        if (planId is String) throw TripAlreadyPlanned(planId);
+      }
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Quita una parada de un plan sin publicar.
+  Future<void> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
+  }) async {
+    try {
+      await _ref
+          .read(logisticsApiProvider)
+          .planning
+          .removeShipmentFromPlan(planId: planId, shipmentId: shipmentId);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

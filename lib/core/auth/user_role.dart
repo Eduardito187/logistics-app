@@ -15,7 +15,7 @@ enum UserRole {
     ],
   ),
   picker(
-    label: 'Preparador / andén',
+    label: 'Preparador',
     backendKey: 'preparador',
     icon: AppIcon.scan,
     tasks: [
@@ -44,6 +44,20 @@ enum UserRole {
     backendKey: 'supervisor',
     icon: AppIcon.supervisor,
     tasks: ['Rutas en curso y alertas', 'Incidencias en campo'],
+  ),
+
+  /// Planificador: arma el día. Genera la planificación, ajusta qué pedido va
+  /// en qué camión y en qué orden, y PUBLICA los planes para que el preparador
+  /// y el chofer los vean. También reprograma y maneja el calendario.
+  planner(
+    label: 'Planificador',
+    backendKey: 'planificador',
+    icon: AppIcon.plans,
+    tasks: [
+      'Planificar el día y publicar los planes',
+      'Asignar pedidos a camiones y ordenar paradas',
+      'Reprogramar pedidos y fechas de entrega',
+    ],
   ),
 
   /// Administrador: ve y gestiona TODA la operación (envíos, rutas, flota en
@@ -90,6 +104,10 @@ enum UserRole {
   /// administrador comparten esas pantallas.
   bool get seesOperations =>
       this == UserRole.supervisor || this == UserRole.admin;
+
+  /// ¿Puede planificar (generar, ajustar y publicar planes)? El planificador
+  /// y el administrador. El supervisor solo monitorea.
+  bool get canPlan => this == UserRole.planner || this == UserRole.admin;
 
   /// Mapea una clave de rol del backend al rol de la app, o `null` si no es un
   /// rol de la app.

@@ -22,8 +22,10 @@ class Audience {
   final StaffRoleName? role;
   @JsonKey(name: 'node_id')
   final String? nodeId;
+
+  /// Lista vacía o null = no aplica (el aviso va por rol o tienda).
   @JsonKey(name: 'user_ids')
-  final List<int> userIds;
+  final List<int>? userIds;
 
   Map<String, Object?> toJson() => _$AudienceToJson(this);
 }

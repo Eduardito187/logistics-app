@@ -128,7 +128,9 @@ void main() {
       final fake = FakeAdmin(staff: staff);
       await pumpAdmin(tester, fake, const AdminStaffScreen());
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Tienda'));
+      await tester.tap(find.text('Todos los roles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tienda').last);
       await tester.pumpAndSettle();
 
       expect(fake.staffRequests.last.role, Role.tienda);
@@ -223,22 +225,36 @@ void main() {
       expect(fake.profileUpdates.single.changeCity, isFalse);
     });
 
+    testWidgets('la tienda solo se asigna al personal de tienda', (
+      tester,
+    ) async {
+      // Un chofer no tiene "Tienda asignada"; su tarjeta es la del camión.
+      await pumpAdmin(
+        tester,
+        FakeAdmin(profile: _driver),
+        const AdminStaffProfileScreen(userId: 7),
+      );
+      expect(find.text('Tienda asignada'), findsNothing);
+      expect(find.text('Camión asignado'), findsOneWidget);
+    });
+
     testWidgets('asignar a una tienda desde la ficha', (tester) async {
       final fake = FakeAdmin(
-        profile: _driver,
+        profile: _profile(id: 9, name: 'Ana Tienda', roles: ['tienda']),
         nodes: [
           adminNode(),
           adminNode(id: 'node-2', name: 'Tienda Sur'),
         ],
       );
-      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 9));
 
+      expect(find.text('Camión asignado'), findsNothing);
       await tester.tap(find.text('Asignar a una tienda'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Tienda Sur'));
       await tester.pumpAndSettle();
 
-      expect(fake.nodeAssignments.single, (userId: 7, nodeId: 'node-2'));
+      expect(fake.nodeAssignments.single, (userId: 9, nodeId: 'node-2'));
       expect(find.text('Asignado a Tienda Sur.'), findsOneWidget);
     });
 

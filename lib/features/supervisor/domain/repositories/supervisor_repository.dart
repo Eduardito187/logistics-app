@@ -1,3 +1,5 @@
+import '../../../../core/api/models/trip_candidate_list.dart';
+import '../../../../core/api/models/trip_sequence_suggestion.dart';
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
 import '../../../../core/api/models/get_plan_eta_data.dart';
@@ -72,5 +74,37 @@ abstract interface class SupervisorRepository {
   Future<void> reorderPlanStops({
     required String planId,
     required List<String> orderedShipmentIds,
+  });
+
+  /// Pedidos que se pueden sumar al viaje, por cercanía al último elegido (o
+  /// a la base del camión).
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    List<String> selected,
+    String query,
+  });
+
+  /// Orden recomendado para esos pedidos. No guarda.
+  Future<TripSequenceSuggestion> suggestTripSequence({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  });
+
+  /// Crea el viaje (plan en borrador) con las paradas en ese orden.
+  Future<Plan> createTrip({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  });
+
+  /// Quita una parada de un plan sin publicar.
+  Future<void> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
   });
 }

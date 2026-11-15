@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../realtime/inbox_realtime.dart';
 import '../../features/carrier/presentation/carrier_pickup_screen.dart';
 import '../../features/driver/presentation/active_delivery_screen.dart';
 import '../../features/home/presentation/all_tasks_screen.dart';
@@ -10,6 +11,7 @@ import '../../features/picking/presentation/orders_worklist_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/store/presentation/counter_pickup_screen.dart';
 import '../../features/supervisor/presentation/supervisor_dashboard_screen.dart';
+import '../../features/supervisor/presentation/supervisor_plans_screen.dart';
 import '../auth/session.dart';
 import '../auth/user_role.dart';
 import '../icons/icons.dart';
@@ -30,6 +32,8 @@ Widget _centerScreenFor(UserRole role) {
       return const CounterPickupScreen();
     case UserRole.carrier:
       return const CarrierPickupScreen();
+    case UserRole.planner:
+      return const SupervisorPlansScreen();
     case UserRole.supervisor || UserRole.admin:
       return const SupervisorDashboardScreen();
   }
@@ -54,6 +58,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final Session? session = ref.watch(sessionProvider);
+    // Avisos en tiempo real mientras el usuario está adentro (si el entorno
+    // tiene sockets; si no, no hace nada).
+    ref.watch(inboxRealtimeProvider);
     if (session == null) {
       return const SizedBox.shrink();
     }

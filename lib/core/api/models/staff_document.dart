@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'staff_document_side.dart';
 import 'staff_document_source.dart';
 
 part 'staff_document.g.dart';
@@ -19,6 +20,7 @@ class StaffDocument {
     this.expiresOn,
     this.expired,
     this.note,
+    this.side,
     this.mimeType,
     this.url,
     this.createdAt,
@@ -40,6 +42,9 @@ class StaffDocument {
   final DateTime? expiresOn;
   final bool? expired;
   final String? note;
+
+  /// Cara del documento; null si es de una sola cara (y siempre null en source=fleet / kind=profile).
+  final StaffDocumentSide? side;
   @JsonKey(name: 'mime_type')
   final String? mimeType;
 

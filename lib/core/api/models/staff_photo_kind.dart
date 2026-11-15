@@ -4,14 +4,13 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+/// La evidencia de entregas pertenece al pedido y no se lista acá.
 @JsonEnum()
 enum StaffPhotoKind {
   @JsonValue('profile')
   profile('profile'),
   @JsonValue('document')
   document('document'),
-  @JsonValue('evidence')
-  evidence('evidence'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

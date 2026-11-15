@@ -30,6 +30,7 @@ class _FakePushService implements PushService {
     required void Function(String token) onToken,
     required void Function(String? payload) onTap,
     void Function()? onUnregistered,
+    void Function()? onForeground,
   }) async {
     if (initError != null) throw initError!;
     this.onToken = onToken;

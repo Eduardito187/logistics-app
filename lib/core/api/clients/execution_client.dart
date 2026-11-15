@@ -13,6 +13,7 @@ import '../models/app_orders_order_number_vehicle_request_body.dart';
 import '../models/app_vehicles_vehicle_id_incidents_request_body.dart';
 import '../models/app_vehicles_vehicle_id_route_request_body.dart';
 import '../models/assign_shelf_location_request.dart';
+import '../models/close_transfer_with_shortage_request.dart';
 import '../models/delivery_evidence_collection.dart';
 import '../models/delivery_issue_request.dart';
 import '../models/enum0.dart';
@@ -34,6 +35,7 @@ import '../models/post_app_deliveries_scans_node_reception_response.dart';
 import '../models/post_app_deliveries_scans_preparation_response.dart';
 import '../models/post_app_deliveries_scans_unload_response.dart';
 import '../models/post_app_deliveries_shipment_id_arrived_response.dart';
+import '../models/post_app_deliveries_shipment_id_close_transfer_response.dart';
 import '../models/post_app_deliveries_shipment_id_complete_response.dart';
 import '../models/post_app_deliveries_shipment_id_issues_response.dart';
 import '../models/post_app_deliveries_shipment_id_store_drop_response.dart';
@@ -83,12 +85,26 @@ abstract class ExecutionClient {
   ///
   /// Idempotente: repetirlo no duplica el hecho ni el aviso (si la primera vez no llevaba foto, una repetición la liga).
   ///
+  /// Traspaso interno (`delivery_mode = transfer`): no hay cliente que retire, así que registrar la entrega en tienda en su nodo destino SIN `missing_units` deja la entrega ENTREGADA (`status: DELIVERED`) y emite `execution.shipment_delivered` (`confirmation: STORE_DROP`), sin foto ni firma obligatorias. Con `missing_units` queda en curso hasta que la tienda concilie la recepción (con diferencias se cierra con `with_shortage: true`) o la oficina lo cierre con `POST /app/deliveries/{shipmentId}/close-transfer`. Para `store_pickup` no cambia: queda «listo para retirar» y lo cierra el mostrador con la prueba de entrega.
+  ///
   /// [idempotencyKey] - Offline idempotency key for the scan; a resend with the same key does not duplicate the fact. REQUIRED for every write scan: send it here or in the body field idempotency_key. A write with neither is rejected with 422.
   @POST('/app/deliveries/{shipmentId}/store-drop')
   Future<PostAppDeliveriesShipmentIdStoreDropResponse> recordStoreDrop({
     @Path('shipmentId') required String shipmentId,
     @Header('Idempotency-Key') String? idempotencyKey,
     @Body() AppDeliveriesShipmentIdStoreDropRequestBody? body,
+  });
+
+  /// Office closes an internal transfer that stayed open with a shortage.
+  ///
+  /// CIERRE MANUAL DE OFICINA de un traspaso con faltantes. El chofer dejó el traspaso en su tienda destino declarando productos faltantes y la tienda nunca concilió la recepción: quedó en curso. Admin o supervisor lo dan por entregado con un motivo obligatorio. La entrega queda `status: DELIVERED` con `with_shortage: true` y se emite `execution.shipment_delivered` (`confirmation: STORE_DROP`, `with_shortage: true`, `missing_unit_ids`). Los faltantes se siguen por el reporte de discrepancias.
+  ///
+  /// Solo aplica a `delivery_mode = transfer`. Idempotente: repetirlo sobre un traspaso ya entregado devuelve su estado sin cambios.
+  @POST('/app/deliveries/{shipmentId}/close-transfer')
+  Future<PostAppDeliveriesShipmentIdCloseTransferResponse>
+  closeTransferWithShortage({
+    @Path('shipmentId') required String shipmentId,
+    @Body() required CloseTransferWithShortageRequest body,
   });
 
   /// Upload an evidence photo (proof of delivery or damage) and get its storage reference.

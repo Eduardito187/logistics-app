@@ -22,6 +22,10 @@ ShipmentTracking _$ShipmentTrackingFromJson(Map<String, dynamic> json) =>
             ),
       positionIsLive: json['position_is_live'] as bool?,
       shipmentExternalId: json['shipment_external_id'] as String?,
+      atStoreAt: json['at_store_at'] == null
+          ? null
+          : DateTime.parse(json['at_store_at'] as String),
+      readyForPickup: json['ready_for_pickup'] as bool?,
     );
 
 Map<String, dynamic> _$ShipmentTrackingToJson(ShipmentTracking instance) =>
@@ -36,4 +40,6 @@ Map<String, dynamic> _$ShipmentTrackingToJson(ShipmentTracking instance) =>
       'eta': instance.eta?.toIso8601String(),
       'last_position': instance.lastPosition,
       'position_is_live': instance.positionIsLive,
+      'at_store_at': instance.atStoreAt?.toIso8601String(),
+      'ready_for_pickup': instance.readyForPickup,
     };

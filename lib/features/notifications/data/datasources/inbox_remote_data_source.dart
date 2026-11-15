@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/push/push_arrived.dart';
 import '../../../../core/widgets/paged.dart';
 
 /// Bandeja de avisos internos del usuario (`/app/inbox`): lo que el
@@ -60,9 +61,24 @@ final inboxRemoteDataSourceProvider = Provider<InboxRemoteDataSource>(
 /// Avisos sin leer, para el acceso de la pantalla de notificaciones. Si falla
 /// (sin señal, backend anterior) vale 0: la bandeja igual se puede abrir.
 final inboxUnreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  ref.watch(pushArrivedProvider);
   try {
     return await ref.watch(inboxRemoteDataSourceProvider).unreadCount();
   } on Object {
     return 0;
+  }
+});
+
+/// Los avisos más recientes del usuario (primera página), para mostrarlos
+/// dentro de la pantalla de notificaciones. Si falla vale vacío: las
+/// notificaciones de la operación igual se ven.
+final inboxPreviewProvider = FutureProvider.autoDispose<Paged<StaffInboxItem>>((
+  ref,
+) async {
+  ref.watch(pushArrivedProvider);
+  try {
+    return await ref.watch(inboxRemoteDataSourceProvider).list(1);
+  } on Object {
+    return const Paged(items: [], hasMore: false);
   }
 });

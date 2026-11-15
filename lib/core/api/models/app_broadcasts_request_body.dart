@@ -20,7 +20,7 @@ class AppBroadcastsRequestBody {
   factory AppBroadcastsRequestBody.fromJson(Map<String, Object?> json) =>
       _$AppBroadcastsRequestBodyFromJson(json);
 
-  /// Al menos uno. `role` y `node_id` juntos se combinan con AND; `user_ids` se suma.
+  /// Al menos una audiencia efectiva: role, node_id o user_ids no vacío. `role` y `node_id` juntos se combinan con AND; `user_ids` se suma. El push FCM del aviso lleva data {type: "inbox", id}.
   final Audience audience;
   final String title;
   final String body;

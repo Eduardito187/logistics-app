@@ -13,6 +13,9 @@ StaffPhoto _$StaffPhotoFromJson(Map<String, dynamic> json) => StaffPhoto(
   url: json['url'] as String?,
   at: json['at'] == null ? null : DateTime.parse(json['at'] as String),
   label: json['label'] as String?,
+  side: json['side'] == null
+      ? null
+      : StaffDocumentSide.fromJson(json['side'] as String),
 );
 
 Map<String, dynamic> _$StaffPhotoToJson(StaffPhoto instance) =>
@@ -21,4 +24,5 @@ Map<String, dynamic> _$StaffPhotoToJson(StaffPhoto instance) =>
       'url': instance.url,
       'at': instance.at?.toIso8601String(),
       'label': instance.label,
+      'side': instance.side,
     };

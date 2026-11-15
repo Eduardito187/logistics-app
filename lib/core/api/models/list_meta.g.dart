@@ -8,6 +8,12 @@ part of 'list_meta.dart';
 
 ListMeta _$ListMetaFromJson(Map<String, dynamic> json) => ListMeta(
   count: (json['count'] as num).toInt(),
+  anchor: json['anchor'] == null
+      ? null
+      : TripCandidateAnchor.fromJson(json['anchor'] as Map<String, dynamic>),
+  capacity: json['capacity'] == null
+      ? null
+      : TripCapacity.fromJson(json['capacity'] as Map<String, dynamic>),
   page: (json['page'] as num?)?.toInt(),
   perPage: (json['per_page'] as num?)?.toInt(),
   total: (json['total'] as num?)?.toInt(),
@@ -29,6 +35,8 @@ ListMeta _$ListMetaFromJson(Map<String, dynamic> json) => ListMeta(
 );
 
 Map<String, dynamic> _$ListMetaToJson(ListMeta instance) => <String, dynamic>{
+  'anchor': instance.anchor,
+  'capacity': instance.capacity,
   'count': instance.count,
   'page': instance.page,
   'per_page': instance.perPage,

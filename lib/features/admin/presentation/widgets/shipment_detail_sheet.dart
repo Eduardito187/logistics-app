@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/models/delivery_mode.dart';
 import '../../../../core/api/models/shipment.dart';
+import '../../../../core/api/models/shipment_delivery_evidence.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/app_snack.dart';
+import '../../../../core/widgets/product_thumb.dart';
+import '../../../../core/widgets/status_pill.dart';
 import '../../../picking/domain/usecases/assign_order_vehicle.dart';
 import '../../../picking/presentation/widgets/shipment_status_pill.dart';
+import '../staff_labels.dart';
 import 'staff_pickers.dart';
 
 /// Abre el detalle de un envío (cliente, destino y productos).
@@ -84,95 +88,110 @@ class _ShipmentDetailSheetState extends ConsumerState<ShipmentDetailSheet> {
       color: theme.colorScheme.onSurfaceVariant,
     );
     final reference = shipment.addressReference;
+    final delivered = shipment.status == ShipmentStatus.delivered;
+    final deliveredAt = shipment.progress?.deliveredAt;
+    // La hoja mide lo que mide su contenido (sin aire abajo); si el pedido
+    // es largo, llega hasta el 90% de la pantalla y se desplaza.
     return SafeArea(
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        builder: (context, controller) => ListView(
-          controller: controller,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          children: [
-            Text(
-              'Pedido ${shipment.externalId}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ShipmentStatusPill(shipment.status),
-            ),
-            if (_open) ...[
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _busy ? null : _assignVehicle,
-                icon: AnimatedAppIcon(
-                  AppIcon.deliver,
-                  state: _busy ? AppIconState.loading : AppIconState.idle,
-                  excludeFromSemantics: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Pedido ${shipment.externalId}',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
-                label: const Text('Asignar a un camión'),
               ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _reschedule,
-                icon: const AnimatedAppIcon(
-                  AppIcon.swap,
-                  excludeFromSemantics: true,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ShipmentStatusPill(shipment.status),
+              ),
+              if (delivered) ...[
+                const SizedBox(height: 8),
+                if (deliveredAt != null)
+                  Text('Entregado el ${staffDateTime(deliveredAt)}'),
+                const SizedBox(height: 8),
+                _EvidenceTags(evidence: shipment.deliveryEvidence),
+              ],
+              if (_open) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _busy ? null : _assignVehicle,
+                  icon: AnimatedAppIcon(
+                    AppIcon.deliver,
+                    state: _busy ? AppIconState.loading : AppIconState.idle,
+                    excludeFromSemantics: true,
+                  ),
+                  label: const Text('Asignar a un camión'),
                 ),
-                label: const Text('Reprogramar'),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _reschedule,
+                  icon: const AnimatedAppIcon(
+                    AppIcon.swap,
+                    excludeFromSemantics: true,
+                  ),
+                  label: const Text('Reprogramar'),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Text('Cliente', style: muted),
+              Text(
+                shipment.customerName,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ],
-            const SizedBox(height: 16),
-            Text('Cliente', style: muted),
-            Text(
-              shipment.customerName,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (shipment.customerDocumentId != null)
-              Text('Documento: ${shipment.customerDocumentId}'),
-            if (shipment.customerPhone != null)
-              Text('Teléfono: ${shipment.customerPhone}'),
-            const SizedBox(height: 16),
-            Text(_destinationLabel(shipment.deliveryMode), style: muted),
-            Text(shipment.addressText),
-            if (reference != null && reference.isNotEmpty)
-              Text('Referencia: $reference', style: muted),
-            const SizedBox(height: 16),
-            Text('Productos', style: muted),
-            for (final line in shipment.lines)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            line.productName,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
+              if (shipment.customerDocumentId != null)
+                Text('Documento: ${shipment.customerDocumentId}'),
+              if (shipment.customerPhone != null)
+                Text('Teléfono: ${shipment.customerPhone}'),
+              const SizedBox(height: 16),
+              Text(_destinationLabel(shipment.deliveryMode), style: muted),
+              Text(shipment.addressText),
+              if (reference != null && reference.isNotEmpty)
+                Text('Referencia: $reference', style: muted),
+              const SizedBox(height: 16),
+              Text('Productos', style: muted),
+              for (final line in shipment.lines)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      ProductThumb(imageUrl: line.imageUrl),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              line.productName,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          Text('SKU ${line.sku}', style: muted),
-                        ],
+                            Text(line.sku, style: muted),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      'x${line.quantity}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      Text(
+                        'x${line.quantity}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -185,4 +204,36 @@ class _ShipmentDetailSheetState extends ConsumerState<ShipmentDetailSheet> {
         DeliveryMode.transfer => 'Destino · traslado a tienda',
         _ => 'Destino · entrega a domicilio',
       };
+}
+
+/// Cómo se entregó: una etiqueta por cada evidencia que quedó registrada.
+class _EvidenceTags extends StatelessWidget {
+  const _EvidenceTags({required this.evidence});
+
+  final ShipmentDeliveryEvidence? evidence;
+
+  @override
+  Widget build(BuildContext context) {
+    final evidence = this.evidence;
+    if (evidence == null) return const SizedBox.shrink();
+    final tags = [
+      if (evidence.signature) ('Firma digital', AppIcon.signature),
+      if (evidence.photo) ('Foto de entrega', AppIcon.capture),
+      if (evidence.document) ('Foto de documento', AppIcon.badge),
+    ];
+    if (tags.isEmpty) {
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: StatusPill('Sin evidencia registrada'),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final (label, icon) in tags)
+          StatusPill(label, tone: PillTone.success, icon: icon),
+      ],
+    );
+  }
 }

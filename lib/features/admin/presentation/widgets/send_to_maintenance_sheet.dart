@@ -20,6 +20,19 @@ Future<MaintenanceResult?> showSendToMaintenanceSheet(
   builder: (_) => SendToMaintenanceSheet(vehicle: vehicle),
 );
 
+/// Pedidos sin terminar del camión (asignados o cargados). Si la consulta
+/// falla vale 0: mandar a mantenimiento no depende de esto.
+final vehiclePendingOrdersProvider = FutureProvider.autoDispose
+    .family<int, String>((ref, vehicleId) async {
+      try {
+        return await ref
+            .watch(adminRemoteDataSourceProvider)
+            .pendingOrdersOf(vehicleId);
+      } on Object {
+        return 0;
+      }
+    });
+
 /// Manda un camión a mantenimiento ahora: tipo, taller y nota. El backend abre
 /// la orden y deja el camión en mantenimiento en una sola llamada.
 class SendToMaintenanceSheet extends ConsumerStatefulWidget {
@@ -72,6 +85,8 @@ class _SendToMaintenanceSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final pending =
+        ref.watch(vehiclePendingOrdersProvider(widget.vehicle.id)).value ?? 0;
     return SafeArea(
       child: SingleChildScrollView(
         // El teclado no tapa los campos ni el botón.
@@ -120,38 +135,49 @@ class _SendToMaintenanceSheetState
                 labelText: 'Motivo o nota (opcional)',
               ),
             ),
-            const SizedBox(height: 16),
-            // Si el camión tiene paradas pendientes hoy, otro camión puede
-            // tomarlas; si no se elige, quedan liberadas para asignarlas después.
-            Text(
-              'Si tiene pedidos pendientes hoy',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            // Solo si el camión tiene pedidos asignados o cargados: hay que
+            // decidir quién los lleva.
+            if (pending > 0) ...[
+              const SizedBox(height: 16),
+              Text(
+                pending == 1
+                    ? 'Este camión tiene 1 pedido pendiente'
+                    : 'Este camión tiene $pending pedidos pendientes',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            OutlinedButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () async {
-                      final picked = await showVehiclePickerSheet(context);
-                      if (picked == null || !context.mounted) return;
-                      if (picked.id == widget.vehicle.id) {
-                        showInfoSnack(context, 'Elegí OTRO camión.');
-                        return;
-                      }
-                      setState(() => _takeover = picked);
-                    },
-              icon: const AnimatedAppIcon(
-                AppIcon.swap,
-                excludeFromSemantics: true,
+              Text(
+                'Elegí qué camión los lleva. Si no elegís ninguno quedan sin '
+                'camión para asignarlos después.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              label: Text(
-                _takeover == null
-                    ? 'Pasarlos a otro camión (opcional)'
-                    : 'Los toma el camión ${_takeover!.displayPlate}',
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        final picked = await showVehiclePickerSheet(context);
+                        if (picked == null || !context.mounted) return;
+                        if (picked.id == widget.vehicle.id) {
+                          showInfoSnack(context, 'Elegí OTRO camión.');
+                          return;
+                        }
+                        setState(() => _takeover = picked);
+                      },
+                icon: const AnimatedAppIcon(
+                  AppIcon.swap,
+                  excludeFromSemantics: true,
+                ),
+                label: Text(
+                  _takeover == null
+                      ? 'Pasarlos a otro camión'
+                      : 'Los toma el camión ${_takeover!.displayPlate}',
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 20),
             SizedBox(
               height: 56,

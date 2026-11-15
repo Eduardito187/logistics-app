@@ -62,9 +62,9 @@ abstract class ShipmentsClient {
 
   /// Open read-only order lookup by order code or label id (any app role).
   ///
-  /// Read-only lookup available to every authenticated app role, with NO role scope: a store finds orders of another store and a picker finds orders of another city. `q` is resolved in this order: exact order code (external id or order reference, case-insensitive), then a scanned label id, then a partial text match (3+ characters). Returns up to 10 shipments; an order split into several shipments returns all of them. `can_process` tells whether the caller could operate each shipment (false = view only).
+  /// Read-only lookup available to every authenticated app role, with NO role scope: a store finds orders of another store and a picker finds orders of another city. `q` is resolved in this order: exact order code (external id or order reference, case-insensitive), then a scanned label id, then a partial text match (3+ characters). The partial match always covers the order code and order reference; it also covers the customer NAME and DOCUMENT only for admin, supervisor and store roles. For any other role a text that only matches customer data returns 404 (never 403). Returns up to 10 shipments; an order split into several shipments returns all of them, with the same payload for every role. `can_process` tells whether the caller could operate each shipment (false = view only).
   ///
-  /// [q] - Order code or scanned label id.
+  /// [q] - Order code, order reference or scanned label id. Admin, supervisor and store roles may also search by customer name or document.
   @GET('/app/orders/lookup')
   Future<OrderLookupResponse> lookupOrders({@Query('q') required String q});
 
@@ -78,7 +78,7 @@ abstract class ShipmentsClient {
   ///
   /// [q] - Búsqueda en el servidor por código de pedido (external_id / order_reference), nombre o documento del cliente. Sin distinguir mayúsculas; coincide por contenido. Se combina con los demás filtros.
   ///
-  /// [city] - Ciudad (texto). Coincide, sin distinguir mayúsculas, con la dirección del envío o con el departamento / nombre de su nodo destino. Los envíos no guardan la ciudad en un campo propio.
+  /// [city] - Ciudad. Si el valor es un código de departamento (la_paz, santa_cruz, cochabamba, oruro, potosi, chuquisaca, tarija, beni, pando; exacto, en minúsculas) filtra por el departamento de DESTINO del envío (`destination_department`). Cualquier otro texto coincide, sin distinguir mayúsculas, con la ciudad del envío o, si no la tiene resuelta, con su dirección. Aplica también a `meta.count_by_status`.
   ///
   /// [vehicleId] - Solo envíos asignados a ese vehículo (entrega abierta o parada en una ruta suya).
   ///
@@ -169,15 +169,15 @@ abstract class ShipmentsClient {
 
   /// Preview a (bulk) reschedule without changing anything.
   ///
-  /// Admin y supervisor. Mismo body que POST /app/shipments/reschedule.
+  /// Admin, supervisor y planificador. Mismo body y mismas reglas de alcance que POST /app/shipments/reschedule (el supervisor solo tiene esta vista previa). El planificador solo puede previsualizar pedidos puntuales (`scope.shipment_ids`) de su ciudad.
   @POST('/app/shipments/reschedule/preview')
   Future<PostAppShipmentsReschedulePreviewResponse> previewRescheduleShipments({
     @Body() required RescheduleShipmentsRequest body,
   });
 
-  /// Reschedule orders — one, several, a whole truck or a whole city (admin only).
+  /// Reschedule orders — one, several, a whole truck or a whole city.
   ///
-  /// Solo admin. Los pedidos cerrados (entregados, fallidos, anulados) se omiten y se informan en `skipped`. Una fecha bloqueada en el calendario se rechaza (code date_blocked). Un fallo en un pedido no corta el resto (queda en `failed`). Tope de 500 pedidos por operación (code scope_too_large). Queda auditado.
+  /// Admin: cualquier alcance. Planificador: SOLO pedidos puntuales (`scope.shipment_ids`, uno o una lista) dentro de su alcance por ciudad; el alcance masivo (`scope.vehicle_id` o `scope.city`) es solo de admin. Los pedidos cerrados (entregados, fallidos, anulados) se omiten y se informan en `skipped`. Una fecha bloqueada en el calendario se rechaza (code date_blocked). Un fallo en un pedido no corta el resto (queda en `failed`). Tope de 500 pedidos por operación (code scope_too_large). Queda auditado.
   @POST('/app/shipments/reschedule')
   Future<PostAppShipmentsRescheduleResponse> rescheduleShipments({
     @Body() required RescheduleShipmentsRequest body,

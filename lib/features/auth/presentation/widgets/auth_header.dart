@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../core/brand/brand_vector.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -54,7 +54,7 @@ class AuthHeader extends StatelessWidget {
               // izquierda, para dejar el formulario a la vista.
               ? Align(
                   alignment: Alignment.centerLeft,
-                  child: SvgPicture.asset(
+                  child: BrandVector(
                     'assets/brand/distrack-logo-inverse.svg',
                     height: 30,
                     semanticsLabel: 'DisTrack',
@@ -64,7 +64,7 @@ class AuthHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Wordmark + lema de marca ("DE ANDÉN A PUERTA.").
-                    SvgPicture.asset(
+                    BrandVector(
                       'assets/brand/distrack-wordmark-tagline-inverse.svg',
                       height: 72,
                       semanticsLabel: 'DisTrack · DE ANDÉN A PUERTA.',

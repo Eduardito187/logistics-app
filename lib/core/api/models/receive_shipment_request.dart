@@ -19,6 +19,8 @@ class ReceiveShipmentRequest {
     required this.lines,
     this.destinationNodeId,
     this.destinationNodeCode,
+    this.originNodeId,
+    this.originNodeCode,
     this.customerDocumentId,
     this.customerPhone,
     this.customerEmail,
@@ -43,6 +45,14 @@ class ReceiveShipmentRequest {
   /// Store/DC code (network_nodes.code); used when no destination_node_id and no "#n:{uuid}" suffix.
   @JsonKey(name: 'destination_node_code')
   final String? destinationNodeCode;
+
+  /// Origin node of the order (where it ships from). Optional; when omitted the origin is derived (distribution center of the destination city). Must be an existing network node.
+  @JsonKey(name: 'origin_node_id')
+  final String? originNodeId;
+
+  /// Origin node code (network_nodes.code, case-insensitive). Alternative to origin_node_id; when both are sent they must point to the same node.
+  @JsonKey(name: 'origin_node_code')
+  final String? originNodeCode;
   @JsonKey(name: 'customer_name')
   final String customerName;
 

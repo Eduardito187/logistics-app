@@ -22,10 +22,15 @@ import 'package:dio/dio.dart';
 class NullBodyStripInterceptor extends Interceptor {
   const NullBodyStripInterceptor();
 
+  /// `Options(extra: {keepNullsKey: true})`: el request NO se toca. Para los
+  /// pocos endpoints donde un `null` explícito significa "borrá este campo"
+  /// (p. ej. los datos personales del personal).
+  static const String keepNullsKey = 'keepNulls';
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final data = options.data;
-    if (data is Map) {
+    if (data is Map && options.extra[keepNullsKey] != true) {
       options.data = <dynamic, dynamic>{
         for (final entry in data.entries)
           if (entry.value != null) entry.key: entry.value,
