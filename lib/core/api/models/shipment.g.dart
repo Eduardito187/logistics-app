@@ -20,6 +20,18 @@ Shipment _$ShipmentFromJson(Map<String, dynamic> json) => Shipment(
   lines: (json['lines'] as List<dynamic>)
       .map((e) => ShipmentLine.fromJson(e as Map<String, dynamic>))
       .toList(),
+  progress: json['progress'] == null
+      ? null
+      : ShipmentProgress.fromJson(json['progress'] as Map<String, dynamic>),
+  deliveryMode: json['delivery_mode'] == null
+      ? null
+      : DeliveryMode.fromJson(json['delivery_mode'] as String),
+  addressParts: json['address_parts'] == null
+      ? null
+      : ShipmentAddressParts.fromJson(
+          json['address_parts'] as Map<String, dynamic>,
+        ),
+  shortAddress: json['short_address'] as String?,
   customerDocumentId: json['customer_document_id'] as String?,
   customerPhone: json['customer_phone'] as String?,
   customerEmail: json['customer_email'] as String?,
@@ -27,9 +39,25 @@ Shipment _$ShipmentFromJson(Map<String, dynamic> json) => Shipment(
   lat: (json['lat'] as num?)?.toDouble(),
   lng: (json['lng'] as num?)?.toDouble(),
   destinationNodeId: json['destination_node_id'] as String?,
+  originNode: json['origin_node'] == null
+      ? null
+      : OrderLookupNodeRef.fromJson(
+          json['origin_node'] as Map<String, dynamic>,
+        ),
+  originDepartment: json['origin_department'] as String?,
+  destinationDepartment: json['destination_department'] as String?,
+  deliveryEvidence: json['delivery_evidence'] == null
+      ? null
+      : ShipmentDeliveryEvidence.fromJson(
+          json['delivery_evidence'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
+  'progress': instance.progress,
+  'delivery_mode': instance.deliveryMode,
+  'address_parts': instance.addressParts,
+  'short_address': instance.shortAddress,
   'id': instance.id,
   'source': instance.source,
   'external_id': instance.externalId,
@@ -46,4 +74,8 @@ Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
   'status': instance.status,
   'destination_node_id': instance.destinationNodeId,
   'lines': instance.lines,
+  'origin_node': instance.originNode,
+  'origin_department': instance.originDepartment,
+  'destination_department': instance.destinationDepartment,
+  'delivery_evidence': instance.deliveryEvidence,
 };

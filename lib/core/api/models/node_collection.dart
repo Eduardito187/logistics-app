@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta13.dart';
+import 'meta7.dart';
 import 'node.dart';
 
 part 'node_collection.g.dart';
@@ -17,7 +17,7 @@ class NodeCollection {
       _$NodeCollectionFromJson(json);
 
   final List<Node> data;
-  final Meta13 meta;
+  final Meta7 meta;
 
   Map<String, Object?> toJson() => _$NodeCollectionToJson(this);
 }

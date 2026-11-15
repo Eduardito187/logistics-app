@@ -19,6 +19,8 @@ class Alert {
     required this.severity,
     required this.detail,
     required this.occurredAt,
+    this.plate,
+    this.driverName,
     this.driverId,
     this.lat,
     this.lng,
@@ -28,6 +30,9 @@ class Alert {
 
   factory Alert.fromJson(Map<String, Object?> json) => _$AlertFromJson(json);
 
+  final String? plate;
+  @JsonKey(name: 'driver_name')
+  final String? driverName;
   final String id;
   @JsonKey(name: 'vehicle_id')
   final String vehicleId;

@@ -16,15 +16,18 @@ UnitTracking _$UnitTrackingFromJson(Map<String, dynamic> json) => UnitTracking(
       ? null
       : DateTime.parse(json['last_seen_at'] as String),
   label: json['label'] as String?,
+  location: json['location'] as String?,
   sku: json['sku'] as String?,
   productName: json['product_name'] as String?,
   productImageUrl: json['product_image_url'] as String?,
   pieceIndex: (json['piece_index'] as num?)?.toInt(),
   pieceTotal: (json['piece_total'] as num?)?.toInt(),
+  labelId: json['label_id'] as String?,
 );
 
 Map<String, dynamic> _$UnitTrackingToJson(UnitTracking instance) =>
     <String, dynamic>{
+      'location': instance.location,
       'id': instance.id,
       'unit_id': instance.unitId,
       'shipment_id': instance.shipmentId,
@@ -37,4 +40,5 @@ Map<String, dynamic> _$UnitTrackingToJson(UnitTracking instance) =>
       'product_image_url': instance.productImageUrl,
       'piece_index': instance.pieceIndex,
       'piece_total': instance.pieceTotal,
+      'label_id': instance.labelId,
     };

@@ -5,17 +5,19 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'asn.dart';
+import 'list_meta.dart';
 
 part 'asn_collection.g.dart';
 
 @JsonSerializable()
 class AsnCollection {
-  const AsnCollection({required this.data});
+  const AsnCollection({required this.data, this.meta});
 
   factory AsnCollection.fromJson(Map<String, Object?> json) =>
       _$AsnCollectionFromJson(json);
 
   final List<Asn> data;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$AsnCollectionToJson(this);
 }

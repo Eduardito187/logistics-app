@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/driver_controllers.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/locally_settled_stops.dart';
 import 'package:logistics_app/features/driver/presentation/stop_detail_screen.dart';
 
 import '../support/driver_test_support.dart';
@@ -45,10 +46,11 @@ void main() {
     expect(find.text('Pendiente'), findsOneWidget);
     expect(find.text('Estado de la entrega'), findsOneWidget);
 
-    // Acciones de terreno.
+    // Acciones de terreno de una parada PENDIENTE (ya no hay "Descargar
+    // productos": el backend confirmó que el unload es vestigial/opcional).
     expect(find.text('Navegar'), findsOneWidget);
     expect(find.text('Ver en el mapa'), findsOneWidget);
-    expect(find.text('Descargar productos'), findsOneWidget);
+    expect(find.text('Descargar productos'), findsNothing);
     expect(find.text('Entregar'), findsOneWidget);
     expect(find.text('Entrega fallida'), findsOneWidget);
   });
@@ -64,21 +66,64 @@ void main() {
     expect(find.text('Navegar'), findsNothing);
     expect(find.text('Ver en el mapa'), findsNothing);
     // Las acciones que no dependen de coordenadas siguen presentes.
-    expect(find.text('Descargar productos'), findsOneWidget);
+    expect(find.text('Entregar'), findsOneWidget);
+    expect(find.text('Entrega fallida'), findsOneWidget);
   });
 
-  testWidgets('parada entregada muestra el estado "Entregada"', (tester) async {
-    final stop = buildStop(
-      shipmentId: 'ship-ok',
-      status: DriverRouteStopStatus.completed,
-    );
-    await pumpScoped(
-      tester,
-      overrides: _overrides('ship-ok'),
-      child: StopDetailScreen(stop: stop),
-    );
+  testWidgets(
+    'parada entregada muestra "Entregada" y oculta las acciones de terreno',
+    (tester) async {
+      final stop = buildStop(
+        shipmentId: 'ship-ok',
+        status: DriverRouteStopStatus.completed,
+      );
+      await pumpScoped(
+        tester,
+        overrides: _overrides('ship-ok'),
+        child: StopDetailScreen(stop: stop),
+      );
 
-    // Pastilla de estado de la parada (no confundir con la de la entrega).
-    expect(find.text('Entregada'), findsWidgets);
-  });
+      // Pastilla de estado de la parada (no confundir con la de la entrega).
+      expect(find.text('Entregada'), findsWidgets);
+      // Una parada ya resuelta no se vuelve a operar.
+      expect(find.text('Entregar'), findsNothing);
+      expect(find.text('Entrega fallida'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'parada resuelta EN ESTE TELÉFONO (offline) también oculta las acciones',
+    (tester) async {
+      // Backend todavía la devuelve pendiente, pero el chofer ya la cerró acá:
+      // el estado efectivo manda y las acciones no deben reaparecer.
+      final stop = buildStop(
+        id: 'stop-local',
+        shipmentId: 'ship-local',
+        status: DriverRouteStopStatus.pending,
+      );
+      await pumpScoped(
+        tester,
+        overrides: [
+          ..._overrides('ship-local'),
+          locallySettledStopsProvider.overrideWith(
+            () => _SettledStub({'stop-local': DriverRouteStopStatus.completed}),
+          ),
+        ],
+        child: StopDetailScreen(stop: stop),
+      );
+
+      expect(find.text('Entregar'), findsNothing);
+      expect(find.text('Entrega fallida'), findsNothing);
+    },
+  );
+}
+
+/// Notifier de prueba con un mapa fijo de paradas resueltas localmente.
+class _SettledStub extends LocallySettledStops {
+  _SettledStub(this._initial);
+
+  final Map<String, DriverRouteStopStatus> _initial;
+
+  @override
+  Map<String, DriverRouteStopStatus> build() => _initial;
 }

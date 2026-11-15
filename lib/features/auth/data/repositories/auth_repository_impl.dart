@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart'
+    hide TwoFactorChallenge, TwoFactorEnrollment;
 import '../../../../core/auth/device_fingerprint.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/auth/token_store.dart';
@@ -158,6 +159,7 @@ class AuthRepositoryImpl implements AuthRepository {
       userName: response.user.name,
       role: role,
       storeNode: response.user.node,
+      userId: response.user.id,
       // Vencimiento real del token: deja que la renovación proactiva caiga
       // justo antes de vencer (sin esto se usa la política por antigüedad).
       expiresAt: response.expiresAt,
@@ -169,7 +171,11 @@ class AuthRepositoryImpl implements AuthRepository {
     // queda con abilities vacías y la UI cae a filtro solo-rol.
     try {
       final me = await _remote.me();
-      session.applyProfile(abilities: me.abilities, storeNode: me.user.node);
+      session.applyProfile(
+        abilities: me.abilities,
+        storeNode: me.user.node,
+        userId: me.user.id,
+      );
     } on ApiException {
       // Sesión sin abilities: la home no oculta nada por permiso (ver regla).
     }

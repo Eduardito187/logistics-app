@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'municipality_slot.dart';
-import 'meta_sealed.dart';
+import 'list_meta.dart';
 
 part 'get_channels_promises_delivery_response.g.dart';
 
@@ -18,7 +18,7 @@ class GetChannelsPromisesDeliveryResponse {
   ) => _$GetChannelsPromisesDeliveryResponseFromJson(json);
 
   final List<MunicipalitySlot> data;
-  final MetaSealed? meta;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() =>
       _$GetChannelsPromisesDeliveryResponseToJson(this);

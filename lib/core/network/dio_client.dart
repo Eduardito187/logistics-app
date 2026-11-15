@@ -203,6 +203,13 @@ final dioProvider = Provider<Dio>((ref) {
   // socket entre escaneos y el próximo request pagaba TCP+TLS de nuevo.
   dio.httpClientAdapter = createApiHttpClientAdapter();
 
+  // Las respuestas se decodifican en ESTE hilo. Por defecto Dio manda a un
+  // hilo secundario (isolate) las de más de 50 KB —una lista de 50 pedidos—
+  // y en algunos arranques ese hilo no respondía: la lista quedaba cargando
+  // para siempre (se veía vacía) hasta cerrar y abrir la app. Decodificar un
+  // JSON de ese tamaño acá toma pocos milisegundos.
+  dio.transformer = FusedTransformer(contentLengthIsolateThreshold: -1);
+
   dio.interceptors.add(_AuthInterceptor(ref, dio));
   // Omite del cuerpo los campos opcionales en `null` (el cliente generado los
   // incluye siempre): varias validaciones del backend son `sometimes|string`

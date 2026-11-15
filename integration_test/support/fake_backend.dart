@@ -399,15 +399,16 @@ class FakeBackend {
   NodeReceptionView? nodeReception() {
     final opened = openedReception;
     if (opened == null) return null;
-    final expected = opened.expectedUnitIds;
+    // Los campos del pedido de apertura ahora son opcionales en el contrato.
+    final expected = opened.expectedUnitIds ?? const <String>[];
     final received = receivedUnits.toSet().toList();
     final missing = expected.where((u) => !received.contains(u)).toList();
     final surplus = received.where((u) => !expected.contains(u)).toList();
     return NodeReceptionView(
       id: 'reception-1',
       shipmentId: opened.shipmentId,
-      originNodeId: opened.originNodeId,
-      destinationNodeId: opened.destinationNodeId,
+      originNodeId: opened.originNodeId ?? '',
+      destinationNodeId: opened.destinationNodeId ?? '',
       corridor: NodeReceptionViewCorridor.cdToStore,
       status: reconciled
           ? NodeReceptionViewStatus.reconciled
@@ -467,7 +468,6 @@ class FakeBackend {
         qrContent: '{"id":"LBL-0000000$i"}',
         zpl: '^XA^FDLBL-0000000$i^FS^XZ',
         emittedAt: 1700000000,
-        revoked: false,
       ),
   ];
 

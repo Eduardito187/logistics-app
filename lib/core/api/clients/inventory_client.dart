@@ -38,14 +38,21 @@ abstract class InventoryClient {
     @Query('owner_party_id') String? ownerPartyId,
   });
 
-  /// List stock lots
+  /// List stock lots.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/integrations/inventory/lots')
   Future<LotCollection> listLots({
-    @Query('limit') int? limit = 100,
-    @Query('offset') int? offset = 0,
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('warehouse_id') String? warehouseId,
     @Query('sku') String? sku,
     @Query('owner_party_id') String? ownerPartyId,
     @Query('fulfillment_mode') FulfillmentMode? fulfillmentMode,
+    @Query('cursor') String? cursor,
   });
 }

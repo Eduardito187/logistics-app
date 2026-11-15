@@ -32,7 +32,17 @@ class OdometerScreen extends ConsumerStatefulWidget {
     this.title = 'Odómetro',
     this.intro,
     this.initialNote,
+    this.closeOnSaved = false,
+    this.routeId,
   });
+
+  /// Salida (ruta) a la que pertenece la lectura; `null` = lectura suelta.
+  final String? routeId;
+
+  /// Cerrar la pantalla apenas se registra la lectura. Para el cierre de ruta
+  /// (odómetro de llegada): es UNA lectura por ruta; dejar el formulario abierto
+  /// permitía registrar otra para la misma ruta ya finalizada.
+  final bool closeOnSaved;
 
   /// Origen de la lectura que viaja al backend (p. ej. `departure`/`manual`).
   final RecordOdometerRequestSource source;
@@ -163,6 +173,7 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
             source: widget.source,
             readAt: DateTime.now(),
             note: note.isEmpty ? null : note,
+            routeId: widget.routeId,
           );
       if (!mounted) return;
       ref.invalidate(vehicleOdometerReadingsProvider);
@@ -172,6 +183,7 @@ class _OdometerScreenState extends ConsumerState<OdometerScreen> {
       _km.clear();
       _note.clear();
       showSuccessSnack(context, 'Lectura de odómetro registrada.');
+      if (widget.closeOnSaved) Navigator.of(context).pop();
     } on ApiException catch (e) {
       if (!mounted) return;
       showErrorSnack(context, e);

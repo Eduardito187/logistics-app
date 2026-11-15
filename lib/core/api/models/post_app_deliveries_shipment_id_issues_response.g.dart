@@ -10,7 +10,7 @@ PostAppDeliveriesShipmentIdIssuesResponse
 _$PostAppDeliveriesShipmentIdIssuesResponseFromJson(
   Map<String, dynamic> json,
 ) => PostAppDeliveriesShipmentIdIssuesResponse(
-  data: Data2.fromJson(json['data'] as Map<String, dynamic>),
+  data: ReportDeliveryIssueData.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostAppDeliveriesShipmentIdIssuesResponseToJson(

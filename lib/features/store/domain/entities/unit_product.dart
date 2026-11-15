@@ -20,6 +20,7 @@ UnitProduct trackingProduct(UnitTracking unit) => UnitProduct(
   imageUrl: unit.productImageUrl,
   pieceIndex: unit.pieceIndex,
   pieceTotal: unit.pieceTotal,
+  labelId: unit.labelId,
 );
 
 /// Producto al que corresponde una unidad física (lo que la tienda recibe o
@@ -32,7 +33,11 @@ class UnitProduct {
     this.imageUrl,
     this.pieceIndex,
     this.pieceTotal,
+    this.labelId,
   });
+
+  /// Código de la etiqueta emitida para este producto (null si no tiene).
+  final String? labelId;
 
   final String? sku;
   final String? name;

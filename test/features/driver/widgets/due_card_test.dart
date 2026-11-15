@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/api/export.dart' hide DueMaintenanceItem;
 import 'package:logistics_app/features/driver/domain/entities/due_maintenance_item.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/due_card.dart';
 import 'package:logistics_app/features/driver/presentation/widgets/urgency_pill.dart';

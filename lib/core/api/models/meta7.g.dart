@@ -7,8 +7,8 @@ part of 'meta7.dart';
 // **************************************************************************
 
 Meta7 _$Meta7FromJson(Map<String, dynamic> json) =>
-    Meta7(message: json['message'] as String?);
+    Meta7(count: (json['count'] as num).toInt());
 
 Map<String, dynamic> _$Meta7ToJson(Meta7 instance) => <String, dynamic>{
-  'message': instance.message,
+  'count': instance.count,
 };

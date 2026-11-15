@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data7.dart';
+import 'get_plan_eta_data.dart';
 
 part 'get_app_plans_plan_id_eta_response.g.dart';
 
@@ -15,7 +15,7 @@ class GetAppPlansPlanIdEtaResponse {
   factory GetAppPlansPlanIdEtaResponse.fromJson(Map<String, Object?> json) =>
       _$GetAppPlansPlanIdEtaResponseFromJson(json);
 
-  final Data7 data;
+  final GetPlanEtaData data;
 
   Map<String, Object?> toJson() => _$GetAppPlansPlanIdEtaResponseToJson(this);
 }

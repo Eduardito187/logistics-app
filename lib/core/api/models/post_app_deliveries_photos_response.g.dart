@@ -9,7 +9,7 @@ part of 'post_app_deliveries_photos_response.dart';
 PostAppDeliveriesPhotosResponse _$PostAppDeliveriesPhotosResponseFromJson(
   Map<String, dynamic> json,
 ) => PostAppDeliveriesPhotosResponse(
-  data: Data.fromJson(json['data'] as Map<String, dynamic>),
+  data: UploadDeliveryPhotoData.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostAppDeliveriesPhotosResponseToJson(

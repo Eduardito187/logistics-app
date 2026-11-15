@@ -4,17 +4,23 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'due_maintenance_item.dart';
+import 'list_meta.dart';
+
 part 'get_app_fleetops_maintenance_due_response.g.dart';
 
 @JsonSerializable()
 class GetAppFleetopsMaintenanceDueResponse {
-  const GetAppFleetopsMaintenanceDueResponse({required this.data});
+  const GetAppFleetopsMaintenanceDueResponse({required this.data, this.meta});
 
   factory GetAppFleetopsMaintenanceDueResponse.fromJson(
     Map<String, Object?> json,
   ) => _$GetAppFleetopsMaintenanceDueResponseFromJson(json);
 
-  final List<dynamic> data;
+  final List<DueMaintenanceItem> data;
+
+  /// Present only when pagination parameters are sent.
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() =>
       _$GetAppFleetopsMaintenanceDueResponseToJson(this);

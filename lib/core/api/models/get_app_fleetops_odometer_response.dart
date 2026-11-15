@@ -5,17 +5,19 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'odometer_reading.dart';
+import 'list_meta.dart';
 
 part 'get_app_fleetops_odometer_response.g.dart';
 
 @JsonSerializable()
 class GetAppFleetopsOdometerResponse {
-  const GetAppFleetopsOdometerResponse({required this.data});
+  const GetAppFleetopsOdometerResponse({required this.data, this.meta});
 
   factory GetAppFleetopsOdometerResponse.fromJson(Map<String, Object?> json) =>
       _$GetAppFleetopsOdometerResponseFromJson(json);
 
   final List<OdometerReading> data;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$GetAppFleetopsOdometerResponseToJson(this);
 }

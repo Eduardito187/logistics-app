@@ -26,7 +26,7 @@ class GeoScanBase {
   @JsonKey(name: 'shipment_id')
   final String shipmentId;
 
-  /// Bulto escaneado
+  /// Producto escaneado
   @JsonKey(name: 'unit_id')
   final String unitId;
   final double lat;

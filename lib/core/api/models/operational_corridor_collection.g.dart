@@ -12,7 +12,7 @@ OperationalCorridorCollection _$OperationalCorridorCollectionFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => OperationalCorridor.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta14.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: Meta8.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$OperationalCorridorCollectionToJson(

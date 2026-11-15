@@ -96,7 +96,7 @@ void main() {
       controller.onSession(_driver);
       controller.onSession(_store);
       expect(service.calls, ['set', 'set']);
-      expect(service.published.first.route, '/store/reception');
+      expect(service.published.first.route, '/store/pickup');
     });
 
     test('acceso tocado con sesión → navega', () {
@@ -114,11 +114,11 @@ void main() {
 
     test('acceso sin sesión queda pendiente hasta el login', () {
       controller.onSession(null);
-      controller.onLaunch('/store/reception');
+      controller.onLaunch('/store/pickup');
       expect(navigated, isEmpty);
-      expect(controller.pendingRoute, '/store/reception');
+      expect(controller.pendingRoute, '/store/pickup');
       controller.onSession(_store);
-      expect(navigated, ['/store/reception']);
+      expect(navigated, ['/store/pickup']);
       expect(controller.pendingRoute, isNull);
     });
 

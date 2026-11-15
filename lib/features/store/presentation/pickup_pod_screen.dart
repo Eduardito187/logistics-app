@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,16 +8,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/models/shipment.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/offline/offline_queue.dart';
 import '../../../core/offline/submit_feedback.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/sharing/share_service.dart';
 import '../../../core/widgets/app_snack.dart';
+// Mismo proceso que la entrega del chofer (pedido del dueño): se reutilizan su
+// pad de firma, su almacén temporal de la firma y sus `kind` de evidencia.
+import '../../driver/data/datasources/signature_file_store.dart';
+import '../../driver/presentation/pod_screen.dart'
+    show
+        kDigitalSignatureConfirmation,
+        kDocumentEvidenceKind,
+        kSignatureEvidenceKind;
+import '../../driver/presentation/signature_pad_screen.dart';
 import '../domain/usecases/enqueue_delivery_photo.dart';
 import '../domain/usecases/record_pod.dart';
 import '../domain/usecases/upload_pod_photo.dart';
 import 'controllers/store_controllers.dart';
+import 'controllers/store_shipments_notifier.dart';
 import 'unit_scan.dart';
 import 'widgets/bottom_action_bar.dart';
 import 'widgets/pickup_pod_cards.dart';
@@ -26,13 +38,25 @@ export 'widgets/pickup_pod_cards.dart' show kPhotoPreviewCacheWidth;
 /// Cuánto espera el POD, como MÁXIMO, a que termine de subir la foto de
 /// evidencia para mandar su `photo_path` real. Mismo criterio que
 /// [kSubmitWaitBudget] de la cola offline: con buena señal la subida ya
-/// terminó (la foto se saca antes de escanear) y el POD sale encadenado; si
+/// terminó (la foto se saca antes de registrar) y el POD sale encadenado; si
 /// no, sale igual sin la foto (regla 4: la entrega nunca espera a la red).
 const Duration kPodPhotoAttachBudget = Duration(milliseconds: 1500);
 
-/// Prueba de entrega en mostrador (recojo en tienda): se confirma al cliente,
-/// se toma una foto como evidencia y se registra el POD por cada producto
-/// retirado.
+/// Captura de la firma del cliente (inyectable: en tests no se abre el pad).
+typedef SignatureCapture = Future<Uint8List?> Function(BuildContext context);
+
+/// Por defecto, el mismo pad de firma a pantalla completa del chofer.
+final pickupSignatureCaptureProvider = Provider<SignatureCapture>(
+  (ref) => captureCustomerSignature,
+);
+
+/// Entrega de un pedido que el CLIENTE retira en la tienda (recojo en tienda).
+///
+/// Mismo proceso que la entrega del chofer: se escanean los productos del
+/// pedido, el cliente firma en pantalla, se toma la foto de la entrega
+/// (obligatoria) y, si se quiere, la del documento (opcional). Recién al tocar
+/// "Registrar entrega" se registra la prueba de entrega de cada producto y el
+/// pedido pasa a ENTREGADO. Escanear solo NO entrega nada.
 class PickupPodScreen extends ConsumerStatefulWidget {
   const PickupPodScreen({super.key, required this.shipment});
 
@@ -43,8 +67,13 @@ class PickupPodScreen extends ConsumerStatefulWidget {
 }
 
 class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
-  final TextEditingController _confirmationController = TextEditingController();
+  /// PNG de la firma del cliente.
+  Uint8List? _signature;
+
   File? _photoFile;
+
+  /// Foto del documento (carnet) del cliente — evidencia OPCIONAL.
+  File? _document;
 
   /// Referencia durable de la evidencia (`data.path` que devolvió el backend):
   /// es lo que el POD manda en `photo_path`. `null` mientras la subida no
@@ -61,12 +90,12 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
 
   bool _busy = false;
 
-  /// Si hay confirmación escrita. Se cachea para reconstruir solo cuando
-  /// cambia (no en cada tecla, que redibujaría la foto y la lista de productos).
-  bool _hasConfirmation = false;
+  /// Productos escaneados en esta pantalla, todavía SIN registrar: se entregan
+  /// todos juntos al tocar "Registrar entrega".
+  final Set<String> _scanned = <String>{};
 
   /// Productos ya entregados: los que el servidor confirmó antes de abrir la
-  /// pantalla (ver [initState]) más los de esta sesión. No es solo memoria: así
+  /// pantalla (ver [initState]) más los registrados acá. No es solo memoria: así
   /// un reinicio de la app a mitad del retiro no permite entregar dos veces el
   /// mismo producto.
   final Set<String> _delivered = <String>{};
@@ -95,23 +124,33 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
   @override
   void dispose() {
     _deliveredSub?.close();
-    _confirmationController.dispose();
     _evictPreview(_photoFile);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Solo importa si los productos ya cargaron, no su contenido.
-    final unitsLoaded = ref.watch(
-      shipmentUnitsProvider(_shipment.id).select((a) => a.hasValue),
-    );
+    final units = ref.watch(shipmentUnitsProvider(_shipment.id)).value;
+    // Lo que todavía falta escanear: ni entregado ni escaneado.
+    final missing = units
+        ?.where(
+          (u) => !_delivered.contains(u.unitId) && !_scanned.contains(u.unitId),
+        )
+        .length;
+    final allDelivered =
+        units != null &&
+        units.isNotEmpty &&
+        _scanned.isEmpty &&
+        units.every((u) => _delivered.contains(u.unitId));
+    // Se registra con TODOS los productos pendientes escaneados + firma + foto.
+    final scanComplete = missing == 0 && _scanned.isNotEmpty;
+    final ready = scanComplete && _signature != null && _photoFile != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Recojo en tienda')),
       body: ResponsiveBody(
         child: Column(
           children: [
-            // Slivers: la lista de productos (paso 3) es perezosa; con 100+
+            // Slivers: la lista de productos (paso 4) es perezosa; con 100+
             // productos con foto solo se arman las filas visibles.
             Expanded(
               child: CustomScrollView(
@@ -124,10 +163,10 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                           children: [
                             PickupCustomerCard(shipment: _shipment),
                             const SizedBox(height: 16),
-                            PickupConfirmationCard(
-                              controller: _confirmationController,
-                              onChanged: _onConfirmationChanged,
-                              onScan: _scanConfirmation,
+                            PickupSignatureCard(
+                              signature: _signature,
+                              busy: _busy,
+                              onSign: _sign,
                             ),
                             const SizedBox(height: 16),
                             PickupPhotoCard(
@@ -137,11 +176,17 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                               onShare: _photoFile == null ? null : _sharePhoto,
                             ),
                             const SizedBox(height: 16),
+                            PickupDocumentCard(
+                              document: _document,
+                              busy: _busy,
+                              onTakeDocument: _takeDocument,
+                            ),
+                            const SizedBox(height: 16),
                           ],
                         ),
                         PickupUnitsCard(
                           shipmentId: _shipment.id,
-                          hasConfirmation: _hasConfirmation,
+                          scanned: _scanned,
                           delivered: _delivered,
                         ),
                       ],
@@ -150,21 +195,51 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
                 ],
               ),
             ),
-            // Escaneo seguido de productos: botón fijo al pie, a mano del pulgar;
-            // los avisos flotan encima (kBottomActionClearance).
+            // Un solo botón fijo al pie, a mano del pulgar, que va cambiando con
+            // el paso: primero escanear; con todo escaneado, registrar. Los
+            // avisos flotan encima (kBottomActionClearance).
             BottomActionBar(
-              child: FilledButton.icon(
-                onPressed: !_hasConfirmation || _busy || !unitsLoaded
-                    ? null
-                    : _scanAndDeliver,
-                // _busy solo cubre la ráfaga de escaneo: barrido mientras la
-                // cámara está abierta.
-                icon: AnimatedAppIcon(
-                  AppIcon.scan,
-                  state: _busy ? AppIconState.loading : AppIconState.idle,
-                  excludeFromSemantics: true,
-                ),
-                label: const Text('Escanear y entregar producto'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (scanComplete && !ready)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        _missingStepsText(),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  if (allDelivered)
+                    const FilledButton(
+                      onPressed: null,
+                      child: Text('Pedido entregado'),
+                    )
+                  else if (scanComplete)
+                    FilledButton.icon(
+                      onPressed: ready && !_busy ? _register : null,
+                      icon: AnimatedAppIcon(
+                        AppIcon.success,
+                        state: _busy ? AppIconState.loading : AppIconState.idle,
+                        excludeFromSemantics: true,
+                      ),
+                      label: const Text('Registrar entrega'),
+                    )
+                  else
+                    FilledButton.icon(
+                      onPressed: _busy || units == null ? null : _scanProducts,
+                      // _busy cubre la ráfaga de escaneo: barrido mientras la
+                      // cámara está abierta.
+                      icon: AnimatedAppIcon(
+                        AppIcon.scan,
+                        state: _busy ? AppIconState.loading : AppIconState.idle,
+                        excludeFromSemantics: true,
+                      ),
+                      label: const Text('Escanear productos'),
+                    ),
+                ],
               ),
             ),
           ],
@@ -173,33 +248,35 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     );
   }
 
+  /// Qué falta para poder registrar, con los productos ya escaneados.
+  String _missingStepsText() {
+    final missing = [
+      if (_signature == null) 'la firma del cliente',
+      if (_photoFile == null) 'la foto de entrega',
+    ];
+    return 'Falta ${missing.join(' y ')}.';
+  }
+
   /// Suma lo que el servidor ya tiene entregado a [_delivered]. Solo agrega:
-  /// nunca borra un producto entregado en esta sesión (que todavía puede estar
+  /// nunca borra un producto registrado en esta sesión (que todavía puede estar
   /// en la cola offline y por eso el servidor aún no lo reporta).
   void _seedDelivered(Set<String>? confirmed) {
     if (confirmed == null || !mounted) return;
     final missing = confirmed.difference(_delivered);
     if (missing.isEmpty) return;
-    setState(() => _delivered.addAll(missing));
+    setState(() {
+      _delivered.addAll(missing);
+      // Lo que el servidor ya tiene entregado no se vuelve a registrar.
+      _scanned.removeAll(missing);
+    });
   }
 
-  void _onConfirmationChanged(String _) {
-    final has = _confirmationController.text.trim().isNotEmpty;
-    if (has != _hasConfirmation) setState(() => _hasConfirmation = has);
+  Future<void> _sign() async {
+    final png = await ref.read(pickupSignatureCaptureProvider)(context);
+    if (png != null && mounted) setState(() => _signature = png);
   }
 
-  Future<void> _scanConfirmation() async {
-    final qr = await scanCode(
-      context,
-      title: 'QR del cliente',
-      helper: 'Apunta al código del cliente que retira.',
-    );
-    if (qr == null || !mounted) return;
-    _confirmationController.text = qr;
-    _onConfirmationChanged(qr);
-  }
-
-  /// Comparte la foto de evidencia/documento por el menú nativo (WhatsApp, etc.).
+  /// Comparte la foto de evidencia por el menú nativo (WhatsApp, etc.).
   Future<void> _sharePhoto() async {
     final file = _photoFile;
     if (file == null || _busy) return;
@@ -225,6 +302,15 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     // La evidencia se encadena en segundo plano: la pantalla no espera ni a la
     // subida ni a la cola (regla 4). Ver [_attachPhoto].
     _photoUpload = _attachPhoto(generation, picked.path);
+  }
+
+  Future<void> _takeDocument() async {
+    final picked = await ref.read(photoPickerProvider)(
+      maxWidth: kEvidencePhotoMaxWidth,
+      imageQuality: kEvidencePhotoQuality,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _document = File(picked.path));
   }
 
   /// Encadena la foto al POD y nunca lanza.
@@ -290,12 +376,11 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     );
   }
 
-  /// Escaneo CONTINUO (tras la confirmación del cliente): la cámara queda
-  /// abierta y cada producto se entrega al leerlo, con aviso sobre la cámara.
-  Future<void> _scanAndDeliver() async {
-    // El GPS se calienta junto con la cámara: el POD no lo espera aparte.
+  /// Escaneo CONTINUO de los productos del pedido: la cámara queda abierta y
+  /// cada producto queda "Escaneado" al leerlo. NO registra la entrega.
+  Future<void> _scanProducts() async {
+    // El GPS se calienta junto con la cámara: el registro no lo espera aparte.
     warmUpLocation(ref);
-    final before = _delivered.length;
     setState(() => _busy = true);
     try {
       await scanContinuous(
@@ -303,25 +388,15 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
         title: 'Escanear producto',
         helper: 'Apunta al QR de la etiqueta del producto.',
         formats: kLabelScanFormats,
-        onCode: _deliverCode,
+        onCode: _scanCode,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-    if (!mounted) return;
-    final delivered = _delivered.length - before;
-    if (delivered <= 0) return;
-    showSuccessSnack(
-      context,
-      delivered == 1
-          ? '1 producto entregado.'
-          : '$delivered productos entregados.',
-      bottomClearance: kBottomActionClearance,
-    );
   }
 
-  /// Procesa un código de la ráfaga de entrega.
-  Future<ScanFeedback> _deliverCode(String qr) async {
+  /// Procesa un código de la ráfaga de escaneo.
+  Future<ScanFeedback> _scanCode(String qr) async {
     final scan = await resolveUnitScan(ref, qr);
     if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
     // Validación de etiqueta en el cliente (offline): firma inválida o clave
@@ -330,49 +405,130 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
       return ScanFeedback.error(unitScanShortError(scan));
     }
 
-    // Solo productos de este envío y una sola vez: si no, se entregaría al cliente
-    // algo ajeno o se encolaría un POD duplicado.
+    // Solo productos de este pedido y una sola vez: si no, se entregaría al
+    // cliente algo ajeno o se registraría un POD duplicado.
     final units = ref.read(shipmentUnitsProvider(_shipment.id)).value;
     final unitId = scan.unitId;
     if (units != null && !units.any((u) => u.unitId == unitId)) {
       return const ScanFeedback.error('No es de este pedido');
     }
-    // Ya entregado: en esta sesión o según el servidor (sembrado al abrir).
-    // Volver a registrarlo encolaría un POD duplicado del mismo producto.
     if (_delivered.contains(unitId)) {
       return const ScanFeedback.error('Este producto ya fue entregado');
     }
+    if (_scanned.contains(unitId)) {
+      return const ScanFeedback.error('Ese producto ya lo escaneaste');
+    }
 
-    // Feedback inmediato: el producto se marca entregado apenas se lee; el POD
-    // se guarda local y sube por la cola.
-    setState(() => _delivered.add(unitId));
-    final photoPath = await _photoPathForPod();
-    if (!mounted) return const ScanFeedback.error('Pantalla cerrada');
-    final outcome = await ref
-        .read(recordPodProvider)
-        .call(
+    setState(() => _scanned.add(unitId));
+    final pending = units?.where((u) => !_delivered.contains(u.unitId)).length;
+    return ScanFeedback.ok(
+      pending == null
+          ? 'Producto escaneado'
+          : 'Producto escaneado (${_scanned.length}/$pending)',
+    );
+  }
+
+  /// Snapshot del cliente para LIGAR la evidencia (firma/documento) a su
+  /// identidad (anti-fraude), igual que en la entrega del chofer.
+  Map<String, Object?> _clientSnapshot(GpsFix? fix) => {
+    'customer_name': _shipment.customerName,
+    if (_shipment.customerPhone != null)
+      'customer_phone': _shipment.customerPhone,
+    if (_shipment.customerDocumentId != null)
+      'customer_document_id': _shipment.customerDocumentId,
+    if (fix != null) 'lat': fix.lat,
+    if (fix != null) 'lng': fix.lng,
+    'captured_at': DateTime.now().toUtc().toIso8601String(),
+  };
+
+  /// Registra la entrega: evidencia (documento y firma) a su cola y una prueba
+  /// de entrega por CADA producto escaneado. Offline-first: lo encolado cuenta
+  /// como registrado.
+  Future<void> _register() async {
+    setState(() => _busy = true);
+    try {
+      final fix = await prefetchFix(ref);
+      if (!mounted) return;
+      final snapshot = _clientSnapshot(fix);
+      final enqueue = ref.read(enqueueDeliveryPhotoProvider);
+      final document = _document;
+      if (document != null) {
+        try {
+          await enqueue(
+            shipmentId: _shipment.id,
+            filePath: document.path,
+            kind: kDocumentEvidenceKind,
+            clientSnapshot: snapshot,
+          );
+        } on Object {
+          // El documento es opcional: sin disco para guardarlo, la entrega
+          // sigue.
+        }
+      }
+      final signature = _signature;
+      if (signature != null) {
+        final store = ref.read(signatureFileStoreProvider);
+        try {
+          final path = await store.save(signature);
+          await enqueue(
+            shipmentId: _shipment.id,
+            filePath: path,
+            kind: kSignatureEvidenceKind,
+            clientSnapshot: snapshot,
+          );
+          // La cola ya copió el archivo a su directorio persistente.
+          await store.discard(path);
+        } on Object {
+          // Sin disco para la imagen no se frena la entrega: el POD viaja
+          // igual con el marcador FIRMA_DIGITAL.
+        }
+      }
+      final photoPath = await _photoPathForPod();
+      if (!mounted) return;
+
+      final recordPod = ref.read(recordPodProvider);
+      var failed = false;
+      var queued = false;
+      for (final unitId in _scanned.toList(growable: false)) {
+        final outcome = await recordPod(
           shipmentId: _shipment.id,
           unitId: unitId,
-          confirmation: _confirmationController.text.trim(),
+          confirmation: kDigitalSignatureConfirmation,
           customerName: _shipment.customerName,
           photoPath: photoPath,
-          location: prefetchFix(ref),
+          location: Future.value(fix),
         );
-    if (outcome == SubmitOutcome.failed) {
-      // Rechazado por el backend: no queda como entregado. Salvo que el
-      // servidor lo tenga confirmado (llegó mientras se registraba): ahí sigue
-      // entregado, para no habilitar una segunda entrega del mismo producto.
-      final confirmed = ref.read(deliveredUnitIdsProvider(_shipment.id)).value;
-      if (mounted && !(confirmed?.contains(unitId) ?? false)) {
-        setState(() => _delivered.remove(unitId));
+        if (!mounted) return;
+        if (outcome == SubmitOutcome.failed) {
+          // Rechazado por el backend: ese producto sigue "escaneado" para
+          // reintentar; los que sí entraron ya no se repiten.
+          failed = true;
+          continue;
+        }
+        if (outcome == SubmitOutcome.queued) queued = true;
+        setState(() {
+          _scanned.remove(unitId);
+          _delivered.add(unitId);
+        });
       }
-      return ScanFeedback.error(submitOutcomeMessage(outcome));
+      final combined = failed
+          ? SubmitOutcome.failed
+          : queued
+          ? SubmitOutcome.queued
+          : SubmitOutcome.sent;
+      showSubmitOutcome(
+        context,
+        combined,
+        bottomClearance: kBottomActionClearance,
+      );
+      if (combined == SubmitOutcome.failed) return;
+      // Entregado: la bandeja de recojos se refresca (el pedido cambió de
+      // estado) y se vuelve a ella.
+      ref.invalidate(storeShipmentsPagedProvider);
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) navigator.pop();
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    final total = units?.length;
-    return ScanFeedback.ok(
-      total == null
-          ? 'Producto entregado'
-          : 'Producto entregado (${_delivered.length}/$total)',
-    );
   }
 }

@@ -85,6 +85,7 @@ class PushService {
     required void Function(String token) onToken,
     required void Function(String? payload) onTap,
     void Function()? onUnregistered,
+    void Function()? onForeground,
   }) async {
     if (!await _initFirebase()) return false;
 
@@ -107,9 +108,10 @@ class PushService {
       ..add(_messaging.onUnregistered.listen((_) => onUnregistered?.call()))
       // Con la app abierta FCM no muestra nada: se muestra con una local.
       ..add(
-        (_foregroundMessages ?? FirebaseMessaging.onMessage).listen(
-          (m) => unawaited(showMessage(messageFrom(m))),
-        ),
+        (_foregroundMessages ?? FirebaseMessaging.onMessage).listen((m) {
+          onForeground?.call();
+          unawaited(showMessage(messageFrom(m)));
+        }),
       )
       // Notificación del sistema tocada con la app en segundo plano.
       ..add(

@@ -8,11 +8,12 @@ part 'meta3.g.dart';
 
 @JsonSerializable()
 class Meta3 {
-  const Meta3({this.message});
+  const Meta3({this.date, this.count});
 
   factory Meta3.fromJson(Map<String, Object?> json) => _$Meta3FromJson(json);
 
-  final String? message;
+  final DateTime? date;
+  final int? count;
 
   Map<String, Object?> toJson() => _$Meta3ToJson(this);
 }

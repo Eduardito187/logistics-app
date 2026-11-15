@@ -7,8 +7,12 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../domain/route_km_today.dart';
+import '../domain/route_progress.dart';
 import '../domain/usecases/assemble_daily_route.dart';
 import 'controllers/driver_controllers.dart';
+import 'controllers/fleet_ops_controllers.dart';
+import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
 import 'odometer_screen.dart';
 import 'widgets/route_list.dart';
@@ -74,34 +78,19 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
             // Cuando ya no quedan paradas pendientes, se ofrece cerrar la ruta
             // tomando el odómetro de LLEGADA al centro de distribución (el
             // odómetro solo se pide al salir —en el checklist— y al llegar).
-            final allDone = data.stops.every(
-              (s) => s.status != DriverRouteStopStatus.pending,
-            );
+            // Item por item con el estado efectivo (incluye lo resuelto en este
+            // teléfono), igual que el resumen y la entrega en curso.
+            final settled = ref.watch(locallySettledStopsProvider);
+            final allDone = RouteProgress.of(data, settled).isComplete;
             return Column(
               children: [
                 RouteSummary(route: data),
                 Expanded(
                   child: _showMap
-                      ? RouteMap(route: data)
+                      ? RouteMap(route: data, settled: settled)
                       : RouteList(route: data),
                 ),
-                if (allDone)
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                      child: SizedBox(
-                        height: 56,
-                        child: FilledButton.icon(
-                          onPressed: _finishRoute,
-                          icon: const AnimatedAppIcon(AppIcon.speed),
-                          label: const Text(
-                            'Finalizar ruta (odómetro de llegada)',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                if (allDone) _CloseRouteButton(onPressed: _finishRoute),
               ],
             );
           },
@@ -113,15 +102,20 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
   /// Abre la lectura de odómetro de LLEGADA al centro de distribución (cierre de
   /// la ruta), con `source: arrival` (simétrico de la salida del checklist).
   void _finishRoute() {
+    // La llegada se liga a ESTA salida (ruta): si después sale otra vez, esa
+    // otra salida tiene su propio cierre.
+    final routeId = ref.read(driverRouteProvider).value?.id;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const OdometerScreen(
+        builder: (_) => OdometerScreen(
           source: RecordOdometerRequestSource.arrival,
           title: 'Odómetro de llegada',
           intro:
               'Registrá los kilómetros al llegar al centro de distribución, '
               'para cerrar la ruta del día.',
           initialNote: 'Llegada al CD',
+          closeOnSaved: true,
+          routeId: routeId,
         ),
       ),
     );
@@ -157,5 +151,46 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
     } finally {
       if (mounted) setState(() => _assembling = false);
     }
+  }
+}
+
+/// "Cerrar ruta del día" (odómetro de llegada). Solo se monta con todas las
+/// paradas atendidas, así las lecturas de hoy se consultan recién ahí (una sola
+/// consulta, la misma de "Mi día"). Se OCULTA cuando la salida en curso ya tiene
+/// su lectura de llegada: antes seguía visible y dejaba registrar el odómetro
+/// otra vez para la misma ruta ya finalizada.
+class _CloseRouteButton extends ConsumerWidget {
+  const _CloseRouteButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final readings = ref.watch(todayOdometerReadingsProvider);
+    // Mientras carga no se ofrece (evita un doble registro por un toque rápido).
+    // Si la consulta falla (sin señal) SÍ se ofrece: cerrar la ruta no se traba.
+    if (readings.isLoading && !readings.hasValue) {
+      return const SizedBox.shrink();
+    }
+    final list = readings.value;
+    final routeId = ref.watch(driverRouteProvider.select((r) => r.value?.id));
+    if (list != null &&
+        arrivalRecordedForCurrentTrip(list, DateTime.now(), routeId: routeId)) {
+      return const SizedBox.shrink();
+    }
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: SizedBox(
+          height: 56,
+          child: FilledButton.icon(
+            onPressed: onPressed,
+            icon: const AnimatedAppIcon(AppIcon.speed),
+            label: const Text('Cerrar ruta del día'),
+          ),
+        ),
+      ),
+    );
   }
 }

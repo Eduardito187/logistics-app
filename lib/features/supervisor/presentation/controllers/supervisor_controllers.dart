@@ -1,15 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/plan.dart';
-import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/performance/cache_for.dart';
 import '../../domain/dashboard_metrics.dart';
 import '../../domain/usecases/get_dashboard_metrics.dart';
-import '../../domain/usecases/get_live_fleet.dart';
 import '../../domain/usecases/get_plan.dart';
 import '../../domain/usecases/get_plan_eta.dart';
 import '../../domain/usecases/get_vehicle_plates.dart';
@@ -23,6 +21,7 @@ import 'plans_date_notifier.dart';
 // viven en su propio archivo; se reexportan para no cambiar los imports de las
 // pantallas ni de los tests.
 export 'alerts_filter_notifier.dart';
+export 'fleet_live_notifier.dart';
 export 'plans_date_notifier.dart';
 
 /// Lecturas (Riverpod) del supervisor. Solo dependen de casos de uso; nunca del
@@ -34,11 +33,6 @@ void _cachePerSession(Ref ref) {
   ref.cacheFor(CacheTtl.short);
   ref.watch(sessionProvider.select((s) => (s?.token, s?.userName)));
 }
-
-/// Posiciones en vivo de la flota (telemetría).
-final fleetLiveProvider = FutureProvider.autoDispose<List<VehicleLive>>(
-  (ref) => ref.watch(getLiveFleetProvider)(),
-);
 
 /// Planes del día seleccionado (uno por camión).
 ///
@@ -97,10 +91,8 @@ final planDetailProvider = FutureProvider.autoDispose.family<Plan, String>((
 });
 
 /// ETA por parada de un plan (secuencia + hora estimada por envío).
-final planEtaProvider = FutureProvider.autoDispose.family<Data7, String>((
-  ref,
-  planId,
-) {
-  ref.cacheFor(CacheTtl.short);
-  return ref.watch(getPlanEtaProvider)(planId);
-});
+final planEtaProvider = FutureProvider.autoDispose
+    .family<GetPlanEtaData, String>((ref, planId) {
+      ref.cacheFor(CacheTtl.short);
+      return ref.watch(getPlanEtaProvider)(planId);
+    });

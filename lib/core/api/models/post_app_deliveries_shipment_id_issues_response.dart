@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data2.dart';
+import 'report_delivery_issue_data.dart';
 
 part 'post_app_deliveries_shipment_id_issues_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostAppDeliveriesShipmentIdIssuesResponse {
     Map<String, Object?> json,
   ) => _$PostAppDeliveriesShipmentIdIssuesResponseFromJson(json);
 
-  final Data2 data;
+  final ReportDeliveryIssueData data;
 
   Map<String, Object?> toJson() =>
       _$PostAppDeliveriesShipmentIdIssuesResponseToJson(this);

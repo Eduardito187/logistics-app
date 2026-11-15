@@ -11,7 +11,7 @@ OutboxMessagePage _$OutboxMessagePageFromJson(Map<String, dynamic> json) =>
       data: (json['data'] as List<dynamic>)
           .map((e) => OutboxMessage.fromJson(e as Map<String, dynamic>))
           .toList(),
-      meta: Meta15.fromJson(json['meta'] as Map<String, dynamic>),
+      meta: Meta9.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$OutboxMessagePageToJson(OutboxMessagePage instance) =>

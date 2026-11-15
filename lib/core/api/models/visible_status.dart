@@ -4,21 +4,29 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-/// Estado visible del envío (vocabulario propio del contexto de seguimiento)
+/// Estado visible del pedido de cara al cliente (ciclo de vida del seguimiento). Flujo: PENDING → PROCESSING → IN_PROGRESS → LOADED → ON_THE_WAY → DELIVERED; con CANCELLED, RESCHEDULED (reprogramada), FAILED (intento fallido) y RETURNED (devuelta).
 @JsonEnum()
 enum VisibleStatus {
-  @JsonValue('REGISTERED')
-  registered('REGISTERED'),
-  @JsonValue('PREPARED')
-  prepared('PREPARED'),
+  @JsonValue('PENDING')
+  pending('PENDING'),
+  @JsonValue('PROCESSING')
+  processing('PROCESSING'),
+  @JsonValue('IN_PROGRESS')
+  inProgress('IN_PROGRESS'),
+  @JsonValue('LOADED')
+  loaded('LOADED'),
   @JsonValue('ON_THE_WAY')
   onTheWay('ON_THE_WAY'),
-  @JsonValue('ARRIVING')
-  arriving('ARRIVING'),
   @JsonValue('DELIVERED')
   delivered('DELIVERED'),
   @JsonValue('FAILED')
   failed('FAILED'),
+  @JsonValue('RESCHEDULED')
+  rescheduled('RESCHEDULED'),
+  @JsonValue('CANCELLED')
+  cancelled('CANCELLED'),
+  @JsonValue('RETURNED')
+  returned('RETURNED'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

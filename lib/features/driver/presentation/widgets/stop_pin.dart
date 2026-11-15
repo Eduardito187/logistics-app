@@ -139,12 +139,17 @@ class _TeardropPainter extends CustomPainter {
 /// Marcador de una parada en el mapa: pin teardrop con el número de secuencia,
 /// coloreado según el estado de la parada ([stopColor]).
 class StopPin extends StatelessWidget {
-  const StopPin({super.key, required this.stop, this.size = 40});
+  const StopPin({super.key, required this.stop, this.size = 40, this.status});
 
   final DriverRouteStop stop;
 
   /// Diámetro del círculo del pin en dp.
   final double size;
+
+  /// Estado con el que colorear el pin. Normalmente el estado EFECTIVO (backend
+  /// + lo resuelto en este teléfono), para que una parada entregada sin señal se
+  /// vea verde en el mapa. Si no se pasa, cae al estado crudo de la parada.
+  final DriverRouteStopStatus? status;
 
   /// Alto total del pin (para dimensionar el `Marker`).
   static double heightFor(double size) => TeardropPin.heightFor(size);
@@ -152,7 +157,7 @@ class StopPin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TeardropPin(
-      color: stopColor(stop.status),
+      color: stopColor(status ?? stop.status),
       size: size,
       child: Text(
         '${stop.sequence}',

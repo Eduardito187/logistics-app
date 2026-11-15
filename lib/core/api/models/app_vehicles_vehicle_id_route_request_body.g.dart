@@ -10,8 +10,8 @@ AppVehiclesVehicleIdRouteRequestBody
 _$AppVehiclesVehicleIdRouteRequestBodyFromJson(Map<String, dynamic> json) =>
     AppVehiclesVehicleIdRouteRequestBody(
       routeDate: DateTime.parse(json['route_date'] as String),
-      stops: (json['stops'] as List<dynamic>)
-          .map((e) => Stops.fromJson(e as Map<String, dynamic>))
+      stops: (json['stops'] as List<dynamic>?)
+          ?.map((e) => Stops.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

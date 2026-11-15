@@ -5,12 +5,20 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
+import '../models/accepted_envelope.dart';
+import '../models/app_delivery_calendar_blocked_request_body.dart';
+import '../models/app_delivery_calendar_blocked_request_body2.dart';
+import '../models/app_delivery_calendar_open_request_body.dart';
 import '../models/capacity_amount_request.dart';
 import '../models/capacity_bucket_envelope.dart';
 import '../models/capacity_calendar_envelope.dart';
 import '../models/capacity_unit.dart';
 import '../models/define_capacity_request.dart';
 import '../models/effective_capacity_envelope.dart';
+import '../models/get_app_delivery_calendar_options_response.dart';
+import '../models/get_app_delivery_calendar_response.dart';
+import '../models/open_delivery_slots_with_defaults_request.dart';
+import '../models/post_app_delivery_calendar_open_default_response.dart';
 
 part 'capacity_client.g.dart';
 
@@ -166,5 +174,50 @@ abstract class CapacityClient {
   @POST('/integrations/capacity/release')
   Future<CapacityBucketEnvelope> integrationsReleaseCapacity({
     @Body() required CapacityAmountRequest body,
+  });
+
+  /// Catalogs needed to activate delivery slots (municipalities, time slots, units, default windows).
+  ///
+  /// Admin y supervisor. Un solo request con los valores que aceptan POST /app/delivery-calendar/open y open-default.
+  @GET('/app/delivery-calendar/options')
+  Future<GetAppDeliveryCalendarOptionsResponse> getDeliveryCalendarOptions();
+
+  /// Enable a date or date range with the default slots of the capacity rules (asynchronous).
+  ///
+  /// Admin y supervisor. Usa las ventanas por defecto de las reglas de cupo. Sin municipality_ids aplica a los municipios del catálogo completo; sin weekdays aplica a los siete días.
+  @POST('/app/delivery-calendar/open-default')
+  Future<PostAppDeliveryCalendarOpenDefaultResponse>
+  openDeliverySlotsWithDefaults({
+    @Body() required OpenDeliverySlotsWithDefaultsRequest body,
+  });
+
+  /// Delivery calendar — days with availability and blocked dates.
+  ///
+  /// Solo admin y supervisor. Mismo calendario de despacho del admin web. Rango máximo 62 días; por defecto 30 días desde hoy.
+  ///
+  /// [municipalityId] - Municipio (coverage). Sin él, el calendario global.
+  @GET('/app/delivery-calendar')
+  Future<GetAppDeliveryCalendarResponse> getDeliveryCalendar({
+    @Query('from') DateTime? from,
+    @Query('to') DateTime? to,
+    @Query('municipality_id') String? municipalityId,
+  });
+
+  /// Block a delivery day (holiday, closure) for a municipality or globally
+  @POST('/app/delivery-calendar/blocked')
+  Future<AcceptedEnvelope> blockDeliveryDay({
+    @Body() required AppDeliveryCalendarBlockedRequestBody body,
+  });
+
+  /// Remove the block of a delivery day
+  @DELETE('/app/delivery-calendar/blocked')
+  Future<AcceptedEnvelope> unblockDeliveryDay({
+    @Body() required AppDeliveryCalendarBlockedRequestBody2 body,
+  });
+
+  /// Activate delivery slots for a date range, weekdays and windows (asynchronous)
+  @POST('/app/delivery-calendar/open')
+  Future<AcceptedEnvelope> openDeliverySlots({
+    @Body() required AppDeliveryCalendarOpenRequestBody body,
   });
 }

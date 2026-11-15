@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta9.dart';
+import 'meta2.dart';
 import 'promise_offer.dart';
 
 part 'promise_offer_collection.g.dart';
@@ -17,7 +17,7 @@ class PromiseOfferCollection {
       _$PromiseOfferCollectionFromJson(json);
 
   final List<PromiseOffer> data;
-  final Meta9 meta;
+  final Meta2 meta;
 
   Map<String, Object?> toJson() => _$PromiseOfferCollectionToJson(this);
 }

@@ -546,9 +546,14 @@ class _PodScreenState extends ConsumerState<PodScreen> {
       final queue = ref.read(offlineQueueProvider);
       final cliente = widget.stop.customerName ?? 'Entrega';
       final outcomes = <SubmitOutcome>[];
+      // Motivo real del PRIMER rechazo del backend (si lo hay), para mostrarlo
+      // en vez del genérico "No se pudo registrar". `onReject` solo corre en un
+      // 4xx permanente dentro del presupuesto de espera.
+      String? rejectDetail;
       for (var i = 0; i < _unitIds.length; i++) {
         outcomes.add(
           await queue.submit(
+            onReject: (error) => rejectDetail ??= error.message,
             kind: 'recordProofOfDelivery',
             payload: ProofOfDeliveryRequest(
               shipmentId: widget.stop.shipmentId,
@@ -581,7 +586,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           ? SubmitOutcome.queued
           : SubmitOutcome.sent;
       if (!mounted) return;
-      showSubmitOutcome(context, combined);
+      showSubmitOutcome(context, combined, failureDetail: rejectDetail);
       if (combined != SubmitOutcome.failed) {
         // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
         // entrega en curso pasa a la siguiente aunque no haya señal).

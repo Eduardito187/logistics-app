@@ -6,10 +6,20 @@ import 'package:json_annotation/json_annotation.dart';
 
 @JsonEnum()
 enum Kind {
-  @JsonValue('pod')
-  pod('pod'),
-  @JsonValue('damage')
-  damage('damage'),
+  @JsonValue('preparation')
+  preparation('preparation'),
+  @JsonValue('load')
+  load('load'),
+  @JsonValue('unload')
+  unload('unload'),
+  @JsonValue('departure')
+  departure('departure'),
+  @JsonValue('arrival')
+  arrival('arrival'),
+  @JsonValue('proof_of_delivery')
+  proofOfDelivery('proof_of_delivery'),
+  @JsonValue('failed')
+  failed('failed'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

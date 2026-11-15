@@ -8,11 +8,21 @@ part 'meta9.g.dart';
 
 @JsonSerializable()
 class Meta9 {
-  const Meta9({this.count});
+  const Meta9({
+    required this.total,
+    required this.page,
+    required this.perPage,
+    required this.lastPage,
+  });
 
   factory Meta9.fromJson(Map<String, Object?> json) => _$Meta9FromJson(json);
 
-  final int? count;
+  final int total;
+  final int page;
+  @JsonKey(name: 'per_page')
+  final int perPage;
+  @JsonKey(name: 'last_page')
+  final int lastPage;
 
   Map<String, Object?> toJson() => _$Meta9ToJson(this);
 }

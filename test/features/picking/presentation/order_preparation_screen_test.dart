@@ -108,7 +108,6 @@ void main() {
                 '"ts":$emittedAt,"s":""}',
             zpl: '^XA^XZ',
             emittedAt: emittedAt,
-            revoked: false,
           );
       await _pump(
         tester,
@@ -144,7 +143,6 @@ void main() {
             '"ts":1700000000,"s":""}',
         zpl: '^XA^XZ',
         emittedAt: 1700000000,
-        revoked: false,
       );
       await _pump(
         tester,
@@ -190,8 +188,8 @@ void main() {
       tester,
       repo: FakePickingRepository(
         onGetOrderLabels: (_) async => [
-          buildLabel(labelId: 'L1', revoked: false),
-          buildLabel(labelId: 'L2', revoked: true),
+          buildLabel(labelId: 'L1'),
+          buildLabel(labelId: 'L2'),
         ],
       ),
     );

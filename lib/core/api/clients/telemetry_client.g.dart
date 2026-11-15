@@ -21,7 +21,7 @@ class _TelemetryClient implements TelemetryClient {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<AcceptedEnvelope> recordAppVehiclePings({
+  Future<PingBatchResultEnvelope> recordAppVehiclePings({
     required AppTelemetryPingsRequestBody body,
   }) async {
     final _extra = <String, dynamic>{};
@@ -29,7 +29,7 @@ class _TelemetryClient implements TelemetryClient {
     final _headers = <String, dynamic>{};
     final _data = <String, dynamic>{};
     _data.addAll(body.toJson());
-    final _options = _setStreamType<AcceptedEnvelope>(
+    final _options = _setStreamType<PingBatchResultEnvelope>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -40,9 +40,9 @@ class _TelemetryClient implements TelemetryClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, Object?>>(_options);
-    late AcceptedEnvelope _value;
+    late PingBatchResultEnvelope _value;
     try {
-      _value = AcceptedEnvelope.fromJson(_result.data!);
+      _value = PingBatchResultEnvelope.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -51,10 +51,17 @@ class _TelemetryClient implements TelemetryClient {
   }
 
   @override
-  Future<GetAppTelemetryFleetLiveResponse> getLiveFleetPositions() async {
+  Future<GetAppTelemetryFleetLiveResponse> getLiveFleetPositions({
+    DateTime? since,
+    String? ifNoneMatch,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'since': since?.toIso8601String(),
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'If-None-Match': ifNoneMatch};
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetAppTelemetryFleetLiveResponse>(
       Options(method: 'GET', headers: _headers, extra: _extra)
@@ -156,13 +163,19 @@ class _TelemetryClient implements TelemetryClient {
 
   @override
   Future<GetAppTelemetryTripsResponse> listTelemetryTrips({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     DateTime? date,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'date': date?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -190,15 +203,25 @@ class _TelemetryClient implements TelemetryClient {
 
   @override
   Future<GetAppTelemetryAlertsResponse> listTelemetryAlerts({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     AlertType? type,
     bool? acknowledged,
+    DateTime? from,
+    DateTime? to,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'type': type?.toJson(),
       r'acknowledged': acknowledged,
+      r'from': from?.toIso8601String(),
+      r'to': to?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -217,6 +240,107 @@ class _TelemetryClient implements TelemetryClient {
     late GetAppTelemetryAlertsResponse _value;
     try {
       _value = GetAppTelemetryAlertsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppTelemetryShipmentsShipmentIdBreadcrumbsResponse>
+  getShipmentBreadcrumbs({required String shipmentId}) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options =
+        _setStreamType<GetAppTelemetryShipmentsShipmentIdBreadcrumbsResponse>(
+          Options(method: 'GET', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/telemetry/shipments/${shipmentId}/breadcrumbs',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppTelemetryShipmentsShipmentIdBreadcrumbsResponse _value;
+    try {
+      _value = GetAppTelemetryShipmentsShipmentIdBreadcrumbsResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppTelemetryShipmentsShipmentIdEtaResponse> getShipmentEta({
+    required String shipmentId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options =
+        _setStreamType<GetAppTelemetryShipmentsShipmentIdEtaResponse>(
+          Options(method: 'GET', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/telemetry/shipments/${shipmentId}/eta',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppTelemetryShipmentsShipmentIdEtaResponse _value;
+    try {
+      _value = GetAppTelemetryShipmentsShipmentIdEtaResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppTelemetryVehiclesVehicleIdEtasResponse> getVehicleEtas({
+    required String vehicleId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options =
+        _setStreamType<GetAppTelemetryVehiclesVehicleIdEtasResponse>(
+          Options(method: 'GET', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/telemetry/vehicles/${vehicleId}/etas',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppTelemetryVehiclesVehicleIdEtasResponse _value;
+    try {
+      _value = GetAppTelemetryVehiclesVehicleIdEtasResponse.fromJson(
+        _result.data!,
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

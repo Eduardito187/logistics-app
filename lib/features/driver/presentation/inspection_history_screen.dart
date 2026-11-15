@@ -9,6 +9,7 @@ import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
+import 'controllers/driver_controllers.dart';
 import 'controllers/inspection_history_controller.dart';
 import 'driver_vehicle_gate.dart';
 
@@ -26,6 +27,10 @@ class InspectionHistoryScreen extends ConsumerWidget {
       title: 'Inspecciones del camión',
       builder: (context, vehicleId) {
         final history = ref.watch(inspectionHistoryProvider(vehicleId));
+        // Placa del camión asignado (toda la lista es de ESE camión). La placa
+        // por inspección —por si cambió de camión— la agrega el backend al
+        // modelo (ver pedido); mientras tanto se muestra la del vehículo actual.
+        final plate = ref.watch(myCrewProvider).value?.vehicle.plate;
         return RefreshIndicator(
           onRefresh: () async =>
               ref.invalidate(inspectionHistoryProvider(vehicleId)),
@@ -55,7 +60,7 @@ class InspectionHistoryScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   itemBuilder: (context, index) =>
-                      _inspectionCard(context, items[index]),
+                      _inspectionCard(context, items[index], plate),
                 );
               },
             ),
@@ -66,9 +71,13 @@ class InspectionHistoryScreen extends ConsumerWidget {
   }
 }
 
-/// Tarjeta de una inspección: fecha, resultado (apto / con observaciones),
-/// ítems pendientes y notas.
-Widget _inspectionCard(BuildContext context, PreTripChecklist checklist) {
+/// Tarjeta de una inspección: fecha y hora, placa del camión, resultado (apto /
+/// con observaciones), ítems pendientes y notas.
+Widget _inspectionCard(
+  BuildContext context,
+  PreTripChecklist checklist,
+  String? plate,
+) {
   final theme = Theme.of(context);
   final passed = checklist.passed ?? false;
   final performed = checklist.performedOn;
@@ -84,13 +93,42 @@ Widget _inspectionCard(BuildContext context, PreTripChecklist checklist) {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  performed == null
-                      ? 'Fecha desconocida'
-                      : _dateFormat.format(performed.toLocal()),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Fecha + hora del checklist.
+                    Text(
+                      performed == null
+                          ? 'Fecha desconocida'
+                          : _dateFormat.format(performed.toLocal()),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    // Placa del camión que se inspeccionó.
+                    if (plate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          children: [
+                            AnimatedAppIcon(
+                              AppIcon.deliver,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              excludeFromSemantics: true,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Camión $plate',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),

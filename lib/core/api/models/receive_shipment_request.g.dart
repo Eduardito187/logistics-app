@@ -16,6 +16,10 @@ ReceiveShipmentRequest _$ReceiveShipmentRequestFromJson(
   lines: (json['lines'] as List<dynamic>)
       .map((e) => ReceiveShipmentLine.fromJson(e as Map<String, dynamic>))
       .toList(),
+  destinationNodeId: json['destination_node_id'] as String?,
+  destinationNodeCode: json['destination_node_code'] as String?,
+  originNodeId: json['origin_node_id'] as String?,
+  originNodeCode: json['origin_node_code'] as String?,
   customerDocumentId: json['customer_document_id'] as String?,
   customerPhone: json['customer_phone'] as String?,
   customerEmail: json['customer_email'] as String?,
@@ -29,6 +33,10 @@ Map<String, dynamic> _$ReceiveShipmentRequestToJson(
 ) => <String, dynamic>{
   'source': instance.source,
   'external_id': instance.externalId,
+  'destination_node_id': instance.destinationNodeId,
+  'destination_node_code': instance.destinationNodeCode,
+  'origin_node_id': instance.originNodeId,
+  'origin_node_code': instance.originNodeCode,
   'customer_name': instance.customerName,
   'customer_document_id': instance.customerDocumentId,
   'customer_phone': instance.customerPhone,

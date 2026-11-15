@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/plan.dart';
+import '../../../../core/api/models/plan_status.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
@@ -13,6 +14,7 @@ import '../supervisor_labels.dart';
 import '../vehicle_label.dart';
 import 'detail_row.dart';
 import 'eta_section.dart';
+import 'plan_editor.dart';
 import 'stop_tile.dart';
 
 /// Cuerpo del detalle (solo lectura) de un plan: cabecera, métricas, ETA y la
@@ -22,10 +24,19 @@ import 'stop_tile.dart';
 /// en [_VehicleTitle], así que la carga de placas reconstruye solo ese texto y
 /// no vuelve a ordenar las paradas ni a armar todo el detalle.
 class PlanDetailBody extends StatelessWidget {
-  const PlanDetailBody({super.key, required this.plan, required this.planId});
+  const PlanDetailBody({
+    super.key,
+    required this.plan,
+    required this.planId,
+    this.canPlan = false,
+  });
 
   final Plan plan;
   final String planId;
+
+  /// El usuario planifica: un plan sin publicar se puede ordenar, completar
+  /// y publicar. Publicado, o para quien solo mira, es de solo lectura.
+  final bool canPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +59,17 @@ class PlanDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           DetailRow(label: 'Fecha', value: formatDay(plan.planDate)),
-          DetailRow(label: 'Plan', value: plan.id, mono: true),
+          if (plan.driverName != null)
+            DetailRow(label: 'Chofer', value: plan.driverName!),
+          if (plan.originNode != null)
+            DetailRow(label: 'Sale de', value: plan.originNode!.name),
+          if (plan.distanceKm != null)
+            DetailRow(label: 'Recorrido', value: formatKm(plan.distanceKm!)),
+          if (plan.durationMinutes != null)
+            DetailRow(
+              label: 'Duración',
+              value: formatDuration(plan.durationMinutes!),
+            ),
           if (plan.routeGeometry != null)
             const DetailRow(label: 'Ruta', value: 'Trazado disponible'),
         ],
@@ -81,7 +102,9 @@ class PlanDetailBody extends StatelessWidget {
     // SectionCard) sin beneficio en el equipo objetivo. Se deja a propósito.
     final stopsCard = SectionCard(
       title: 'Secuencia de paradas',
-      child: stops.isEmpty
+      child: canPlan && plan.status != PlanStatus.published
+          ? PlanEditor(plan: plan)
+          : stops.isEmpty
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('El plan todavía no tiene paradas.'),

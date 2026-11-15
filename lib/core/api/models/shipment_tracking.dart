@@ -23,6 +23,8 @@ class ShipmentTracking {
     required this.lastPosition,
     required this.positionIsLive,
     this.shipmentExternalId,
+    this.atStoreAt,
+    this.readyForPickup,
   });
 
   factory ShipmentTracking.fromJson(Map<String, Object?> json) =>
@@ -52,6 +54,16 @@ class ShipmentTracking {
   /// True si la última posición es fresca, false si es solo la última conocida, null si no hay posición.
   @JsonKey(name: 'position_is_live')
   final bool? positionIsLive;
+
+  /// Momento en que un pedido con retiro en tienda llegó a su tienda destino; null si aún no llegó o si el pedido no es de retiro en tienda.
+  ///
+  @JsonKey(name: 'at_store_at')
+  final DateTime? atStoreAt;
+
+  /// True si el pedido ya está en la tienda y el cliente puede pasar a recogerlo (at_store_at no nulo y estado distinto de DELIVERED, CANCELLED y RETURNED). No es un estado nuevo: `status` conserva su valor.
+  ///
+  @JsonKey(name: 'ready_for_pickup')
+  final bool? readyForPickup;
 
   Map<String, Object?> toJson() => _$ShipmentTrackingToJson(this);
 }

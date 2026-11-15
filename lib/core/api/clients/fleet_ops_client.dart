@@ -41,6 +41,7 @@ import '../models/register_departure_request.dart';
 import '../models/schedule_maintenance_request.dart';
 import '../models/set_fuel_price_request.dart';
 import '../models/update_vehicle_odometer_request.dart';
+import '../models/urgency.dart';
 
 part 'fleet_ops_client.g.dart';
 
@@ -66,12 +67,21 @@ abstract class FleetOpsClient {
     @Query('fuel_type') required FuelType fuelType,
   });
 
-  /// List refuels
+  /// List refuels.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/refuels')
   Future<GetAppFleetopsRefuelsResponse> listFleetRefuels({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('from') DateTime? from,
     @Query('to') DateTime? to,
+    @Query('cursor') String? cursor,
   });
 
   /// Record a refuel
@@ -94,11 +104,24 @@ abstract class FleetOpsClient {
     @Query('date') required DateTime date,
   });
 
-  /// List maintenance orders
+  /// List maintenance orders.
+  ///
+  /// [from] - Filter on scheduled_at (inclusive).
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/maintenance/orders')
   Future<GetAppFleetopsMaintenanceOrdersResponse> listFleetMaintenanceOrders({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('status') MaintenanceStatus? status,
+    @Query('from') DateTime? from,
+    @Query('to') DateTime? to,
+    @Query('cursor') String? cursor,
   });
 
   /// Schedule a maintenance order
@@ -131,10 +154,19 @@ abstract class FleetOpsClient {
     @Path('orderId') required String orderId,
   });
 
-  /// List maintenance plans
+  /// List maintenance plans.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/maintenance/plans')
   Future<GetAppFleetopsMaintenancePlansResponse> listFleetMaintenancePlans({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
+    @Query('cursor') String? cursor,
   });
 
   /// Define a preventive maintenance plan
@@ -170,17 +202,38 @@ abstract class FleetOpsClient {
     @Query('to') required DateTime to,
   });
 
-  /// List due or overdue preventive maintenance
+  /// List due or overdue preventive maintenance.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/maintenance/due')
-  Future<GetAppFleetopsMaintenanceDueResponse> listFleetDueMaintenance();
+  Future<GetAppFleetopsMaintenanceDueResponse> listFleetDueMaintenance({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
+    @Query('vehicle_id') String? vehicleId,
+    @Query('urgency') Urgency? urgency,
+    @Query('cursor') String? cursor,
+  });
 
-  /// List departures
+  /// List departures.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/departures')
   Future<GetAppFleetopsDeparturesResponse> listFleetDepartures({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('status') DepartureStatus? status,
     @Query('from') DateTime? from,
     @Query('to') DateTime? to,
+    @Query('cursor') String? cursor,
   });
 
   /// Register a vehicle departure
@@ -202,12 +255,24 @@ abstract class FleetOpsClient {
     @Body() required CloseDepartureRequest body,
   });
 
-  /// List odometer readings
+  /// List odometer readings.
+  ///
+  /// [routeId] - Solo las lecturas de esa ruta del chofer (su salida y su llegada).
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/odometer')
   Future<GetAppFleetopsOdometerResponse> listFleetOdometerReadings({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('from') DateTime? from,
     @Query('to') DateTime? to,
+    @Query('route_id') String? routeId,
+    @Query('cursor') String? cursor,
   });
 
   /// Record an odometer reading
@@ -246,13 +311,22 @@ abstract class FleetOpsClient {
     @Body() required UpdateVehicleOdometerRequest body,
   });
 
-  /// List fleet expenses
+  /// List fleet expenses.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/fleetops/expenses')
   Future<GetAppFleetopsExpensesResponse> listFleetExpenses({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('category') ExpenseCategory? category,
     @Query('from') DateTime? from,
     @Query('to') DateTime? to,
+    @Query('cursor') String? cursor,
   });
 
   /// Record a fleet expense

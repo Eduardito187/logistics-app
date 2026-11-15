@@ -7,7 +7,7 @@ part of 'features.dart';
 // **************************************************************************
 
 Features _$FeaturesFromJson(Map<String, dynamic> json) => Features(
-  type: Type2.fromJson(json['type'] as String),
+  type: Type5.fromJson(json['type'] as String),
   geometry: GeoJsonPolygon.fromJson(json['geometry'] as Map<String, dynamic>),
   properties: json['properties'],
 );

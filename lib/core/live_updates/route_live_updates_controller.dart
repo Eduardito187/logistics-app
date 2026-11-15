@@ -13,8 +13,10 @@ import 'route_live_status.dart';
 /// - Cambio de parada, de estado, de avance, de cliente o de ETA → `update`
 ///   al instante.
 /// - Solo la distancia ("2,3 km" → "2,1 km") → como máximo una vez cada
-///   [minUpdateInterval] (la batería es crítica: el GPS emite seguido y cada
-///   update despierta al sistema de notificaciones / ActivityKit).
+///   [minUpdateInterval] (pedido del dueño: ~10 s para que se sienta en vivo; el
+///   dato ya lo tiene el teléfono. Igual lo limita la cadencia del GPS: en
+///   marcha el rastreo emite cada ~15 s, así que 10 s publica apenas hay un fix
+///   nuevo con otra distancia, sin despertar al sistema de más).
 /// - Igual a lo último publicado → nada.
 /// - Ruta terminada o sin ruta/sesión → `end`.
 ///
@@ -49,7 +51,7 @@ class RouteLiveUpdatesController {
     this.hideInForeground = false,
     bool foreground = true,
     DateTime Function()? clock,
-    this.minUpdateInterval = const Duration(seconds: 30),
+    this.minUpdateInterval = const Duration(seconds: 10),
     this.dwellThreshold = const Duration(seconds: 90),
     this.onArrived,
   }) : _service = service,

@@ -11,7 +11,7 @@ NodeCollection _$NodeCollectionFromJson(Map<String, dynamic> json) =>
       data: (json['data'] as List<dynamic>)
           .map((e) => Node.fromJson(e as Map<String, dynamic>))
           .toList(),
-      meta: Meta13.fromJson(json['meta'] as Map<String, dynamic>),
+      meta: Meta7.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$NodeCollectionToJson(NodeCollection instance) =>

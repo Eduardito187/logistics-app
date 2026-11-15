@@ -28,9 +28,28 @@ DriverRouteStop _$DriverRouteStopFromJson(Map<String, dynamic> json) =>
       settledAt: json['settled_at'] == null
           ? null
           : DateTime.parse(json['settled_at'] as String),
+      arrivedAt: json['arrived_at'] == null
+          ? null
+          : DateTime.parse(json['arrived_at'] as String),
+      arrivalSource: json['arrival_source'] == null
+          ? null
+          : DriverRouteStopArrivalSource.fromJson(
+              json['arrival_source'] as String,
+            ),
+      deliveryMode: json['delivery_mode'] == null
+          ? null
+          : DeliveryMode.fromJson(json['delivery_mode'] as String),
+      destinationNodeId: json['destination_node_id'] as String?,
+      destinationNodeName: json['destination_node_name'] as String?,
+      unitsTotal: (json['units_total'] as num?)?.toInt(),
       unitIds: (json['unit_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      destination: json['destination'] == null
+          ? null
+          : Destination.fromJson(json['destination'] as Map<String, dynamic>),
+      podConfirmation: json['pod_confirmation'] as String?,
+      podPhotoUrl: json['pod_photo_url'] as String?,
     );
 
 Map<String, dynamic> _$DriverRouteStopToJson(DriverRouteStop instance) =>
@@ -49,4 +68,14 @@ Map<String, dynamic> _$DriverRouteStopToJson(DriverRouteStop instance) =>
       'lng': instance.lng,
       'status': instance.status,
       'settled_at': instance.settledAt?.toIso8601String(),
+      'arrived_at': instance.arrivedAt?.toIso8601String(),
+      'arrival_source': instance.arrivalSource,
+      'delivery_mode': instance.deliveryMode,
+      'destination_node_id': instance.destinationNodeId,
+      'destination_node_name': instance.destinationNodeName,
+      'units_total': instance.unitsTotal,
+      'unit_ids': instance.unitIds,
+      'destination': instance.destination,
+      'pod_confirmation': instance.podConfirmation,
+      'pod_photo_url': instance.podPhotoUrl,
     };

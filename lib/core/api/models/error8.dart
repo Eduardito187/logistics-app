@@ -4,15 +4,19 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'problem_code.dart';
+
 part 'error8.g.dart';
 
 @JsonSerializable()
 class Error8 {
-  const Error8({required this.type, required this.message});
+  const Error8({required this.code, required this.message});
 
   factory Error8.fromJson(Map<String, Object?> json) => _$Error8FromJson(json);
 
-  final String type;
+  final ProblemCode code;
+
+  /// Motivo legible; idéntico a `detail` cuando este existe.
   final String message;
 
   Map<String, Object?> toJson() => _$Error8ToJson(this);

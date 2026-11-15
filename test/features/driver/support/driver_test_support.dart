@@ -9,6 +9,7 @@ import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/location/truck_tracking_service.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/features/driver/domain/repositories/fleet_repository.dart';
 import 'package:logistics_app/features/driver/domain/usecases/conduct_checklist.dart';
@@ -24,21 +25,22 @@ import 'package:logistics_app/features/driver/presentation/widgets/active_delive
 // Fixtures: constructores de modelos del contrato OpenAPI.
 // ---------------------------------------------------------------------------
 
-Vehicle buildVehicle({String id = 'v1', String? plate = 'ABC-123'}) => Vehicle(
-  id: id,
-  plate: plate,
-  capacityKg: 1000,
-  capacityM3: 10,
-  status: 'active',
-);
+CrewVehicle buildVehicle({String id = 'v1', String? plate = 'ABC-123'}) =>
+    CrewVehicle(
+      id: id,
+      plate: plate,
+      capacityKg: 1000,
+      capacityM3: 10,
+      status: 'active',
+    );
 
-Driver buildDriver({String id = 'd1', String? name = 'Juan Pérez'}) =>
-    Driver(id: id, name: name, licenseNumber: 'LIC-1');
+CrewDriver buildDriver({String id = 'd1', String? name = 'Juan Pérez'}) =>
+    CrewDriver(id: id, name: name, licenseNumber: 'LIC-1');
 
 MyCrew buildMyCrew({
-  Vehicle? vehicle,
-  Driver? driver,
-  List<Helpers> helpers = const [],
+  CrewVehicle? vehicle,
+  CrewDriver? driver,
+  List<Helpers2> helpers = const [],
   Shift? shift,
 }) => MyCrew(
   crewId: 'crew-1',
@@ -65,7 +67,13 @@ DriverRouteStop buildStop({
   List<Items3> items = const [],
   List<String>? unitIds,
   DateTime? settledAt,
+  DeliveryMode? deliveryMode,
+  String? destinationNodeId,
+  String? destinationNodeName,
 }) => DriverRouteStop(
+  deliveryMode: deliveryMode,
+  destinationNodeId: destinationNodeId,
+  destinationNodeName: destinationNodeName,
   id: id,
   shipmentId: shipmentId,
   sequence: sequence,
@@ -124,6 +132,7 @@ Delivery buildDelivery({
   String? podConfirmation,
   FailureReason? failureReason,
 }) => Delivery(
+  reference: 'REF-1',
   id: id,
   shipmentId: shipmentId,
   vehicleId: 'v1',
@@ -260,6 +269,9 @@ class FakeOfflineQueue implements OfflineQueue {
 
   final SubmitOutcome outcome;
   final List<Map<String, Object?>> submissions = [];
+
+  /// `kind` de cada envío, en orden (paralelo a [submissions]).
+  final List<String> kinds = [];
   String? lastKind;
 
   @override
@@ -269,8 +281,10 @@ class FakeOfflineQueue implements OfflineQueue {
     required String label,
     DateTime? occurredAt,
     String? idempotencyKey,
+    void Function(ApiException error)? onReject,
   }) async {
     lastKind = kind;
+    kinds.add(kind);
     submissions.add(payload);
     return outcome;
   }
@@ -292,7 +306,7 @@ class FakeFleetRepository implements FleetRepository {
   final MyCrew? crew;
   final Object? crewError;
   final List<Driver> drivers;
-  final Data5? checklistResult;
+  final PreTripChecklistResult? checklistResult;
   final Object? checklistError;
 
   Map<String, bool>? lastItems;
@@ -307,7 +321,7 @@ class FakeFleetRepository implements FleetRepository {
   Future<List<Driver>> listActiveDrivers() async => drivers;
 
   @override
-  Future<Data5?> conductPreTripChecklist(
+  Future<PreTripChecklistResult?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {
     if (checklistError != null) throw checklistError!;
@@ -321,21 +335,24 @@ class FakeConductChecklist extends ConductChecklist {
   FakeConductChecklist({this.result, this.error})
     : super(FakeFleetRepository());
 
-  final Data5? result;
+  final PreTripChecklistResult? result;
   final Object? error;
   Map<String, bool>? lastItems;
   String? lastDriverId;
+  String? lastRouteId;
 
   @override
-  Future<Data5?> call({
+  Future<PreTripChecklistResult?> call({
     required String vehicleId,
     required String driverId,
     required Map<String, bool> items,
     required DateTime performedOn,
     String? notes,
+    String? routeId,
   }) async {
     lastItems = items;
     lastDriverId = driverId;
+    lastRouteId = routeId;
     if (error != null) throw error!;
     return result;
   }

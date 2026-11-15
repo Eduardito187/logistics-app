@@ -8,11 +8,11 @@ part 'meta2.g.dart';
 
 @JsonSerializable()
 class Meta2 {
-  const Meta2({this.message});
+  const Meta2({this.count});
 
   factory Meta2.fromJson(Map<String, Object?> json) => _$Meta2FromJson(json);
 
-  final String? message;
+  final int? count;
 
   Map<String, Object?> toJson() => _$Meta2ToJson(this);
 }

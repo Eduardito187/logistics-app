@@ -30,7 +30,7 @@ void main() {
     expect(find.text('Estado de la entrega'), findsOneWidget);
     expect(find.text('Fallida'), findsOneWidget);
     expect(find.text('0 escaneo(s) registrados'), findsOneWidget);
-    expect(find.text('Confirmación: QR-123'), findsOneWidget);
+    expect(find.text('Firma/confirmación: QR-123'), findsOneWidget);
     expect(find.text('Motivo de falla: Cliente ausente'), findsOneWidget);
   });
 

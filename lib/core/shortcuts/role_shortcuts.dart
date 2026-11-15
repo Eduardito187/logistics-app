@@ -19,9 +19,11 @@ const Map<UserRole, List<String>> kRoleShortcutTaskIds = {
     'driver-incident',
   ],
   UserRole.picker: ['picking-orders', 'picking-prepare'],
-  UserRole.store: ['store-reception', 'store-pickup'],
+  UserRole.store: ['store-pickup'],
   UserRole.carrier: ['carrier-pickup', 'carrier-deliver'],
   UserRole.supervisor: ['sup-fleet', 'sup-alerts', 'sup-dashboard'],
+  UserRole.planner: ['sup-plans', 'sup-fleet'],
+  UserRole.admin: ['sup-fleet', 'sup-alerts', 'sup-dashboard'],
 };
 
 /// Textos cortos (Android, ≤ 10 caracteres) por id de tarea.
@@ -32,7 +34,6 @@ const Map<String, String> kShortcutShortTitles = {
   'driver-incident': 'Incidente',
   'picking-orders': 'Preparar',
   'picking-prepare': 'Ingresar',
-  'store-reception': 'Recibir',
   'store-pickup': 'Recojo',
   'carrier-pickup': 'Recoger',
   'carrier-deliver': 'Entregar',

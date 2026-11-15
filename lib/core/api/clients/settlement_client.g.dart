@@ -22,17 +22,23 @@ class _SettlementClient implements SettlementClient {
 
   @override
   Future<SellerSettlementCollection> listSellerSettlements({
+    int? page = 1,
+    int? perPage = 50,
     String? sellerId,
     SellerSettlementStatus? status,
     DateTime? periodFrom,
     DateTime? periodTo,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'seller_id': sellerId,
       r'status': status?.toJson(),
       r'period_from': periodFrom?.toIso8601String(),
       r'period_to': periodTo?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

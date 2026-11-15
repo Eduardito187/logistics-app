@@ -26,7 +26,7 @@ class UnloadScanRequest {
   @JsonKey(name: 'shipment_id')
   final String shipmentId;
 
-  /// Bulto escaneado
+  /// Producto escaneado
   @JsonKey(name: 'unit_id')
   final String unitId;
   final double lat;
@@ -48,7 +48,7 @@ class UnloadScanRequest {
   @JsonKey(name: 'idempotency_key')
   final String? idempotencyKey;
 
-  /// Parada (nodo) donde se descarga el bulto
+  /// Parada (nodo) donde se descarga el producto
   @JsonKey(name: 'node_id')
   final String nodeId;
 

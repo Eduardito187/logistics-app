@@ -23,7 +23,7 @@ class IncidentScreen extends ConsumerStatefulWidget {
 }
 
 class _IncidentScreenState extends ConsumerState<IncidentScreen> {
-  Type _type = Type.breakdown;
+  Type2 _type = Type2.breakdown;
   Severity _severity = Severity.minor;
   final TextEditingController _note = TextEditingController();
   bool _busy = false;
@@ -49,8 +49,8 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
                 // Flutter 3.32: sin RadioGroup, cada tile lleva groupValue/onChanged.
                 child: Column(
                   children: [
-                    for (final type in Type.$valuesDefined)
-                      RadioListTile<Type>(
+                    for (final type in Type2.$valuesDefined)
+                      RadioListTile<Type2>(
                         contentPadding: EdgeInsets.zero,
                         title: Text(_typeLabel(type)),
                         value: type,
@@ -148,9 +148,9 @@ class _IncidentScreenState extends ConsumerState<IncidentScreen> {
   }
 }
 
-String _typeLabel(Type type) => switch (type) {
-  Type.breakdown => 'Avería',
-  Type.accident => 'Accidente',
+String _typeLabel(Type2 type) => switch (type) {
+  Type2.breakdown => 'Avería',
+  Type2.accident => 'Accidente',
   _ => 'Incidente',
 };
 

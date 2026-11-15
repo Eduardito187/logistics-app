@@ -4,15 +4,16 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-/// home = domicilio del cliente; store = tienda/punto de retiro; warehouse = centro de distribución/almacén. null si no se pudo determinar el envío.
 @JsonEnum()
 enum Type3 {
-  @JsonValue('home')
-  home('home'),
-  @JsonValue('store')
-  store('store'),
-  @JsonValue('warehouse')
-  warehouse('warehouse'),
+  @JsonValue('scan')
+  scan('scan'),
+  @JsonValue('assignment')
+  assignment('assignment'),
+  @JsonValue('checklist')
+  checklist('checklist'),
+  @JsonValue('device')
+  device('device'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

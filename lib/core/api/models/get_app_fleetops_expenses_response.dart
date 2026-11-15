@@ -5,17 +5,19 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'expense.dart';
+import 'list_meta.dart';
 
 part 'get_app_fleetops_expenses_response.g.dart';
 
 @JsonSerializable()
 class GetAppFleetopsExpensesResponse {
-  const GetAppFleetopsExpensesResponse({required this.data});
+  const GetAppFleetopsExpensesResponse({required this.data, this.meta});
 
   factory GetAppFleetopsExpensesResponse.fromJson(Map<String, Object?> json) =>
       _$GetAppFleetopsExpensesResponseFromJson(json);
 
   final List<Expense> data;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$GetAppFleetopsExpensesResponseToJson(this);
 }

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart' hide DueMaintenanceItem;
 import '../../domain/entities/due_maintenance_item.dart';
 import '../../domain/repositories/fleet_ops_repository.dart';
 import '../datasources/fleet_ops_data_source.dart';

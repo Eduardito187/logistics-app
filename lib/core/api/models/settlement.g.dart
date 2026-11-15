@@ -20,6 +20,9 @@ Settlement _$SettlementFromJson(Map<String, dynamic> json) => Settlement(
   documents: (json['documents'] as List<dynamic>)
       .map((e) => CarrierDocument.fromJson(e as Map<String, dynamic>))
       .toList(),
+  vehicleClass: json['vehicle_class'] == null
+      ? null
+      : VehicleClass.fromJson(json['vehicle_class'] as String),
   carrierName: json['carrier_name'] as String?,
   disputeReason: json['dispute_reason'] as String?,
   paymentReference: json['payment_reference'] as String?,
@@ -27,6 +30,7 @@ Settlement _$SettlementFromJson(Map<String, dynamic> json) => Settlement(
 
 Map<String, dynamic> _$SettlementToJson(Settlement instance) =>
     <String, dynamic>{
+      'vehicle_class': instance.vehicleClass,
       'id': instance.id,
       'carrier_id': instance.carrierId,
       'carrier_name': instance.carrierName,

@@ -15,11 +15,15 @@ import '../models/geofence_type.dart';
 import '../models/get_app_telemetry_alerts_response.dart';
 import '../models/get_app_telemetry_fleet_live_response.dart';
 import '../models/get_app_telemetry_geofences_response.dart';
+import '../models/get_app_telemetry_shipments_shipment_id_breadcrumbs_response.dart';
+import '../models/get_app_telemetry_shipments_shipment_id_eta_response.dart';
 import '../models/get_app_telemetry_streets_response.dart';
 import '../models/get_app_telemetry_trips_response.dart';
+import '../models/get_app_telemetry_vehicles_vehicle_id_etas_response.dart';
 import '../models/get_app_telemetry_vehicles_vehicle_id_summary_response.dart';
 import '../models/get_app_telemetry_vehicles_vehicle_id_track_response.dart';
 import '../models/integrations_telemetry_pings_request_body.dart';
+import '../models/ping_batch_result_envelope.dart';
 
 part 'telemetry_client.g.dart';
 
@@ -31,13 +35,18 @@ abstract class TelemetryClient {
   ///
   /// El app agrupa lecturas GPS para ahorrar batería/datos y las envía en lote. El origen queda fijado como 'app' por la puerta. La respuesta es un acuse 202 (el procesamiento es asíncrono vía outbox).
   @POST('/app/telemetry/pings')
-  Future<AcceptedEnvelope> recordAppVehiclePings({
+  Future<PingBatchResultEnvelope> recordAppVehiclePings({
     @Body() required AppTelemetryPingsRequestBody body,
   });
 
-  /// Live positions of the whole fleet
+  /// Live positions of the whole fleet.
+  ///
+  /// [since] - Only vehicles whose position changed at/after this server time (pass meta.server_time of the previous call).
   @GET('/app/telemetry/fleet/live')
-  Future<GetAppTelemetryFleetLiveResponse> getLiveFleetPositions();
+  Future<GetAppTelemetryFleetLiveResponse> getLiveFleetPositions({
+    @Query('since') DateTime? since,
+    @Header('If-None-Match') String? ifNoneMatch,
+  });
 
   /// Track (path) of a vehicle between two instants.
   ///
@@ -62,18 +71,55 @@ abstract class TelemetryClient {
   /// List trips.
   ///
   /// [date] - Day filter (YYYY-MM-DD).
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/telemetry/trips')
   Future<GetAppTelemetryTripsResponse> listTelemetryTrips({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('date') DateTime? date,
+    @Query('cursor') String? cursor,
   });
 
-  /// List misuse alerts
+  /// List misuse alerts.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/telemetry/alerts')
   Future<GetAppTelemetryAlertsResponse> listTelemetryAlerts({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('vehicle_id') String? vehicleId,
     @Query('type') AlertType? type,
     @Query('acknowledged') bool? acknowledged,
+    @Query('from') DateTime? from,
+    @Query('to') DateTime? to,
+    @Query('cursor') String? cursor,
+  });
+
+  /// Vehicle track while the shipment was on board (downsampled)
+  @GET('/app/telemetry/shipments/{shipmentId}/breadcrumbs')
+  Future<GetAppTelemetryShipmentsShipmentIdBreadcrumbsResponse>
+  getShipmentBreadcrumbs({@Path('shipmentId') required String shipmentId});
+
+  /// Dynamic ETA of the shipment stop (no live traffic)
+  @GET('/app/telemetry/shipments/{shipmentId}/eta')
+  Future<GetAppTelemetryShipmentsShipmentIdEtaResponse> getShipmentEta({
+    @Path('shipmentId') required String shipmentId,
+  });
+
+  /// Dynamic ETA of every remaining stop of the vehicle route today (no live traffic)
+  @GET('/app/telemetry/vehicles/{vehicleId}/etas')
+  Future<GetAppTelemetryVehiclesVehicleIdEtasResponse> getVehicleEtas({
+    @Path('vehicleId') required String vehicleId,
   });
 
   /// Acknowledge an alert

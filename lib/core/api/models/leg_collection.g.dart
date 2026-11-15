@@ -11,7 +11,7 @@ LegCollection _$LegCollectionFromJson(Map<String, dynamic> json) =>
       data: (json['data'] as List<dynamic>)
           .map((e) => Leg.fromJson(e as Map<String, dynamic>))
           .toList(),
-      meta: Meta11.fromJson(json['meta'] as Map<String, dynamic>),
+      meta: Meta5.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$LegCollectionToJson(LegCollection instance) =>

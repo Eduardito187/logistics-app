@@ -5,8 +5,12 @@ import 'package:dio/dio.dart';
 import '../api/models/problem_code.dart';
 
 /// Error de API normalizado. El backend responde errores como RFC 7807
-/// (`application/problem+json`): `{type, title, status, detail, code, errors}`.
-/// Los clientes deben ramificar por `code` (estable), no por `title`.
+/// (`application/problem+json`): `{type, title, status, detail, code, errors}`,
+/// y además repite el motivo en `error.message` y el código en `error.code`
+/// (texto idéntico a `detail`/`code`). Los clientes deben ramificar por `code`
+/// (estable), no por `title`. Leemos el anidado `error.*` como respaldo: cubre
+/// el formato unificado nuevo, el viejo `{error:{code,message}}` y el
+/// `error`/problem POR ÍTEM del 207 por lotes.
 class ApiException implements Exception {
   const ApiException({
     required this.status,
@@ -119,6 +123,13 @@ class ApiException implements Exception {
     final problem = data is Map
         ? data.cast<String, Object?>()
         : const <String, Object?>{};
+    // `error` anidado (`{code, message}`): respaldo redundante del motivo y el
+    // código cuando no vinieran en el nivel superior (shape viejo, o 207 por
+    // ítem). El backend unificado manda ambos, idénticos; leemos el que haya.
+    final rawNestedError = problem['error'];
+    final nestedError = rawNestedError is Map
+        ? rawNestedError.cast<String, Object?>()
+        : const <String, Object?>{};
     final rawErrors = problem['errors'];
     final fieldErrors = <String, List<String>>{};
     if (rawErrors is Map) {
@@ -131,13 +142,14 @@ class ApiException implements Exception {
       });
     }
 
-    final rawCode = problem['code'];
+    final rawCode = problem['code'] ?? nestedError['code'];
+    final rawDetail = problem['detail'] ?? nestedError['message'];
 
     return ApiException(
       status: response.statusCode ?? 0,
       title:
           (problem['title'] as String?) ?? _titleForStatus(response.statusCode),
-      detail: problem['detail'] as String?,
+      detail: rawDetail is String ? rawDetail : null,
       type: problem['type'] as String?,
       code: rawCode is String ? ProblemCode.fromJson(rawCode) : null,
       fieldErrors: fieldErrors,

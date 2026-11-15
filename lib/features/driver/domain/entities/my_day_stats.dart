@@ -1,5 +1,5 @@
 import '../../../../core/api/export.dart';
-import '../effective_stop_status.dart';
+import '../route_progress.dart';
 
 /// Métricas del día del chofer calculadas en la app a partir de la ruta del
 /// día (`DriverRoute`). Las KPIs "oficiales" del backend se piden aparte.
@@ -28,20 +28,13 @@ class MyDayStats {
     Map<String, DriverRouteStopStatus> locallySettled = const {},
   ]) {
     final stops = route.stops;
-    final total = stops.isEmpty ? route.totalStops : stops.length;
-    var delivered = 0;
-    var failed = 0;
-    for (final stop in stops) {
-      switch (effectiveStopStatus(stop, locallySettled)) {
-        case DriverRouteStopStatus.completed:
-          delivered++;
-        case DriverRouteStopStatus.failed:
-          failed++;
-        default:
-          break;
-      }
-    }
-    final pending = (total - delivered - failed).clamp(0, total);
+    // Conteos desde la fuente ÚNICA de avance (item por item con estado
+    // efectivo), para que "Mi día", el resumen y la lista nunca difieran.
+    final progress = RouteProgress.of(route, locallySettled);
+    final total = progress.total;
+    final delivered = progress.delivered;
+    final failed = progress.failed;
+    final pending = progress.pending;
 
     // Horarios y promedio: solo con los cierres que YA confirmó el backend
     // (una parada resuelta sin señal todavía no tiene hora de cierre).

@@ -6,10 +6,12 @@ import 'package:json_annotation/json_annotation.dart';
 
 @JsonEnum()
 enum Type {
-  @JsonValue('BREAKDOWN')
-  breakdown('BREAKDOWN'),
-  @JsonValue('ACCIDENT')
-  accident('ACCIDENT'),
+  @JsonValue('preventive')
+  preventive('preventive'),
+  @JsonValue('corrective')
+  corrective('corrective'),
+  @JsonValue('inspection')
+  inspection('inspection'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

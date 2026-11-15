@@ -4,29 +4,47 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-part 'role.g.dart';
+@JsonEnum()
+enum Role {
+  @JsonValue('chofer')
+  chofer('chofer'),
+  @JsonValue('preparador')
+  preparador('preparador'),
+  @JsonValue('tienda')
+  tienda('tienda'),
+  @JsonValue('transportista')
+  transportista('transportista'),
+  @JsonValue('supervisor')
+  supervisor('supervisor'),
+  @JsonValue('planificador')
+  planificador('planificador'),
+  @JsonValue('admin')
+  admin('admin'),
 
-@JsonSerializable()
-class Role {
-  const Role({
-    required this.id,
-    required this.key,
-    required this.name,
-    required this.isSystem,
-    required this.permissionKeys,
-    this.description,
-  });
+  /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
+  $unknown(null);
 
-  factory Role.fromJson(Map<String, Object?> json) => _$RoleFromJson(json);
+  const Role(this.json);
 
-  final String id;
-  final String key;
-  final String name;
-  final String? description;
-  @JsonKey(name: 'is_system')
-  final bool isSystem;
-  @JsonKey(name: 'permission_keys')
-  final List<String> permissionKeys;
+  factory Role.fromJson(String json) =>
+      values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
-  Map<String, Object?> toJson() => _$RoleToJson(this);
+  final String? json;
+  String toJson() {
+    final value = json;
+    if (value == null) {
+      throw StateError(
+        'Cannot convert enum value with null JSON representation to String. '
+        'This usually happens for \$unknown or @JsonValue(null) entries.',
+      );
+    }
+    return value as String;
+  }
+
+  @override
+  String toString() => json?.toString() ?? super.toString();
+
+  /// Returns all defined enum values excluding the $unknown value.
+  static List<Role> get $valuesDefined =>
+      values.where((value) => value != $unknown).toList();
 }
