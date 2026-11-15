@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data13.dart';
+import 'import_coverage_map_data.dart';
 
 part 'post_integrations_coverage_map_import_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostIntegrationsCoverageMapImportResponse {
     Map<String, Object?> json,
   ) => _$PostIntegrationsCoverageMapImportResponseFromJson(json);
 
-  final Data13 data;
+  final ImportCoverageMapData data;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsCoverageMapImportResponseToJson(this);

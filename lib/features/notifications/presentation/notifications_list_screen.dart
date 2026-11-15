@@ -8,6 +8,7 @@ import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import 'controllers/notifications_controller.dart';
+import 'widgets/inbox_entry_card.dart';
 import 'widgets/notification_tile.dart';
 import 'widgets/push_status_card.dart';
 
@@ -38,6 +39,12 @@ class NotificationsListScreen extends ConsumerWidget {
               const SliverPadding(
                 padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                 sliver: SliverToBoxAdapter(child: PushStatusCard()),
+              ),
+              // Avisos que el administrador le envió al usuario (por rol, por
+              // tienda o a él): su bandeja propia.
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(child: InboxEntryCard()),
               ),
               ...switch (notifications) {
                 // Con datos (también mientras recarga): lista perezosa.

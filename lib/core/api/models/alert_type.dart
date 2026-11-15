@@ -16,6 +16,8 @@ enum AlertType {
   unauthorizedUse('unauthorized_use'),
   @JsonValue('speeding')
   speeding('speeding'),
+  @JsonValue('route_deviation')
+  routeDeviation('route_deviation'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

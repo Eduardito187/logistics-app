@@ -4,6 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'vehicle_utilization.dart';
+
 part 'get_app_fleetops_utilization_response.g.dart';
 
 @JsonSerializable()
@@ -14,7 +16,7 @@ class GetAppFleetopsUtilizationResponse {
     Map<String, Object?> json,
   ) => _$GetAppFleetopsUtilizationResponseFromJson(json);
 
-  final dynamic data;
+  final VehicleUtilization data;
 
   Map<String, Object?> toJson() =>
       _$GetAppFleetopsUtilizationResponseToJson(this);

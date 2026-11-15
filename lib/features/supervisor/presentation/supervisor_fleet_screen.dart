@@ -41,6 +41,9 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
     with WidgetsBindingObserver {
   Timer? _timer;
 
+  /// Ciudad elegida en el filtro; `null` = todo el país.
+  String? _city;
+
   /// App en primer plano (o apenas inactiva, p. ej. con la cortina bajada).
   bool _appActive = true;
 
@@ -144,9 +147,66 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
               message: 'No hay posiciones de telemetría por ahora.',
             );
           }
-          return FleetMap(vehicles: vehicles);
+          // Ciudades con camiones (la ciudad es la de la sede del camión). Con
+          // un backend que aún no la manda no hay filtro: se ve todo.
+          final cities = fleetCities(vehicles);
+          final city = cities.contains(_city) ? _city : null;
+          final shown = city == null
+              ? vehicles
+              : [
+                  for (final v in vehicles)
+                    if (v.city == city) v,
+                ];
+          return Column(
+            children: [
+              if (cities.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Row(
+                    children: [
+                      _cityChip('Todo el país', null, vehicles.length, city),
+                      for (final name in cities)
+                        _cityChip(
+                          name,
+                          name,
+                          vehicles.where((v) => v.city == name).length,
+                          city,
+                        ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: FleetMap(
+                  // Otra ciudad = otro encuadre: el mapa se arma de nuevo.
+                  key: ValueKey<String?>(city),
+                  vehicles: shown,
+                  fitAll: cities.isNotEmpty,
+                ),
+              ),
+            ],
+          );
         },
       ),
     );
   }
+
+  Widget _cityChip(String label, String? value, int count, String? selected) =>
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ChoiceChip(
+          label: Text('$label · $count'),
+          selected: selected == value,
+          onSelected: (_) => setState(() => _city = value),
+        ),
+      );
+}
+
+/// Ciudades (sede del camión) presentes en la flota en vivo, ordenadas.
+List<String> fleetCities(List<VehicleLive> vehicles) {
+  final cities = <String>{
+    for (final v in vehicles)
+      if (v.city != null && v.city!.trim().isNotEmpty) v.city!,
+  }.toList()..sort();
+  return cities;
 }

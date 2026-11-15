@@ -10,17 +10,26 @@ import '../../../core/api/export.dart';
 ///   mensaje parcial ("Salida: X km, falta llegada").
 typedef RouteKmToday = ({int? traveledKm, int? departureKm, int? arrivalKm});
 
-/// Calcula los km recorridos de la ruta del día de [now] (zona local): toma la
-/// lectura de SALIDA y la de LLEGADA más recientes del mismo día (mismo
-/// año/mes/día que `readAt` en local) y devuelve su diferencia. Nunca lanza.
-///
-/// Lecturas de otro día se ignoran; otras fuentes (`manual`, `refuel`…) también.
 /// `true` si la SALIDA en curso ya tiene su odómetro de LLEGADA: hay una lectura
 /// `arrival` de hoy posterior a la última `departure` de hoy (o hay llegada y
 /// ninguna salida registrada). Con esto se oculta "Cerrar ruta del día" una vez
 /// cerrada, y vuelve a aparecer en una segunda salida del día (su checklist
 /// registra una `departure` nueva, posterior a la llegada anterior).
-bool arrivalRecordedForCurrentTrip(List<OdometerReading> readings, DateTime now) {
+///
+/// Con [routeId] y un backend que ya etiqueta las lecturas con su salida
+/// (`route_id`), la respuesta es EXACTA: hay una llegada de esa ruta. El chofer
+/// puede salir varias veces al día, con el mismo camión o con otro; cada salida
+/// se cierra con su propia llegada. Sin etiqueta se cae al criterio por hora.
+bool arrivalRecordedForCurrentTrip(
+  List<OdometerReading> readings,
+  DateTime now, {
+  String? routeId,
+}) {
+  if (routeId != null && readings.any((r) => r.routeId != null)) {
+    return readings.any(
+      (r) => r.source == OdometerReadingSource.arrival && r.routeId == routeId,
+    );
+  }
   final today = now.toLocal();
   DateTime? departureAt;
   DateTime? arrivalAt;
@@ -46,6 +55,11 @@ bool arrivalRecordedForCurrentTrip(List<OdometerReading> readings, DateTime now)
   return departureAt == null || arrivalAt.isAfter(departureAt);
 }
 
+/// Calcula los km recorridos de la ruta del día de [now] (zona local): toma la
+/// lectura de SALIDA y la de LLEGADA más recientes del mismo día (mismo
+/// año/mes/día que `readAt` en local) y devuelve su diferencia. Nunca lanza.
+///
+/// Lecturas de otro día se ignoran; otras fuentes (`manual`, `refuel`…) también.
 RouteKmToday routeKmToday(List<OdometerReading> readings, DateTime now) {
   final today = now.toLocal();
   OdometerReading? departure;

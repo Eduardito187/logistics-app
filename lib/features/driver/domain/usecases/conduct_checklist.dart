@@ -11,7 +11,7 @@ class ConductChecklist {
 
   final FleetRepository _repo;
 
-  Future<Data5?> call({
+  Future<PreTripChecklistResult?> call({
     required String vehicleId,
     required String driverId,
     required Map<String, bool> items,

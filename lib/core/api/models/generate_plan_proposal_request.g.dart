@@ -13,7 +13,7 @@ GeneratePlanProposalRequest _$GeneratePlanProposalRequestFromJson(
   vehicleId: json['vehicle_id'] as String,
   departAt: DateTime.parse(json['depart_at'] as String),
   stops: (json['stops'] as List<dynamic>)
-      .map((e) => Stops2.fromJson(e as Map<String, dynamic>))
+      .map((e) => Stops3.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 

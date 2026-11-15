@@ -195,7 +195,7 @@ void main() {
     expect(p.toMap(updatedAt: _updatedAt), {
       'state': 'ok',
       'updatedAt': 1000,
-      'route': '/store/reception',
+      'route': '/store/pickup',
       'incoming': 2,
       'pickups': 1,
     });

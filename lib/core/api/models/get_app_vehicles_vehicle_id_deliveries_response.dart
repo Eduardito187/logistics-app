@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'delivery.dart';
-import 'meta5.dart';
+import 'list_meta.dart';
 
 part 'get_app_vehicles_vehicle_id_deliveries_response.g.dart';
 
@@ -21,7 +21,7 @@ class GetAppVehiclesVehicleIdDeliveriesResponse {
   ) => _$GetAppVehiclesVehicleIdDeliveriesResponseFromJson(json);
 
   final List<Delivery> data;
-  final Meta5 meta;
+  final ListMeta meta;
 
   Map<String, Object?> toJson() =>
       _$GetAppVehiclesVehicleIdDeliveriesResponseToJson(this);

@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta17.dart';
+import 'meta12.dart';
 import 'stock_transfer.dart';
 
 part 'stock_transfer_collection.g.dart';
@@ -17,7 +17,7 @@ class StockTransferCollection {
       _$StockTransferCollectionFromJson(json);
 
   final List<StockTransfer> data;
-  final Meta17 meta;
+  final Meta12 meta;
 
   Map<String, Object?> toJson() => _$StockTransferCollectionToJson(this);
 }

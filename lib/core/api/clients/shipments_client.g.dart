@@ -21,11 +21,126 @@ class _ShipmentsClient implements ShipmentsClient {
   final ParseErrorLogger? errorLogger;
 
   @override
+  Future<GetAppShipmentsSummaryResponse> getShipmentSummary({
+    DateTime? date,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? destinationNodeId,
+    DeliveryMode? deliveryMode,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'date': date?.toIso8601String(),
+      r'date_from': dateFrom?.toIso8601String(),
+      r'date_to': dateTo?.toIso8601String(),
+      r'destination_node_id': destinationNodeId,
+      r'delivery_mode': deliveryMode?.toJson(),
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppShipmentsSummaryResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/shipments/summary',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppShipmentsSummaryResponse _value;
+    try {
+      _value = GetAppShipmentsSummaryResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppKpisDailyResponse> getDailyKpis({
+    DateTime? date,
+    String? nodeId,
+    String? vehicleId,
+    String? driverId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'date': date?.toIso8601String(),
+      r'node_id': nodeId,
+      r'vehicle_id': vehicleId,
+      r'driver_id': driverId,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppKpisDailyResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/kpis/daily',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppKpisDailyResponse _value;
+    try {
+      _value = GetAppKpisDailyResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<OrderLookupResponse> lookupOrders({required String q}) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'q': q};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<OrderLookupResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/orders/lookup',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late OrderLookupResponse _value;
+    try {
+      _value = OrderLookupResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<GetAppShipmentsResponse> listShipments({
     int? page = 1,
     int? perPage = 50,
-    ShipmentStatus? status,
+    List<ShipmentStatus>? status,
+    DeliveryMode? deliveryMode,
+    String? include,
+    String? q,
+    String? city,
+    String? vehicleId,
+    DateTime? deliveryDate,
+    bool? readyForPickup,
+    bool? pendingPreparation,
     OrderSource? source,
+    DateTime? deliveryDateFrom,
+    DateTime? deliveryDateTo,
     String? destinationNodeId,
     String? cursor,
   }) async {
@@ -33,8 +148,18 @@ class _ShipmentsClient implements ShipmentsClient {
     final queryParameters = <String, dynamic>{
       r'page': page,
       r'per_page': perPage,
-      r'status': status?.toJson(),
+      r'status': status,
+      r'delivery_mode': deliveryMode?.toJson(),
+      r'include': include,
+      r'q': q,
+      r'city': city,
+      r'vehicle_id': vehicleId,
+      r'delivery_date': deliveryDate?.toIso8601String(),
+      r'ready_for_pickup': readyForPickup,
+      r'pending_preparation': pendingPreparation,
       r'source': source?.toJson(),
+      r'delivery_date_from': deliveryDateFrom?.toIso8601String(),
+      r'delivery_date_to': deliveryDateTo?.toIso8601String(),
       r'destination_node_id': destinationNodeId,
       r'cursor': cursor,
     };
@@ -228,6 +353,68 @@ class _ShipmentsClient implements ShipmentsClient {
     late PostIntegrationsShipmentsImportResponse _value;
     try {
       _value = PostIntegrationsShipmentsImportResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppShipmentsReschedulePreviewResponse> previewRescheduleShipments({
+    required RescheduleShipmentsRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppShipmentsReschedulePreviewResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/shipments/reschedule/preview',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppShipmentsReschedulePreviewResponse _value;
+    try {
+      _value = PostAppShipmentsReschedulePreviewResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppShipmentsRescheduleResponse> rescheduleShipments({
+    required RescheduleShipmentsRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppShipmentsRescheduleResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/shipments/reschedule',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppShipmentsRescheduleResponse _value;
+    try {
+      _value = PostAppShipmentsRescheduleResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

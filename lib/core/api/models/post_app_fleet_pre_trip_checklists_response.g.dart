@@ -11,7 +11,9 @@ _$PostAppFleetPreTripChecklistsResponseFromJson(Map<String, dynamic> json) =>
     PostAppFleetPreTripChecklistsResponse(
       data: json['data'] == null
           ? null
-          : Data5.fromJson(json['data'] as Map<String, dynamic>),
+          : PreTripChecklistResult.fromJson(
+              json['data'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$PostAppFleetPreTripChecklistsResponseToJson(

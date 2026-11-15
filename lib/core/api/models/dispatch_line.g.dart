@@ -21,6 +21,11 @@ DispatchLine _$DispatchLineFromJson(Map<String, dynamic> json) => DispatchLine(
   shipmentReference: json['shipment_reference'] as String?,
   authorized: json['authorized'] as bool,
   authorizedReason: json['authorized_reason'] as String?,
+  authorizedReasonCode: json['authorized_reason_code'] == null
+      ? null
+      : DispatchAuthorizationReasonCode.fromJson(
+          json['authorized_reason_code'] as String,
+        ),
   labelStatus: DispatchLineLabelStatus.fromJson(json['label_status'] as String),
 );
 
@@ -38,5 +43,6 @@ Map<String, dynamic> _$DispatchLineToJson(DispatchLine instance) =>
       'shipment_reference': instance.shipmentReference,
       'authorized': instance.authorized,
       'authorized_reason': instance.authorizedReason,
+      'authorized_reason_code': instance.authorizedReasonCode,
       'label_status': instance.labelStatus,
     };

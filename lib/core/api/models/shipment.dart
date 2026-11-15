@@ -5,8 +5,11 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'address_confidence_level.dart';
+import 'delivery_mode.dart';
 import 'order_source.dart';
+import 'shipment_address_parts.dart';
 import 'shipment_line.dart';
+import 'shipment_progress.dart';
 import 'shipment_status.dart';
 
 part 'shipment.g.dart';
@@ -23,6 +26,10 @@ class Shipment {
     required this.addressConfidenceLevel,
     required this.status,
     required this.lines,
+    this.progress,
+    this.deliveryMode,
+    this.addressParts,
+    this.shortAddress,
     this.customerDocumentId,
     this.customerPhone,
     this.customerEmail,
@@ -30,12 +37,20 @@ class Shipment {
     this.lat,
     this.lng,
     this.destinationNodeId,
-    this.deliveryMode,
   });
 
   factory Shipment.fromJson(Map<String, Object?> json) =>
       _$ShipmentFromJson(json);
 
+  final ShipmentProgress? progress;
+  @JsonKey(name: 'delivery_mode')
+  final DeliveryMode? deliveryMode;
+  @JsonKey(name: 'address_parts')
+  final ShipmentAddressParts? addressParts;
+
+  /// Street + number plus neighborhood or city, at most 80 chars, never empty.
+  @JsonKey(name: 'short_address')
+  final String? shortAddress;
   final String id;
   final OrderSource source;
   @JsonKey(name: 'external_id')
@@ -65,12 +80,6 @@ class Shipment {
   /// UUID del nodo destino del envío (network_nodes). Null mientras el ingest/SAP no lo pueble.
   @JsonKey(name: 'destination_node_id')
   final String? destinationNodeId;
-
-  /// Campo aditivo agregado A MANO (el backend ya lo manda; pendiente regenerar
-  /// el cliente): `home_delivery` | `store_pickup` | `transfer`. Al regenerar
-  /// saldrá como enum `DeliveryMode`: ajustar `isStorePickup` (store feature).
-  @JsonKey(name: 'delivery_mode')
-  final String? deliveryMode;
   final List<ShipmentLine> lines;
 
   Map<String, Object?> toJson() => _$ShipmentToJson(this);

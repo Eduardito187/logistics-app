@@ -186,15 +186,23 @@ class _NotificationsClient implements NotificationsClient {
   }
 
   @override
-  Future<NotificationListEnvelope> appListNotifications({
-    int? limit = 100,
+  Future<GetAppNotificationsAllResponse> appListNotifications({
+    String? cursor,
+    bool? unread,
+    int? page = 1,
+    int? perPage = 50,
   }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'limit': limit};
+    final queryParameters = <String, dynamic>{
+      r'cursor': cursor,
+      r'unread': unread,
+      r'page': page,
+      r'per_page': perPage,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<NotificationListEnvelope>(
+    final _options = _setStreamType<GetAppNotificationsAllResponse>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -205,9 +213,74 @@ class _NotificationsClient implements NotificationsClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, Object?>>(_options);
-    late NotificationListEnvelope _value;
+    late GetAppNotificationsAllResponse _value;
     try {
-      _value = NotificationListEnvelope.fromJson(_result.data!);
+      _value = GetAppNotificationsAllResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppNotificationsReadAllResponse> appMarkAllNotificationsRead({
+    AppNotificationsReadAllRequestBody? body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body?.toJson() ?? <String, dynamic>{});
+    final _options = _setStreamType<PostAppNotificationsReadAllResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/notifications/read-all',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppNotificationsReadAllResponse _value;
+    try {
+      _value = PostAppNotificationsReadAllResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppNotificationsNotificationReadResponse> appMarkNotificationRead({
+    required String notification,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options =
+        _setStreamType<PostAppNotificationsNotificationReadResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/notifications/${notification}/read',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppNotificationsNotificationReadResponse _value;
+    try {
+      _value = PostAppNotificationsNotificationReadResponse.fromJson(
+        _result.data!,
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

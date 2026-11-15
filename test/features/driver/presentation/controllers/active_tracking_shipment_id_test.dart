@@ -37,15 +37,23 @@ void main() {
     expect(container.read(activeTrackingShipmentIdProvider), isNull);
   });
 
-  test('la ruta "completada" por el backend con una parada pendiente la rastrea', () async {
-    // El backend dice completada pero una parada sigue pendiente (el bug del
-    // dueño): el seguimiento NO debe apagarse, debe rastrear esa parada.
-    final route = buildRoute(
-      status: DriverRouteStatus.completed,
-      stops: [buildStop(shipmentId: 'ship-1', status: DriverRouteStopStatus.pending)],
-    );
-    expect(await _resolve(route), 'ship-1');
-  });
+  test(
+    'la ruta "completada" por el backend con una parada pendiente la rastrea',
+    () async {
+      // El backend dice completada pero una parada sigue pendiente (el bug del
+      // dueño): el seguimiento NO debe apagarse, debe rastrear esa parada.
+      final route = buildRoute(
+        status: DriverRouteStatus.completed,
+        stops: [
+          buildStop(
+            shipmentId: 'ship-1',
+            status: DriverRouteStopStatus.pending,
+          ),
+        ],
+      );
+      expect(await _resolve(route), 'ship-1');
+    },
+  );
 
   test('usa el envío de la parada en curso si está pendiente', () async {
     final current = buildStop(

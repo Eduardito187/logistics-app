@@ -153,7 +153,9 @@ class PickupDocumentCard extends StatelessWidget {
               excludeFromSemantics: true,
             ),
             label: Text(
-              document == null ? 'Foto del documento' : 'Volver a tomar documento',
+              document == null
+                  ? 'Foto del documento'
+                  : 'Volver a tomar documento',
             ),
           ),
         ],

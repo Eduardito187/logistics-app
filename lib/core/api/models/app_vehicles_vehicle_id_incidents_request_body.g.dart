@@ -10,7 +10,7 @@ AppVehiclesVehicleIdIncidentsRequestBody
 _$AppVehiclesVehicleIdIncidentsRequestBodyFromJson(Map<String, dynamic> json) =>
     AppVehiclesVehicleIdIncidentsRequestBody(
       severity: Severity.fromJson(json['severity'] as String),
-      type: Type.fromJson(json['type'] as String),
+      type: Type2.fromJson(json['type'] as String),
       routeId: json['route_id'] as String?,
       note: json['note'] as String?,
       lat: (json['lat'] as num?)?.toDouble(),

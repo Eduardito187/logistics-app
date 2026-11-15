@@ -241,7 +241,9 @@ void main() {
     expect(find.byType(FailedDeliveryScreen), findsOneWidget);
   });
 
-  testWidgets('parada ya resuelta: ofrece pasar a la siguiente', (tester) async {
+  testWidgets('parada ya resuelta: ofrece pasar a la siguiente', (
+    tester,
+  ) async {
     // "Siguiente entrega" solo aparece cuando la parada EN SÍ está resuelta
     // (estado efectivo), no por el estado de la entrega del envío: así una 7ª
     // parada pendiente que el backend reporta como "delivered" NO ofrece pasar
@@ -255,7 +257,9 @@ void main() {
     );
     await _pump(
       tester,
-      overrides: _overrides(route: _route(current: doneStop, stops: [doneStop])),
+      overrides: _overrides(
+        route: _route(current: doneStop, stops: [doneStop]),
+      ),
     );
 
     expect(find.text('Siguiente entrega'), findsOneWidget);

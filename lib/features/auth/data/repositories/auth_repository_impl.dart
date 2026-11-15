@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart'
+    hide TwoFactorChallenge, TwoFactorEnrollment;
 import '../../../../core/auth/device_fingerprint.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/auth/token_store.dart';

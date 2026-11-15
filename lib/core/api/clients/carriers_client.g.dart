@@ -59,6 +59,104 @@ class _CarriersClient implements CarriersClient {
   }
 
   @override
+  Future<GetAppCarriersMeAssignmentsResponse> listCarrierAssignments({
+    int? page = 1,
+    int? perPage = 50,
+    String? carrierId,
+    String? status,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'carrier_id': carrierId,
+      r'status': status,
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppCarriersMeAssignmentsResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/carriers/me/assignments',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppCarriersMeAssignmentsResponse _value;
+    try {
+      _value = GetAppCarriersMeAssignmentsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppCarriersTripsTripIdStartResponse> startCarrierTrip({
+    required String tripId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<PostAppCarriersTripsTripIdStartResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/carriers/trips/${tripId}/start',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppCarriersTripsTripIdStartResponse _value;
+    try {
+      _value = PostAppCarriersTripsTripIdStartResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppCarriersTripsTripIdCloseResponse> closeCarrierTrip({
+    required String tripId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<PostAppCarriersTripsTripIdCloseResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/carriers/trips/${tripId}/close',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppCarriersTripsTripIdCloseResponse _value;
+    try {
+      _value = PostAppCarriersTripsTripIdCloseResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<GetAppCarriersAssignmentResponse> assignCarrierForVolume({
     required String corridorFrom,
     required String corridorTo,
@@ -97,13 +195,23 @@ class _CarriersClient implements CarriersClient {
 
   @override
   Future<GetAppCarriersSettlementsResponse> listCarrierSettlements({
+    int? page = 1,
+    int? perPage = 50,
     String? carrierId,
     SettlementStatus? status,
+    DateTime? periodFrom,
+    DateTime? periodTo,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'carrier_id': carrierId,
       r'status': status?.toJson(),
+      r'period_from': periodFrom?.toIso8601String(),
+      r'period_to': periodTo?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -122,6 +230,44 @@ class _CarriersClient implements CarriersClient {
     late GetAppCarriersSettlementsResponse _value;
     try {
       _value = GetAppCarriersSettlementsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppCarriersCorridorsResponse> listCarrierCorridors({
+    int? page = 1,
+    int? perPage = 50,
+    String? carrierId,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'carrier_id': carrierId,
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppCarriersCorridorsResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/carriers/corridors',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppCarriersCorridorsResponse _value;
+    try {
+      _value = GetAppCarriersCorridorsResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

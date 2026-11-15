@@ -8,11 +8,11 @@ part 'meta8.g.dart';
 
 @JsonSerializable()
 class Meta8 {
-  const Meta8({this.count});
+  const Meta8({required this.count});
 
   factory Meta8.fromJson(Map<String, Object?> json) => _$Meta8FromJson(json);
 
-  final int? count;
+  final int count;
 
   Map<String, Object?> toJson() => _$Meta8ToJson(this);
 }

@@ -102,9 +102,12 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
   /// Abre la lectura de odómetro de LLEGADA al centro de distribución (cierre de
   /// la ruta), con `source: arrival` (simétrico de la salida del checklist).
   void _finishRoute() {
+    // La llegada se liga a ESTA salida (ruta): si después sale otra vez, esa
+    // otra salida tiene su propio cierre.
+    final routeId = ref.read(driverRouteProvider).value?.id;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const OdometerScreen(
+        builder: (_) => OdometerScreen(
           source: RecordOdometerRequestSource.arrival,
           title: 'Odómetro de llegada',
           intro:
@@ -112,6 +115,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen> {
               'para cerrar la ruta del día.',
           initialNote: 'Llegada al CD',
           closeOnSaved: true,
+          routeId: routeId,
         ),
       ),
     );
@@ -169,7 +173,9 @@ class _CloseRouteButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final list = readings.value;
-    if (list != null && arrivalRecordedForCurrentTrip(list, DateTime.now())) {
+    final routeId = ref.watch(driverRouteProvider.select((r) => r.value?.id));
+    if (list != null &&
+        arrivalRecordedForCurrentTrip(list, DateTime.now(), routeId: routeId)) {
       return const SizedBox.shrink();
     }
     return SafeArea(

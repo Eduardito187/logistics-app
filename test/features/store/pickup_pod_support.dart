@@ -6,7 +6,7 @@ import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/unit_tracking.dart';
 import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
-import 'package:logistics_app/core/location/gps_fix.dart';
+import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/media/photo_picker.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
 import 'package:logistics_app/core/scanning/scanner_screen.dart';
@@ -21,6 +21,7 @@ import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart
 import '../../support/button_finders.dart';
 import '../../support/fake_label_resolver.dart';
 import '../../support/fake_photo_picker.dart';
+import '../driver/support/driver_test_support.dart' show FakeLocationService;
 import '../driver/support/signature_test_support.dart';
 import 'fake_continuous_scanner.dart';
 import 'store_fixtures.dart';
@@ -161,6 +162,9 @@ Future<PickupHarness> pumpPickupPod(
         // El código escaneado representa al producto (Code128): se resuelve con
         // su propio valor como unit_id (el backend real lo mapea).
         labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
+        // GPS falso: el registro pide la posición y, sin esto, esperaría al
+        // plugin real (que en los tests nunca responde).
+        locationServiceProvider.overrideWithValue(FakeLocationService()),
         photoPickerProvider.overrideWithValue(h.camera.call),
         pickupSignatureCaptureProvider.overrideWithValue(
           (_) async => signs ? kTinyPng : null,
@@ -194,7 +198,10 @@ Future<void> tapSign(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> tapTakePhoto(WidgetTester tester, [String label = 'Tomar foto']) async {
+Future<void> tapTakePhoto(
+  WidgetTester tester, [
+  String label = 'Tomar foto',
+]) async {
   await tester.tap(findButtonWithText<OutlinedButton>(label));
   await tester.pumpAndSettle();
 }

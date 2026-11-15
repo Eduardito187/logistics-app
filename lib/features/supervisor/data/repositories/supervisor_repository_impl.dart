@@ -2,11 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
-import '../../../../core/api/models/stops2.dart';
+import '../../../../core/api/models/stops3.dart';
 import '../../../../core/api/models/strategy.dart';
 import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
@@ -51,7 +51,8 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
   Future<Plan> getPlan(String planId) => _remote.getPlan(planId);
 
   @override
-  Future<Data7> getPlanEta(String planId) => _remote.getPlanEta(planId);
+  Future<GetPlanEtaData> getPlanEta(String planId) =>
+      _remote.getPlanEta(planId);
 
   @override
   Future<AutoPlanRun> getDailyPlanRun({
@@ -70,7 +71,7 @@ class SupervisorRepositoryImpl implements SupervisorRepository {
     required DateTime planDate,
     required String vehicleId,
     required DateTime departAt,
-    required List<Stops2> stops,
+    required List<Stops3> stops,
   }) => _remote.generatePlanProposal(
     planDate: planDate,
     vehicleId: vehicleId,

@@ -22,6 +22,10 @@ class DriverRoute {
     required this.completedStops,
     required this.stopsRemaining,
     required this.stops,
+    this.startedAt,
+    this.closedAt,
+    this.failedStops,
+    this.rescheduledStops,
     this.currentStop,
     this.routeGeometry,
   });
@@ -29,6 +33,10 @@ class DriverRoute {
   factory DriverRoute.fromJson(Map<String, Object?> json) =>
       _$DriverRouteFromJson(json);
 
+  @JsonKey(name: 'started_at')
+  final DateTime? startedAt;
+  @JsonKey(name: 'closed_at')
+  final DateTime? closedAt;
   final String id;
   @JsonKey(name: 'vehicle_id')
   final String vehicleId;
@@ -37,8 +45,18 @@ class DriverRoute {
   final DriverRouteStatus status;
   @JsonKey(name: 'total_stops')
   final int totalStops;
+
+  /// Paradas ENTREGADAS con éxito (solo entregas). NO incluye fallidas ni replanificadas: esas van en failed_stops / rescheduled_stops.
   @JsonKey(name: 'completed_stops')
   final int completedStops;
+
+  /// Paradas con intento de entrega fallido.
+  @JsonKey(name: 'failed_stops')
+  final int? failedStops;
+
+  /// Paradas replanificadas por incidente del camión (sacadas de esta ruta).
+  @JsonKey(name: 'rescheduled_stops')
+  final int? rescheduledStops;
   @JsonKey(name: 'stops_remaining')
   final int stopsRemaining;
   @JsonKey(name: 'current_stop')

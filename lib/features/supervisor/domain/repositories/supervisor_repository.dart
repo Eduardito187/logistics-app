@@ -1,10 +1,10 @@
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
-import '../../../../core/api/models/stops2.dart';
+import '../../../../core/api/models/stops3.dart';
 import '../../../../core/api/models/strategy.dart';
 import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
@@ -37,7 +37,7 @@ abstract interface class SupervisorRepository {
   Future<Plan> getPlan(String planId);
 
   /// ETA por parada de un plan.
-  Future<Data7> getPlanEta(String planId);
+  Future<GetPlanEtaData> getPlanEta(String planId);
 
   /// Estado y resultado de la corrida automática del día (y modo).
   Future<AutoPlanRun> getDailyPlanRun({
@@ -56,7 +56,7 @@ abstract interface class SupervisorRepository {
     required DateTime planDate,
     required String vehicleId,
     required DateTime departAt,
-    required List<Stops2> stops,
+    required List<Stops3> stops,
   });
 
   /// Publica un plan, dejándolo disponible para ejecución.

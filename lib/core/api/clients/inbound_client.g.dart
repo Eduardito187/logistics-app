@@ -52,17 +52,23 @@ class _InboundClient implements InboundClient {
 
   @override
   Future<AsnCollection> listAsns({
+    int? page = 1,
+    int? perPage = 50,
     String? sellerId,
     String? warehouseId,
     AsnStatus? status,
     DateTime? appointmentDate,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'seller_id': sellerId,
       r'warehouse_id': warehouseId,
       r'status': status?.toJson(),
       r'appointment_date': appointmentDate?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

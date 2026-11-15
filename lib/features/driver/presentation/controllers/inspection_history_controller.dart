@@ -63,7 +63,8 @@ PreTripChecklist? inspectionForCurrentRoute(
     }
     if (!matches) continue;
     final at = c.performedOn?.toLocal();
-    if (best == null || (at != null && (bestAt == null || at.isAfter(bestAt)))) {
+    if (best == null ||
+        (at != null && (bestAt == null || at.isAfter(bestAt)))) {
       best = c;
       bestAt = at;
     }

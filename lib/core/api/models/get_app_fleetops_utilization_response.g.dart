@@ -8,7 +8,9 @@ part of 'get_app_fleetops_utilization_response.dart';
 
 GetAppFleetopsUtilizationResponse _$GetAppFleetopsUtilizationResponseFromJson(
   Map<String, dynamic> json,
-) => GetAppFleetopsUtilizationResponse(data: json['data']);
+) => GetAppFleetopsUtilizationResponse(
+  data: VehicleUtilization.fromJson(json['data'] as Map<String, dynamic>),
+);
 
 Map<String, dynamic> _$GetAppFleetopsUtilizationResponseToJson(
   GetAppFleetopsUtilizationResponse instance,

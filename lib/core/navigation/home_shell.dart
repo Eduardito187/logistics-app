@@ -8,7 +8,7 @@ import '../../features/home/presentation/role_home_screen.dart';
 import '../../features/notifications/presentation/notifications_list_screen.dart';
 import '../../features/picking/presentation/orders_worklist_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
-import '../../features/store/presentation/node_reception_screen.dart';
+import '../../features/store/presentation/counter_pickup_screen.dart';
 import '../../features/supervisor/presentation/supervisor_dashboard_screen.dart';
 import '../auth/session.dart';
 import '../auth/user_role.dart';
@@ -25,10 +25,12 @@ Widget _centerScreenFor(UserRole role) {
     case UserRole.picker:
       return const OrdersWorklistScreen();
     case UserRole.store:
-      return const NodeReceptionScreen();
+      // La tienda solo entrega al cliente final (la llegada la marca el
+      // chofer): su acción principal es el recojo.
+      return const CounterPickupScreen();
     case UserRole.carrier:
       return const CarrierPickupScreen();
-    case UserRole.supervisor:
+    case UserRole.supervisor || UserRole.admin:
       return const SupervisorDashboardScreen();
   }
 }

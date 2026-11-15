@@ -115,7 +115,9 @@ class _OrderPreparationScreenState
       context: context,
       builder: (_) => AssignLaneDialog(initial: current.lane),
     );
-    if (!mounted || vehicle == null) return;
+    // Sin id no hay a qué atar el pedido (el contrato lo declara opcional).
+    final vehicleId = vehicle?.id;
+    if (!mounted || vehicle == null || vehicleId == null) return;
     final plate = (vehicle.plate ?? '').trim();
 
     setState(() => _orderBusy = true);
@@ -123,11 +125,11 @@ class _OrderPreparationScreenState
       // ATA el pedido al vehículo EN EL BACKEND: así deja de figurar en
       // "Pedidos por preparar" y pasa a la ruta de ese camión. Antes esto era
       // solo estado local y el pedido seguía apareciendo en la worklist.
-      await ref.read(assignOrderVehicleProvider).call(_orderNumber, vehicle.id);
+      await ref.read(assignOrderVehicleProvider).call(_orderNumber, vehicleId);
       if (!mounted) return;
       ref
           .read(preparationControllerProvider(_orderNumber).notifier)
-          .assign(vehicleId: vehicle.id, lane: plate.isEmpty ? null : plate);
+          .assign(vehicleId: vehicleId, lane: plate.isEmpty ? null : plate);
       // Asignar el vehículo PREPARA el pedido: sus etiquetas quedan marcadas
       // como preparadas (ya no hay escaneo del producto, decisión del dueño).
       _markAllPrepared();

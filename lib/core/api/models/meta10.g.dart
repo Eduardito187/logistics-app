@@ -7,11 +7,15 @@ part of 'meta10.dart';
 // **************************************************************************
 
 Meta10 _$Meta10FromJson(Map<String, dynamic> json) => Meta10(
-  date: json['date'] == null ? null : DateTime.parse(json['date'] as String),
   count: (json['count'] as num?)?.toInt(),
+  accepted: (json['accepted'] as num?)?.toInt(),
+  duplicate: (json['duplicate'] as num?)?.toInt(),
+  rejected: (json['rejected'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$Meta10ToJson(Meta10 instance) => <String, dynamic>{
-  'date': instance.date?.toIso8601String(),
   'count': instance.count,
+  'accepted': instance.accepted,
+  'duplicate': instance.duplicate,
+  'rejected': instance.rejected,
 };

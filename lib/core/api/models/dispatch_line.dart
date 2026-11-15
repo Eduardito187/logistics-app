@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'dispatch_authorization_reason_code.dart';
 import 'dispatch_destination.dart';
 import 'dispatch_line_label_status.dart';
 import 'origin2.dart';
@@ -25,6 +26,7 @@ class DispatchLine {
     required this.shipmentReference,
     required this.authorized,
     required this.authorizedReason,
+    required this.authorizedReasonCode,
     required this.labelStatus,
   });
 
@@ -40,7 +42,7 @@ class DispatchLine {
   final String? imageUrl;
   final int quantity;
 
-  /// Bultos por unidad; 1 por defecto si no se conoce
+  /// Productos por unidad; 1 por defecto si no se conoce
   @JsonKey(name: 'pieces_per_unit')
   final int piecesPerUnit;
 
@@ -58,12 +60,16 @@ class DispatchLine {
   @JsonKey(name: 'shipment_reference')
   final String? shipmentReference;
 
-  /// true si el envío está en un plan publicado
+  /// true si el envío ya tiene camión: parada en un plan publicado, o asignación directa del vehículo al pedido (entrega abierta o parada en la ruta de un camión apto)
   final bool authorized;
 
-  /// Motivo si authorized=false (p. ej. "sin plan publicado")
+  /// Motivo legible si authorized=false: "sin plan publicado" (sin camión por ninguna vía) o "vehículo no apto"
   @JsonKey(name: 'authorized_reason')
   final String? authorizedReason;
+
+  /// Código estable del motivo si authorized=false. not_assigned: se destraba con POST /app/orders/{orderNumber}/vehicle. vehicle_unfit: reasignar a otro camión o liberar el vehículo. null si authorized=true
+  @JsonKey(name: 'authorized_reason_code')
+  final DispatchAuthorizationReasonCode? authorizedReasonCode;
   @JsonKey(name: 'label_status')
   final DispatchLineLabelStatus labelStatus;
 

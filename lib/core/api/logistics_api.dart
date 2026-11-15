@@ -21,15 +21,25 @@ import 'clients/settings_client.dart';
 import 'clients/shipments_client.dart';
 import 'clients/tracking_client.dart';
 import 'clients/promise_client.dart';
+import 'clients/catalog_client.dart';
 import 'clients/access_client.dart';
 import 'clients/telemetry_client.dart';
 import 'clients/auth_client.dart';
 import 'clients/sellers_client.dart';
+import 'clients/payments_client.dart';
 import 'clients/inbound_client.dart';
 import 'clients/inventory_client.dart';
 import 'clients/settlement_client.dart';
 import 'clients/returns_client.dart';
 import 'clients/seller_portal_client.dart';
+import 'clients/cart_client.dart';
+import 'clients/orders_client.dart';
+import 'clients/pricing_client.dart';
+import 'clients/accounts_client.dart';
+import 'clients/promotions_client.dart';
+import 'clients/invoicing_client.dart';
+import 'clients/search_client.dart';
+import 'clients/staff_client.dart';
 
 /// Dismac Logistics API `v1.0.0`.
 ///
@@ -69,15 +79,25 @@ class LogisticsApi {
   ShipmentsClient? _shipments;
   TrackingClient? _tracking;
   PromiseClient? _promise;
+  CatalogClient? _catalog;
   AccessClient? _access;
   TelemetryClient? _telemetry;
   AuthClient? _auth;
   SellersClient? _sellers;
+  PaymentsClient? _payments;
   InboundClient? _inbound;
   InventoryClient? _inventory;
   SettlementClient? _settlement;
   ReturnsClient? _returns;
   SellerPortalClient? _sellerPortal;
+  CartClient? _cart;
+  OrdersClient? _orders;
+  PricingClient? _pricing;
+  AccountsClient? _accounts;
+  PromotionsClient? _promotions;
+  InvoicingClient? _invoicing;
+  SearchClient? _search;
+  StaffClient? _staff;
 
   SystemClient get system => _system ??= SystemClient(_dio, baseUrl: _baseUrl);
 
@@ -126,6 +146,9 @@ class LogisticsApi {
   PromiseClient get promise =>
       _promise ??= PromiseClient(_dio, baseUrl: _baseUrl);
 
+  CatalogClient get catalog =>
+      _catalog ??= CatalogClient(_dio, baseUrl: _baseUrl);
+
   AccessClient get access => _access ??= AccessClient(_dio, baseUrl: _baseUrl);
 
   TelemetryClient get telemetry =>
@@ -135,6 +158,9 @@ class LogisticsApi {
 
   SellersClient get sellers =>
       _sellers ??= SellersClient(_dio, baseUrl: _baseUrl);
+
+  PaymentsClient get payments =>
+      _payments ??= PaymentsClient(_dio, baseUrl: _baseUrl);
 
   InboundClient get inbound =>
       _inbound ??= InboundClient(_dio, baseUrl: _baseUrl);
@@ -150,4 +176,24 @@ class LogisticsApi {
 
   SellerPortalClient get sellerPortal =>
       _sellerPortal ??= SellerPortalClient(_dio, baseUrl: _baseUrl);
+
+  CartClient get cart => _cart ??= CartClient(_dio, baseUrl: _baseUrl);
+
+  OrdersClient get orders => _orders ??= OrdersClient(_dio, baseUrl: _baseUrl);
+
+  PricingClient get pricing =>
+      _pricing ??= PricingClient(_dio, baseUrl: _baseUrl);
+
+  AccountsClient get accounts =>
+      _accounts ??= AccountsClient(_dio, baseUrl: _baseUrl);
+
+  PromotionsClient get promotions =>
+      _promotions ??= PromotionsClient(_dio, baseUrl: _baseUrl);
+
+  InvoicingClient get invoicing =>
+      _invoicing ??= InvoicingClient(_dio, baseUrl: _baseUrl);
+
+  SearchClient get search => _search ??= SearchClient(_dio, baseUrl: _baseUrl);
+
+  StaffClient get staff => _staff ??= StaffClient(_dio, baseUrl: _baseUrl);
 }

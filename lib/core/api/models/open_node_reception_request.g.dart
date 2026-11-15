@@ -10,18 +10,22 @@ OpenNodeReceptionRequest _$OpenNodeReceptionRequestFromJson(
   Map<String, dynamic> json,
 ) => OpenNodeReceptionRequest(
   shipmentId: json['shipment_id'] as String,
-  originNodeId: json['origin_node_id'] as String,
-  destinationNodeId: json['destination_node_id'] as String,
-  originNodeKind: OpenNodeReceptionRequestOriginNodeKind.fromJson(
-    json['origin_node_kind'] as String,
-  ),
-  destinationNodeKind: OpenNodeReceptionRequestDestinationNodeKind.fromJson(
-    json['destination_node_kind'] as String,
-  ),
-  expectedUnitIds: (json['expected_unit_ids'] as List<dynamic>)
-      .map((e) => e as String)
-      .toList(),
   occurredAt: DateTime.parse(json['occurred_at'] as String),
+  originNodeId: json['origin_node_id'] as String?,
+  destinationNodeId: json['destination_node_id'] as String?,
+  originNodeKind: json['origin_node_kind'] == null
+      ? null
+      : OpenNodeReceptionRequestOriginNodeKind.fromJson(
+          json['origin_node_kind'] as String,
+        ),
+  destinationNodeKind: json['destination_node_kind'] == null
+      ? null
+      : OpenNodeReceptionRequestDestinationNodeKind.fromJson(
+          json['destination_node_kind'] as String,
+        ),
+  expectedUnitIds: (json['expected_unit_ids'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
 );
 
 Map<String, dynamic> _$OpenNodeReceptionRequestToJson(

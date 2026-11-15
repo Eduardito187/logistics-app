@@ -257,33 +257,34 @@ void main() {
       expect(find.text('Entregados 2 de 2 producto(s).'), findsOneWidget);
     });
 
-    testWidgets('rechazo del backend: no queda entregado y se puede reintentar', (
-      tester,
-    ) async {
-      final h = await pumpPickupPod(
-        tester,
-        shipment: _shipment,
-        products: ['unit-1', 'unit-2'],
-        // Solo el segundo producto es rechazado.
-        outcomeFor: (unitId) =>
-            unitId == 'unit-2' ? SubmitOutcome.failed : SubmitOutcome.sent,
-      );
+    testWidgets(
+      'rechazo del backend: no queda entregado y se puede reintentar',
+      (tester) async {
+        final h = await pumpPickupPod(
+          tester,
+          shipment: _shipment,
+          products: ['unit-1', 'unit-2'],
+          // Solo el segundo producto es rechazado.
+          outcomeFor: (unitId) =>
+              unitId == 'unit-2' ? SubmitOutcome.failed : SubmitOutcome.sent,
+        );
 
-      await deliverAll(tester);
+        await deliverAll(tester);
 
-      expect(h.pods, hasLength(2));
-      expect(
-        find.text('No se pudo registrar. Intentá de nuevo.'),
-        findsOneWidget,
-      );
-      // El que entró queda entregado; el rechazado sigue escaneado.
-      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
-      expect(find.text('Escaneado'), findsOneWidget);
+        expect(h.pods, hasLength(2));
+        expect(
+          find.text('No se pudo registrar. Intentá de nuevo.'),
+          findsOneWidget,
+        );
+        // El que entró queda entregado; el rechazado sigue escaneado.
+        expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+        expect(find.text('Escaneado'), findsOneWidget);
 
-      // Reintentar NO repite el producto que ya entró.
-      await tapRegister(tester);
-      expect(h.podUnitIds, ['unit-1', 'unit-2', 'unit-2']);
-    });
+        // Reintentar NO repite el producto que ya entró.
+        await tapRegister(tester);
+        expect(h.podUnitIds, ['unit-1', 'unit-2', 'unit-2']);
+      },
+    );
   });
 
   // Doble entrega entre reinicios: la lista en memoria se vacía cuando el

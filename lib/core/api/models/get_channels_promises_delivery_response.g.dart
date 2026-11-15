@@ -14,7 +14,7 @@ _$GetChannelsPromisesDeliveryResponseFromJson(Map<String, dynamic> json) =>
           .toList(),
       meta: json['meta'] == null
           ? null
-          : MetaSealed.fromJson(json['meta'] as Map<String, dynamic>),
+          : ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$GetChannelsPromisesDeliveryResponseToJson(

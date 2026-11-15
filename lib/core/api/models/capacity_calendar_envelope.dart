@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'capacity_bucket.dart';
-import 'meta10.dart';
+import 'meta3.dart';
 
 part 'capacity_calendar_envelope.g.dart';
 
@@ -17,7 +17,7 @@ class CapacityCalendarEnvelope {
       _$CapacityCalendarEnvelopeFromJson(json);
 
   final List<CapacityBucket> data;
-  final Meta10? meta;
+  final Meta3? meta;
 
   Map<String, Object?> toJson() => _$CapacityCalendarEnvelopeToJson(this);
 }

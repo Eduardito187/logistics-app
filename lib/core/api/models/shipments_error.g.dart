@@ -8,7 +8,7 @@ part of 'shipments_error.dart';
 
 ShipmentsError _$ShipmentsErrorFromJson(Map<String, dynamic> json) =>
     ShipmentsError(
-      error: Error9.fromJson(json['error'] as Map<String, dynamic>),
+      error: Error10.fromJson(json['error'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ShipmentsErrorToJson(ShipmentsError instance) =>

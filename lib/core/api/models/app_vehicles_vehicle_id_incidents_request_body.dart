@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'severity.dart';
-import 'type.dart';
+import 'type2.dart';
 
 part 'app_vehicles_vehicle_id_incidents_request_body.g.dart';
 
@@ -27,7 +27,7 @@ class AppVehiclesVehicleIdIncidentsRequestBody {
 
   /// MINOR keeps the route with delayed ETAs; MAJOR reschedules pending stops to the next day.
   final Severity severity;
-  final Type type;
+  final Type2 type;
 
   /// Optional; when omitted, the vehicle's current open route is used.
   @JsonKey(name: 'route_id')

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/alert.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
@@ -97,10 +97,8 @@ final planDetailProvider = FutureProvider.autoDispose.family<Plan, String>((
 });
 
 /// ETA por parada de un plan (secuencia + hora estimada por envío).
-final planEtaProvider = FutureProvider.autoDispose.family<Data7, String>((
-  ref,
-  planId,
-) {
-  ref.cacheFor(CacheTtl.short);
-  return ref.watch(getPlanEtaProvider)(planId);
-});
+final planEtaProvider = FutureProvider.autoDispose
+    .family<GetPlanEtaData, String>((ref, planId) {
+      ref.cacheFor(CacheTtl.short);
+      return ref.watch(getPlanEtaProvider)(planId);
+    });

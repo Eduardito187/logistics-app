@@ -122,6 +122,8 @@ RouteDayPayload routeDayPayloadFor({
       case DriverRouteStopStatus.failed:
         failed++;
       case DriverRouteStopStatus.pending:
+      // Reprogramada: no se entregó ni falló hoy; no suma a ninguno.
+      case DriverRouteStopStatus.rescheduled:
       case DriverRouteStopStatus.$unknown:
         break;
     }

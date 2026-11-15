@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/models/delivery_mode.dart';
 import '../../../core/api/models/shipment.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
@@ -13,7 +14,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/field_icon.dart';
 import 'controllers/store_shipments_notifier.dart';
 import 'controllers/store_shipments_state.dart';
-import 'pickup_label_lookup.dart';
+import '../../../core/labels/label_lookup.dart';
 import 'widgets/load_more_footer.dart';
 import 'widgets/load_more_on_scroll.dart';
 import 'widgets/pickup_card.dart';
@@ -150,10 +151,19 @@ class _CounterPickupScreenState extends ConsumerState<CounterPickupScreen> {
                             icon: AppIcon.search,
                             title: 'Pedido no encontrado',
                             message:
-                                'No hay un recojo con ese código entre los '
-                                'pedidos cargados.',
-                            // Puede estar en una página que aún no se trajo.
-                            action: paged!.hasMore ? _footer(paged) : null,
+                                'Todavía no está en la tienda para retirar. '
+                                'Consultá en qué estado está para decírselo '
+                                'al cliente.',
+                            // El pedido puede estar en camino: la consulta
+                            // dice su estado aunque no sea un recojo listo.
+                            action: FilledButton.icon(
+                              onPressed: () => context.push(
+                                '/lookup',
+                                extra: _search.text.trim(),
+                              ),
+                              icon: const AnimatedAppIcon(AppIcon.search),
+                              label: const Text('Consultar estado del pedido'),
+                            ),
                           ),
                         )
                       else
@@ -206,7 +216,7 @@ class _CounterPickupScreenState extends ConsumerState<CounterPickupScreen> {
     if (!shipments.any((s) => s.deliveryMode != null)) return shipments;
     return [
       for (final shipment in shipments)
-        if (shipment.deliveryMode == 'store_pickup') shipment,
+        if (shipment.deliveryMode == DeliveryMode.storePickup) shipment,
     ];
   }
 

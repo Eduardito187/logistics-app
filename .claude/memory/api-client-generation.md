@@ -25,3 +25,28 @@ El cliente del API vive en `lib/core/api/` y se **genera** (regla #5, nunca DTOs
 **AVISO al regenerar hoy: el cliente commiteado (26 oct) está ATRÁS ~10 días → un regen full trae drift mayor que ROMPE la app** (enum `Channel` repropósito a canales de venta, `Delivery.reference` requerido, `TwoFactor*` colisiona con auth, notifications `limit`…). Ver [[labeling-order-multishipping]] para el patrón de **regen QUIRÚRGICO** (aplicar solo los archivos de una feature nueva autocontenida y revertir el resto con `git checkout` + `git clean`).
 
 **Regenerar con endpoints nuevos (probado 2026-10-16, Windows):** generar en una COPIA con el Flutter 3.47 que quedó en `C:\sdk\flutter` (Dart 3.13, donde `retrofit_generator ^10.2.12` sí compila): carpeta temporal con `openapi/`, `swagger_parser.yaml`, `analysis_options.yaml`, `third_party/` y el pubspec/lock de Dart 3.13 (respaldo en el scratchpad `backup-dart313/`), `pub get` + `dart run swagger_parser` + parche `MetaSealed?` + `build_runner build`, y copiar SOLO `lib/core/api` al proyecto; luego `C:\flutter\bin\dart format lib/core/api` y `flutter analyze` con 3.32 (el código generado compila en Dart 3.8). Trampa: swagger_parser numera los objetos anónimos (`Data4`, `Data6`, `Data21`…) y un endpoint nuevo CORRE la numeración → renombrar las referencias de la app/tests (y los imports `models/dataN.dart`) comparando campos viejo vs nuevo.
+
+**Regen FULL hecho el 2026-11-14 (Windows, cliente al día con el backend).** Comando que funciona:
+`powershell -ExecutionPolicy Bypass -File scripts\regen_api_client.ps1 -Spec C:\Users\ehhuallata\Documents\APP\logistics\openapi\v1.yaml [-DryRun]`
+(el default del script apunta al backend VIEJO de WSL: pasar siempre `-Spec`). El generador producía código
+roto o silenciosamente incorrecto; `scripts/preprocess_openapi.py` ahora lo corrige ANTES de generar (cada
+arreglo imprime una línea al correr):
+1. `prefer_json_bodies`: operación con el mismo cuerpo en JSON y multipart → deja JSON (si no, se aplanaba a
+   parámetros sueltos, desaparecía `ProofOfDeliveryRequest` y quedaban parámetros DUPLICADOS que no compilan).
+2. `drop_multipart_duplicates`: en multipart puro quita del cuerpo lo que ya viene por header/path.
+3. `hoist_core_type_collisions`: propiedad `map` generaba `class Map` → "Stack Overflow" en json_serializable.
+4. `hoist_enum_name_collisions` / `hoist_object_name_collisions`: un inline con el nombre de un componente lo
+   PISABA en silencio (`channel` de comercio pisaba `Channel` de notificaciones → canal siempre $unknown;
+   `node` del personal pisaba `Node` de la red). Ahora salen como `ChannelOption`, `NodeSummary`,
+   `VehicleSummary`, `DriverSummary2` y el componente conserva su nombre (por eso `Vehicle`/`Driver` son ahora
+   los completos y la tripulación usa los `*Summary`).
+5. `name_response_data`: el `data` inline de cada respuesta se llama `<OperationId>Data` (estable). Antes
+   `Data`, `Data2`… se renumeraban con cada endpoint nuevo y dos respuestas podían compartir `Data`.
+6. `simplify_union_parameters`: query con `oneOf` salía `dynamic` y hacía `.toJson()` sobre null
+   (`GET /app/shipments` sin `status` reventaba).
+Y en `regen_api_client.ps1`: el parche de `meta` nullable es genérico (`final <Tipo> meta;` sin `required`).
+**El cliente generado está EXCLUIDO del analyzer**: para ver si compila, comentar temporalmente las exclusiones
+de `analysis_options.yaml`, `dart analyze lib/core/api`, y restaurar. Quedan numerados (inestables) los enums
+inline `Type2/3/4`, `Status*`, `Stops*`: al regenerar, revisar esas referencias. `scripts/regen_api_client.sh`
+(WSL) usa el mismo preprocesador. `Meta` de listas viejas es una clase vacía: paginación por heurística
+(página completa = puede haber más); las nuevas traen `ListMeta` con `nextPage`.

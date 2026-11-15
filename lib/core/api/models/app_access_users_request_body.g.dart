@@ -17,7 +17,7 @@ AppAccessUsersRequestBody _$AppAccessUsersRequestBodyFromJson(
       .toList(),
   status: json['status'] == null
       ? null
-      : Status6.fromJson(json['status'] as String),
+      : Status5.fromJson(json['status'] as String),
 );
 
 Map<String, dynamic> _$AppAccessUsersRequestBodyToJson(

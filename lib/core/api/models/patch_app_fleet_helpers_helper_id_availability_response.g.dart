@@ -12,7 +12,9 @@ _$PatchAppFleetHelpersHelperIdAvailabilityResponseFromJson(
 ) => PatchAppFleetHelpersHelperIdAvailabilityResponse(
   data: json['data'] == null
       ? null
-      : Data4.fromJson(json['data'] as Map<String, dynamic>),
+      : FleetSetHelperAvailabilityData.fromJson(
+          json['data'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$PatchAppFleetHelpersHelperIdAvailabilityResponseToJson(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/models/delivery_mode.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
@@ -62,11 +63,14 @@ void main() {
     await _pump(
       tester,
       () async => [
-        shipment(customerName: 'Ana Pérez', deliveryMode: 'store_pickup'),
+        shipment(
+          customerName: 'Ana Pérez',
+          deliveryMode: DeliveryMode.storePickup,
+        ),
         shipment(
           id: 'ship-2',
           customerName: 'Traslado CD',
-          deliveryMode: 'transfer',
+          deliveryMode: DeliveryMode.transfer,
         ),
       ],
     );

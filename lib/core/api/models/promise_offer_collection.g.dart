@@ -12,7 +12,7 @@ PromiseOfferCollection _$PromiseOfferCollectionFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => PromiseOffer.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta9.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: Meta2.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PromiseOfferCollectionToJson(

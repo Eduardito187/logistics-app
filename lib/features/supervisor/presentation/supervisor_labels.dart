@@ -14,6 +14,7 @@ String alertTypeLabel(AlertType type) => switch (type) {
   AlertType.geofenceViolation => 'Violación de geocerca',
   AlertType.unauthorizedUse => 'Uso no autorizado',
   AlertType.speeding => 'Exceso de velocidad',
+  AlertType.routeDeviation => 'Desvío de la ruta',
   AlertType.$unknown => 'Alerta de telemetría',
 };
 

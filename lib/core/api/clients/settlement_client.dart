@@ -18,13 +18,22 @@ part 'settlement_client.g.dart';
 abstract class SettlementClient {
   factory SettlementClient(Dio dio, {String? baseUrl}) = _SettlementClient;
 
-  /// List seller settlements
+  /// List seller settlements.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/integrations/settlements')
   Future<SellerSettlementCollection> listSellerSettlements({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('seller_id') String? sellerId,
     @Query('status') SellerSettlementStatus? status,
     @Query('period_from') DateTime? periodFrom,
     @Query('period_to') DateTime? periodTo,
+    @Query('cursor') String? cursor,
   });
 
   /// Draft a seller settlement.

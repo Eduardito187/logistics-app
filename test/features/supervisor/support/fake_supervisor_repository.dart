@@ -1,10 +1,10 @@
 import 'package:logistics_app/core/api/models/alert.dart';
 import 'package:logistics_app/core/api/models/auto_plan_run.dart';
-import 'package:logistics_app/core/api/models/data7.dart';
+import 'package:logistics_app/core/api/models/get_plan_eta_data.dart';
 import 'package:logistics_app/core/api/models/generate_daily_plan_request_strategy.dart';
 import 'package:logistics_app/core/api/models/plan.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
-import 'package:logistics_app/core/api/models/stops2.dart';
+import 'package:logistics_app/core/api/models/stops3.dart';
 import 'package:logistics_app/core/api/models/strategy.dart';
 import 'package:logistics_app/core/api/models/vehicle_live.dart';
 import 'package:logistics_app/core/api/models/vehicle_telemetry_summary.dart';
@@ -53,7 +53,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   // Detalle de plan y ETA.
   Plan? planValue;
   Object? planError;
-  Data7? planEtaValue;
+  GetPlanEtaData? planEtaValue;
   Object? planEtaError;
   int planCalls = 0;
   int planEtaCalls = 0;
@@ -128,7 +128,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
   }
 
   @override
-  Future<Data7> getPlanEta(String planId) async {
+  Future<GetPlanEtaData> getPlanEta(String planId) async {
     planEtaCalls++;
     if (planEtaError != null) throw planEtaError!;
     return planEtaValue!;
@@ -153,7 +153,7 @@ class FakeSupervisorRepository implements SupervisorRepository {
     required DateTime planDate,
     required String vehicleId,
     required DateTime departAt,
-    required List<Stops2> stops,
+    required List<Stops3> stops,
   }) => throw UnimplementedError('No usado por la app (solo lectura).');
 
   @override

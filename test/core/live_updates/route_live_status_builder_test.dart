@@ -124,18 +124,21 @@ void main() {
     expect(status.stopId, 's2'); // la primera pendiente por secuencia
   });
 
-  test('todas las paradas no-pendientes → finaliza (sin mirar route.status)', () {
-    // Sin ninguna pendiente (aunque el backend diga inProgress) → terminada.
-    final route = buildRoute(
-      status: DriverRouteStatus.inProgress,
-      totalStops: 2,
-      stops: [
-        buildStop(id: 'a', status: DriverRouteStopStatus.completed),
-        buildStop(id: 'b', sequence: 2, status: DriverRouteStopStatus.failed),
-      ],
-    );
-    expect(routeLiveStatusFor(route: route)!.state, RouteLiveState.finished);
-  });
+  test(
+    'todas las paradas no-pendientes → finaliza (sin mirar route.status)',
+    () {
+      // Sin ninguna pendiente (aunque el backend diga inProgress) → terminada.
+      final route = buildRoute(
+        status: DriverRouteStatus.inProgress,
+        totalStops: 2,
+        stops: [
+          buildStop(id: 'a', status: DriverRouteStopStatus.completed),
+          buildStop(id: 'b', sequence: 2, status: DriverRouteStopStatus.failed),
+        ],
+      );
+      expect(routeLiveStatusFor(route: route)!.state, RouteLiveState.finished);
+    },
+  );
 
   test('entregas FUERA DE ORDEN: el título va por avance, no por secuencia', () {
     // 7 paradas, 6 atendidas (seq 2..7), pendiente la seq 1. El chofer hizo 6 y

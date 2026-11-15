@@ -21,9 +21,28 @@ class _PlanningClient implements PlanningClient {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<GetAppPlansResponse> listPlansByDate({required DateTime date}) async {
+  Future<GetAppPlansResponse> listPlansByDate({
+    int? page = 1,
+    int? perPage = 50,
+    DateTime? date,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    Status3? status,
+    String? vehicleId,
+    String? cursor,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'date': date.toIso8601String()};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'date': date?.toIso8601String(),
+      r'date_from': dateFrom?.toIso8601String(),
+      r'date_to': dateTo?.toIso8601String(),
+      r'status': status?.toJson(),
+      r'vehicle_id': vehicleId,
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetAppPlansResponse>(

@@ -9,17 +9,25 @@ part 'driver.g.dart';
 @JsonSerializable()
 class Driver {
   const Driver({
-    required this.id,
-    required this.name,
-    required this.licenseNumber,
+    this.id,
+    this.name,
+    this.licenseNumber,
+    this.licenseExpiry,
+    this.enabledVehicleIds,
+    this.active,
   });
 
   factory Driver.fromJson(Map<String, Object?> json) => _$DriverFromJson(json);
 
-  final String id;
+  final String? id;
   final String? name;
   @JsonKey(name: 'license_number')
   final String? licenseNumber;
+  @JsonKey(name: 'license_expiry')
+  final DateTime? licenseExpiry;
+  @JsonKey(name: 'enabled_vehicle_ids')
+  final List<String>? enabledVehicleIds;
+  final bool? active;
 
   Map<String, Object?> toJson() => _$DriverToJson(this);
 }

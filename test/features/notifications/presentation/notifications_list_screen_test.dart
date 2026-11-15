@@ -5,6 +5,7 @@ import 'package:logistics_app/core/api/models/message_type.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
 import 'package:logistics_app/core/push/push_status.dart';
+import 'package:logistics_app/features/notifications/data/datasources/inbox_remote_data_source.dart';
 import 'package:logistics_app/features/notifications/data/repositories/notifications_repository_impl.dart';
 import 'package:logistics_app/features/notifications/presentation/controllers/notifications_controller.dart';
 import 'package:logistics_app/features/notifications/presentation/notifications_list_screen.dart';
@@ -26,6 +27,8 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         notificationsRepositoryProvider.overrideWithValue(repo),
+        // Bandeja de avisos de la empresa: sin red en los tests.
+        inboxUnreadCountProvider.overrideWith((ref) async => 0),
         pushRegistrationProvider.overrideWith(
           () => FakePushController(const PushStatus.idle()),
         ),
@@ -91,6 +94,8 @@ void main() {
 
     final more = find.text('Ver más notificaciones');
     await tester.scrollUntilVisible(more, 300);
+    await tester.ensureVisible(more);
+    await tester.pumpAndSettle();
     await tester.tap(more);
     await tester.pumpAndSettle();
 

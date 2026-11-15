@@ -111,15 +111,21 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsRefuelsResponse> listFleetRefuels({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     DateTime? from,
     DateTime? to,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'from': from?.toIso8601String(),
       r'to': to?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -241,13 +247,23 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsMaintenanceOrdersResponse> listFleetMaintenanceOrders({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     MaintenanceStatus? status,
+    DateTime? from,
+    DateTime? to,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'status': status?.toJson(),
+      r'from': from?.toIso8601String(),
+      r'to': to?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -427,10 +443,18 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsMaintenancePlansResponse> listFleetMaintenancePlans({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'vehicle_id': vehicleId};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'vehicle_id': vehicleId,
+      r'cursor': cursor,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -611,9 +635,22 @@ class _FleetOpsClient implements FleetOpsClient {
   }
 
   @override
-  Future<GetAppFleetopsMaintenanceDueResponse> listFleetDueMaintenance() async {
+  Future<GetAppFleetopsMaintenanceDueResponse> listFleetDueMaintenance({
+    int? page = 1,
+    int? perPage = 50,
+    String? vehicleId,
+    Urgency? urgency,
+    String? cursor,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'vehicle_id': vehicleId,
+      r'urgency': urgency?.toJson(),
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetAppFleetopsMaintenanceDueResponse>(
@@ -639,17 +676,23 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsDeparturesResponse> listFleetDepartures({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     DepartureStatus? status,
     DateTime? from,
     DateTime? to,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'status': status?.toJson(),
       r'from': from?.toIso8601String(),
       r'to': to?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -772,15 +815,23 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsOdometerResponse> listFleetOdometerReadings({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     DateTime? from,
     DateTime? to,
+    String? routeId,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'from': from?.toIso8601String(),
       r'to': to?.toIso8601String(),
+      r'route_id': routeId,
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -995,17 +1046,23 @@ class _FleetOpsClient implements FleetOpsClient {
 
   @override
   Future<GetAppFleetopsExpensesResponse> listFleetExpenses({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     ExpenseCategory? category,
     DateTime? from,
     DateTime? to,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'category': category?.toJson(),
       r'from': from?.toIso8601String(),
       r'to': to?.toIso8601String(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

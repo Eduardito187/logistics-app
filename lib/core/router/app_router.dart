@@ -11,6 +11,8 @@ import '../../features/picking/presentation/picking_routes.dart';
 import '../../features/settings/presentation/settings_routes.dart';
 import '../../features/store/presentation/store_routes.dart';
 import '../../features/supervisor/presentation/supervisor_routes.dart';
+import '../../features/admin/presentation/admin_routes.dart';
+import '../../features/lookup/presentation/lookup_routes.dart';
 import '../../features/sync/presentation/sync_screen.dart';
 import '../auth/session.dart';
 import '../monitoring/crash_navigation_observer.dart';
@@ -105,6 +107,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...storeRoutes,
       ...carrierRoutes,
       ...supervisorRoutes,
+      ...adminRoutes,
+      ...lookupRoutes,
       ...notificationsRoutes,
       ...settingsRoutes,
     ],

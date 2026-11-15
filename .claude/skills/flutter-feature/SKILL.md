@@ -176,6 +176,31 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 numeración de tipos anónimos `DataN`**: renombrar las referencias de la app/tests y los imports `models/dataN.dart`
 comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
+- **Pasar SIEMPRE `-Spec C:\Users\ehhuallata\Documents\APP\logistics\openapi\v1.yaml`**: el valor por defecto
+  apunta al backend viejo de WSL. Probar primero con `-DryRun`.
+- El cliente generado está EXCLUIDO del analizador (`analysis_options.yaml`): `flutter analyze` en verde no
+  prueba que compile. Para revisarlo: comentar un momento las exclusiones `lib/core/api/**` y `**/*.g.dart`,
+  `dart analyze lib/core/api`, y restaurarlas.
+- `scripts/preprocess_openapi.py` arregla lo que rompe a swagger_parser y avisa con una línea por arreglo:
+  enums/objetos anónimos con el mismo nombre, parámetros unión, `data` de las respuestas con nombre propio
+  (`<OperationId>Data`, `<Schema>Data`), tipos que chocan con Dart (`map` → `MapSettings`), JSON antes que
+  multipart. Si un regen falla (Stack Overflow, `class Map`, un enum pisado, `.toJson()` sobre null), el
+  arreglo va ahí, nunca a mano en `lib/core/api/`.
+- Tras regenerar: `flutter analyze` + suite completa; los renombres se aplican con un script de Python en el
+  scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
+
+## Reglas de negocio vigentes (nov 2026)
+
+- **Tienda solo entrega al cliente final.** La llegada del pedido a la tienda la marca el CHOFER ("Entregar en
+  tienda": escanear + foto). No existe "Recepción de mercadería" en el rol tienda: no reintroducirla.
+- **"Consultar pedido"** (`lib/features/lookup/`, `/lookup`) es de los 6 roles y solo lectura: usa
+  `GET /app/orders/lookup`; la etapa la calcula el servidor (`tracking.stage`), la app solo la traduce.
+- **Admin** entra a la app (`lib/features/admin/`); la ficha del personal es UNA vista por pestañas para todos
+  los roles. Listas paginadas con `PagedSearchList<T>` (`lib/core/widgets/`).
+- Personal por ciudad; el alcance por rol lo aplica el servidor (`can_process`), no la app.
+- Inspección y odómetro van por SALIDA (`route_id`), no por día: el chofer sale N veces.
+- Lo que decide el dueño se implementa tal cual, sin dejar el flujo viejo "como control".
+
 ## Definición de terminado
 
 `dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde (+ e2e si tocaste un flujo crítico),
@@ -285,3 +310,7 @@ en uso (ver regla 0b).
 | El POD falla con **"no hay entrega abierta para el envío …"** (aunque la etiqueta esté "Cargada") | La ETIQUETA está Cargada (nivel envío) pero la ENTREGA (objeto de execution) no está ABIERTA. El app NO la puede abrir solo. Casi siempre = el backend **no está deployado** con el fix de auto-abrir-entrega | Es del BACKEND: desplegar + `php artisan logistics:execution:open-missing-deliveries [--force] [--shipment=<uuid>]` (abre en Loaded las faltantes; NO re-emite etiquetas). El "transición inválida desde DELIVERED" = ya entregado (backend lo hace idempotente). La FOTO no es la causa (el POD manda `photo_url:null` y falla antes). Ver `.claude/memory/pod-scanner-vehicle-hardening.md` |
 | La Live Update / isla (chip en la cámara, Android 16 / Dynamic Island) muestra mal el avance ("Parada 1 de 7" congelado, pocos puntos) o se quiere cambiar su texto/tamaño | El contenido se arma en Dart (`RouteLiveStatus`): `chipText` = texto del chip del sistema (ahora SOLO `completedCount/stopCount` sin hora), `completedCount` item-por-item (no `route.completedStops`). El render lo hace el SO: `LiveUpdatesChannel.kt` (notificación + ProgressStyle, segmentos=`stopCount`, puntos=`completed`). "1 de 7 congelado" = el `settled` en memoria se pierde al reiniciar y el route sheet sin deploy devuelve todo pendiente → lo fija el deploy del backend | Cambiar textos/contador en `RouteLiveStatus` (Dart, probado); el **tamaño** de la pastilla del sistema NO se controla (lo decide el SO/fabricante). La pastilla PROPIA (`IslandOverlay.kt`, overlay, requiere permiso) SÍ se controla: ahí está la compacta (camión + contador) y `celebrate()` (camión verde + bote al entregar). Ver `.claude/memory/driver-tracking-count-single-source` |
 | Tentación de que cada widget/pantalla pida el mismo dato al backend (varias llamadas al mismo endpoint) | Regla dura del dueño: **no saturar el backend** ("si se ocupa lo mismo en varios lugares, centraliza, si no colapsaremos el backend") | UN provider compartido por dato (`driverRouteProvider`, `truckTrackingProvider.lastFix`, `deliveryStateProvider`…) y los widgets lo `watch`ean. Lo derivable se calcula EN EL TELÉFONO (distancia GPS→parada con `remainingToStop`, avance item-por-item con `RouteProgress`) sin pegarle al backend. ¿Falta un campo? Enriquecer un endpoint existente antes que agregar una 2.ª llamada. Ver `.claude/memory/feedback-working-style` |
+| Un pedido sale "Sin autorizar" / "Falta asignar camión" en despacho | El backend autoriza el pedido cuando tiene camión asignado; el motivo llega en `authorized_reason_code` | El texto sale de `dispatchBlockText(line)` (`dispatch_lines_body.dart`); lo destraba el admin/supervisor desde Envíos → "Asignar a un camión". No agregar botones de "publicar plan" |
+| Probar staging con una cuenta y el teléfono de esa cuenta se desloguea | Hay 1 sesión activa por tipo de cliente; un login de diagnóstico como app móvil pisa la del teléfono | Loguear el diagnóstico con `device.client_kind: "web"` |
+| Un test de widget falla con `contains(<Map>)` aunque el mapa "es igual" | `contains` compara por identidad los mapas | `contains(equals({...}))` |
+| El análisis pasa pero un test no compila tras regenerar el cliente | Los fakes de `test/` implementan data sources con tipos del cliente (`Role` vs `StaffRoleName`, `DataN`) | Revisar `test/features/*/fake_*.dart` y los helpers `fromJson` junto con cada regen |

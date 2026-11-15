@@ -11,7 +11,10 @@ AsnCollection _$AsnCollectionFromJson(Map<String, dynamic> json) =>
       data: (json['data'] as List<dynamic>)
           .map((e) => Asn.fromJson(e as Map<String, dynamic>))
           .toList(),
+      meta: json['meta'] == null
+          ? null
+          : ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$AsnCollectionToJson(AsnCollection instance) =>
-    <String, dynamic>{'data': instance.data};
+    <String, dynamic>{'data': instance.data, 'meta': instance.meta};

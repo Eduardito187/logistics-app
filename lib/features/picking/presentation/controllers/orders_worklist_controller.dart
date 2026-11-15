@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_status.dart';
+import '../../../../core/auth/session.dart';
 import '../../domain/usecases/list_orders_to_prepare.dart';
 import 'locally_assigned_orders.dart';
 
@@ -44,6 +45,12 @@ class OrdersWorklistState {
 class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
   @override
   Future<OrdersWorklistState> build() async {
+    // La lista es de QUIEN está logueado. Este provider no es autoDispose (se
+    // precarga en el inicio y conserva el scroll), así que sin esto sobrevivía
+    // al cierre de sesión: al entrar con otro usuario en el mismo teléfono se
+    // veía la lista (o el vacío) del anterior hasta refrescar a mano. Se
+    // observa el usuario y el rol, no el token (que rota al renovarse).
+    ref.watch(sessionProvider.select((s) => (s?.userName, s?.role)));
     // Se ocultan los pedidos ya asignados en esta sesión (el backend aún los
     // devuelve como PLANNED; ver [LocallyAssignedOrders]). `watch`: al asignar
     // uno, la lista se recalcula sola y el pedido desaparece al instante.

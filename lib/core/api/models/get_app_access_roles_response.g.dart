@@ -10,7 +10,7 @@ GetAppAccessRolesResponse _$GetAppAccessRolesResponseFromJson(
   Map<String, dynamic> json,
 ) => GetAppAccessRolesResponse(
   data: (json['data'] as List<dynamic>)
-      .map((e) => Role.fromJson(e as Map<String, dynamic>))
+      .map((e) => Role.fromJson(e as String))
       .toList(),
 );
 

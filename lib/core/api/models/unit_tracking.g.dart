@@ -16,6 +16,7 @@ UnitTracking _$UnitTrackingFromJson(Map<String, dynamic> json) => UnitTracking(
       ? null
       : DateTime.parse(json['last_seen_at'] as String),
   label: json['label'] as String?,
+  location: json['location'] as String?,
   sku: json['sku'] as String?,
   productName: json['product_name'] as String?,
   productImageUrl: json['product_image_url'] as String?,
@@ -26,6 +27,7 @@ UnitTracking _$UnitTrackingFromJson(Map<String, dynamic> json) => UnitTracking(
 
 Map<String, dynamic> _$UnitTrackingToJson(UnitTracking instance) =>
     <String, dynamic>{
+      'location': instance.location,
       'id': instance.id,
       'unit_id': instance.unitId,
       'shipment_id': instance.shipmentId,

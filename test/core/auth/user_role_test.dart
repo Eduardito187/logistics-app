@@ -12,10 +12,10 @@ void main() {
       expect(UserRole.fromBackendKey('tienda'), UserRole.store);
       expect(UserRole.fromBackendKey('transportista'), UserRole.carrier);
       expect(UserRole.fromBackendKey('supervisor'), UserRole.supervisor);
+      expect(UserRole.fromBackendKey('admin'), UserRole.admin);
     });
 
     test('devuelve null para una clave desconocida o no operativa', () {
-      expect(UserRole.fromBackendKey('admin'), isNull);
       expect(UserRole.fromBackendKey('contador'), isNull);
       expect(UserRole.fromBackendKey(''), isNull);
       expect(

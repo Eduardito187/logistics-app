@@ -134,8 +134,7 @@ class _PickupPodScreenState extends ConsumerState<PickupPodScreen> {
     // Lo que todavía falta escanear: ni entregado ni escaneado.
     final missing = units
         ?.where(
-          (u) =>
-              !_delivered.contains(u.unitId) && !_scanned.contains(u.unitId),
+          (u) => !_delivered.contains(u.unitId) && !_scanned.contains(u.unitId),
         )
         .length;
     final allDelivered =

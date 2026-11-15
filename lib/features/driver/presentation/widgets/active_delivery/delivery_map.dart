@@ -415,8 +415,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     _upcomingStops = [
       for (final s in widget.route.stops)
         if (s.id != widget.stop.id &&
-            effectiveStopStatus(s, settled) ==
-                DriverRouteStopStatus.pending &&
+            effectiveStopStatus(s, settled) == DriverRouteStopStatus.pending &&
             s.lat != null &&
             s.lng != null)
           s,

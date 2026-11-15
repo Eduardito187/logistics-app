@@ -3,10 +3,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/models/data.dart';
+import '../../../../core/api/models/upload_delivery_photo_data.dart';
 import '../../../../core/api/models/delivery.dart';
 import '../../../../core/api/models/enum0.dart';
-import '../../../../core/api/models/meta_sealed.dart';
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/node_reception_request.dart';
 import '../../../../core/api/models/node_reception_view.dart';
@@ -100,18 +99,14 @@ class StoreRemoteDataSource {
   /// arregla, esto empieza a funcionar solo) y, si no, se deduce por tamaño:
   /// una página completa significa que puede haber más. El costo del heurístico
   /// es, como máximo, un GET extra que vuelve vacío.
-  bool _hasMoreAfter(MetaSealed? meta, int received, int perPage) =>
-      switch (meta) {
-        MetaSealedPaginationMeta(:final nextPage) => nextPage != null,
-        MetaSealedCursorMeta(:final hasMore) => hasMore,
-        _ => received >= perPage,
-      };
+  bool _hasMoreAfter(Object? meta, int received, int perPage) =>
+      received >= perPage;
 
   /// Sube la foto de evidencia del POD y devuelve `{disk, path, url}`: `path`
   /// es la referencia durable que el backend espera en `photo_path` de la
   /// prueba de entrega. Requiere red; el fallback offline lo decide el caso de
   /// uso (ver `UploadPodPhoto`).
-  Future<Data> uploadDeliveryPhoto({
+  Future<UploadDeliveryPhotoData> uploadDeliveryPhoto({
     required String shipmentId,
     required File photo,
     Enum0 kind = Enum0.pod,

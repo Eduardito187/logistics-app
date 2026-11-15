@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/icons/icons.dart';
-import '../pickup_label_lookup.dart';
+import '../../../../core/labels/label_lookup.dart';
 
 /// Muestra de qué pedido es la etiqueta escaneada y a qué cliente se entrega.
 /// Devuelve `true` si el personal tocó "Entregar este pedido".

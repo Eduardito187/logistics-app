@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data.dart';
+import 'upload_delivery_photo_data.dart';
 
 part 'post_app_deliveries_photos_response.g.dart';
 
@@ -15,7 +15,7 @@ class PostAppDeliveriesPhotosResponse {
   factory PostAppDeliveriesPhotosResponse.fromJson(Map<String, Object?> json) =>
       _$PostAppDeliveriesPhotosResponseFromJson(json);
 
-  final Data data;
+  final UploadDeliveryPhotoData data;
 
   Map<String, Object?> toJson() =>
       _$PostAppDeliveriesPhotosResponseToJson(this);

@@ -7,8 +7,8 @@ part of 'meta2.dart';
 // **************************************************************************
 
 Meta2 _$Meta2FromJson(Map<String, dynamic> json) =>
-    Meta2(message: json['message'] as String?);
+    Meta2(count: (json['count'] as num?)?.toInt());
 
 Map<String, dynamic> _$Meta2ToJson(Meta2 instance) => <String, dynamic>{
-  'message': instance.message,
+  'count': instance.count,
 };

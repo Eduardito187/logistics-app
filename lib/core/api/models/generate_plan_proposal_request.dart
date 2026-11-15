@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'stops2.dart';
+import 'stops3.dart';
 
 part 'generate_plan_proposal_request.g.dart';
 
@@ -28,7 +28,7 @@ class GeneratePlanProposalRequest {
   /// Depot departure time, ISO-8601
   @JsonKey(name: 'depart_at')
   final DateTime departAt;
-  final List<Stops2> stops;
+  final List<Stops3> stops;
 
   Map<String, Object?> toJson() => _$GeneratePlanProposalRequestToJson(this);
 }

@@ -1,0 +1,263 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/features/admin/domain/entities/admin_vehicle.dart';
+import 'package:logistics_app/features/admin/presentation/admin_staff_profile_screen.dart';
+import 'package:logistics_app/features/admin/presentation/admin_staff_screen.dart';
+import 'package:logistics_app/features/admin/presentation/staff_labels.dart';
+
+import 'fake_admin.dart';
+
+// Personal del administrador: lista con buscador/rol y la ficha por pestañas
+// (una sola vista; el contenido cambia según el rol de la persona).
+
+StaffMember _member({
+  required int id,
+  required String name,
+  required List<String> roles,
+  StaffNode? node,
+}) => StaffMember(
+  id: id,
+  name: name,
+  email: '$id@dismac.test',
+  roles: roles,
+  node: node,
+  driverId: null,
+  carrierId: null,
+  phone: null,
+  nationalId: null,
+  photoUrl: null,
+);
+
+StaffProfile _profile({
+  required int id,
+  required String name,
+  required List<String> roles,
+  StaffNode? node,
+  String? driverId,
+  StaffDriverData? driver,
+}) => StaffProfile(
+  id: id,
+  name: name,
+  email: '$id@dismac.test',
+  roles: roles,
+  node: node,
+  driverId: driverId,
+  carrierId: null,
+  phone: null,
+  nationalId: null,
+  photoUrl: null,
+  createdAt: null,
+  personal: const StaffPersonalData(),
+  driver: driver,
+  currentVehicle: null,
+  devices: const [],
+);
+
+final _driver = _profile(
+  id: 7,
+  name: 'Iker Corona',
+  roles: ['chofer'],
+  driverId: 'drv-1',
+  driver: const StaffDriverData(licenseNumber: 'LIC-9', licenseCategory: 'C'),
+);
+
+final _storeClerk = _profile(
+  id: 9,
+  name: 'Ana Tienda',
+  roles: ['tienda'],
+  node: const StaffNode(id: 'node-1', name: 'Tienda Norte', city: 'Santa Cruz'),
+);
+
+void main() {
+  group('lista', () {
+    final staff = [
+      _member(id: 7, name: 'Iker Corona', roles: ['chofer']),
+      _member(
+        id: 9,
+        name: 'Ana Tienda',
+        roles: ['tienda'],
+        node: const StaffNode(id: 'node-1', name: 'Tienda Norte'),
+      ),
+    ];
+
+    testWidgets('muestra nombre, rol en español y tienda', (tester) async {
+      await pumpAdmin(
+        tester,
+        FakeAdmin(staff: staff),
+        const AdminStaffScreen(),
+      );
+
+      expect(find.text('Iker Corona'), findsOneWidget);
+      expect(find.text('Chofer'), findsWidgets);
+      expect(find.text('Tienda Norte'), findsOneWidget);
+      expect(find.text('Sin tienda asignada'), findsOneWidget);
+    });
+
+    testWidgets('filtrar por rol consulta al servidor', (tester) async {
+      final fake = FakeAdmin(staff: staff);
+      await pumpAdmin(tester, fake, const AdminStaffScreen());
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Tienda'));
+      await tester.pumpAndSettle();
+
+      expect(fake.staffRequests.last.role, Role.tienda);
+      expect(find.text('Ana Tienda'), findsOneWidget);
+      expect(find.text('Iker Corona'), findsNothing);
+    });
+
+    testWidgets('buscar por nombre consulta al servidor', (tester) async {
+      final fake = FakeAdmin(staff: staff);
+      await pumpAdmin(tester, fake, const AdminStaffScreen());
+
+      await tester.enterText(find.byType(TextField), 'iker');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(fake.staffRequests.last.query, 'iker');
+      expect(find.text('Ana Tienda'), findsNothing);
+    });
+  });
+
+  group('ficha', () {
+    testWidgets('cuatro pestañas para cualquier rol', (tester) async {
+      await pumpAdmin(
+        tester,
+        FakeAdmin(profile: _storeClerk),
+        const AdminStaffProfileScreen(userId: 9),
+      );
+
+      for (final tab in ['Datos', 'Documentos', 'Actividad', 'Fotos']) {
+        expect(find.widgetWithText(Tab, tab), findsOneWidget);
+      }
+    });
+
+    testWidgets('chofer: muestra licencia y camión; tienda: no', (
+      tester,
+    ) async {
+      await pumpAdmin(
+        tester,
+        FakeAdmin(profile: _driver),
+        const AdminStaffProfileScreen(userId: 7),
+      );
+      expect(find.text('Camión asignado'), findsOneWidget);
+      expect(find.text('Licencia de conducir'), findsOneWidget);
+      expect(find.text('LIC-9 · Categoría C'), findsOneWidget);
+
+      await pumpAdmin(
+        tester,
+        FakeAdmin(profile: _storeClerk),
+        const AdminStaffProfileScreen(userId: 9),
+      );
+      expect(find.text('Camión asignado'), findsNothing);
+      expect(find.text('Licencia de conducir'), findsNothing);
+      expect(find.text('Tienda Norte'), findsOneWidget);
+    });
+
+    testWidgets('asignar a una tienda desde la ficha', (tester) async {
+      final fake = FakeAdmin(
+        profile: _driver,
+        nodes: [
+          adminNode(),
+          adminNode(id: 'node-2', name: 'Tienda Sur'),
+        ],
+      );
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.text('Asignar a una tienda'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tienda Sur'));
+      await tester.pumpAndSettle();
+
+      expect(fake.nodeAssignments.single, (userId: 7, nodeId: 'node-2'));
+      expect(find.text('Asignado a Tienda Sur.'), findsOneWidget);
+    });
+
+    testWidgets('asignar un camión al chofer desde la ficha', (tester) async {
+      final fake = FakeAdmin(
+        profile: _driver,
+        vehicles: const [
+          AdminVehicle(
+            id: 'v1',
+            plate: '904U10',
+            status: AdminVehicleStatus.available,
+          ),
+        ],
+      );
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.text('Asignar camión'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('904U10'));
+      await tester.pumpAndSettle();
+
+      expect(fake.vehicleAssignments.single, (
+        driverId: 'drv-1',
+        vehicleId: 'v1',
+      ));
+      expect(find.text('Camión 904U10 asignado para hoy.'), findsOneWidget);
+    });
+
+    testWidgets('documentos: vencido en rojo y sin archivo avisado', (
+      tester,
+    ) async {
+      final fake = FakeAdmin(
+        profile: _driver,
+        documents: [
+          StaffDocument(
+            id: 'd1',
+            documentType: 'licencia_de_conducir',
+            reference: 'LIC-9',
+            expiresOn: DateTime(2026, 1, 15),
+            expired: true,
+          ),
+        ],
+      );
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.widgetWithText(Tab, 'Documentos'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Licencia de conducir'), findsOneWidget);
+      expect(find.text('Nº LIC-9'), findsOneWidget);
+      expect(find.text('Venció el 15/01/2026'), findsOneWidget);
+      expect(find.text('Sin archivo adjunto'), findsOneWidget);
+    });
+
+    testWidgets('actividad: traduce los códigos del backend', (tester) async {
+      final fake = FakeAdmin(
+        profile: _driver,
+        activity: [
+          StaffActivity(
+            type: StaffActivityType.assignment,
+            title: 'vehicle_assigned',
+            detail: '904U10',
+            at: DateTime(2026, 11, 14, 8, 30),
+          ),
+          const StaffActivity(
+            type: StaffActivityType.checklist,
+            title: 'checklist_failed',
+          ),
+        ],
+      );
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.widgetWithText(Tab, 'Actividad'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Camión asignado'), findsOneWidget);
+      expect(find.text('Inspección con fallas'), findsOneWidget);
+    });
+  });
+
+  test('un código desconocido se muestra legible, sin guiones', () {
+    expect(
+      staffActivityTitle(const StaffActivity(title: 'nuevo_evento_raro')),
+      'Nuevo evento raro',
+    );
+    expect(
+      staffActivityTitle(const StaffActivity(type: StaffActivityType.scan)),
+      'Escaneo',
+    );
+  });
+}

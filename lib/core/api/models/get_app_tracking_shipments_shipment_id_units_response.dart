@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data10.dart';
+import 'get_shipment_units_data.dart';
 
 part 'get_app_tracking_shipments_shipment_id_units_response.g.dart';
 
@@ -16,7 +16,7 @@ class GetAppTrackingShipmentsShipmentIdUnitsResponse {
     Map<String, Object?> json,
   ) => _$GetAppTrackingShipmentsShipmentIdUnitsResponseFromJson(json);
 
-  final Data10 data;
+  final GetShipmentUnitsData data;
 
   Map<String, Object?> toJson() =>
       _$GetAppTrackingShipmentsShipmentIdUnitsResponseToJson(this);

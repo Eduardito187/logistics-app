@@ -13,6 +13,7 @@ import '../models/generate_plan_proposal_request.dart';
 import '../models/get_app_plans_plan_id_eta_response.dart';
 import '../models/get_app_plans_response.dart';
 import '../models/plan_envelope.dart';
+import '../models/status3.dart';
 import '../models/strategy.dart';
 
 part 'planning_client.g.dart';
@@ -23,10 +24,27 @@ abstract class PlanningClient {
 
   /// List the delivery plans of a day (one per truck).
   ///
-  /// [date] - Day to list, as YYYY-MM-DD.
+  /// [date] - Day to list, as YYYY-MM-DD. Required unless date_from is given; takes precedence over the range.
+  ///
+  /// [dateFrom] - First day of a range (inclusive). Required when date is absent or date_to is given.
+  ///
+  /// [dateTo] - Last day of the range (inclusive). The range may not exceed 31 days.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/plans')
   Future<GetAppPlansResponse> listPlansByDate({
-    @Query('date') required DateTime date,
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
+    @Query('date') DateTime? date,
+    @Query('date_from') DateTime? dateFrom,
+    @Query('date_to') DateTime? dateTo,
+    @Query('status') Status3? status,
+    @Query('vehicle_id') String? vehicleId,
+    @Query('cursor') String? cursor,
   });
 
   /// Generate the automatic order-to-truck proposal for a day

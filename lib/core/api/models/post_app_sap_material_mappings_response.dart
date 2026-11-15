@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'define_material_mapping_request.dart';
-import 'meta2.dart';
+import 'message_meta.dart';
 
 part 'post_app_sap_material_mappings_response.g.dart';
 
@@ -21,7 +21,7 @@ class PostAppSapMaterialMappingsResponse {
   ) => _$PostAppSapMaterialMappingsResponseFromJson(json);
 
   final DefineMaterialMappingRequest data;
-  final Meta2 meta;
+  final MessageMeta meta;
 
   Map<String, Object?> toJson() =>
       _$PostAppSapMaterialMappingsResponseToJson(this);

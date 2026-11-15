@@ -21,6 +21,48 @@ class _FleetClient implements FleetClient {
   final ParseErrorLogger? errorLogger;
 
   @override
+  Future<GetAppFleetCrewsResponse> fleetListCrews({
+    int? page = 1,
+    int? perPage = 50,
+    DateTime? date,
+    String? vehicleId,
+    String? driverId,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'date': date?.toIso8601String(),
+      r'vehicle_id': vehicleId,
+      r'driver_id': driverId,
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppFleetCrewsResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/fleet/crews',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppFleetCrewsResponse _value;
+    try {
+      _value = GetAppFleetCrewsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<PostAppFleetCrewsResponse> fleetAssembleCrew({
     required AssembleCrewRequest body,
   }) async {
@@ -83,11 +125,79 @@ class _FleetClient implements FleetClient {
   }
 
   @override
-  Future<GetAppFleetDriversResponse> fleetListDrivers({
-    bool? onlyActive,
+  Future<AcceptedEnvelope> fleetUpdateCrew({
+    required String crewId,
+    required AssembleCrewRequest body,
   }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'only_active': onlyActive};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<AcceptedEnvelope>(
+      Options(method: 'PUT', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/fleet/crews/${crewId}',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late AcceptedEnvelope _value;
+    try {
+      _value = AcceptedEnvelope.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<AcceptedEnvelope> fleetDeleteCrew({required String crewId}) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<AcceptedEnvelope>(
+      Options(method: 'DELETE', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/fleet/crews/${crewId}',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late AcceptedEnvelope _value;
+    try {
+      _value = AcceptedEnvelope.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppFleetDriversResponse> fleetListDrivers({
+    int? page = 1,
+    int? perPage = 50,
+    bool? onlyActive,
+    String? q,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'only_active': onlyActive,
+      r'q': q,
+      r'cursor': cursor,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -243,13 +353,25 @@ class _FleetClient implements FleetClient {
 
   @override
   Future<GetAppFleetPreTripChecklistsResponse> fleetListPreTripChecklists({
+    int? page = 1,
+    int? perPage = 50,
     String? vehicleId,
     bool? onlyPassed,
+    DateTime? from,
+    DateTime? to,
+    String? routeId,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'vehicle_id': vehicleId,
       r'only_passed': onlyPassed,
+      r'from': from?.toIso8601String(),
+      r'to': to?.toIso8601String(),
+      r'route_id': routeId,
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -306,11 +428,160 @@ class _FleetClient implements FleetClient {
   }
 
   @override
-  Future<GetAppFleetVehiclesResponse> fleetListVehicles({
-    VehicleStatus? status,
+  Future<GetAppFleetPreTripChecklistsLatestResponse>
+  fleetGetLatestPreTripChecklist({required String vehicleId}) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'vehicle_id': vehicleId};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppFleetPreTripChecklistsLatestResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/fleet/pre-trip-checklists/latest',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppFleetPreTripChecklistsLatestResponse _value;
+    try {
+      _value = GetAppFleetPreTripChecklistsLatestResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppFleetChecklistTemplateResponse> fleetGetChecklistTemplate({
+    String? vehicleType,
+    String? vehicleId,
   }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'status': status?.toJson()};
+    final queryParameters = <String, dynamic>{
+      r'vehicle_type': vehicleType,
+      r'vehicle_id': vehicleId,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppFleetChecklistTemplateResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/fleet/checklist-template',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppFleetChecklistTemplateResponse _value;
+    try {
+      _value = GetAppFleetChecklistTemplateResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppFleetVehiclesVehicleIdFitnessResponse> fleetGetVehicleFitness({
+    required String vehicleId,
+    DateTime? date,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'date': date?.toIso8601String()};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options =
+        _setStreamType<GetAppFleetVehiclesVehicleIdFitnessResponse>(
+          Options(method: 'GET', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/fleet/vehicles/${vehicleId}/fitness',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppFleetVehiclesVehicleIdFitnessResponse _value;
+    try {
+      _value = GetAppFleetVehiclesVehicleIdFitnessResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppFleetVehiclesVehicleIdClearFitnessResponse>
+  fleetClearVehicleFitness({
+    required String vehicleId,
+    required ClearVehicleFitnessRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options =
+        _setStreamType<PostAppFleetVehiclesVehicleIdClearFitnessResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/fleet/vehicles/${vehicleId}/clear-fitness',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppFleetVehiclesVehicleIdClearFitnessResponse _value;
+    try {
+      _value = PostAppFleetVehiclesVehicleIdClearFitnessResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppFleetVehiclesResponse> fleetListVehicles({
+    int? page = 1,
+    int? perPage = 50,
+    VehicleStatus? status,
+    String? q,
+    String? nodeId,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'status': status?.toJson(),
+      r'q': q,
+      r'node_id': nodeId,
+      r'cursor': cursor,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -328,6 +599,44 @@ class _FleetClient implements FleetClient {
     late GetAppFleetVehiclesResponse _value;
     try {
       _value = GetAppFleetVehiclesResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppFleetVehiclesVehicleIdSendToMaintenanceResponse>
+  fleetSendVehicleToMaintenance({
+    required String vehicleId,
+    AppFleetVehiclesVehicleIdSendToMaintenanceRequestBody? body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body?.toJson() ?? <String, dynamic>{});
+    final _options =
+        _setStreamType<PostAppFleetVehiclesVehicleIdSendToMaintenanceResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/fleet/vehicles/${vehicleId}/send-to-maintenance',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppFleetVehiclesVehicleIdSendToMaintenanceResponse _value;
+    try {
+      _value = PostAppFleetVehiclesVehicleIdSendToMaintenanceResponse.fromJson(
+        _result.data!,
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

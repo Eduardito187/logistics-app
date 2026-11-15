@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data21.dart';
+import 'position_accepted_data.dart';
 
 part 'post_integrations_tracking_shipments_shipment_id_position_response.g.dart';
 
@@ -20,7 +20,7 @@ class PostIntegrationsTrackingShipmentsShipmentIdPositionResponse {
     json,
   );
 
-  final Data21 data;
+  final PositionAcceptedData data;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsTrackingShipmentsShipmentIdPositionResponseToJson(this);

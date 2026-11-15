@@ -17,7 +17,7 @@ const List<RoleTask> supervisorTasks = [
     label: 'Tablero del día',
     appIcon: AppIcon.dashboard,
     route: '/supervisor/dashboard',
-    roles: {UserRole.supervisor},
+    roles: {UserRole.supervisor, UserRole.admin},
     accent: true,
   ),
   RoleTask(
@@ -25,21 +25,21 @@ const List<RoleTask> supervisorTasks = [
     label: 'Flota en vivo',
     appIcon: AppIcon.fleet,
     route: '/supervisor/fleet',
-    roles: {UserRole.supervisor},
+    roles: {UserRole.supervisor, UserRole.admin},
   ),
   RoleTask(
     id: 'sup-plans',
     label: 'Rutas en curso',
     appIcon: AppIcon.plans,
     route: '/supervisor/plans',
-    roles: {UserRole.supervisor},
+    roles: {UserRole.supervisor, UserRole.admin},
   ),
   RoleTask(
     id: 'sup-alerts',
     label: 'Alertas',
     appIcon: AppIcon.roleAlerts,
     route: '/supervisor/alerts',
-    roles: {UserRole.supervisor},
+    roles: {UserRole.supervisor, UserRole.admin},
   ),
 ];
 

@@ -129,7 +129,7 @@ class _AssignLaneDialogState extends ConsumerState<AssignLaneDialog> {
   static String _subtitle(Vehicle v) {
     final parts = <String>[];
     if (v.capacityKg != null) parts.add('${v.capacityKg} kg');
-    final status = (v.status ?? '').trim();
+    final status = v.status?.json ?? '';
     if (status.isNotEmpty) parts.add(_statusLabel(status));
     return parts.join(' · ');
   }

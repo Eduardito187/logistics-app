@@ -67,21 +67,24 @@ void main() {
       expect(p.isComplete, isTrue);
     });
 
-    test('con una parada pendiente NO está completa aunque el backend lo diga', () {
-      final route = buildRoute(
-        status: DriverRouteStatus.completed, // backend dice completada
-        totalStops: 2,
-        completedStops: 2,
-        stopsRemaining: 0,
-        stops: [
-          buildStop(id: 'a', status: DriverRouteStopStatus.completed),
-          buildStop(id: 'b'), // pero esta sigue pendiente
-        ],
-      );
-      final p = RouteProgress.of(route);
-      expect(p.pending, 1);
-      expect(p.isComplete, isFalse);
-    });
+    test(
+      'con una parada pendiente NO está completa aunque el backend lo diga',
+      () {
+        final route = buildRoute(
+          status: DriverRouteStatus.completed, // backend dice completada
+          totalStops: 2,
+          completedStops: 2,
+          stopsRemaining: 0,
+          stops: [
+            buildStop(id: 'a', status: DriverRouteStopStatus.completed),
+            buildStop(id: 'b'), // pero esta sigue pendiente
+          ],
+        );
+        final p = RouteProgress.of(route);
+        expect(p.pending, 1);
+        expect(p.isComplete, isFalse);
+      },
+    );
 
     test('sin paradas listadas cae a los agregados del backend', () {
       final route = buildRoute(

@@ -15,6 +15,9 @@ AppUserProfile _$AppUserProfileFromJson(Map<String, dynamic> json) =>
       node: json['node'] == null
           ? null
           : Node.fromJson(json['node'] as Map<String, dynamic>),
+      carrier: json['carrier'] == null
+          ? null
+          : AppUserCarrier.fromJson(json['carrier'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$AppUserProfileToJson(AppUserProfile instance) =>
@@ -24,4 +27,5 @@ Map<String, dynamic> _$AppUserProfileToJson(AppUserProfile instance) =>
       'email': instance.email,
       'roles': instance.roles,
       'node': instance.node,
+      'carrier': instance.carrier,
     };

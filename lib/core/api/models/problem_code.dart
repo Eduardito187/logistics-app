@@ -4,8 +4,10 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-/// Código del catálogo de errores de la API (App\Http\Problem\ErrorCode). Valor.
-/// estable, legible por máquina, que los clientes usan para ramificar su lógica.
+/// Código del catálogo de errores de la API. Valor estable, legible por máquina, que los clientes.
+/// usan para ramificar su lógica. Incluye el catálogo central (App\Http\Problem\ErrorCode) y códigos.
+/// estables específicos de contexto (entregas, etiquetas, pedidos, vales). La lista puede crecer: un.
+/// cliente debe tolerar un valor no enumerado (mostrar `detail`) en vez de romper.
 ///
 @JsonEnum()
 enum ProblemCode {
@@ -21,6 +23,8 @@ enum ProblemCode {
   invalidCredentials('invalid_credentials'),
   @JsonValue('device_revoked')
   deviceRevoked('device_revoked'),
+  @JsonValue('session_superseded')
+  sessionSuperseded('session_superseded'),
   @JsonValue('forbidden')
   forbidden('forbidden'),
   @JsonValue('insufficient_role')
@@ -43,12 +47,42 @@ enum ProblemCode {
   unsupportedMediaType('unsupported_media_type'),
   @JsonValue('validation_failed')
   validationFailed('validation_failed'),
+  @JsonValue('business_rule_violation')
+  businessRuleViolation('business_rule_violation'),
+  @JsonValue('upgrade_required')
+  upgradeRequired('upgrade_required'),
   @JsonValue('rate_limited')
   rateLimited('rate_limited'),
   @JsonValue('server_error')
   serverError('server_error'),
   @JsonValue('service_unavailable')
   serviceUnavailable('service_unavailable'),
+  @JsonValue('invalid_route')
+  invalidRoute('invalid_route'),
+  @JsonValue('delivery_not_found')
+  deliveryNotFound('delivery_not_found'),
+  @JsonValue('node_reception_not_found')
+  nodeReceptionNotFound('node_reception_not_found'),
+  @JsonValue('evidence_unreadable')
+  evidenceUnreadable('evidence_unreadable'),
+  @JsonValue('evidence_upload_failed')
+  evidenceUploadFailed('evidence_upload_failed'),
+  @JsonValue('label_already_emitted')
+  labelAlreadyEmitted('label_already_emitted'),
+  @JsonValue('order_not_found')
+  orderNotFound('order_not_found'),
+  @JsonValue('voucher_not_found')
+  voucherNotFound('voucher_not_found'),
+  @JsonValue('voucher_expired')
+  voucherExpired('voucher_expired'),
+  @JsonValue('voucher_redeemed')
+  voucherRedeemed('voucher_redeemed'),
+  @JsonValue('voucher_held')
+  voucherHeld('voucher_held'),
+  @JsonValue('voucher_holder_mismatch')
+  voucherHolderMismatch('voucher_holder_mismatch'),
+  @JsonValue('voucher_revoked')
+  voucherRevoked('voucher_revoked'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

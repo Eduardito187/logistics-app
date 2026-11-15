@@ -7,6 +7,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'node_reception_unit.dart';
 import 'node_reception_view_corridor.dart';
 import 'node_reception_view_status.dart';
+import 'reconciliation.dart';
 
 part 'node_reception_view.g.dart';
 
@@ -29,6 +30,9 @@ class NodeReceptionView {
     required this.complete,
     required this.openedAt,
     this.reconciledAt,
+    this.missingCount,
+    this.surplusCount,
+    this.reconciliation,
     this.units,
   });
 
@@ -49,11 +53,11 @@ class NodeReceptionView {
   @JsonKey(name: 'received_unit_ids')
   final List<String> receivedUnitIds;
 
-  /// Bultos esperados que no se recibieron
+  /// Productos esperados que no se recibieron
   @JsonKey(name: 'missing_unit_ids')
   final List<String> missingUnitIds;
 
-  /// Bultos recibidos que no se esperaban
+  /// Productos recibidos que no se esperaban
   @JsonKey(name: 'surplus_unit_ids')
   final List<String> surplusUnitIds;
   @JsonKey(name: 'expected_count')
@@ -67,8 +71,15 @@ class NodeReceptionView {
   final DateTime openedAt;
   @JsonKey(name: 'reconciled_at')
   final DateTime? reconciledAt;
+  @JsonKey(name: 'missing_count')
+  final int? missingCount;
+  @JsonKey(name: 'surplus_count')
+  final int? surplusCount;
 
-  /// Producto de cada bulto de la recepción (esperados ∪ recibidos ∪ sobrantes); campos null si el id no es un bulto conocido
+  /// Null while the reception is open.
+  final Reconciliation? reconciliation;
+
+  /// Detalle de cada producto de la recepción (esperados ∪ recibidos ∪ sobrantes); campos null si el id no es un producto conocido
   final List<NodeReceptionUnit>? units;
 
   Map<String, Object?> toJson() => _$NodeReceptionViewToJson(this);

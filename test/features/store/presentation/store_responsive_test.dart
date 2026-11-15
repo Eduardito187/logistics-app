@@ -126,7 +126,13 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('$_longName 11'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      // El de la LISTA: el buscador de arriba trae su propio Scrollable.
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(find.text('$_longName 11'), findsOneWidget);
   });

@@ -12,7 +12,7 @@ MaterialMappingCollection _$MaterialMappingCollectionFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => MaterialMapping.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta12.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: Meta6.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$MaterialMappingCollectionToJson(

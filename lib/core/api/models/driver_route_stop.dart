@@ -4,6 +4,9 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'delivery_mode.dart';
+import 'destination.dart';
+import 'driver_route_stop_arrival_source.dart';
 import 'driver_route_stop_status.dart';
 import 'items3.dart';
 
@@ -27,7 +30,16 @@ class DriverRouteStop {
     this.lat,
     this.lng,
     this.settledAt,
+    this.arrivedAt,
+    this.arrivalSource,
+    this.deliveryMode,
+    this.destinationNodeId,
+    this.destinationNodeName,
+    this.unitsTotal,
     this.unitIds,
+    this.destination,
+    this.podConfirmation,
+    this.podPhotoUrl,
   });
 
   factory DriverRouteStop.fromJson(Map<String, Object?> json) =>
@@ -61,12 +73,38 @@ class DriverRouteStop {
   @JsonKey(name: 'settled_at')
   final DateTime? settledAt;
 
-  /// Bultos esperados de la parada (ids de unidad). Es la fuente AUTORITATIVA
-  /// de cuántos bultos hay que entregar: la cantidad de PRODUCTO (`items[].
-  /// quantity`) no es la cantidad de bultos. `null` si el backend todavía no lo
-  /// manda. (Campo aditivo agregado a mano; al regenerar el cliente viene solo.)
+  /// First reported arrival at the stop (POST /app/deliveries/{shipmentId}/arrived).
+  @JsonKey(name: 'arrived_at')
+  final DateTime? arrivedAt;
+  @JsonKey(name: 'arrival_source')
+  final DriverRouteStopArrivalSource? arrivalSource;
+
+  /// Modalidad de la parada. home_delivery = se entrega al cliente (POD con firma). store_pickup / transfer = el chofer NO entrega al cliente: deja el pedido en la tienda con POST /app/deliveries/{shipmentId}/store-drop.
+  @JsonKey(name: 'delivery_mode')
+  final DeliveryMode? deliveryMode;
+
+  /// Tienda/nodo destino de la parada; null si es a domicilio.
+  @JsonKey(name: 'destination_node_id')
+  final String? destinationNodeId;
+  @JsonKey(name: 'destination_node_name')
+  final String? destinationNodeName;
+
+  /// Number of physical products (shipment units) of the stop; the POD expects this many, not the sum of quantities.
+  @JsonKey(name: 'units_total')
+  final int? unitsTotal;
   @JsonKey(name: 'unit_ids')
   final List<String>? unitIds;
+
+  /// Tipo de destino de la parada, para que la app muestre UNA acción: home → "Entregar" (POD); store/warehouse (hub/tienda/almacén) → "Descargar" (escaneo de descarga). Derivado de shipments.destination_node_id (null = home). Null si no se pudo resolver el envío.
+  final Destination? destination;
+
+  /// Confirmación de la prueba de entrega ya capturada para este envío (firma/receptor), misma fuente que GET /app/deliveries/{shipmentId}. Null mientras no haya POD.
+  @JsonKey(name: 'pod_confirmation')
+  final String? podConfirmation;
+
+  /// URL de la foto del POD si el disco de evidencia la expone (puede ser null en disco privado aunque exista la foto; la referencia durable vive en la entrega).
+  @JsonKey(name: 'pod_photo_url')
+  final String? podPhotoUrl;
 
   Map<String, Object?> toJson() => _$DriverRouteStopToJson(this);
 }

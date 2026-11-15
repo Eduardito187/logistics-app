@@ -90,6 +90,7 @@ void main() {
         'recordPreparationScan',
         'recordLoadScan',
         'recordUnloadScan',
+        'recordStoreDrop',
         'recordFailedDelivery',
         'recordProofOfDelivery',
         'reportVehicleIncident',

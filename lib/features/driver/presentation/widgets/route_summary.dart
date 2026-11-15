@@ -103,7 +103,9 @@ class RouteSummary extends ConsumerWidget {
                         : progress.attended > 0
                         ? 'En curso'
                         : routeStatusLabel(route.status),
-                    tone: progress.isComplete ? PillTone.success : PillTone.info,
+                    tone: progress.isComplete
+                        ? PillTone.success
+                        : PillTone.info,
                   ),
                 ),
                 const SizedBox(height: 10),

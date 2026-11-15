@@ -13,6 +13,8 @@ Alert _$AlertFromJson(Map<String, dynamic> json) => Alert(
   severity: AlertSeverity.fromJson(json['severity'] as String),
   detail: json['detail'],
   occurredAt: DateTime.parse(json['occurred_at'] as String),
+  plate: json['plate'] as String?,
+  driverName: json['driver_name'] as String?,
   driverId: json['driver_id'] as String?,
   lat: (json['lat'] as num?)?.toDouble(),
   lng: (json['lng'] as num?)?.toDouble(),
@@ -23,6 +25,8 @@ Alert _$AlertFromJson(Map<String, dynamic> json) => Alert(
 );
 
 Map<String, dynamic> _$AlertToJson(Alert instance) => <String, dynamic>{
+  'plate': instance.plate,
+  'driver_name': instance.driverName,
   'id': instance.id,
   'vehicle_id': instance.vehicleId,
   'driver_id': instance.driverId,

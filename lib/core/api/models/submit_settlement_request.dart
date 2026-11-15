@@ -6,6 +6,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'carrier_document.dart';
 import 'corridor_type.dart';
+import 'vehicle_class.dart';
 
 part 'submit_settlement_request.g.dart';
 
@@ -19,12 +20,16 @@ class SubmitSettlementRequest {
     required this.amountCents,
     required this.currency,
     required this.reference,
+    this.vehicleClass,
     this.documents,
   });
 
   factory SubmitSettlementRequest.fromJson(Map<String, Object?> json) =>
       _$SubmitSettlementRequestFromJson(json);
 
+  /// Optional. If omitted, derived from the carrier's tariff for the corridor when exactly one class is tariffed; otherwise null.
+  @JsonKey(name: 'vehicle_class')
+  final VehicleClass? vehicleClass;
   @JsonKey(name: 'corridor_from')
   final String corridorFrom;
   @JsonKey(name: 'corridor_to')

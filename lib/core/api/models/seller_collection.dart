@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'pagination_meta.dart';
+import 'list_meta.dart';
 import 'seller.dart';
 
 part 'seller_collection.g.dart';
@@ -17,7 +17,7 @@ class SellerCollection {
       _$SellerCollectionFromJson(json);
 
   final List<Seller> data;
-  final PaginationMeta? meta;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$SellerCollectionToJson(this);
 }

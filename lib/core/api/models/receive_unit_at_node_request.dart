@@ -4,17 +4,21 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'captured_location.dart';
+
 part 'receive_unit_at_node_request.g.dart';
 
+/// Recepción de un producto en el nodo. Sin señal se omite la posición (nunca 0,0).
 @JsonSerializable()
 class ReceiveUnitAtNodeRequest {
   const ReceiveUnitAtNodeRequest({
     required this.shipmentId,
     required this.unitId,
-    required this.lat,
-    required this.lng,
-    required this.occurredAt,
     required this.destinationNodeId,
+    required this.occurredAt,
+    this.lat,
+    this.lng,
+    this.location,
     this.deviceId,
     this.userId,
     this.idempotencyKey,
@@ -25,32 +29,25 @@ class ReceiveUnitAtNodeRequest {
 
   @JsonKey(name: 'shipment_id')
   final String shipmentId;
-
-  /// Bulto escaneado
   @JsonKey(name: 'unit_id')
   final String unitId;
-  final double lat;
-  final double lng;
 
-  /// Momento del escaneo, fijado por la app en terreno (offline-first)
-  @JsonKey(name: 'occurred_at')
-  final DateTime occurredAt;
-
-  /// Puede inyectarlo el token de Auth; opcional en el cuerpo
-  @JsonKey(name: 'device_id')
-  final String? deviceId;
-
-  /// Puede inyectarlo el token de Auth; opcional en el cuerpo
-  @JsonKey(name: 'user_id')
-  final String? userId;
-
-  /// Clave de idempotencia; alternativa al header Idempotency-Key. Obligatoria por una de las dos vías; no puede ir vacía.
-  @JsonKey(name: 'idempotency_key')
-  final String? idempotencyKey;
-
-  /// Nodo destino donde se recibe el bulto
+  /// Nodo destino donde se recibe el producto
   @JsonKey(name: 'destination_node_id')
   final String destinationNodeId;
+
+  /// Se manda junto con lng.
+  final double? lat;
+  final double? lng;
+  final CapturedLocation? location;
+  @JsonKey(name: 'occurred_at')
+  final DateTime occurredAt;
+  @JsonKey(name: 'device_id')
+  final String? deviceId;
+  @JsonKey(name: 'user_id')
+  final String? userId;
+  @JsonKey(name: 'idempotency_key')
+  final String? idempotencyKey;
 
   Map<String, Object?> toJson() => _$ReceiveUnitAtNodeRequestToJson(this);
 }

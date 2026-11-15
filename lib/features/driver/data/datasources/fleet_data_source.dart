@@ -81,7 +81,7 @@ class FleetDataSource {
     }
   }
 
-  Future<Data5?> conductPreTripChecklist(
+  Future<PreTripChecklistResult?> conductPreTripChecklist(
     ConductPreTripChecklistRequest request,
   ) async {
     // El backend valida `performed_on` con `date_format:Y-m-d`; el cliente

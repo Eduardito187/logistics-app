@@ -19,6 +19,7 @@ class VehiclePing {
     this.ignition,
     this.odometerM,
     this.deviceId,
+    this.fixId,
   });
 
   factory VehiclePing.fromJson(Map<String, Object?> json) =>
@@ -38,6 +39,10 @@ class VehiclePing {
   final int? odometerM;
   @JsonKey(name: 'device_id')
   final String? deviceId;
+
+  /// Client id of the fix; makes retries idempotent (fallback device_id + recorded_at).
+  @JsonKey(name: 'fix_id')
+  final String? fixId;
 
   Map<String, Object?> toJson() => _$VehiclePingToJson(this);
 }

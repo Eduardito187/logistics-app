@@ -8,6 +8,14 @@ part of 'pre_trip_checklist.dart';
 
 PreTripChecklist _$PreTripChecklistFromJson(Map<String, dynamic> json) =>
     PreTripChecklist(
+      fitToDispatch: json['fit_to_dispatch'] as bool?,
+      failedCritical: (json['failed_critical'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      missingCritical: (json['missing_critical'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      checklistTemplateId: json['checklist_template_id'] as String?,
       id: json['id'] as String?,
       vehicleId: json['vehicle_id'] as String?,
       driverId: json['driver_id'] as String?,
@@ -29,6 +37,10 @@ PreTripChecklist _$PreTripChecklistFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$PreTripChecklistToJson(PreTripChecklist instance) =>
     <String, dynamic>{
+      'fit_to_dispatch': instance.fitToDispatch,
+      'failed_critical': instance.failedCritical,
+      'missing_critical': instance.missingCritical,
+      'checklist_template_id': instance.checklistTemplateId,
       'id': instance.id,
       'vehicle_id': instance.vehicleId,
       'driver_id': instance.driverId,

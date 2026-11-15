@@ -33,6 +33,13 @@ NodeReceptionView _$NodeReceptionViewFromJson(Map<String, dynamic> json) =>
       reconciledAt: json['reconciled_at'] == null
           ? null
           : DateTime.parse(json['reconciled_at'] as String),
+      missingCount: (json['missing_count'] as num?)?.toInt(),
+      surplusCount: (json['surplus_count'] as num?)?.toInt(),
+      reconciliation: json['reconciliation'] == null
+          ? null
+          : Reconciliation.fromJson(
+              json['reconciliation'] as Map<String, dynamic>,
+            ),
       units: (json['units'] as List<dynamic>?)
           ?.map((e) => NodeReceptionUnit.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -55,5 +62,8 @@ Map<String, dynamic> _$NodeReceptionViewToJson(NodeReceptionView instance) =>
       'complete': instance.complete,
       'opened_at': instance.openedAt.toIso8601String(),
       'reconciled_at': instance.reconciledAt?.toIso8601String(),
+      'missing_count': instance.missingCount,
+      'surplus_count': instance.surplusCount,
+      'reconciliation': instance.reconciliation,
       'units': instance.units,
     };

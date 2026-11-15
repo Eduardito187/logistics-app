@@ -29,9 +29,7 @@ class ConductPreTripChecklistRequest {
   final DateTime performedOn;
   final String? notes;
 
-  /// Ruta/viaje a la que se liga la inspección (UUID = `DriverRoute.id`).
-  /// Opcional: habilita el checklist POR RUTA en el backend. (Campo aditivo
-  /// agregado a mano; al regenerar el cliente viene solo.)
+  /// Optional route/trip the inspection belongs to (pre-trip check is per route, not per day).
   @JsonKey(name: 'route_id')
   final String? routeId;
 

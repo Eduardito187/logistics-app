@@ -5,12 +5,14 @@ import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../domain/store_stop.dart';
 import '../../controllers/driver_controllers.dart';
 import '../../controllers/locally_settled_stops.dart';
 import '../../failed_delivery_screen.dart';
 import '../../pod_screen.dart';
 import '../../scan_mode.dart';
 import '../../scan_units_screen.dart';
+import '../../store_drop_screen.dart';
 import 'delivery_sheet.dart';
 
 /// Abre un paso de la entrega y, al volver, refresca la ruta y el estado de la
@@ -93,11 +95,18 @@ class DeliveryActionsBar extends ConsumerWidget {
                         // (antes ocupaban 2 filas): "Entregar" destacado y las
                         // otras dos al lado. Ocupa menos alto → más mapa visible.
                         _ActionGroup(
+                          // Parada de TIENDA: el camión deja el pedido (escaneo
+                          // + foto), no es una entrega al cliente con firma.
+                          deliverLabel: isStoreStop(stop)
+                              ? 'Entregar en tienda'
+                              : 'Entregar',
                           onDeliver: () => openDeliveryStep(
                             context,
                             ref,
                             stop,
-                            PodScreen(stop: stop),
+                            isStoreStop(stop)
+                                ? StoreDropScreen(stop: stop)
+                                : PodScreen(stop: stop),
                           ),
                           onFailed: () => openDeliveryStep(
                             context,
@@ -122,8 +131,13 @@ class DeliveryActionsBar extends ConsumerWidget {
 /// tercer botón "Escanear" suelto: era redundante (la entrega ya escanea) y
 /// confundía, así que se quitó.
 class _ActionGroup extends StatelessWidget {
-  const _ActionGroup({required this.onDeliver, required this.onFailed});
+  const _ActionGroup({
+    required this.onDeliver,
+    required this.onFailed,
+    this.deliverLabel = 'Entregar',
+  });
 
+  final String deliverLabel;
   final VoidCallback onDeliver;
   final VoidCallback onFailed;
 
@@ -142,7 +156,7 @@ class _ActionGroup extends StatelessWidget {
             Expanded(
               child: _Segment(
                 icon: AppIcon.capture,
-                label: 'Entregar',
+                label: deliverLabel,
                 onTap: onDeliver,
                 background: AppColors.brand,
                 foreground: Colors.white,

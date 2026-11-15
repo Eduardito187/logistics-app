@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/api/export.dart' hide DueMaintenanceItem;
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/driver/domain/entities/due_maintenance_item.dart';
 import 'package:logistics_app/features/driver/presentation/controllers/fleet_ops_controllers.dart';

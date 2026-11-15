@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'error8.dart';
 import 'problem_code.dart';
 
 part 'problem.g.dart';
@@ -20,6 +21,7 @@ class Problem {
     this.type,
     this.detail,
     this.instance,
+    this.error,
     this.errors,
   });
 
@@ -41,6 +43,12 @@ class Problem {
   /// Ruta de la petición que produjo el error.
   final String? instance;
   final ProblemCode code;
+
+  /// Bloque redundante con el motivo (contrato unificado): `error.message` repite `detail` —o.
+  /// `title` si no hay detalle— y `error.code` repite `code`. Está SIEMPRE presente en errores, para.
+  /// que el cliente lea el motivo sin importar qué campo consuma (`detail` o `error.message`).
+  ///
+  final Error8? error;
 
   /// Errores por campo; presente solo en fallos de validación (code=validation_failed).
   final Map<String, List<String>>? errors;

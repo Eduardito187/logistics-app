@@ -26,7 +26,7 @@ class HomePrefetcher {
         // chofer la ruta es lo primero y no conviene competir por la red.
         prefetchDriverDay(ref);
         return;
-      case UserRole.supervisor:
+      case UserRole.supervisor || UserRole.admin:
         // Si el inicio quedó abierto de un día para otro, que el tablero y los
         // planes precargados sean de hoy.
         ref.read(plansDateProvider.notifier).rollOverIfNewDay();

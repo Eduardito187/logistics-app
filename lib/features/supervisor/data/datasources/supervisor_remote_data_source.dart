@@ -5,13 +5,13 @@ import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/app_plans_plan_id_sequence_request_body.dart';
 import '../../../../core/api/models/app_plans_plan_id_stops_request_body.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/generate_daily_plan_request.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/generate_plan_proposal_request.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
-import '../../../../core/api/models/stops2.dart';
+import '../../../../core/api/models/stops3.dart';
 import '../../../../core/api/models/strategy.dart';
 import '../../../../core/api/models/vehicle.dart';
 import '../../../../core/api/models/vehicle_live.dart';
@@ -68,8 +68,8 @@ class SupervisorRemoteDataSource {
           .fleetListVehicles();
       return {
         for (final v in response.data ?? const <Vehicle>[])
-          if (v.plate != null && v.plate!.trim().isNotEmpty)
-            v.id: v.plate!.trim(),
+          if (v.id != null && v.plate != null && v.plate!.trim().isNotEmpty)
+            v.id!: v.plate!.trim(),
       };
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
@@ -157,7 +157,7 @@ class SupervisorRemoteDataSource {
   }
 
   /// ETA por parada de un plan.
-  Future<Data7> getPlanEta(String planId) async {
+  Future<GetPlanEtaData> getPlanEta(String planId) async {
     try {
       final response = await _ref
           .read(logisticsApiProvider)
@@ -213,7 +213,7 @@ class SupervisorRemoteDataSource {
     required DateTime planDate,
     required String vehicleId,
     required DateTime departAt,
-    required List<Stops2> stops,
+    required List<Stops3> stops,
   }) async {
     try {
       final response = await _ref

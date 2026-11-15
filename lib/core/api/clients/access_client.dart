@@ -27,8 +27,8 @@ import '../models/get_app_access_users_user_id_response.dart';
 import '../models/get_integrations_access_token_verify_response.dart';
 import '../models/post_app_access_tokens_response.dart';
 import '../models/post_app_access_tokens_token_id_rotate_response.dart';
+import '../models/status5.dart';
 import '../models/status6.dart';
-import '../models/status7.dart';
 
 part 'access_client.g.dart';
 
@@ -96,10 +96,25 @@ abstract class AccessClient {
     @Body() required AppAccessRolesRoleIdPermissionsRevokeRequestBody body,
   });
 
-  /// List users
+  /// List users.
+  ///
+  /// [role] - Only users holding this role key.
+  ///
+  /// [search] - Case-insensitive substring match on name or email.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/app/access/users')
   Future<GetAppAccessUsersResponse> listUsers({
-    @Query('status') Status6? status,
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
+    @Query('status') Status5? status,
+    @Query('role') String? role,
+    @Query('search') String? search,
+    @Query('cursor') String? cursor,
   });
 
   /// Register a user
@@ -150,7 +165,7 @@ abstract class AccessClient {
   /// List integration tokens
   @GET('/app/access/tokens')
   Future<GetAppAccessTokensResponse> listIntegrationTokens({
-    @Query('status') Status7? status,
+    @Query('status') Status6? status,
   });
 
   /// Issue an integration token.

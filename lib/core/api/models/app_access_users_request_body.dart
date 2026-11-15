@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'status6.dart';
+import 'status5.dart';
 
 part 'app_access_users_request_body.g.dart';
 
@@ -26,7 +26,7 @@ class AppAccessUsersRequestBody {
   final String password;
   @JsonKey(name: 'role_keys')
   final List<String>? roleKeys;
-  final Status6? status;
+  final Status5? status;
 
   Map<String, Object?> toJson() => _$AppAccessUsersRequestBodyToJson(this);
 }

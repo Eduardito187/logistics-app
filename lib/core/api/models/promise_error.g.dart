@@ -7,7 +7,7 @@ part of 'promise_error.dart';
 // **************************************************************************
 
 PromiseError _$PromiseErrorFromJson(Map<String, dynamic> json) =>
-    PromiseError(error: Error8.fromJson(json['error'] as Map<String, dynamic>));
+    PromiseError(error: Error9.fromJson(json['error'] as Map<String, dynamic>));
 
 Map<String, dynamic> _$PromiseErrorToJson(PromiseError instance) =>
     <String, dynamic>{'error': instance.error};

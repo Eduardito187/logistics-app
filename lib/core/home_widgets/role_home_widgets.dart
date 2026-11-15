@@ -24,6 +24,7 @@ const Map<UserRole, List<HomeWidgetKind>> kRoleHomeWidgetKinds = {
   UserRole.store: [HomeWidgetKind.storeReceptions, HomeWidgetKind.quickScan],
   UserRole.carrier: [HomeWidgetKind.quickScan],
   UserRole.supervisor: [HomeWidgetKind.supervisorSummary],
+  UserRole.admin: [HomeWidgetKind.supervisorSummary],
 };
 
 /// Tarea de escaneo principal de cada rol (rutas REALES de `RoleTask`):
@@ -33,7 +34,7 @@ const Map<UserRole, List<HomeWidgetKind>> kRoleHomeWidgetKinds = {
 const Map<UserRole, String> kQuickScanRoutes = {
   UserRole.driver: '/driver/load',
   UserRole.picker: '/picking/prepare',
-  UserRole.store: '/store/reception',
+  UserRole.store: '/store/pickup',
   UserRole.carrier: '/carrier/pickup',
 };
 
@@ -42,7 +43,7 @@ const String kNextDeliveryRoute = '/driver/delivery';
 const String kRouteDayRoute = '/driver/route';
 const String kPickingPendingRoute = '/picking/orders';
 const String kPickingScanRoute = '/picking/prepare';
-const String kStoreReceptionsRoute = '/store/reception';
+const String kStoreReceptionsRoute = '/store/pickup';
 const String kSupervisorSummaryRoute = '/supervisor/dashboard';
 
 /// Widgets del rol [role] (vacío si no tiene).

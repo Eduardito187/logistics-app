@@ -29,9 +29,8 @@ enum UserRole {
     backendKey: 'tienda',
     icon: AppIcon.pickupStore,
     tasks: [
-      'Recepción contra manifiesto',
-      'Ubicación en estante',
-      'Recojo en tienda',
+      'Recojo en tienda: entrega al cliente',
+      'Consultar el estado de un pedido',
     ],
   ),
   carrier(
@@ -45,6 +44,21 @@ enum UserRole {
     backendKey: 'supervisor',
     icon: AppIcon.supervisor,
     tasks: ['Rutas en curso y alertas', 'Incidencias en campo'],
+  ),
+
+  /// Administrador: ve y gestiona TODA la operación (envíos, rutas, flota en
+  /// vivo, camiones, personal). Hereda las pantallas del supervisor y suma las
+  /// de administración (`lib/features/admin/`).
+  admin(
+    label: 'Administrador',
+    backendKey: 'admin',
+    icon: AppIcon.supervisor,
+    tasks: [
+      'Flota en vivo a nivel nacional',
+      'Envíos, rutas y reprogramaciones',
+      'Camiones y mantenimiento',
+      'Personal, documentos y asignaciones',
+    ],
   );
 
   const UserRole({
@@ -68,10 +82,17 @@ enum UserRole {
   /// ¿Este rol usa la impresora Zebra de etiquetas? Solo el preparador (imprime
   /// al escanear) y el supervisor (reimpresiones); al resto no se le muestra.
   bool get usesLabelPrinter =>
-      this == UserRole.picker || this == UserRole.supervisor;
+      this == UserRole.picker ||
+      this == UserRole.supervisor ||
+      this == UserRole.admin;
+
+  /// ¿Ve la operación completa (tablero, flota, rutas, alertas)? Supervisor y
+  /// administrador comparten esas pantallas.
+  bool get seesOperations =>
+      this == UserRole.supervisor || this == UserRole.admin;
 
   /// Mapea una clave de rol del backend al rol de la app, o `null` si no es un
-  /// rol operativo de terreno (p. ej. `admin`).
+  /// rol de la app.
   static UserRole? fromBackendKey(String key) {
     for (final role in values) {
       if (role.backendKey == key) return role;
@@ -80,7 +101,11 @@ enum UserRole {
   }
 
   /// Elige el primer rol operativo de la lista de roles del usuario.
+  ///
+  /// Un usuario con `admin` entra SIEMPRE como administrador aunque además
+  /// tenga otro rol: es la vista que contiene a las demás.
   static UserRole? firstOperational(Iterable<String> roleKeys) {
+    if (roleKeys.contains(UserRole.admin.backendKey)) return UserRole.admin;
     for (final key in roleKeys) {
       final role = fromBackendKey(key);
       if (role != null) return role;

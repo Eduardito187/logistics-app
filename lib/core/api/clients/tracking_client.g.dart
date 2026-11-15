@@ -125,10 +125,13 @@ class _TrackingClient implements TrackingClient {
   @override
   Future<GetChannelsTrackingTokenResponse> getPublicTracking({
     required String token,
+    String? ifNoneMatch,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'If-None-Match': ifNoneMatch};
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetChannelsTrackingTokenResponse>(
       Options(method: 'GET', headers: _headers, extra: _extra)
@@ -154,10 +157,13 @@ class _TrackingClient implements TrackingClient {
   @override
   Future<GetChannelsTrackingTokenUnitsResponse> getPublicUnits({
     required String token,
+    String? ifNoneMatch,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'If-None-Match': ifNoneMatch};
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetChannelsTrackingTokenUnitsResponse>(
       Options(method: 'GET', headers: _headers, extra: _extra)

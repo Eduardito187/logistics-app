@@ -18,11 +18,19 @@ class Plan {
     required this.vehicleId,
     required this.status,
     required this.stops,
+    this.plate,
+    this.driverName,
     this.routeGeometry,
   });
 
   factory Plan.fromJson(Map<String, Object?> json) => _$PlanFromJson(json);
 
+  /// Plate of the plan's truck (Fleet). Null if unknown.
+  final String? plate;
+
+  /// Driver of the truck for the plan date (route driver if dispatched, else the crew assembled for that truck and day). Null if no crew is assigned.
+  @JsonKey(name: 'driver_name')
+  final String? driverName;
   final String id;
   @JsonKey(name: 'plan_date')
   final DateTime planDate;

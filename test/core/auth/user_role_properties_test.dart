@@ -6,13 +6,14 @@ import 'package:logistics_app/core/auth/user_role.dart';
 
 void main() {
   group('UserRole (propiedades de cada valor)', () {
-    test('existen exactamente los cinco roles operativos esperados', () {
+    test('existen exactamente los seis roles esperados (incluye admin)', () {
       expect(UserRole.values, [
         UserRole.driver,
         UserRole.picker,
         UserRole.store,
         UserRole.carrier,
         UserRole.supervisor,
+        UserRole.admin,
       ]);
     });
 
@@ -22,6 +23,7 @@ void main() {
       expect(UserRole.store.backendKey, 'tienda');
       expect(UserRole.carrier.backendKey, 'transportista');
       expect(UserRole.supervisor.backendKey, 'supervisor');
+      expect(UserRole.admin.backendKey, 'admin');
     });
 
     test('label (texto de UI en español) de cada rol', () {
@@ -47,12 +49,23 @@ void main() {
   });
 
   group('UserRole.firstOperational (casos límite complementarios)', () {
-    test('admin no es operativo: se ignora', () {
-      expect(UserRole.firstOperational(['admin']), isNull);
+    test('admin entra como administrador, aunque tenga otro rol', () {
+      expect(UserRole.firstOperational(['admin']), UserRole.admin);
       expect(
         UserRole.firstOperational(['admin', 'supervisor']),
-        UserRole.supervisor,
+        UserRole.admin,
       );
+      // Sin importar el orden en que el backend liste los roles.
+      expect(
+        UserRole.firstOperational(['supervisor', 'admin']),
+        UserRole.admin,
+      );
+    });
+
+    test('supervisor y admin ven la operación completa', () {
+      expect(UserRole.supervisor.seesOperations, isTrue);
+      expect(UserRole.admin.seesOperations, isTrue);
+      expect(UserRole.driver.seesOperations, isFalse);
     });
   });
 }

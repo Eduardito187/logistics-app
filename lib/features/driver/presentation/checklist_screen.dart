@@ -128,7 +128,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
   Widget _buildForm(
     BuildContext context,
     String vehicleId,
-    Driver driver,
+    CrewDriver driver,
     String? routeId,
   ) {
     final passedCount = _checks.values.where((v) => v).length;
@@ -217,7 +217,11 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     );
   }
 
-  Future<void> _submit(String vehicleId, String driverId, String? routeId) async {
+  Future<void> _submit(
+    String vehicleId,
+    String driverId,
+    String? routeId,
+  ) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -252,6 +256,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                 source: RecordOdometerRequestSource.departure,
                 readAt: DateTime.now(),
                 note: 'Salida de ruta',
+                routeId: routeId,
               );
         } on ApiException {
           if (mounted) {

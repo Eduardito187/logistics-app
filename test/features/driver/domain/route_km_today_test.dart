@@ -60,6 +60,36 @@ void main() {
       );
     });
 
+    test('por salida: la llegada de OTRA ruta no cierra esta', () {
+      OdometerReading tagged(
+        OdometerReadingSource source,
+        int hour,
+        String route,
+      ) => OdometerReading(
+        id: 'r$hour',
+        vehicleId: 'v1',
+        km: 12000 + hour,
+        source: source,
+        readAt: DateTime(2026, 11, 11, hour),
+        routeId: route,
+      );
+      final readings = [
+        tagged(OdometerReadingSource.departure, 8, 'ruta-1'),
+        tagged(OdometerReadingSource.arrival, 12, 'ruta-1'),
+        tagged(OdometerReadingSource.departure, 14, 'ruta-2'),
+      ];
+
+      // Primera salida: cerrada. Segunda salida del mismo día: falta cerrar.
+      expect(
+        arrivalRecordedForCurrentTrip(readings, now, routeId: 'ruta-1'),
+        isTrue,
+      );
+      expect(
+        arrivalRecordedForCurrentTrip(readings, now, routeId: 'ruta-2'),
+        isFalse,
+      );
+    });
+
     test('una llegada de ayer no cuenta', () {
       expect(
         arrivalRecordedForCurrentTrip([

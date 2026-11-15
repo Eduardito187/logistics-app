@@ -16,7 +16,6 @@ EmittedLabel _label() => const EmittedLabel(
   qrContent: '{"id":"01M6P94518T508MZ8XFVYP1JF5"}',
   zpl: '^XA^XZ',
   emittedAt: 1700000000,
-  revoked: false,
   productName: 'Base box Queen',
 );
 

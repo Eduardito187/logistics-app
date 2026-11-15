@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/logistics_api.dart';
 import '../../../../core/api/models/dispatch_lines_response.dart';
+import '../../../../core/api/models/emit_labels_by_order_request.dart';
 import '../../../../core/api/models/emit_labels_request.dart';
 import '../../../../core/api/models/emitted_label.dart';
-import '../../../../core/api/models/meta_sealed.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../domain/entities/shipment_page.dart';
 import '../../../../core/network/api_exception.dart';
@@ -41,7 +41,7 @@ class PickingRemoteDataSource {
   }) async {
     try {
       final response = await _api.shipments.listShipments(
-        status: status,
+        status: status == null ? null : [status],
         page: page,
         perPage: perPage,
       );
@@ -59,11 +59,7 @@ class PickingRemoteDataSource {
 
   /// `true`/`false` si el `meta` sellado se pudo leer; `null` si no (hoy es lo
   /// habitual por el bug de camelCase del generador).
-  static bool? _hasMoreOf(MetaSealed? meta) => switch (meta) {
-    MetaSealedCursorMeta(:final hasMore) => hasMore,
-    MetaSealedPaginationMeta(:final nextPage) => nextPage != null,
-    _ => null,
-  };
+  static bool? _hasMoreOf(Object? meta) => null;
 
   /// GET `/app/orders/{orderNumber}/labels`: etiquetas ya emitidas del pedido.
   Future<List<EmittedLabel>> getOrderLabels(String orderNumber) async {
@@ -119,7 +115,11 @@ class PickingRemoteDataSource {
     try {
       final collection = await _api.labels.emitShipmentLabels(
         orderNumber: orderNumber,
-        body: body,
+        body: EmitLabelsByOrderRequest(
+          origin: body.origin,
+          destination: body.destination,
+          lines: body.lines,
+        ),
       );
       return collection.data;
     } on DioException catch (e) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/vehicle.dart';
+import 'package:logistics_app/core/api/models/vehicle_status.dart';
 import 'package:logistics_app/features/picking/data/available_vehicles.dart';
 import 'package:logistics_app/features/picking/presentation/widgets/assign_lane_dialog.dart';
 
@@ -15,21 +16,21 @@ const _vehicles = <Vehicle>[
     plate: '904U10',
     capacityKg: 4144,
     capacityM3: 32.7,
-    status: 'available',
+    status: VehicleStatus.available,
   ),
   Vehicle(
     id: 'v2',
     plate: '131O17',
     capacityKg: 3026,
     capacityM3: 31.8,
-    status: 'in_service',
+    status: VehicleStatus.inService,
   ),
   Vehicle(
     id: 'v3',
     plate: '161W94',
     capacityKg: 2063,
     capacityM3: 15.8,
-    status: 'maintenance',
+    status: VehicleStatus.maintenance,
   ),
 ];
 

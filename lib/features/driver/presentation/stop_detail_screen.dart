@@ -14,7 +14,9 @@ import '../../../core/widgets/status_pill.dart';
 import 'controllers/locally_settled_stops.dart';
 import 'driver_common.dart';
 import 'failed_delivery_screen.dart';
+import '../domain/store_stop.dart';
 import 'pod_screen.dart';
+import 'store_drop_screen.dart';
 import 'widgets/delivery_state_card.dart';
 import 'widgets/info_row.dart';
 import 'widgets/stop_map_screen.dart';
@@ -116,12 +118,18 @@ class StopDetailScreen extends ConsumerWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => PodScreen(stop: stop),
+                      // Parada de tienda: el camión deja el pedido (escaneo +
+                      // foto), no es una entrega al cliente con firma.
+                      builder: (_) => isStoreStop(stop)
+                          ? StoreDropScreen(stop: stop)
+                          : PodScreen(stop: stop),
                     ),
                   );
                 },
                 icon: const AnimatedAppIcon(AppIcon.success),
-                label: const Text('Entregar'),
+                label: Text(
+                  isStoreStop(stop) ? 'Entregar en tienda' : 'Entregar',
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(

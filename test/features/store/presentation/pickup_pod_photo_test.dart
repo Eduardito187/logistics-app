@@ -82,7 +82,7 @@ void main() {
     await deliverAll(tester);
 
     expect(h.uploaded, ['/tmp/pod-1.jpg']);
-    expect(h.enqueued, contains(_podPhoto('/tmp/pod-1.jpg')));
+    expect(h.enqueued, contains(equals(_podPhoto('/tmp/pod-1.jpg'))));
     expect(h.pods.single['photoPath'], isNull);
   });
 

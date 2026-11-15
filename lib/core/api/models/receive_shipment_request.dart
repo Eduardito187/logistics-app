@@ -17,6 +17,8 @@ class ReceiveShipmentRequest {
     required this.customerName,
     required this.addressText,
     required this.lines,
+    this.destinationNodeId,
+    this.destinationNodeCode,
     this.customerDocumentId,
     this.customerPhone,
     this.customerEmail,
@@ -33,6 +35,14 @@ class ReceiveShipmentRequest {
   /// External reference of the order in its source system
   @JsonKey(name: 'external_id')
   final String externalId;
+
+  /// Pickup/transfer destination node.
+  @JsonKey(name: 'destination_node_id')
+  final String? destinationNodeId;
+
+  /// Store/DC code (network_nodes.code); used when no destination_node_id and no "#n:{uuid}" suffix.
+  @JsonKey(name: 'destination_node_code')
+  final String? destinationNodeCode;
   @JsonKey(name: 'customer_name')
   final String customerName;
 

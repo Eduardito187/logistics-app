@@ -6,7 +6,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'node_reception_unit.g.dart';
 
-/// Bulto de una recepción en nodo con el producto que contiene (foto, nombre, SKU) y su posición "N de M"
+/// Producto de una recepción en nodo (foto, nombre, SKU) y su posición "N de M"
 @JsonSerializable()
 class NodeReceptionUnit {
   const NodeReceptionUnit({
@@ -18,11 +18,17 @@ class NodeReceptionUnit {
     required this.unitTotal,
     required this.pieceIndex,
     required this.pieceTotal,
+    this.location,
+    this.locatedAt,
   });
 
   factory NodeReceptionUnit.fromJson(Map<String, Object?> json) =>
       _$NodeReceptionUnitFromJson(json);
 
+  /// Shelf location at the node (e.g. A-03-2).
+  final String? location;
+  @JsonKey(name: 'located_at')
+  final DateTime? locatedAt;
   @JsonKey(name: 'unit_id')
   final String unitId;
   final String? sku;

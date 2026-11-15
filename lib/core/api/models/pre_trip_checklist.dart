@@ -9,6 +9,10 @@ part 'pre_trip_checklist.g.dart';
 @JsonSerializable()
 class PreTripChecklist {
   const PreTripChecklist({
+    this.fitToDispatch,
+    this.failedCritical,
+    this.missingCritical,
+    this.checklistTemplateId,
     this.id,
     this.vehicleId,
     this.driverId,
@@ -25,6 +29,14 @@ class PreTripChecklist {
   factory PreTripChecklist.fromJson(Map<String, Object?> json) =>
       _$PreTripChecklistFromJson(json);
 
+  @JsonKey(name: 'fit_to_dispatch')
+  final bool? fitToDispatch;
+  @JsonKey(name: 'failed_critical')
+  final List<String>? failedCritical;
+  @JsonKey(name: 'missing_critical')
+  final List<String>? missingCritical;
+  @JsonKey(name: 'checklist_template_id')
+  final String? checklistTemplateId;
   final String? id;
   @JsonKey(name: 'vehicle_id')
   final String? vehicleId;
@@ -41,18 +53,14 @@ class PreTripChecklist {
   final DateTime? performedOn;
   final String? notes;
 
-  /// Ruta/viaje a la que se ligó esta inspección (UUID). Permite el checklist
-  /// POR RUTA (una inspección por salida). `null` en registros viejos o si no se
-  /// ligó. (Campos aditivos agregados a mano; al regenerar el cliente vienen
-  /// solos — ver docs/backend-requests/2026-11-13-checklist-por-ruta-y-placa.md.)
+  /// Route/trip this inspection belongs to (pre-trip check is per route, not per day).
   @JsonKey(name: 'route_id')
   final String? routeId;
 
-  /// Placa del vehículo inspeccionado (para el historial). `null` si el vehículo
-  /// ya no existe en flota.
+  /// Plate of the inspected vehicle (null if the vehicle was removed from the fleet).
   final String? plate;
 
-  /// Nombre del chofer que firmó la inspección. `null` si ya no existe en flota.
+  /// Name of the driver who performed the inspection (null if removed from the fleet).
   @JsonKey(name: 'driver_name')
   final String? driverName;
 
