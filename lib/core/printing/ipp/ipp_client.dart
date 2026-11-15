@@ -284,7 +284,7 @@ class IppClient {
         case 4:
           return PrintOutcome.held(jobId: jobId);
       }
-      if (DateTime.now().isAfter(deadline)) {
+      if (!DateTime.now().isBefore(deadline)) {
         return PrintOutcome.accepted(jobId: jobId, note: info.problem);
       }
     }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'brand_vector.dart';
 
 /// Logotipo DisTrack para la fila superior (toolbar) de un [AppBar].
 ///
@@ -21,7 +21,7 @@ class DisTrackAppBarLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     // AppBar clara → logo oscuro; AppBar Noche → logo invertido.
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SvgPicture.asset(
+    return BrandVector(
       isDark ? _dark : _light,
       height: height,
       fit: BoxFit.contain,

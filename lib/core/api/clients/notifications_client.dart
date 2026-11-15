@@ -6,11 +6,15 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/advance_cascade_envelope.dart';
+import '../models/app_notifications_read_all_request_body.dart';
 import '../models/get_app_notification_rules_response.dart';
 import '../models/get_app_notification_sms_budget_response.dart';
 import '../models/get_app_notification_templates_response.dart';
+import '../models/get_app_notifications_all_response.dart';
 import '../models/get_app_notifications_notification_response.dart';
 import '../models/notification_list_envelope.dart';
+import '../models/post_app_notifications_notification_read_response.dart';
+import '../models/post_app_notifications_read_all_response.dart';
 import '../models/put_app_notification_rules_response.dart';
 import '../models/queue_notification_request.dart';
 import '../models/queued_notification_envelope.dart';
@@ -63,9 +67,32 @@ abstract class NotificationsClient {
   /// List the global notification log (internal app).
   ///
   /// Returns the latest notifications across the whole operation, newest first. App gate.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
+  ///
+  /// [unread] - When true, only notifications the authenticated user has not read (meta.total counts unread).
   @GET('/app/notifications/all')
-  Future<NotificationListEnvelope> appListNotifications({
-    @Query('limit') int? limit = 100,
+  Future<GetAppNotificationsAllResponse> appListNotifications({
+    @Query('cursor') String? cursor,
+    @Query('unread') bool? unread,
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
+  });
+
+  /// Mark all notifications as read for the authenticated user
+  @POST('/app/notifications/read-all')
+  Future<PostAppNotificationsReadAllResponse> appMarkAllNotificationsRead({
+    @Body() AppNotificationsReadAllRequestBody? body,
+  });
+
+  /// Mark a notification as read for the authenticated user (idempotent)
+  @POST('/app/notifications/{notification}/read')
+  Future<PostAppNotificationsNotificationReadResponse> appMarkNotificationRead({
+    @Path('notification') required String notification,
   });
 
   /// Get a single notification (internal app)

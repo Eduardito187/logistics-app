@@ -123,7 +123,10 @@ void main() {
       // La firma lleva el snapshot del cliente (nombre, momento de captura).
       expect(sig.snapshot, isNotNull);
       expect(sig.snapshot!['captured_at'], isNotNull);
-      expect(queue.submissions.single['photo_path'], 'pendiente');
+      // El POD NO manda una ruta inventada: la foto va por su cola y el backend
+      // la liga al envío (opción A). Mandar `'pendiente'` hacía que el backend
+      // rechazara con 422 ("No se pudo registrar"). photo_path viaja en null.
+      expect(queue.submissions.single['photo_path'], isNull);
       expect(find.byType(PodScreen), findsNothing);
     });
 

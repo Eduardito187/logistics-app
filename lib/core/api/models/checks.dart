@@ -8,12 +8,19 @@ part 'checks.g.dart';
 
 @JsonSerializable()
 class Checks {
-  const Checks({required this.database, required this.cache});
+  const Checks({
+    required this.database,
+    required this.schema,
+    required this.cache,
+  });
 
   factory Checks.fromJson(Map<String, Object?> json) => _$ChecksFromJson(json);
 
   /// PostgreSQL reachable with PostGIS enabled
   final bool database;
+
+  /// A real schema table is queryable (detects schema/plan breakage)
+  final bool schema;
 
   /// Valkey reachable
   final bool cache;

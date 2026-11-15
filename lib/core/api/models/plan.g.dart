@@ -14,12 +14,24 @@ Plan _$PlanFromJson(Map<String, dynamic> json) => Plan(
   stops: (json['stops'] as List<dynamic>)
       .map((e) => PlannedStop.fromJson(e as Map<String, dynamic>))
       .toList(),
+  originNode: json['origin_node'] == null
+      ? null
+      : PlanOriginNode.fromJson(json['origin_node'] as Map<String, dynamic>),
+  distanceKm: (json['distance_km'] as num?)?.toDouble(),
+  durationMinutes: (json['duration_minutes'] as num?)?.toInt(),
+  plate: json['plate'] as String?,
+  driverName: json['driver_name'] as String?,
   routeGeometry: json['route_geometry'] == null
       ? null
       : RouteGeometry.fromJson(json['route_geometry'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PlanToJson(Plan instance) => <String, dynamic>{
+  'origin_node': instance.originNode,
+  'distance_km': instance.distanceKm,
+  'duration_minutes': instance.durationMinutes,
+  'plate': instance.plate,
+  'driver_name': instance.driverName,
   'id': instance.id,
   'plan_date': instance.planDate.toIso8601String(),
   'vehicle_id': instance.vehicleId,

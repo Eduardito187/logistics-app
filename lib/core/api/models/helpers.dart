@@ -8,12 +8,12 @@ part 'helpers.g.dart';
 
 @JsonSerializable()
 class Helpers {
-  const Helpers({required this.id, required this.name});
+  const Helpers({this.id, this.name});
 
   factory Helpers.fromJson(Map<String, Object?> json) =>
       _$HelpersFromJson(json);
 
-  final String id;
+  final String? id;
   final String? name;
 
   Map<String, Object?> toJson() => _$HelpersToJson(this);

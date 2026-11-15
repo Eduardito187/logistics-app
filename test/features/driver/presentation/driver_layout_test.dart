@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/api/export.dart' hide DueMaintenanceItem;
 import 'package:logistics_app/core/layout/breakpoints.dart';
 import 'package:logistics_app/core/media/photo_picker.dart';
 import 'package:logistics_app/core/widgets/section_card.dart';
@@ -306,7 +306,9 @@ void main() {
       overrides: [
         ...gateBase(),
         driversProvider.overrideWith(
-          (ref) async => [buildDriver(name: _longName)],
+          (ref) async => [
+            const Driver(id: 'd1', name: _longName, licenseNumber: 'LIC-1'),
+          ],
         ),
       ],
     );

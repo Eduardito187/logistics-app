@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data27.dart';
+import 'set_setting_accepted_data.dart';
 
 part 'set_setting_accepted.g.dart';
 
@@ -15,7 +15,7 @@ class SetSettingAccepted {
   factory SetSettingAccepted.fromJson(Map<String, Object?> json) =>
       _$SetSettingAcceptedFromJson(json);
 
-  final Data27 data;
+  final SetSettingAcceptedData data;
 
   Map<String, Object?> toJson() => _$SetSettingAcceptedToJson(this);
 }

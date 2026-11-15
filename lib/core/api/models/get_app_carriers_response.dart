@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'carrier.dart';
-import 'meta_sealed.dart';
+import 'list_meta.dart';
 
 part 'get_app_carriers_response.g.dart';
 
@@ -17,7 +17,7 @@ class GetAppCarriersResponse {
       _$GetAppCarriersResponseFromJson(json);
 
   final List<Carrier> data;
-  final MetaSealed? meta;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$GetAppCarriersResponseToJson(this);
 }

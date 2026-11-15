@@ -29,7 +29,7 @@ void main() {
     );
 
     expect(find.text('3'), findsOneWidget); // posición en el avatar
-    expect(find.text('Envío SHP-9'), findsOneWidget);
+    expect(find.text('Parada 3'), findsOneWidget);
     expect(find.text('Carga #5 · Carril A2 · 42 min'), findsOneWidget);
   });
 

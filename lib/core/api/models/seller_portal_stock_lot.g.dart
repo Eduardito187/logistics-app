@@ -13,9 +13,7 @@ SellerPortalStockLot _$SellerPortalStockLotFromJson(
   ownerPartyId: json['owner_party_id'] as String,
   warehouseId: json['warehouse_id'] as String,
   sku: json['sku'] as String,
-  fulfillmentMode: SellerPortalStockLotFulfillmentMode.fromJson(
-    json['fulfillment_mode'] as String,
-  ),
+  fulfillmentMode: FulfillmentMode.fromJson(json['fulfillment_mode'] as String),
   availableQuantity: (json['available_quantity'] as num).toInt(),
   reservedQuantity: (json['reserved_quantity'] as num).toInt(),
   unitCostCents: (json['unit_cost_cents'] as num).toInt(),

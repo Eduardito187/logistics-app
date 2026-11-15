@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data12.dart';
+import 'get_public_units_data.dart';
 
 part 'get_channels_tracking_token_units_response.g.dart';
 
@@ -16,7 +16,7 @@ class GetChannelsTrackingTokenUnitsResponse {
     Map<String, Object?> json,
   ) => _$GetChannelsTrackingTokenUnitsResponseFromJson(json);
 
-  final Data12 data;
+  final GetPublicUnitsData data;
 
   Map<String, Object?> toJson() =>
       _$GetChannelsTrackingTokenUnitsResponseToJson(this);

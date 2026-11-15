@@ -15,6 +15,7 @@ class RecordOdometerRequest {
     required this.km,
     required this.source,
     required this.readAt,
+    this.routeId,
     this.note,
   });
 
@@ -27,6 +28,10 @@ class RecordOdometerRequest {
   final RecordOdometerRequestSource source;
   @JsonKey(name: 'read_at')
   final DateTime readAt;
+
+  /// Ruta del chofer a la que pertenece la lectura (salida/llegada). Null si no es de una ruta.
+  @JsonKey(name: 'route_id')
+  final String? routeId;
   final String? note;
 
   Map<String, Object?> toJson() => _$RecordOdometerRequestToJson(this);

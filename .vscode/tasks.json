@@ -6,7 +6,8 @@
       "detail": "Túnel teléfono:8110 → PC:8110 para que la app alcance el Docker (localhost). No falla si no hay device.",
       "type": "shell",
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "reverse"],
+      "args": ["scripts/adb-wireless.sh", "reverse"],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "silent", "panel": "shared", "close": true },
       "problemMatcher": []
     },
@@ -15,7 +16,8 @@
       "detail": "Autodescubre y conecta el teléfono por WiFi usando el adb de WSL.",
       "type": "shell",
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "mdns"],
+      "args": ["scripts/adb-wireless.sh", "mdns"],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
@@ -24,7 +26,8 @@
       "detail": "Pegás la 'Dirección IP y puerto' de Depuración inalámbrica y conecta (adb de WSL).",
       "type": "shell",
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "connect", "${input:adbTarget}"],
+      "args": ["scripts/adb-wireless.sh", "connect", "${input:adbTarget}"],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
@@ -33,7 +36,8 @@
       "detail": "Reconecta al último ip:puerto (def. 192.168.1.42:5555).",
       "type": "shell",
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "reconnect"],
+      "args": ["scripts/adb-wireless.sh", "reconnect"],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
@@ -43,9 +47,10 @@
       "type": "shell",
       "command": "bash",
       "args": [
-        "${workspaceFolder}/scripts/adb-wireless.sh", "pair",
+        "scripts/adb-wireless.sh", "pair",
         "${input:adbPairTarget}", "${input:adbPairCode}", "${input:adbConnectTarget}"
       ],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     },
@@ -54,7 +59,8 @@
       "detail": "Con el teléfono atado a WSL por usbipd: tcpip 5555 + connect (5555 estable).",
       "type": "shell",
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/adb-wireless.sh", "usb"],
+      "args": ["scripts/adb-wireless.sh", "usb"],
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     }

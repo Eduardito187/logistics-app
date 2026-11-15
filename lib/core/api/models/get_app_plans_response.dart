@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'plan.dart';
-import 'meta.dart';
+import 'list_meta.dart';
 
 part 'get_app_plans_response.g.dart';
 
@@ -17,7 +17,7 @@ class GetAppPlansResponse {
       _$GetAppPlansResponseFromJson(json);
 
   final List<Plan> data;
-  final Meta meta;
+  final ListMeta meta;
 
   Map<String, Object?> toJson() => _$GetAppPlansResponseToJson(this);
 }

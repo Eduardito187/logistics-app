@@ -7,6 +7,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'carrier_document.dart';
 import 'corridor_type.dart';
 import 'settlement_status.dart';
+import 'vehicle_class.dart';
 
 part 'settlement.g.dart';
 
@@ -24,6 +25,7 @@ class Settlement {
     required this.reference,
     required this.status,
     required this.documents,
+    this.vehicleClass,
     this.carrierName,
     this.disputeReason,
     this.paymentReference,
@@ -32,6 +34,9 @@ class Settlement {
   factory Settlement.fromJson(Map<String, Object?> json) =>
       _$SettlementFromJson(json);
 
+  /// Vehicle class the service was tariffed with; null for historical settlements or when ambiguous.
+  @JsonKey(name: 'vehicle_class')
+  final VehicleClass? vehicleClass;
   final String id;
   @JsonKey(name: 'carrier_id')
   final String carrierId;

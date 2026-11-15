@@ -24,19 +24,36 @@ import 'vehicle_sheet.dart';
 ///   clustering) no repintan la barra superior ni el resto de la pantalla, y
 ///   un cambio fuera del mapa (spinner, aviso) no repinta los tiles.
 class FleetMap extends StatefulWidget {
-  const FleetMap({super.key, required this.vehicles});
+  const FleetMap({super.key, required this.vehicles, this.fitAll = false});
 
   final List<VehicleLive> vehicles;
+
+  /// Encuadra TODOS los camiones al abrir (vista nacional o de una ciudad), en
+  /// vez de centrar en el primero. Con un solo camión se centra en él.
+  final bool fitAll;
 
   @override
   State<FleetMap> createState() => _FleetMapState();
 }
 
 class _FleetMapState extends State<FleetMap> {
-  late final MapOptions _options = MapOptions(
-    initialCenter: LatLng(widget.vehicles.first.lat, widget.vehicles.first.lng),
-    initialZoom: 12,
-  );
+  late final MapOptions _options = widget.fitAll && widget.vehicles.length > 1
+      ? MapOptions(
+          initialCameraFit: CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints([
+              for (final v in widget.vehicles) LatLng(v.lat, v.lng),
+            ]),
+            padding: const EdgeInsets.all(56),
+            maxZoom: 14,
+          ),
+        )
+      : MapOptions(
+          initialCenter: LatLng(
+            widget.vehicles.first.lat,
+            widget.vehicles.first.lng,
+          ),
+          initialZoom: 12,
+        );
 
   late List<Marker> _markers = _buildMarkers(widget.vehicles);
 

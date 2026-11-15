@@ -52,13 +52,19 @@ class _ReturnsClient implements ReturnsClient {
 
   @override
   Future<ReturnOrderCollection> listReturns({
+    int? page = 1,
+    int? perPage = 50,
     String? sellerId,
     ReturnOrderStatus? status,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
       r'seller_id': sellerId,
       r'status': status?.toJson(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

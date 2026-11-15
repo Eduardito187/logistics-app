@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'error9.dart';
+import 'error10.dart';
 
 part 'shipments_error.g.dart';
 
@@ -15,7 +15,7 @@ class ShipmentsError {
   factory ShipmentsError.fromJson(Map<String, Object?> json) =>
       _$ShipmentsErrorFromJson(json);
 
-  final Error9 error;
+  final Error10 error;
 
   Map<String, Object?> toJson() => _$ShipmentsErrorToJson(this);
 }

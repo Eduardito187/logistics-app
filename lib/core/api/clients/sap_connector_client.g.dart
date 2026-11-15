@@ -190,12 +190,12 @@ class _SapConnectorClient implements SapConnectorClient {
   }
 
   @override
-  Future<PostIntegrationsSapOrdersImportResponse> importSapOrders() async {
+  Future<SapAsyncRequestAccepted> importSapOrders() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<PostIntegrationsSapOrdersImportResponse>(
+    final _options = _setStreamType<SapAsyncRequestAccepted>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -206,9 +206,9 @@ class _SapConnectorClient implements SapConnectorClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, Object?>>(_options);
-    late PostIntegrationsSapOrdersImportResponse _value;
+    late SapAsyncRequestAccepted _value;
     try {
-      _value = PostIntegrationsSapOrdersImportResponse.fromJson(_result.data!);
+      _value = SapAsyncRequestAccepted.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

@@ -1,4 +1,4 @@
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart' hide DueMaintenanceItem;
 import '../entities/due_maintenance_item.dart';
 
 /// Contrato de operaciones de flota (módulo `fleetOps`): costos, utilización,

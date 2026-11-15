@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../realtime/realtime_hub.dart';
 import '../../features/carrier/presentation/carrier_pickup_screen.dart';
 import '../../features/driver/presentation/active_delivery_screen.dart';
 import '../../features/home/presentation/all_tasks_screen.dart';
@@ -8,8 +9,9 @@ import '../../features/home/presentation/role_home_screen.dart';
 import '../../features/notifications/presentation/notifications_list_screen.dart';
 import '../../features/picking/presentation/orders_worklist_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
-import '../../features/store/presentation/node_reception_screen.dart';
+import '../../features/store/presentation/counter_pickup_screen.dart';
 import '../../features/supervisor/presentation/supervisor_dashboard_screen.dart';
+import '../../features/supervisor/presentation/supervisor_plans_screen.dart';
 import '../auth/session.dart';
 import '../auth/user_role.dart';
 import '../icons/icons.dart';
@@ -25,10 +27,14 @@ Widget _centerScreenFor(UserRole role) {
     case UserRole.picker:
       return const OrdersWorklistScreen();
     case UserRole.store:
-      return const NodeReceptionScreen();
+      // La tienda solo entrega al cliente final (la llegada la marca el
+      // chofer): su acción principal es el recojo.
+      return const CounterPickupScreen();
     case UserRole.carrier:
       return const CarrierPickupScreen();
-    case UserRole.supervisor:
+    case UserRole.planner:
+      return const SupervisorPlansScreen();
+    case UserRole.supervisor || UserRole.admin:
       return const SupervisorDashboardScreen();
   }
 }
@@ -52,6 +58,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final Session? session = ref.watch(sessionProvider);
+    // Conexión de tiempo real mientras el usuario está adentro (si el entorno
+    // tiene sockets; si no, no hace nada).
+    ref.watch(realtimeHubProvider);
     if (session == null) {
       return const SizedBox.shrink();
     }

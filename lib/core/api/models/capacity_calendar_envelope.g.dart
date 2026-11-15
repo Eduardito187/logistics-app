@@ -14,7 +14,7 @@ CapacityCalendarEnvelope _$CapacityCalendarEnvelopeFromJson(
       .toList(),
   meta: json['meta'] == null
       ? null
-      : Meta10.fromJson(json['meta'] as Map<String, dynamic>),
+      : Meta3.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$CapacityCalendarEnvelopeToJson(

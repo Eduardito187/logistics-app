@@ -21,6 +21,89 @@ OdometerReading _reading({
 void main() {
   final now = DateTime(2026, 11, 11, 18, 30);
 
+  // Oculta "Cerrar ruta del día" cuando la salida en curso ya tiene su llegada.
+  group('arrivalRecordedForCurrentTrip', () {
+    OdometerReading at(OdometerReadingSource source, int hour) => _reading(
+      km: 12000 + hour,
+      source: source,
+      readAt: DateTime(2026, 11, 11, hour),
+    );
+
+    test('sin llegada → false', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+        ], now),
+        isFalse,
+      );
+      expect(arrivalRecordedForCurrentTrip(const [], now), isFalse);
+    });
+
+    test('llegada posterior a la salida → true', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+          at(OdometerReadingSource.arrival, 13),
+        ], now),
+        isTrue,
+      );
+    });
+
+    test('segunda salida del día: vuelve a faltar la llegada', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          at(OdometerReadingSource.departure, 8),
+          at(OdometerReadingSource.arrival, 13),
+          at(OdometerReadingSource.departure, 14),
+        ], now),
+        isFalse,
+      );
+    });
+
+    test('por salida: la llegada de OTRA ruta no cierra esta', () {
+      OdometerReading tagged(
+        OdometerReadingSource source,
+        int hour,
+        String route,
+      ) => OdometerReading(
+        id: 'r$hour',
+        vehicleId: 'v1',
+        km: 12000 + hour,
+        source: source,
+        readAt: DateTime(2026, 11, 11, hour),
+        routeId: route,
+      );
+      final readings = [
+        tagged(OdometerReadingSource.departure, 8, 'ruta-1'),
+        tagged(OdometerReadingSource.arrival, 12, 'ruta-1'),
+        tagged(OdometerReadingSource.departure, 14, 'ruta-2'),
+      ];
+
+      // Primera salida: cerrada. Segunda salida del mismo día: falta cerrar.
+      expect(
+        arrivalRecordedForCurrentTrip(readings, now, routeId: 'ruta-1'),
+        isTrue,
+      );
+      expect(
+        arrivalRecordedForCurrentTrip(readings, now, routeId: 'ruta-2'),
+        isFalse,
+      );
+    });
+
+    test('una llegada de ayer no cuenta', () {
+      expect(
+        arrivalRecordedForCurrentTrip([
+          _reading(
+            km: 11900,
+            source: OdometerReadingSource.arrival,
+            readAt: DateTime(2026, 11, 10, 17),
+          ),
+        ], now),
+        isFalse,
+      );
+    });
+  });
+
   group('routeKmToday', () {
     test('salida y llegada presentes → recorrido = llegada − salida', () {
       final readings = [

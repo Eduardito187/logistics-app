@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart' hide DueMaintenanceItem;
 import '../../../../core/network/api_exception.dart';
 import '../../domain/entities/due_maintenance_item.dart';
 import '../../domain/usecases/get_current_fuel_price.dart';

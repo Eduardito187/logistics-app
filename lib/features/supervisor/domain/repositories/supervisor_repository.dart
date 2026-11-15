@@ -1,10 +1,12 @@
+import '../../../../core/api/models/trip_candidate_list.dart';
+import '../../../../core/api/models/trip_sequence_suggestion.dart';
 import '../../../../core/api/models/alert.dart';
 import '../../../../core/api/models/auto_plan_run.dart';
-import '../../../../core/api/models/data7.dart';
+import '../../../../core/api/models/get_plan_eta_data.dart';
 import '../../../../core/api/models/generate_daily_plan_request_strategy.dart';
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/shipment.dart';
-import '../../../../core/api/models/stops2.dart';
+import '../../../../core/api/models/stops3.dart';
 import '../../../../core/api/models/strategy.dart';
 import '../../../../core/api/models/vehicle_live.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
@@ -37,7 +39,7 @@ abstract interface class SupervisorRepository {
   Future<Plan> getPlan(String planId);
 
   /// ETA por parada de un plan.
-  Future<Data7> getPlanEta(String planId);
+  Future<GetPlanEtaData> getPlanEta(String planId);
 
   /// Estado y resultado de la corrida automática del día (y modo).
   Future<AutoPlanRun> getDailyPlanRun({
@@ -56,7 +58,7 @@ abstract interface class SupervisorRepository {
     required DateTime planDate,
     required String vehicleId,
     required DateTime departAt,
-    required List<Stops2> stops,
+    required List<Stops3> stops,
   });
 
   /// Publica un plan, dejándolo disponible para ejecución.
@@ -73,4 +75,39 @@ abstract interface class SupervisorRepository {
     required String planId,
     required List<String> orderedShipmentIds,
   });
+
+  /// Pedidos que se pueden sumar al viaje, por cercanía al último elegido (o
+  /// a la base del camión).
+  Future<TripCandidateList> listTripCandidates({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    List<String> selected,
+    String query,
+  });
+
+  /// Orden recomendado para esos pedidos. No guarda.
+  Future<TripSequenceSuggestion> suggestTripSequence({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  });
+
+  /// Crea el viaje (plan en borrador) con las paradas en ese orden.
+  Future<Plan> createTrip({
+    required DateTime date,
+    required String vehicleId,
+    required DateTime departAt,
+    required List<String> shipmentIds,
+  });
+
+  /// Quita una parada de un plan sin publicar.
+  Future<void> removeShipmentFromPlan({
+    required String planId,
+    required String shipmentId,
+  });
+
+  /// Borra un plan sin publicar (sus pedidos quedan libres).
+  Future<void> deletePlan(String planId);
 }

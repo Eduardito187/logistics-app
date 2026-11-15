@@ -12,7 +12,7 @@ PostAppSapMaterialMappingsResponse _$PostAppSapMaterialMappingsResponseFromJson(
   data: DefineMaterialMappingRequest.fromJson(
     json['data'] as Map<String, dynamic>,
   ),
-  meta: Meta2.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: MessageMeta.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$PostAppSapMaterialMappingsResponseToJson(

@@ -12,7 +12,7 @@ AvailableSlotCollection _$AvailableSlotCollectionFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => AvailableSlot.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta8.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: Meta.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$AvailableSlotCollectionToJson(

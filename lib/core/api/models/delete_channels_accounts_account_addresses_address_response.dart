@@ -1,0 +1,25 @@
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, unused_import, invalid_annotation_target, unnecessary_import
+
+import 'package:json_annotation/json_annotation.dart';
+
+import 'commerce_account.dart';
+
+part 'delete_channels_accounts_account_addresses_address_response.g.dart';
+
+@JsonSerializable()
+class DeleteChannelsAccountsAccountAddressesAddressResponse {
+  const DeleteChannelsAccountsAccountAddressesAddressResponse({
+    required this.data,
+  });
+
+  factory DeleteChannelsAccountsAccountAddressesAddressResponse.fromJson(
+    Map<String, Object?> json,
+  ) => _$DeleteChannelsAccountsAccountAddressesAddressResponseFromJson(json);
+
+  final CommerceAccount data;
+
+  Map<String, Object?> toJson() =>
+      _$DeleteChannelsAccountsAccountAddressesAddressResponseToJson(this);
+}

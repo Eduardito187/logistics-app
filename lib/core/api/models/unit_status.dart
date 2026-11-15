@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-/// Estado visible de un bulto (unidad física) dentro del seguimiento
+/// Estado visible de un producto (unidad física) dentro del seguimiento
 @JsonEnum()
 enum UnitStatus {
   @JsonValue('REGISTERED')

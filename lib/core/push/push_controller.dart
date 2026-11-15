@@ -1,3 +1,4 @@
+import 'push_arrived.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -154,6 +155,8 @@ class PushController extends Notifier<PushStatus> {
     onToken: _onToken,
     onTap: _onTap,
     onUnregistered: _onUnregistered,
+    // Llegó un push con la app abierta: que las bandejas se refresquen.
+    onForeground: () => ref.read(pushArrivedProvider.notifier).bump(),
   );
 
   /// FCM dio de baja este dispositivo: se olvida el identificador.

@@ -13,7 +13,7 @@ _$GetAppVehiclesVehicleIdDeliveriesResponseFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => Delivery.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta5.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GetAppVehiclesVehicleIdDeliveriesResponseToJson(

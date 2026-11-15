@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/api/export.dart' hide DueMaintenanceItem;
 import 'package:logistics_app/features/driver/domain/entities/due_maintenance_item.dart';
 
 // Entidad del cliente DueMaintenanceItem: parseo tolerante del objeto libre del

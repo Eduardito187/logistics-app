@@ -13,6 +13,8 @@ enum DriverRouteStatus {
   inProgress('IN_PROGRESS'),
   @JsonValue('COMPLETED')
   completed('COMPLETED'),
+  @JsonValue('SUSPENDED')
+  suspended('SUSPENDED'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

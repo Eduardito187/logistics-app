@@ -4,10 +4,15 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+/// Estado decidido por el validador (gana sobre ocr_document_number si viene)
 @JsonEnum()
 enum Status4 {
-  @JsonValue('DISPATCH_REQUESTED')
-  dispatchRequested('DISPATCH_REQUESTED'),
+  @JsonValue('ok')
+  ok('ok'),
+  @JsonValue('review')
+  review('review'),
+  @JsonValue('mismatch')
+  mismatch('mismatch'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

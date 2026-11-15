@@ -138,7 +138,8 @@ void main() {
       addTearDown(tester.view.reset);
       await _pump(tester, role: role);
 
-      final expected = role == UserRole.picker || role == UserRole.supervisor;
+      // El administrador también reimprime etiquetas, como el supervisor.
+      final expected = role.usesLabelPrinter;
       expect(
         find.byType(PrinterSection),
         expected ? findsOneWidget : findsNothing,

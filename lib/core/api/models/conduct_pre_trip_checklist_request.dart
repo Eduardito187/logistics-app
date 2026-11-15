@@ -14,6 +14,7 @@ class ConductPreTripChecklistRequest {
     required this.items,
     required this.performedOn,
     this.notes,
+    this.routeId,
   });
 
   factory ConductPreTripChecklistRequest.fromJson(Map<String, Object?> json) =>
@@ -27,6 +28,10 @@ class ConductPreTripChecklistRequest {
   @JsonKey(name: 'performed_on')
   final DateTime performedOn;
   final String? notes;
+
+  /// Optional route/trip the inspection belongs to (pre-trip check is per route, not per day).
+  @JsonKey(name: 'route_id')
+  final String? routeId;
 
   Map<String, Object?> toJson() => _$ConductPreTripChecklistRequestToJson(this);
 }

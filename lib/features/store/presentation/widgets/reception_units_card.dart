@@ -87,7 +87,7 @@ class _ShelfAwareRow extends ConsumerWidget {
 }
 
 /// Estado de una unidad en una lista de la tienda.
-enum UnitRowStatus { pending, received, surplus, delivered }
+enum UnitRowStatus { pending, received, surplus, delivered, scanned }
 
 /// Fila de producto: foto chica (decodificada al tamaño de la miniatura para
 /// no gastar RAM), nombre, código y pieza; a la derecha el estado.
@@ -98,12 +98,17 @@ class UnitProductRow extends StatelessWidget {
     required this.product,
     required this.status,
     this.shelf,
+    this.showLabelCode = false,
   });
 
   final String unitId;
   final UnitProduct? product;
   final UnitRowStatus status;
   final String? shelf;
+
+  /// Mostrar el código de la etiqueta del producto (recojo en tienda): con el
+  /// nombre y el SKU, es lo que el personal usa para ubicarlo en su almacén.
+  final bool showLabelCode;
 
   static const double _thumb = 48;
 
@@ -118,6 +123,7 @@ class UnitProductRow extends StatelessWidget {
         PillTone.success,
         AppIcon.success,
       ),
+      UnitRowStatus.scanned => ('Escaneado', PillTone.info, AppIcon.scan),
       UnitRowStatus.pending => (
         'Pendiente',
         PillTone.neutral,
@@ -127,7 +133,14 @@ class UnitProductRow extends StatelessWidget {
     final name = product?.name;
     final sku = product?.sku;
     final piece = product?.pieceLabel;
-    final subtitle = [?sku, ?piece, if (shelf != null) 'Estante: $shelf'];
+    final subtitle = [
+      if (sku != null) showLabelCode ? 'SKU $sku' : sku,
+      ?piece,
+      // Código real de la etiqueta si el backend lo manda; si no, el id del
+      // producto (abreviado), que es lo que había.
+      if (showLabelCode) 'Etiqueta ${shortUnitId(product?.labelId ?? unitId)}',
+      if (shelf != null) 'Estante: $shelf',
+    ];
     final muted = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.outline,
     );

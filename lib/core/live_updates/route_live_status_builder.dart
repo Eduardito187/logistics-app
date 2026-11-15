@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import '../../features/driver/domain/entities/route_navigation.dart';
 import '../../features/driver/presentation/controllers/locally_settled_stops.dart';
 import '../../features/driver/presentation/widgets/active_delivery/delivery_status_card.dart'
@@ -24,18 +22,24 @@ RouteLiveStatus? routeLiveStatusFor({
   RemainingEstimate? remaining,
 }) {
   if (route.stops.isEmpty) return null;
-  final total = route.totalStops > 0 ? route.totalStops : route.stops.length;
-  var settledHere = 0;
+  final total = route.stops.length;
+  // Atendidas ITEM POR ITEM (estado efectivo = backend + lo resuelto en este
+  // teléfono), NUNCA `route.completedStops` del backend (cuenta fallidas y
+  // reprogramadas como "completadas" → el avance de la isla mentía).
+  var attended = 0;
   for (final s in route.stops) {
     if (effectiveStopStatus(s, settled) != DriverRouteStopStatus.pending) {
-      settledHere++;
+      attended++;
     }
   }
-  final completed = math.max(route.completedStops, settledHere).clamp(0, total);
+  final completed = attended.clamp(0, total);
 
-  final stop = route.status == DriverRouteStatus.completed
-      ? null
-      : currentStopOf(route, settled);
+  // Item por item, como el resto del app: la parada en curso sale de
+  // currentStopOf (estado efectivo = backend + lo resuelto en este teléfono),
+  // NUNCA de `route.status == completed` del backend (que marca la ruta
+  // completada de más → la isla decía "Ruta completada" mientras la pantalla de
+  // entrega seguía mostrando una parada pendiente).
+  final stop = currentStopOf(route, settled);
   if (stop == null) {
     return RouteLiveStatus(
       routeId: route.id,

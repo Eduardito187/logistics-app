@@ -13,6 +13,7 @@ RecordOdometerRequest _$RecordOdometerRequestFromJson(
   km: (json['km'] as num).toInt(),
   source: RecordOdometerRequestSource.fromJson(json['source'] as String),
   readAt: DateTime.parse(json['read_at'] as String),
+  routeId: json['route_id'] as String?,
   note: json['note'] as String?,
 );
 
@@ -23,5 +24,6 @@ Map<String, dynamic> _$RecordOdometerRequestToJson(
   'km': instance.km,
   'source': instance.source,
   'read_at': instance.readAt.toIso8601String(),
+  'route_id': instance.routeId,
   'note': instance.note,
 };

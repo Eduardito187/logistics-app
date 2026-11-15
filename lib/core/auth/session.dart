@@ -19,6 +19,7 @@ class Session {
     this.token,
     this.abilities = const [],
     this.storeNode,
+    this.userId,
     this.tokenExpiresAt,
     this.tokenIssuedAt,
   });
@@ -38,6 +39,11 @@ class Session {
   /// `null` para roles sin tienda o si el backend no la asignó. El rol tienda
   /// opera SOLO sobre este nodo (el backend lo exige con 403).
   final Node? storeNode;
+
+  /// Id del usuario en el backend. Hace falta para su canal de avisos en
+  /// tiempo real. `null` en el dev-login o en una sesión guardada por una
+  /// versión anterior (se completa con `/app/auth/me`).
+  final int? userId;
 
   /// Vencimiento del token (`expires_at` del login o del refresh). `null` si el
   /// backend no lo informó o si el login no lo pasó: en ese caso el refresh

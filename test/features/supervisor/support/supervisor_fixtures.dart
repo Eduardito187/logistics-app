@@ -2,7 +2,7 @@ import 'package:logistics_app/core/api/models/address_confidence_level.dart';
 import 'package:logistics_app/core/api/models/alert.dart';
 import 'package:logistics_app/core/api/models/alert_severity.dart';
 import 'package:logistics_app/core/api/models/alert_type.dart';
-import 'package:logistics_app/core/api/models/data7.dart';
+import 'package:logistics_app/core/api/models/get_plan_eta_data.dart';
 import 'package:logistics_app/core/api/models/order_source.dart';
 import 'package:logistics_app/core/api/models/plan.dart';
 import 'package:logistics_app/core/api/models/plan_status.dart';
@@ -125,8 +125,8 @@ StopEta stopEta({
   etaMinutes: etaMinutes,
 );
 
-Data7 planEtaData({
+GetPlanEtaData planEtaData({
   String planId = 'p1',
   PlanStatus status = PlanStatus.published,
   List<StopEta> stops = const [],
-}) => Data7(planId: planId, status: status, stops: stops);
+}) => GetPlanEtaData(planId: planId, status: status, stops: stops);

@@ -8,10 +8,8 @@ import 'package:json_annotation/json_annotation.dart';
 enum Status6 {
   @JsonValue('active')
   active('active'),
-  @JsonValue('suspended')
-  suspended('suspended'),
-  @JsonValue('invited')
-  invited('invited'),
+  @JsonValue('revoked')
+  revoked('revoked'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

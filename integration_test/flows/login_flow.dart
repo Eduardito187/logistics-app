@@ -61,7 +61,7 @@ void loginFlowTests() {
           email: 'tienda@dismac.test',
           role: UserRole.store,
           name: 'Tania Tienda',
-          task: 'Recepción de mercadería',
+          task: 'Recojo en tienda',
         ),
         (
           email: 'transportista@dismac.test',

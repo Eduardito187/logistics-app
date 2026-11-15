@@ -4,8 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data20.dart';
-import 'meta7.dart';
+import 'acknowledge_stock_transfer_data.dart';
+import 'message_meta.dart';
 
 part 'post_integrations_sap_stock_transfers_acknowledge_response.g.dart';
 
@@ -20,8 +20,8 @@ class PostIntegrationsSapStockTransfersAcknowledgeResponse {
     Map<String, Object?> json,
   ) => _$PostIntegrationsSapStockTransfersAcknowledgeResponseFromJson(json);
 
-  final Data20 data;
-  final Meta7 meta;
+  final AcknowledgeStockTransferData data;
+  final MessageMeta meta;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsSapStockTransfersAcknowledgeResponseToJson(this);

@@ -123,9 +123,14 @@ class _EvidenceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items =
+    final raw =
         ref.watch(deliveryEvidenceProvider(stop.shipmentId)).value ??
         const <DeliveryEvidenceItem>[];
+    // El backend graba una evidencia por UNIDAD, así que firma/documento/foto
+    // venían repetidos. Para el chofer son UNO por pedido: se deduplica por
+    // tipo mostrando el estado más relevante (una falla/"No coincide" no se
+    // pierde entre varias "Validando").
+    final items = _dedupeByKind(raw);
     if (items.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return Padding(
@@ -143,11 +148,17 @@ class _EvidenceSection extends ConsumerWidget {
           for (final e in items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: Text(_kindLabel(e.kind))),
-                  const SizedBox(width: 12),
-                  _validationPill(e.status),
+                  Row(
+                    children: [
+                      Expanded(child: Text(_kindLabel(e.kind))),
+                      const SizedBox(width: 12),
+                      _validationPill(e.status),
+                    ],
+                  ),
+                  if (e.url != null) _EvidenceImage(url: e.url!),
                 ],
               ),
             ),
@@ -155,6 +166,41 @@ class _EvidenceSection extends ConsumerWidget {
       ),
     );
   }
+
+  /// Deja UNA evidencia por tipo (firma, documento, foto de entrega, foto de
+  /// daño), conservando el estado MÁS relevante si hay varias del mismo tipo
+  /// (una "No coincide" pesa más que varias "Validando"). Mantiene el orden de
+  /// primera aparición.
+  static List<DeliveryEvidenceItem> _dedupeByKind(
+    List<DeliveryEvidenceItem> items,
+  ) {
+    final byKind = <String, DeliveryEvidenceItem>{};
+    final order = <String>[];
+    for (final e in items) {
+      final existing = byKind[e.kind];
+      if (existing == null) {
+        byKind[e.kind] = e;
+        order.add(e.kind);
+      } else if (_severity(e.status) > _severity(existing.status)) {
+        // Gana el estado más grave, sin perder una imagen ya disponible.
+        byKind[e.kind] = e.url == null ? e.withUrl(existing.url) : e;
+      } else if (existing.url == null && e.url != null) {
+        byKind[e.kind] = existing.withUrl(e.url);
+      }
+    }
+    return [for (final k in order) byKind[k]!];
+  }
+
+  /// Prioridad del estado para elegir el representativo: una falla/revisión
+  /// gana a "validando", y "validando" gana a "validado" (lo importante es que
+  /// el chofer vea un problema si lo hay).
+  static int _severity(EvidenceValidation status) => switch (status) {
+    EvidenceValidation.mismatch => 4,
+    EvidenceValidation.review => 3,
+    EvidenceValidation.pending => 2,
+    EvidenceValidation.unknown => 1,
+    EvidenceValidation.ok => 0,
+  };
 
   static String _kindLabel(String kind) => switch (kind) {
     'signature' => 'Firma del cliente',
@@ -181,6 +227,36 @@ class _EvidenceSection extends ConsumerWidget {
     ),
     _ => const StatusPill('Validando…', icon: AppIcon.pending),
   };
+}
+
+/// Imagen de una evidencia (firma, foto, documento). El enlace es temporal y
+/// firmado: si venció o el archivo no está, no se muestra nada (queda la fila
+/// con su estado).
+class _EvidenceImage extends StatelessWidget {
+  const _EvidenceImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ColoredBox(
+          // Fondo claro fijo: la firma es trazo oscuro sobre transparente.
+          color: Colors.white,
+          child: Image.network(
+            url,
+            height: 150,
+            fit: BoxFit.contain,
+            cacheWidth: 800,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Cliente, teléfono (con llamar) y dirección (con navegar). El teléfono sale

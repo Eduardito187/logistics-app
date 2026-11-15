@@ -15,9 +15,6 @@ EmittedLabel _$EmittedLabelFromJson(Map<String, dynamic> json) => EmittedLabel(
   qrContent: json['qr_content'] as String,
   zpl: json['zpl'] as String,
   emittedAt: (json['emitted_at'] as num).toInt(),
-  revoked: json['revoked'] as bool? ?? false,
-  revokedAt: (json['revoked_at'] as num?)?.toInt(),
-  revokedReason: json['revoked_reason'] as String?,
   productName: json['product_name'] as String?,
   imageUrl: json['image_url'] as String?,
   origin: json['origin'] == null
@@ -25,7 +22,15 @@ EmittedLabel _$EmittedLabelFromJson(Map<String, dynamic> json) => EmittedLabel(
       : Origin.fromJson(json['origin'] as Map<String, dynamic>),
   destination: json['destination'] == null
       ? null
-      : Destination.fromJson(json['destination'] as Map<String, dynamic>),
+      : Destination2.fromJson(json['destination'] as Map<String, dynamic>),
+  unitId: json['unit_id'] as String?,
+  shipmentId: json['shipment_id'] as String?,
+  unit: json['unit'] == null
+      ? null
+      : Unit.fromJson(json['unit'] as Map<String, dynamic>),
+  piece: json['piece'] == null
+      ? null
+      : Piece.fromJson(json['piece'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$EmittedLabelToJson(EmittedLabel instance) =>
@@ -38,11 +43,12 @@ Map<String, dynamic> _$EmittedLabelToJson(EmittedLabel instance) =>
       'qr_content': instance.qrContent,
       'zpl': instance.zpl,
       'emitted_at': instance.emittedAt,
-      'revoked': instance.revoked,
-      'revoked_at': instance.revokedAt,
-      'revoked_reason': instance.revokedReason,
       'product_name': instance.productName,
       'image_url': instance.imageUrl,
       'origin': instance.origin,
       'destination': instance.destination,
+      'unit_id': instance.unitId,
+      'shipment_id': instance.shipmentId,
+      'unit': instance.unit,
+      'piece': instance.piece,
     };

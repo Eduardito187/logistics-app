@@ -2,35 +2,20 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logistics_app/core/api/models/delivery.dart';
-import 'package:logistics_app/core/api/models/unit_tracking.dart';
-import 'package:logistics_app/core/network/api_exception.dart';
-import 'package:logistics_app/core/labels/label_resolver.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/labels/label_verifier.dart';
-import 'package:logistics_app/core/location/gps_fix.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
-import 'package:logistics_app/core/scanning/scanner_screen.dart';
-import 'package:logistics_app/features/store/data/repositories/store_repository_impl.dart';
-import 'package:logistics_app/features/store/domain/usecases/record_pod.dart';
-import 'package:logistics_app/features/store/presentation/controllers/store_controllers.dart';
-import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../../support/fake_code_scanner.dart';
-import '../../../support/fake_label_resolver.dart';
-import '../fake_continuous_scanner.dart';
-import '../store_fixtures.dart';
-import '../store_test_harness.dart';
 import '../../../support/button_finders.dart';
+import '../pickup_pod_support.dart';
+import '../store_fixtures.dart';
 
-// Entrega en mostrador: flujos escaneo -> submit. El QR del cliente usa el
-// escáner de un código (`FakeCodeScanner` vía `codeScannerProvider`); los
-// productos, el escaneo CONTINUO (`FakeContinuousScanner` vía
-// `continuousScannerProvider`, varios por sesión). El caso de uso `RecordPod`
-// es un fake que registra las llamadas (sin cola ni GPS).
+// Recojo en tienda, mismo proceso que la entrega del chofer: escanear los
+// productos NO entrega nada; la entrega se registra recién con "Registrar
+// entrega" (productos escaneados + firma del cliente + foto obligatoria).
 
 final _shipment = shipment(customerName: 'Ana Pérez');
 
@@ -46,397 +31,260 @@ LabelScanner _scannerWithKey(int keyId) {
   return LabelScanner(LabelVerifier({keyId: key}));
 }
 
-/// Caso de uso falso: registra cada POD y devuelve [outcome].
-class _FakeRecordPod extends RecordPod {
-  _FakeRecordPod(super.ref, this.calls, this.outcome);
-
-  final List<Map<String, String?>> calls;
-  final SubmitOutcome outcome;
-
-  @override
-  Future<SubmitOutcome> call({
-    required String shipmentId,
-    required String unitId,
-    required String confirmation,
-    required String customerName,
-    String? photoPath,
-    Future<GpsFix?>? location,
-  }) async {
-    calls.add({
-      'shipmentId': shipmentId,
-      'unitId': unitId,
-      'confirmation': confirmation,
-      'customerName': customerName,
-      'photoPath': photoPath,
-    });
-    return outcome;
-  }
-}
-
-class _Harness {
-  final calls = <Map<String, String?>>[];
-  late FakeCodeScanner scanner;
-  late FakeContinuousScanner products;
-
-  List<String?> get unitIds => [for (final c in calls) c['unitId']];
-}
-
-Future<_Harness> _pump(
-  WidgetTester tester, {
-  List<String?> codes = const [],
-  List<String> products = const [],
-  List<List<String>>? productSessions,
-  List<UnitTracking>? units,
-  LabelScanner? labelScanner,
-  SubmitOutcome outcome = SubmitOutcome.sent,
-  Future<Delivery> Function(String shipmentId)? onGetDeliveryState,
-}) async {
-  // Superficie alta: la lista es perezosa y en 800x600 deja botones fuera.
-  tester.view.physicalSize = const Size(1200, 3600);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-
-  final h = _Harness()
-    ..scanner = FakeCodeScanner(codes)
-    ..products = productSessions != null
-        ? FakeContinuousScanner.sessions(productSessions)
-        : FakeContinuousScanner(products);
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        ...syncBadgeOverrides(),
-        // Entregas que el servidor ya tiene confirmadas: siembran la lista de
-        // entregados al abrir (sin esto, un reinicio permitiría re-entregar).
-        storeRepositoryProvider.overrideWithValue(
-          FakeStoreRepository(
-            onGetDeliveryState: onGetDeliveryState ?? ((_) async => delivery()),
-          ),
-        ),
-        shipmentUnitsProvider(_shipment.id).overrideWith(
-          (ref) async =>
-              units ?? [unit(unitId: 'unit-1'), unit(unitId: 'unit-2')],
-        ),
-        codeScannerProvider.overrideWithValue(h.scanner.call),
-        continuousScannerProvider.overrideWithValue(h.products.call),
-        labelScannerProvider.overrideWithValue(
-          labelScanner ?? LabelScanner(null),
-        ),
-        // El código escaneado representa al producto (Code128): se resuelve con su
-        // propio valor como unit_id (el backend real lo mapea; acá se echo-ea).
-        labelResolverProvider.overrideWithValue(FakeLabelResolver(echo: true)),
-        recordPodProvider.overrideWith(
-          (ref) => _FakeRecordPod(ref, h.calls, outcome),
-        ),
-      ],
-      child: MaterialApp(home: PickupPodScreen(shipment: _shipment)),
-    ),
-  );
-  await tester.pumpAndSettle();
-  return h;
-}
-
-final _confirmationField = find.widgetWithText(
-  TextField,
-  'QR del cliente o documento',
-);
-
-Future<void> _typeConfirmation(WidgetTester tester, String text) async {
-  await tester.enterText(_confirmationField, text);
-  await tester.pumpAndSettle();
-}
-
-Future<void> _tapDeliver(WidgetTester tester) async {
-  await tester.tap(
-    findButtonWithText<FilledButton>('Escanear y entregar producto'),
-  );
-  await tester.pumpAndSettle();
-}
-
 void main() {
-  group('QR del cliente (confirmación)', () {
-    testWidgets('escanear llena la confirmación y habilita la entrega', (
+  group('escanear productos (continuo, sin registrar)', () {
+    testWidgets('escanear marca "Escaneado" y NO registra la entrega', (
       tester,
     ) async {
-      final h = await _pump(tester, codes: ['CI-12345678']);
-
-      await tester.tap(
-        findButtonWithText<OutlinedButton>('Escanear QR del cliente'),
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1'],
       );
-      await tester.pumpAndSettle();
 
-      expect(h.scanner.requestedTitles, ['QR del cliente']);
+      await tapScanProducts(tester);
+
+      expect(h.products.requestedTitles, ['Escanear producto']);
+      expect(h.products.requestedFormats.single, [
+        BarcodeFormat.qrCode,
+        BarcodeFormat.code128,
+      ]);
+      expect(h.products.messages, ['Producto escaneado (1/2)']);
+      // Honestidad de datos: escanear no es entregar.
+      expect(h.pods, isEmpty);
+      expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
+      expect(find.text('Escaneado'), findsOneWidget);
+      expect(find.text('Pendiente'), findsOneWidget);
+      // Falta un producto: el botón sigue siendo escanear.
       expect(
-        tester.widget<TextField>(_confirmationField).controller!.text,
-        'CI-12345678',
+        findButtonWithText<FilledButton>('Escanear productos'),
+        findsOneWidget,
       );
       expect(
-        find.text('Primero captura la confirmación del cliente.'),
+        findButtonWithText<FilledButton>('Registrar entrega'),
         findsNothing,
       );
-      final button = tester.widget<FilledButton>(
-        findButtonWithText<FilledButton>('Escanear y entregar producto'),
-      );
-      expect(button.onPressed, isNotNull);
-      // Escanear la confirmación no registra ninguna entrega.
-      expect(h.calls, isEmpty);
     });
 
-    testWidgets('cancelar deja la confirmación vacía y la entrega bloqueada', (
+    testWidgets('producto ajeno al pedido: aviso rojo y no cuenta', (
       tester,
     ) async {
-      final h = await _pump(tester, codes: [null]);
-
-      await tester.tap(
-        findButtonWithText<OutlinedButton>('Escanear QR del cliente'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(h.scanner.requestedTitles, hasLength(1));
-      expect(tester.widget<TextField>(_confirmationField).controller!.text, '');
-      final button = tester.widget<FilledButton>(
-        findButtonWithText<FilledButton>('Escanear y entregar producto'),
-      );
-      expect(button.onPressed, isNull);
-    });
-
-    testWidgets('cancelar no pisa una confirmación ya escrita', (tester) async {
-      await _pump(tester, codes: [null]);
-      await _typeConfirmation(tester, 'CI-999');
-
-      await tester.tap(
-        findButtonWithText<OutlinedButton>('Escanear QR del cliente'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        tester.widget<TextField>(_confirmationField).controller!.text,
-        'CI-999',
-      );
-    });
-  });
-
-  group('escanear y entregar productos (continuo)', () {
-    testWidgets(
-      'camino feliz: registra el POD del producto y lo marca entregado',
-      (tester) async {
-        final h = await _pump(tester, products: ['unit-1']);
-        await _typeConfirmation(tester, '  CI-12345678  ');
-
-        await _tapDeliver(tester);
-
-        expect(h.products.requestedTitles, ['Escanear producto']);
-        expect(h.products.requestedFormats.single, [
-          BarcodeFormat.qrCode,
-          BarcodeFormat.code128,
-        ]);
-        expect(h.calls, [
-          {
-            'shipmentId': _shipment.id,
-            'unitId': 'unit-1',
-            // La confirmación se envía recortada.
-            'confirmation': 'CI-12345678',
-            'customerName': 'Ana Pérez',
-            'photoPath': null,
-          },
-        ]);
-        expect(h.products.messages, ['Producto entregado (1/2)']);
-        expect(find.text('1 producto entregado.'), findsOneWidget);
-        expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
-        expect(find.text('Entregado'), findsOneWidget);
-        expect(find.text('Pendiente'), findsOneWidget);
-      },
-    );
-
-    testWidgets('varios productos en una sola sesión de cámara', (
-      tester,
-    ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
-        products: ['unit-1', 'unit-2', 'unit-3'],
-        units: [
-          unit(unitId: 'unit-1'),
-          unit(unitId: 'unit-2'),
-          unit(unitId: 'unit-3'),
-        ],
+        shipment: _shipment,
+        products: ['unit-de-otro-envio'],
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await tapScanProducts(tester);
 
-      expect(h.products.requestedTitles, hasLength(1));
-      expect(h.unitIds, ['unit-1', 'unit-2', 'unit-3']);
+      expect(h.products.messages, ['No es de este pedido']);
+      expect(find.text('Escaneado'), findsNothing);
+    });
+
+    testWidgets('el mismo producto dos veces no se duplica', (tester) async {
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1', 'unit-1'],
+      );
+
+      await tapScanProducts(tester);
+
       expect(h.products.messages, [
-        'Producto entregado (1/3)',
-        'Producto entregado (2/3)',
-        'Producto entregado (3/3)',
+        'Producto escaneado (1/2)',
+        'Ese producto ya lo escaneaste',
       ]);
-      expect(find.text('3 productos entregados.'), findsOneWidget);
-      expect(find.text('Entregados 3 de 3 producto(s).'), findsOneWidget);
     });
 
-    testWidgets('confirmación escaneada viaja en el POD', (tester) async {
-      final h = await _pump(
-        tester,
-        codes: ['QR-CLIENTE-7'],
-        products: ['unit-2'],
-      );
-
-      await tester.tap(
-        findButtonWithText<OutlinedButton>('Escanear QR del cliente'),
-      );
-      await tester.pumpAndSettle();
-      await _tapDeliver(tester);
-
-      expect(h.scanner.requestedTitles, ['QR del cliente']);
-      expect(h.products.requestedTitles, ['Escanear producto']);
-      expect(h.calls.single['unitId'], 'unit-2');
-      expect(h.calls.single['confirmation'], 'QR-CLIENTE-7');
-    });
-
-    testWidgets('sin conexión: queda en cola y lo marca entregado', (
+    testWidgets('etiqueta firmada válida: se toma el id del payload', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
-        products: ['unit-1'],
-        outcome: SubmitOutcome.queued,
-      );
-      await _typeConfirmation(tester, 'CI-1');
-
-      await _tapDeliver(tester);
-
-      expect(h.calls, hasLength(1));
-      // Offline invisible: igual que enviado.
-      expect(h.products.messages, ['Producto entregado (1/2)']);
-      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
-    });
-
-    testWidgets('rechazo del backend: aviso rojo y no queda entregado', (
-      tester,
-    ) async {
-      final h = await _pump(
-        tester,
-        products: ['unit-1'],
-        outcome: SubmitOutcome.failed,
-      );
-      await _typeConfirmation(tester, 'CI-1');
-
-      await _tapDeliver(tester);
-
-      expect(h.calls, hasLength(1));
-      expect(h.products.messages, ['No se pudo registrar. Intentá de nuevo.']);
-      expect(h.products.okCount, 0);
-      expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
-      expect(find.byType(SnackBar), findsNothing);
-    });
-
-    testWidgets('terminar sin leer nada no registra', (tester) async {
-      final h = await _pump(tester);
-      await _typeConfirmation(tester, 'CI-1');
-
-      await _tapDeliver(tester);
-
-      expect(h.products.requestedTitles, hasLength(1));
-      expect(h.calls, isEmpty);
-      expect(find.byType(SnackBar), findsNothing);
-      expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
-      final button = tester.widget<FilledButton>(
-        findButtonWithText<FilledButton>('Escanear y entregar producto'),
-      );
-      expect(button.onPressed, isNotNull);
-    });
-
-    testWidgets('etiqueta firmada válida: entrega con el id del payload', (
-      tester,
-    ) async {
-      final h = await _pump(
-        tester,
+        shipment: _shipment,
         products: [_vector()['qr_content'] as String],
         labelScanner: _scannerWithKey(1),
         units: [unit(unitId: _signedUnitId, label: 'B1')],
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await deliverAll(tester);
 
-      expect(h.calls.single['unitId'], _signedUnitId);
-      expect(find.text('Entregados 1 de 1 producto(s).'), findsOneWidget);
-      expect(find.text('Entregado'), findsOneWidget);
+      expect(h.podUnitIds, [_signedUnitId]);
     });
 
-    testWidgets('etiqueta con firma inválida: aviso rojo y no entrega', (
+    testWidgets('etiqueta con firma inválida: aviso rojo y no cuenta', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
+        shipment: _shipment,
         products: [_vector()['tampered_qr_content'] as String],
         labelScanner: _scannerWithKey(1),
         units: [unit(unitId: _signedUnitId)],
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await tapScanProducts(tester);
 
-      expect(h.calls, isEmpty);
       expect(h.products.messages, ['Etiqueta inválida: editada o falsa']);
-      expect(find.text('Entregados 0 de 1 producto(s).'), findsOneWidget);
+      expect(find.text('Escaneado'), findsNothing);
     });
 
-    testWidgets('etiqueta de clave desconocida: avisa y no entrega', (
+    testWidgets('etiqueta de clave desconocida: avisa y no cuenta', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
+        shipment: _shipment,
         products: [_vector()['qr_content'] as String],
         labelScanner: _scannerWithKey(99),
         units: [unit(unitId: _signedUnitId)],
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await tapScanProducts(tester);
 
-      expect(h.calls, isEmpty);
       expect(h.products.messages, ['Etiqueta inválida: clave desconocida']);
+    });
+  });
+
+  group('registrar entrega', () {
+    testWidgets('con todo escaneado pide firma y foto antes de registrar', (
+      tester,
+    ) async {
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
+      );
+
+      await tapScanProducts(tester);
+
+      final register = findButtonWithText<FilledButton>('Registrar entrega');
+      expect(tester.widget<FilledButton>(register).onPressed, isNull);
+      expect(
+        find.text('Falta la firma del cliente y la foto de entrega.'),
+        findsOneWidget,
+      );
+
+      await tapSign(tester);
+      expect(tester.widget<FilledButton>(register).onPressed, isNull);
+      expect(find.text('Falta la foto de entrega.'), findsOneWidget);
+
+      await tapTakePhoto(tester);
+      expect(tester.widget<FilledButton>(register).onPressed, isNotNull);
+      expect(h.pods, isEmpty);
+    });
+
+    testWidgets('camino feliz: un POD por producto, con firma digital', (
+      tester,
+    ) async {
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
+        uploadedPath: 'evidence/pod/abc.jpg',
+      );
+
+      await deliverAll(tester);
+
+      expect(h.pods, [
+        for (final id in ['unit-1', 'unit-2'])
+          {
+            'shipmentId': _shipment.id,
+            'unitId': id,
+            'confirmation': 'FIRMA_DIGITAL',
+            'customerName': 'Ana Pérez',
+            'photoPath': 'evidence/pod/abc.jpg',
+          },
+      ]);
+      // La firma viaja como evidencia ligada al cliente (con snapshot).
+      expect(h.signatures.saved, hasLength(1));
+      expect(h.enqueued, [
+        {
+          'shipmentId': _shipment.id,
+          'filePath': '/tmp/firma.png',
+          'kind': 'signature',
+          'hasSnapshot': true,
+        },
+      ]);
+      expect(find.text('Registrado.'), findsOneWidget);
+      expect(find.text('Entregados 2 de 2 producto(s).'), findsOneWidget);
+      expect(find.text('Entregado'), findsNWidgets(2));
+      expect(find.text('Pedido entregado'), findsOneWidget);
+    });
+
+    testWidgets('documento opcional: viaja como evidencia del cliente', (
+      tester,
+    ) async {
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
+        photos: ['/tmp/pod.jpg', '/tmp/ci.jpg'],
+        uploadedPath: 'evidence/pod/abc.jpg',
+      );
+
+      await tapScanProducts(tester);
+      await tapSign(tester);
+      await tapTakePhoto(tester);
+      await tapTakeDocument(tester);
+      await tapRegister(tester);
+
+      expect(
+        h.enqueued.map((e) => e['kind']),
+        containsAll(<String>['id_document', 'signature']),
+      );
+      expect(
+        h.enqueued.firstWhere((e) => e['kind'] == 'id_document'),
+        containsPair('filePath', '/tmp/ci.jpg'),
+      );
+      expect(h.pods, hasLength(2));
+    });
+
+    testWidgets('sin conexión: queda registrado igual (offline invisible)', (
+      tester,
+    ) async {
+      final h = await pumpPickupPod(
+        tester,
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
+        outcome: SubmitOutcome.queued,
+      );
+
+      await deliverAll(tester);
+
+      expect(h.pods, hasLength(2));
+      expect(find.text('Registrado.'), findsOneWidget);
+      expect(find.text('Entregados 2 de 2 producto(s).'), findsOneWidget);
     });
 
     testWidgets(
-      'producto ajeno al pedido: no registra el POD ni cuenta como entregado',
+      'rechazo del backend: no queda entregado y se puede reintentar',
       (tester) async {
-        final h = await _pump(tester, products: ['unit-de-otro-envio']);
-        await _typeConfirmation(tester, 'CI-1');
+        final h = await pumpPickupPod(
+          tester,
+          shipment: _shipment,
+          products: ['unit-1', 'unit-2'],
+          // Solo el segundo producto es rechazado.
+          outcomeFor: (unitId) =>
+              unitId == 'unit-2' ? SubmitOutcome.failed : SubmitOutcome.sent,
+        );
 
-        await _tapDeliver(tester);
+        await deliverAll(tester);
 
-        // Entregar al cliente un producto que no es de su pedido debe frenarse.
-        expect(h.calls, isEmpty);
-        expect(h.products.messages, ['No es de este pedido']);
-        expect(find.text('Entregados 0 de 2 producto(s).'), findsOneWidget);
+        expect(h.pods, hasLength(2));
+        expect(
+          find.text('No se pudo registrar. Intentá de nuevo.'),
+          findsOneWidget,
+        );
+        // El que entró queda entregado; el rechazado sigue escaneado.
+        expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+        expect(find.text('Escaneado'), findsOneWidget);
+
+        // Reintentar NO repite el producto que ya entró.
+        await tapRegister(tester);
+        expect(h.podUnitIds, ['unit-1', 'unit-2', 'unit-2']);
       },
     );
-
-    testWidgets('producto ya entregado: no registra un segundo POD', (
-      tester,
-    ) async {
-      final h = await _pump(
-        tester,
-        productSessions: [
-          ['unit-1', 'unit-1'],
-          ['unit-1'],
-        ],
-      );
-      await _typeConfirmation(tester, 'CI-1');
-
-      await _tapDeliver(tester);
-      await _tapDeliver(tester);
-
-      expect(h.calls, hasLength(1));
-      expect(h.products.messages, [
-        'Producto entregado (1/2)',
-        'Este producto ya fue entregado',
-        'Este producto ya fue entregado',
-      ]);
-      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
-    });
   });
 
   // Doble entrega entre reinicios: la lista en memoria se vacía cuando el
@@ -446,8 +294,9 @@ void main() {
     testWidgets('al abrir se siembran y se ven como entregados', (
       tester,
     ) async {
-      await _pump(
+      await pumpPickupPod(
         tester,
+        shipment: _shipment,
         onGetDeliveryState: (shipmentId) async =>
             delivery(shipmentId: shipmentId, podUnitIds: const ['unit-1']),
       );
@@ -460,81 +309,57 @@ void main() {
     testWidgets('no se puede entregar de nuevo tras un reinicio', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
-        products: ['unit-1'],
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
         onGetDeliveryState: (_) async => delivery(podUnitIds: const ['unit-1']),
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await deliverAll(tester);
 
-      // Nada encolado: no se duplica el POD del producto ya entregado.
-      expect(h.calls, isEmpty);
-      expect(h.products.messages, ['Este producto ya fue entregado']);
-      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+      // Solo se registra el que faltaba: no se duplica el POD del entregado.
+      expect(h.products.messages, [
+        'Este producto ya fue entregado',
+        'Producto escaneado (1/1)',
+      ]);
+      expect(h.podUnitIds, ['unit-2']);
     });
 
     testWidgets('los escaneos de carga no cuentan como entrega', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
-        products: ['unit-1'],
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
         onGetDeliveryState: (_) async =>
             delivery(otherUnitIds: const ['unit-1']),
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await deliverAll(tester);
 
-      expect(h.unitIds, ['unit-1']);
-      expect(find.text('Entregados 1 de 2 producto(s).'), findsOneWidget);
+      expect(h.podUnitIds, ['unit-1', 'unit-2']);
     });
 
     testWidgets('sin red el retiro sigue igual, sin error que trabe', (
       tester,
     ) async {
-      final h = await _pump(
+      final h = await pumpPickupPod(
         tester,
-        products: ['unit-1'],
+        shipment: _shipment,
+        products: ['unit-1', 'unit-2'],
         onGetDeliveryState: (_) async =>
             throw const ApiException(status: 503, title: 'Caído'),
       );
-      await _typeConfirmation(tester, 'CI-1');
 
-      await _tapDeliver(tester);
+      await deliverAll(tester);
 
       // Offline invisible: entrega normal y ningún aviso de error.
-      expect(h.unitIds, ['unit-1']);
-      expect(h.products.messages, ['Producto entregado (1/2)']);
-      expect(find.text('1 producto entregado.'), findsOneWidget);
+      expect(h.podUnitIds, ['unit-1', 'unit-2']);
+      expect(find.text('Registrado.'), findsOneWidget);
       expect(find.textContaining('No se pudo'), findsNothing);
       expect(find.textContaining('Reintentar'), findsNothing);
-    });
-
-    testWidgets('sin red lo entregado en la sesión sigue bloqueado', (
-      tester,
-    ) async {
-      final h = await _pump(
-        tester,
-        productSessions: [
-          ['unit-1'],
-          ['unit-1'],
-        ],
-        onGetDeliveryState: (_) async =>
-            throw Exception('SocketException: sin red'),
-      );
-      await _typeConfirmation(tester, 'CI-1');
-
-      await _tapDeliver(tester);
-      await _tapDeliver(tester);
-
-      expect(h.calls, hasLength(1));
-      expect(h.products.messages, [
-        'Producto entregado (1/2)',
-        'Este producto ya fue entregado',
-      ]);
     });
   });
 }

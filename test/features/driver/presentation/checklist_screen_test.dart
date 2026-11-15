@@ -4,17 +4,24 @@ import 'package:logistics_app/core/api/export.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/features/driver/domain/usecases/conduct_checklist.dart';
 import 'package:logistics_app/features/driver/presentation/checklist_screen.dart';
+import 'package:logistics_app/features/driver/presentation/controllers/inspection_history_controller.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import '../support/driver_test_support.dart';
 import '../../../support/button_finders.dart';
 
 // Checklist pre-salida: el chofer que firma es el ASIGNADO al camión (el del
 // crew), no se elige de una lista. Snackbars "apto"/"con observaciones"/error.
+// Si la inspección de HOY ya está hecha, muestra el estado "al día" en vez del
+// formulario.
 
 Future<FakeConductChecklist> _pumpChecklist(
   WidgetTester tester, {
-  Data5? result,
+  PreTripChecklistResult? result,
   Object? error,
+  // Historial del vehículo 'v1' (crew por defecto). Vacío = inspección de hoy
+  // pendiente → se muestra el formulario.
+  List<PreTripChecklist> history = const [],
 }) async {
   final fake = FakeConductChecklist(result: result, error: error);
   await pumpScoped(
@@ -22,6 +29,7 @@ Future<FakeConductChecklist> _pumpChecklist(
     overrides: [
       ...gateBase(),
       conductChecklistProvider.overrideWith((ref) => fake),
+      inspectionHistoryProvider('v1').overrideWith((ref) async => history),
     ],
     child: const ChecklistScreen(),
     tall: true,
@@ -30,10 +38,39 @@ Future<FakeConductChecklist> _pumpChecklist(
 }
 
 void main() {
+  setUpAll(() async => initializeDateFormatting('es'));
+
+  testWidgets('inspección de hoy ya hecha: muestra "al día", no el formulario', (
+    tester,
+  ) async {
+    await _pumpChecklist(
+      tester,
+      result: const PreTripChecklistResult(status: 'ok'),
+      history: [
+        PreTripChecklist(
+          id: 'c1',
+          vehicleId: 'v1',
+          passed: true,
+          performedOn: DateTime.now(),
+        ),
+      ],
+    );
+
+    expect(find.text('Camión al día'), findsOneWidget);
+    expect(find.text('Registrar checklist'), findsNothing);
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    // Sin botón "Rehacer": la inspección es por ruta (otra ruta la pide sola).
+    expect(find.textContaining('Rehacer'), findsNothing);
+  });
+
   testWidgets('no pide elegir chofer: el botón está habilitado de entrada', (
     tester,
   ) async {
-    await _pumpChecklist(tester, result: const Data5(status: 'ok'));
+    await _pumpChecklist(
+      tester,
+      result: const PreTripChecklistResult(status: 'ok'),
+    );
 
     // Ya no hay dropdown de "Selecciona el chofer".
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
@@ -48,7 +85,7 @@ void main() {
   ) async {
     final fake = await _pumpChecklist(
       tester,
-      result: const Data5(status: 'ok'),
+      result: const PreTripChecklistResult(status: 'ok'),
     );
 
     await tester.tap(find.text('Registrar checklist'));
@@ -60,7 +97,10 @@ void main() {
   });
 
   testWidgets('todo marcado => "apto para salir" (verde)', (tester) async {
-    await _pumpChecklist(tester, result: const Data5(status: 'ok'));
+    await _pumpChecklist(
+      tester,
+      result: const PreTripChecklistResult(status: 'ok'),
+    );
 
     final switches = find.byType(SwitchListTile);
     for (var i = 0; i < switches.evaluate().length; i++) {
@@ -79,7 +119,10 @@ void main() {
   testWidgets('observación NO crítica => "con observaciones" y el status', (
     tester,
   ) async {
-    await _pumpChecklist(tester, result: const Data5(status: 'needs_review'));
+    await _pumpChecklist(
+      tester,
+      result: const PreTripChecklistResult(status: 'needs_review'),
+    );
 
     // Se marca todo y se desmarca un ítem NO crítico (extintor): queda "con
     // observaciones", no "no apto".
@@ -105,7 +148,10 @@ void main() {
   testWidgets('ítem CRÍTICO falla (frenos) => "NO apto para salir" en rojo', (
     tester,
   ) async {
-    await _pumpChecklist(tester, result: const Data5(status: 'needs_review'));
+    await _pumpChecklist(
+      tester,
+      result: const PreTripChecklistResult(status: 'needs_review'),
+    );
 
     // Todo marcado menos FRENOS (crítico) → no apto.
     final switches = find.byType(SwitchListTile);

@@ -124,11 +124,14 @@ try {
   # --- 4. Generacion ----------------------------------------------------------
   Step '[4/7] swagger_parser + parche MetaSealed? + build_runner'
   Invoke-Native $GenDart @('run', 'swagger_parser') 'swagger_parser'
-  # swagger_parser genera `final MetaSealed meta;` con `this.meta` opcional -> no compila.
+  # swagger_parser genera `final <TipoMeta> meta;` (MetaSealed, Meta, ListMeta...) con
+  # `this.meta` OPCIONAL en el constructor -> no compila. Se vuelve nullable solo
+  # cuando el constructor no lo marca `required`.
   Get-ChildItem (Join-Path $Work "$ApiRel\models") -Filter '*.dart' | ForEach-Object {
     $txt = [IO.File]::ReadAllText($_.FullName)
-    if ($txt.Contains('final MetaSealed meta;')) {
-      [IO.File]::WriteAllText($_.FullName, $txt.Replace('final MetaSealed meta;', 'final MetaSealed? meta;'))
+    if ($txt -match 'final \w+ meta;' -and $txt -notmatch 'required this\.meta') {
+      $fixed = [regex]::Replace($txt, 'final (\w+) meta;', 'final $1? meta;')
+      [IO.File]::WriteAllText($_.FullName, $fixed)
     }
   }
   Invoke-Native $GenDart @('run', 'build_runner', 'build') 'build_runner'

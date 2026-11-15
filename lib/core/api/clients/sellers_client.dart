@@ -10,7 +10,7 @@ import '../models/register_seller_request.dart';
 import '../models/seller_collection.dart';
 import '../models/seller_envelope.dart';
 import '../models/set_settlement_terms_request.dart';
-import '../models/status8.dart';
+import '../models/status7.dart';
 import '../models/upsert_seller_sku_request.dart';
 
 part 'sellers_client.g.dart';
@@ -31,7 +31,7 @@ abstract class SellersClient {
   ///
   /// [status] - Optional filter by seller status.
   @GET('/integrations/sellers')
-  Future<SellerCollection> listSellers({@Query('status') Status8? status});
+  Future<SellerCollection> listSellers({@Query('status') Status7? status});
 
   /// Get a seller
   @GET('/integrations/sellers/{sellerId}')

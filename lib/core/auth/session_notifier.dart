@@ -69,6 +69,10 @@ class SessionNotifier extends Notifier<Session?> {
           ? abilities.whereType<String>().toList()
           : const [],
       storeNode: _nodeFrom(snapshot['storeNode']),
+      userId: switch (snapshot['userId']) {
+        final int id => id,
+        _ => null,
+      },
       tokenExpiresAt: _dateFrom(snapshot['tokenExpiresAt']),
       tokenIssuedAt: _dateFrom(snapshot['tokenIssuedAt']),
     );
@@ -87,6 +91,7 @@ class SessionNotifier extends Notifier<Session?> {
     required UserRole role,
     List<String> abilities = const [],
     Node? storeNode,
+    int? userId,
     DateTime? expiresAt,
   }) async {
     await _store.writeToken(token);
@@ -99,6 +104,7 @@ class SessionNotifier extends Notifier<Session?> {
       token: token,
       abilities: abilities,
       storeNode: storeNode,
+      userId: userId,
       tokenExpiresAt: expiresAt,
       tokenIssuedAt: now,
     );
@@ -115,6 +121,7 @@ class SessionNotifier extends Notifier<Session?> {
         'role': session.role.name,
         'abilities': session.abilities,
         'storeNode': session.storeNode?.toJson(),
+        'userId': session.userId,
         'tokenExpiresAt': session.tokenExpiresAt?.toIso8601String(),
         'tokenIssuedAt': session.tokenIssuedAt?.toIso8601String(),
       });
@@ -137,16 +144,26 @@ class SessionNotifier extends Notifier<Session?> {
 
   /// Aplica lo que devuelve `/app/auth/me` (abilities + tienda asignada) y lo
   /// persiste. Sin sesión no hace nada.
-  void applyProfile({required List<String> abilities, Node? storeNode}) {
+  void applyProfile({
+    required List<String> abilities,
+    Node? storeNode,
+    int? userId,
+  }) {
     final current = state;
     if (current == null) return;
-    _update(current, abilities: abilities, storeNode: storeNode);
+    _update(
+      current,
+      abilities: abilities,
+      storeNode: storeNode,
+      userId: userId,
+    );
   }
 
   void _update(
     Session current, {
     required List<String> abilities,
     required Node? storeNode,
+    int? userId,
   }) {
     final updated = Session(
       userName: current.userName,
@@ -154,6 +171,7 @@ class SessionNotifier extends Notifier<Session?> {
       token: current.token,
       abilities: abilities,
       storeNode: storeNode,
+      userId: userId ?? current.userId,
       tokenExpiresAt: current.tokenExpiresAt,
       tokenIssuedAt: current.tokenIssuedAt,
     );
@@ -225,6 +243,7 @@ class SessionNotifier extends Notifier<Session?> {
         token: response.token,
         abilities: latest.abilities,
         storeNode: latest.storeNode,
+        userId: latest.userId,
         tokenExpiresAt: response.expiresAt,
         tokenIssuedAt: DateTime.now(),
       );

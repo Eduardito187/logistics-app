@@ -8,12 +8,14 @@ part 'meta10.g.dart';
 
 @JsonSerializable()
 class Meta10 {
-  const Meta10({this.date, this.count});
+  const Meta10({this.count, this.accepted, this.duplicate, this.rejected});
 
   factory Meta10.fromJson(Map<String, Object?> json) => _$Meta10FromJson(json);
 
-  final DateTime? date;
   final int? count;
+  final int? accepted;
+  final int? duplicate;
+  final int? rejected;
 
   Map<String, Object?> toJson() => _$Meta10ToJson(this);
 }

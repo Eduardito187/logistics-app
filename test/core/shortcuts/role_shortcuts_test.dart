@@ -41,7 +41,7 @@ void main() {
 
   test('cada rol recibe SOLO sus accesos', () {
     expect(routesFor(UserRole.picker), ['/picking/orders', '/picking/prepare']);
-    expect(routesFor(UserRole.store), ['/store/reception', '/store/pickup']);
+    expect(routesFor(UserRole.store), ['/store/pickup']);
     expect(routesFor(UserRole.carrier), [
       '/carrier/pickup',
       '/carrier/deliver',

@@ -104,6 +104,9 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 
 - **Offline invisible:** el usuario NUNCA ve "sin conexión", "pendiente" ni sincronización. Encolado = "Registrado." /
   pastilla "Enviado". Única señal: "Sincronizando..." al volver la red. Errores de red: "No se pudo completar…".
+  Esto incluye los campos "pending" que el backend EXPONE (p. ej. `pod_photo_pending` de la entrega): son verdad
+  interna/diagnóstico, **no se muestran** en la UI. El POD de tienda sale sin foto si la subida no terminó y la
+  foto viaja por su cola; el backend la liga solo (ver `.claude/memory/backend-audit-2026-11-12.md`).
 - **Notificaciones:** solo la campana del header del inicio. **Sin chat** en ningún flujo.
 - **Tienda fija** del usuario (`Session.storeNode`, `selectedStoreNodeProvider`), sin selector. "Recojo en tienda".
 - **Sesión persistente** (restore en `main`), como WhatsApp.
@@ -173,6 +176,31 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 numeración de tipos anónimos `DataN`**: renombrar las referencias de la app/tests y los imports `models/dataN.dart`
 comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
+- **Pasar SIEMPRE `-Spec C:\Users\ehhuallata\Documents\APP\logistics\openapi\v1.yaml`**: el valor por defecto
+  apunta al backend viejo de WSL. Probar primero con `-DryRun`.
+- El cliente generado está EXCLUIDO del analizador (`analysis_options.yaml`): `flutter analyze` en verde no
+  prueba que compile. Para revisarlo: comentar un momento las exclusiones `lib/core/api/**` y `**/*.g.dart`,
+  `dart analyze lib/core/api`, y restaurarlas.
+- `scripts/preprocess_openapi.py` arregla lo que rompe a swagger_parser y avisa con una línea por arreglo:
+  enums/objetos anónimos con el mismo nombre, parámetros unión, `data` de las respuestas con nombre propio
+  (`<OperationId>Data`, `<Schema>Data`), tipos que chocan con Dart (`map` → `MapSettings`), JSON antes que
+  multipart. Si un regen falla (Stack Overflow, `class Map`, un enum pisado, `.toJson()` sobre null), el
+  arreglo va ahí, nunca a mano en `lib/core/api/`.
+- Tras regenerar: `flutter analyze` + suite completa; los renombres se aplican con un script de Python en el
+  scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
+
+## Reglas de negocio vigentes (nov 2026)
+
+- **Tienda solo entrega al cliente final.** La llegada del pedido a la tienda la marca el CHOFER ("Entregar en
+  tienda": escanear + foto). No existe "Recepción de mercadería" en el rol tienda: no reintroducirla.
+- **"Consultar pedido"** (`lib/features/lookup/`, `/lookup`) es de los 6 roles y solo lectura: usa
+  `GET /app/orders/lookup`; la etapa la calcula el servidor (`tracking.stage`), la app solo la traduce.
+- **Admin** entra a la app (`lib/features/admin/`); la ficha del personal es UNA vista por pestañas para todos
+  los roles. Listas paginadas con `PagedSearchList<T>` (`lib/core/widgets/`).
+- Personal por ciudad; el alcance por rol lo aplica el servidor (`can_process`), no la app.
+- Inspección y odómetro van por SALIDA (`route_id`), no por día: el chofer sale N veces.
+- Lo que decide el dueño se implementa tal cual, sin dejar el flujo viejo "como control".
+
 ## Definición de terminado
 
 `dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde (+ e2e si tocaste un flujo crítico),
@@ -181,6 +209,12 @@ con números. Si cambió Android/iOS: una build (`make apk`). Reportar qué no s
 (imports, nombres contra enums/catálogos, fin de línea conservado, sin duplicados), decir claramente "no compilado"
 y darle los comandos en orden, uno por bloque: `dart format lib test` → `flutter analyze` → `flutter test <carpeta tocada>`
 → `flutter test`.
+
+**Verificación estática SIN correr flutter:** la herramienta `mcp__claude-vscode__getDiagnostics` devuelve los
+errores/warnings del analizador del IDE (mismos que `flutter analyze`) y el hook los muestra tras CADA `Edit`.
+Usala para dejar el código con **0 errores / 0 warnings** antes de entregar (incluye los tests: fakes que no
+implementan una firma nueva salen acá). No reemplaza `flutter test` del dueño, pero cierra el grueso. Al terminar,
+una corrida con `minSeverity: "Warning"` que vuelve `[]` es la señal de "estáticamente limpio".
 
 ## Antes de culpar al app: medir contra staging
 
@@ -244,7 +278,8 @@ en uso (ver regla 0b).
 | Release no llega a `http://10.0.2.2` | `networkSecurityConfig` bloquea cleartext en release | Probar release con staging/production |
 | Script con `'\\n'`/rutas `C:\...` sale roto | La herramienta Bash colapsa `\\` en heredocs (`\f` → form feed) | Scripts/JSON con barras `/` o escribirlos con la herramienta Write |
 | PowerShell muestra "logÃ­stica" | `.ps1` en UTF-8 sin BOM lo lee como Windows-1252 | `.ps1` en ASCII; textos en archivos UTF-8 |
-| Muchos `ClientException … tile.openstreetmap.org` en tests | La capa de tiles intenta red en test | Ruido esperado; no falla el test |
+| Muchos `ClientException … tile.openstreetmap.org` en tests | La capa de tiles intenta red en test | Ruido esperado; no falla el test. PERO tapa el fallo real y hasta `--reporter failures-only` queda sepultado (el `+N:` con `+` es un test que PASA). Para aislar: `flutter test <dirs> --reporter json 2>$null \| Out-File $j` + `ConvertFrom-Json` filtrando `testDone`/`result!=success` y `type=='error'`. Ver `.claude/memory/test-battery-and-infra.md` |
+| Un test que debería pasar REVIENTA con `Null check operator used on a null value` dentro de un fake (no en `lib/`) | Un fake a mano devuelve `campo!` cuando el test no seteó ese campo; el error crudo (no es `ApiException`) se escapa del `catch (on ApiException)` del código bajo prueba (p. ej. `_completeSignIn` que degrada `/me`) y rompe el flujo | El fake debe DEGRADAR con el MISMO tipo de excepción que simula, no con un null-check: `if (meResponse == null) throw const ApiException(status: 503, …)`. Así los tests que no configuran ese campo igualan el comportamiento real. Trampa que dejó un agente (nov 2026) |
 | `pumpAndSettle timed out` con un `AnimatedAppIcon` en pantalla | Ícono en `state: loading` (loop real) | `pump()` + `pump(Duration)`; el `ambient` del botón central respira solo 3 ciclos y se detiene |
 | `find.byIcon(Icons.x)` no encuentra nada | La app ya no usa `Icon` | `findAppIcon(AppIcon.x)` / `findAppIconInState(AppIcon.x, AppIconState.success)` |
 | `UnimplementedError` en `Matrix4.translate` | vector_math 2.1 no acepta `int` | `m.multiply(Matrix4.translationValues(x, y, 0))` |
@@ -260,7 +295,22 @@ en uso (ver regla 0b).
 | Una pantalla dice **"No se pudo cargar"** pero `curl` al endpoint devuelve **200** | El backend dejó de mandar un campo que el modelo GENERADO tiene como `required` → `fromJson` explota. Pasó con `EmittedLabel.revoked` cuando el backend quitó `revoked`: **ningún** pedido cargaba | Comparar las claves del JSON real contra los `required` del modelo. Parche: campo opcional con default (`this.x = false` + `json['x'] as bool? ?? false` en el `.g.dart`) + test de regresión con el JSON REAL. Se resuelve solo al regenerar |
 | La paginación "no avanza": `next_page`/`next_cursor` siempre vacíos | **`MetaSealed` es inservible**: (a) deserializa en camelCase (`perPage`, `nextCursor`) y el backend manda snake_case; (b) la PRIMERA variante solo exige `count`, así que **siempre gana** y las de paginación son inalcanzables | Paginar por **número de página** con heurística "página completa ⇒ puede haber más" (cuesta un GET vacío al final). Al regenerar con el `ListMeta` único del backend, sacar la heurística |
 | `GET /app/shipments?status=planned` → **422** "The selected status is invalid" | Los estados del backend son **MAYÚSCULAS** (`PLANNED`, `RECEIVED`, `IN_EXECUTION`) | Mandar el valor del enum (`ShipmentStatus` serializa bien); en `curl` a mano usar mayúsculas. El backend va a aceptar ambos |
+| **422 "the field must match the format Y-m-d"** en un POST (p. ej. `performed_on` del checklist pre-salida) | El cliente generado serializa los `DateTime` del CUERPO como fecha-hora ISO (`toIso8601String`), pero varios campos del backend se validan `date_format:Y-m-d` (fecha de calendario). `DateQueryInterceptor` solo arregla los QUERY params, NO el cuerpo | Mandar ese endpoint por **Dio directo** con el campo en `Y-m-d` (`request.toJson()..['campo']='YYYY-MM-DD'`), reusando el modelo generado para parsear la respuesta. Patrón ya usado en `fleet_data_source.dart` (`getMyCrew`, `conductPreTripChecklist`) |
 | Tarifa del transportista siempre **404** aunque el corredor "exista" | Los corredores de tarifas/liquidaciones son **slugs** (`cd-santa-cruz`), NO los códigos de nodo de `/app/network/nodes` (`CD-SCZ-01`) | Usar los slugs (salen de las liquidaciones del transportista). Ver `.claude/memory/carrier-corridor-slugs` |
+| El avance de la ruta se contradice (resumen dice "5/7" pero la lista muestra 6 entregadas, o "ruta completada" con pendientes) | DOS fuentes: el resumen usaba los conteos agregados del backend (`completed_stops`/`stops_remaining`/`status`, que además cuentan fallidas/reprogramadas como "completadas") y la lista usa el estado por parada | **Fuente ÚNICA item-por-item:** `RouteProgress.of(route, settled)` (`domain/route_progress.dart`) cuenta el estado EFECTIVO de cada `stop` (`effectiveStopStatus`); `isComplete` = sin pendientes, NUNCA el `status`/conteo del backend. Usarla en resumen, barra, "Mi día", detección de ruta terminada y gate del botón "Finalizar". Ver `.claude/memory/driver-tracking-count-single-source` |
+| Un botón "Siguiente entrega"/"avanzar" marca una parada como entregada que el chofer NO entregó | La barra decidía "cerrada" por `deliveryStateProvider` (estado de la ENTREGA del envío); si el backend reportaba el envío `delivered` por su cuenta, aparecía el botón para una parada pendiente y al tocarlo hacía `settle(completed)` | Gatear las acciones de parada por el **estado EFECTIVO de la parada** (`effectiveStopStatus(stop, settled)`), no por el estado del envío. El POD/fallida ya hacen `settle`; el botón de avanzar SOLO refresca, nunca marca |
+| Backend agregó un campo/param aditivo (nullable) y no querés/ no podés regenerar el cliente ahora | El regen (`scripts/regen_api_client.ps1`) es un comando del dueño (Dart 3.9 en `C:\sdk\flutter`) | Agregar el campo A MANO al modelo generado + su `.g.dart` (from/toJson), con comentario "al regenerar viene solo" (precedente: `unit_ids`, `route_id`/`plate`/`driver_name`). Al regenerar se pisa idéntico. Si va por **Dio directo** (`fleet_data_source`), `request.toJson()` ya lo incluye |
+| Querés que una feature nueva del backend NO regresione mientras no esté deployada | Si cableás el comportamiento nuevo "a lo bruto", antes del deploy (el campo llega null/ausente) rompés el flujo viejo | **Auto-upgrade sin regresión:** detectar si el backend ya manda el dato (p. ej. `items.any((c)=>c.routeId!=null)`) → si sí, comportamiento nuevo; si no, fallback al viejo. Así se activa solo al deployar, sin tocar código. Ej.: checklist por ruta vs diario (`inspectionForCurrentRoute`). Ver `.claude/memory/checklist-por-ruta-y-hora-entrega` |
 | `pumpAndSettle timed out` en un test de un pie/estado "cargando" | El spinner es una animación en loop (igual que `AnimatedAppIcon` en `loading`) | `pump()` + `pump(Duration(...))` en vez de `pumpAndSettle()` |
 | La herramienta Bash muere con `fatal error - add_item ... failed, errno 1` | Git Bash en esta PC se cae con heredocs/`python - <<EOF` y comandos largos encadenados | Reintentar el comando (suele pasar 1 de cada N) o, mejor, editar con las herramientas Edit/Write en vez de scripts por heredoc |
 | Emitir etiquetas tira **"Error del servidor"** (500) | Backend sin `LABELS_SIGNING_KEY` en el env (clave Ed25519 de firma) → `RuntimeException` en `LabelsServiceProvider`. NO es la app | Es backend/ops: `php artisan logistics:labels:keygen` + setear la env. La app verifica con las públicas de `GET /app/labels/public-keys` (no fija ninguna). Derivar por `docs/backend-requests/` + a la sesión del backend. Ver `.claude/memory/staging-login-500-2fa-appkey.md` |
+| El APK "pesa 90+ MB" | Es el APK **universal** (`flutter build apk` sin split): trae las **4 ABIs** (x86/x86_64/armeabi-v7a/arm64), ~95% del peso. `--target-platform android-arm64` NO basta (baja solo el motor; los .so de plugins siguen con 4 ABIs → ~50 MB) | Compilar con **`--split-per-abi`** (lo que ya hace `make apk`/CI): `app-arm64-v8a-release.apk` ≈ **33 MB**. Instalar ese en el teléfono. Sin `key.properties` el release se firma con la clave debug (sirve para probar). Ver `.claude/memory/apk-size-split-abi.md` |
+| Desde esta sesión (Git Bash de Windows) el teléfono conectado en VS Code "no aparece" | WSL y Windows tienen **servidores adb SEPARADOS** (WSL2 es NAT). Si VS Code está en modo WSL-remoto, sus tareas usan el adb de WSL; esta sesión usa el `adb.exe` de Windows | Conectar con el **adb de Windows** (`$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe`) a la MISMA `ip:puerto` (por WiFi conviven). Fijar `tcpip 5555` para un puerto estable. En `tasks.json` pasar la ruta del script **relativa** + `cwd`, no `${workspaceFolder}/...` (los `\` rompen bash). Ver `.claude/memory/device-run-wireless-adb.md` |
+| El chofer ve **"No se pudo registrar. Intentá de nuevo."** y no se sabe por qué | El genérico de `submit_feedback.dart` tragaba el motivo real del backend; había que sacar la DB del teléfono para verlo | La app ya MUESTRA el motivo real: `OfflineQueue.submit(onReject: (e) => ...)` entrega el `ApiException` del 4xx permanente → pasar `e.message` a `showSubmitOutcome(..., failureDetail:)`. Último recurso para ver el error crudo: leer `outbox_actions.last_error` de la DB del teléfono con **Python stdlib** (`adb exec-out run-as PKG cat app_flutter/logistics_app.sqlite{,-wal,-shm}`; el -wal tiene lo último). Ver `.claude/memory/pod-scanner-vehicle-hardening.md` |
+| El POD falla con **"no hay entrega abierta para el envío …"** (aunque la etiqueta esté "Cargada") | La ETIQUETA está Cargada (nivel envío) pero la ENTREGA (objeto de execution) no está ABIERTA. El app NO la puede abrir solo. Casi siempre = el backend **no está deployado** con el fix de auto-abrir-entrega | Es del BACKEND: desplegar + `php artisan logistics:execution:open-missing-deliveries [--force] [--shipment=<uuid>]` (abre en Loaded las faltantes; NO re-emite etiquetas). El "transición inválida desde DELIVERED" = ya entregado (backend lo hace idempotente). La FOTO no es la causa (el POD manda `photo_url:null` y falla antes). Ver `.claude/memory/pod-scanner-vehicle-hardening.md` |
+| La Live Update / isla (chip en la cámara, Android 16 / Dynamic Island) muestra mal el avance ("Parada 1 de 7" congelado, pocos puntos) o se quiere cambiar su texto/tamaño | El contenido se arma en Dart (`RouteLiveStatus`): `chipText` = texto del chip del sistema (ahora SOLO `completedCount/stopCount` sin hora), `completedCount` item-por-item (no `route.completedStops`). El render lo hace el SO: `LiveUpdatesChannel.kt` (notificación + ProgressStyle, segmentos=`stopCount`, puntos=`completed`). "1 de 7 congelado" = el `settled` en memoria se pierde al reiniciar y el route sheet sin deploy devuelve todo pendiente → lo fija el deploy del backend | Cambiar textos/contador en `RouteLiveStatus` (Dart, probado); el **tamaño** de la pastilla del sistema NO se controla (lo decide el SO/fabricante). La pastilla PROPIA (`IslandOverlay.kt`, overlay, requiere permiso) SÍ se controla: ahí está la compacta (camión + contador) y `celebrate()` (camión verde + bote al entregar). Ver `.claude/memory/driver-tracking-count-single-source` |
+| Tentación de que cada widget/pantalla pida el mismo dato al backend (varias llamadas al mismo endpoint) | Regla dura del dueño: **no saturar el backend** ("si se ocupa lo mismo en varios lugares, centraliza, si no colapsaremos el backend") | UN provider compartido por dato (`driverRouteProvider`, `truckTrackingProvider.lastFix`, `deliveryStateProvider`…) y los widgets lo `watch`ean. Lo derivable se calcula EN EL TELÉFONO (distancia GPS→parada con `remainingToStop`, avance item-por-item con `RouteProgress`) sin pegarle al backend. ¿Falta un campo? Enriquecer un endpoint existente antes que agregar una 2.ª llamada. Ver `.claude/memory/feedback-working-style` |
+| Un pedido sale "Sin autorizar" / "Falta asignar camión" en despacho | El backend autoriza el pedido cuando tiene camión asignado; el motivo llega en `authorized_reason_code` | El texto sale de `dispatchBlockText(line)` (`dispatch_lines_body.dart`); lo destraba el admin/supervisor desde Envíos → "Asignar a un camión". No agregar botones de "publicar plan" |
+| Probar staging con una cuenta y el teléfono de esa cuenta se desloguea | Hay 1 sesión activa por tipo de cliente; un login de diagnóstico como app móvil pisa la del teléfono | Loguear el diagnóstico con `device.client_kind: "web"` |
+| Un test de widget falla con `contains(<Map>)` aunque el mapa "es igual" | `contains` compara por identidad los mapas | `contains(equals({...}))` |
+| El análisis pasa pero un test no compila tras regenerar el cliente | Los fakes de `test/` implementan data sources con tipos del cliente (`Role` vs `StaffRoleName`, `DataN`) | Revisar `test/features/*/fake_*.dart` y los helpers `fromJson` junto con cada regen |

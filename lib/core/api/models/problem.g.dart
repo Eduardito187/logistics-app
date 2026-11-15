@@ -13,6 +13,9 @@ Problem _$ProblemFromJson(Map<String, dynamic> json) => Problem(
   type: json['type'] as String?,
   detail: json['detail'] as String?,
   instance: json['instance'] as String?,
+  error: json['error'] == null
+      ? null
+      : Error8.fromJson(json['error'] as Map<String, dynamic>),
   errors: (json['errors'] as Map<String, dynamic>?)?.map(
     (k, e) =>
         MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
@@ -26,5 +29,6 @@ Map<String, dynamic> _$ProblemToJson(Problem instance) => <String, dynamic>{
   'detail': instance.detail,
   'instance': instance.instance,
   'code': instance.code,
+  'error': instance.error,
   'errors': instance.errors,
 };

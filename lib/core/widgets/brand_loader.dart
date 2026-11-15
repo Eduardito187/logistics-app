@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../brand/brand_vector.dart';
 
 import '../power/motion_budget.dart';
 import '../theme/app_colors.dart';
@@ -67,7 +67,7 @@ class _BrandLoaderState extends State<BrandLoader>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final mark = SvgPicture.asset(
+    final mark = BrandVector(
       isDark ? _dark : _light,
       width: widget.size,
       height: widget.size,

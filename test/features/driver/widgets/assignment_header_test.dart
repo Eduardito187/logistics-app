@@ -22,8 +22,8 @@ void main() {
         vehicle: buildVehicle(plate: 'XYZ-789'),
         driver: buildDriver(name: 'Ana Gómez'),
         helpers: const [
-          Helpers(id: 'h1', name: 'Luis'),
-          Helpers(id: 'h2', name: 'Marta'),
+          Helpers2(id: 'h1', name: 'Luis'),
+          Helpers2(id: 'h2', name: 'Marta'),
         ],
         shift: Shift(
           startsAt: DateTime(2026, 10, 15, 8, 0),
@@ -65,8 +65,8 @@ void main() {
       tester,
       buildMyCrew(
         helpers: const [
-          Helpers(id: 'h1', name: null),
-          Helpers(id: 'h2', name: 'Pedro'),
+          Helpers2(id: 'h1', name: null),
+          Helpers2(id: 'h2', name: 'Pedro'),
         ],
       ),
     );

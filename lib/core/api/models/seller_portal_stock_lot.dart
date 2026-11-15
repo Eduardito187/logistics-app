@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'seller_portal_stock_lot_fulfillment_mode.dart';
+import 'fulfillment_mode.dart';
 
 part 'seller_portal_stock_lot.g.dart';
 
@@ -35,7 +35,7 @@ class SellerPortalStockLot {
   final String warehouseId;
   final String sku;
   @JsonKey(name: 'fulfillment_mode')
-  final SellerPortalStockLotFulfillmentMode fulfillmentMode;
+  final FulfillmentMode fulfillmentMode;
   @JsonKey(name: 'seller_sku_ref')
   final String? sellerSkuRef;
   @JsonKey(name: 'available_quantity')

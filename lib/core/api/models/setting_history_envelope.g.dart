@@ -14,7 +14,7 @@ SettingHistoryEnvelope _$SettingHistoryEnvelopeFromJson(
       .toList(),
   meta: json['meta'] == null
       ? null
-      : Meta16.fromJson(json['meta'] as Map<String, dynamic>),
+      : Meta11.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$SettingHistoryEnvelopeToJson(

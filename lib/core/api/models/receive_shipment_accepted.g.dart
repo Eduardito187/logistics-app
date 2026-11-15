@@ -9,7 +9,9 @@ part of 'receive_shipment_accepted.dart';
 ReceiveShipmentAccepted _$ReceiveShipmentAcceptedFromJson(
   Map<String, dynamic> json,
 ) => ReceiveShipmentAccepted(
-  data: Data26.fromJson(json['data'] as Map<String, dynamic>),
+  data: ReceiveShipmentAcceptedData.fromJson(
+    json['data'] as Map<String, dynamic>,
+  ),
 );
 
 Map<String, dynamic> _$ReceiveShipmentAcceptedToJson(

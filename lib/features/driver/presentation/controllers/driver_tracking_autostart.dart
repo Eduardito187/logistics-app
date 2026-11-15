@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/location/truck_tracking_service.dart';
+import '../widgets/route_points.dart';
 import 'driver_controllers.dart';
 import 'locally_settled_stops.dart';
 
 /// Envío al que debe asociarse el rastreo automático del camión: la parada en
 /// curso de la ruta del día, o la primera pendiente si no hay una marcada en
-/// curso (sin contar las ya resueltas en este teléfono). Devuelve `null` cuando
-/// no hay ruta/parada activa (ruta completada, sin paradas o aún cargando).
+/// curso (sin contar las ya resueltas en este teléfono). Si ya no quedan
+/// pendientes, se sigue rastreando el ÚLTIMO envío (regreso al CD). Devuelve
+/// `null` solo cuando no hay ruta todavía o la ruta no tiene paradas.
 ///
 /// `.value` (no `.asData?.value`): mientras la ruta se refresca (cada
 /// `invalidate` al volver de un POD) conserva la ruta anterior; con `asData`
@@ -27,8 +29,17 @@ String? _shipmentToTrack(
   DriverRoute route,
   Map<String, DriverRouteStopStatus> settled,
 ) {
-  if (route.status == DriverRouteStatus.completed) return null;
-  return pendingStopOf(route, settled)?.shipmentId;
+  // Mientras haya una parada pendiente, se rastrea ESA.
+  final pending = pendingStopOf(route, settled)?.shipmentId;
+  if (pending != null) return pending;
+  // Sin pendientes (ruta "completada"): el camión SIGUE rastreándose en el
+  // regreso al centro de distribución hasta que el chofer cierre sesión o le den
+  // descanso (el logout lo detiene desde el propio servicio). Se asocia al
+  // ÚLTIMO envío de la ruta para que los breadcrumbs sigan fluyendo: el backend
+  // los agrupa por envío, y el seguimiento del regreso a nivel ruta es un
+  // pendiente del backend (ver pedido de re-ruteo/regreso).
+  final stops = sortedStops(route);
+  return stops.isEmpty ? null : stops.last.shipmentId;
 }
 
 /// Decisión del rastreo: `known == false` mientras todavía no hay NINGUNA ruta

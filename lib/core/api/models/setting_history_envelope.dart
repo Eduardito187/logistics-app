@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta16.dart';
+import 'meta11.dart';
 import 'setting_version.dart';
 
 part 'setting_history_envelope.g.dart';
@@ -17,7 +17,7 @@ class SettingHistoryEnvelope {
       _$SettingHistoryEnvelopeFromJson(json);
 
   final List<SettingVersion> data;
-  final Meta16? meta;
+  final Meta11? meta;
 
   Map<String, Object?> toJson() => _$SettingHistoryEnvelopeToJson(this);
 }

@@ -19,7 +19,13 @@ class DeliveryEvidenceItem {
     required this.kind,
     required this.status,
     this.detail,
+    this.url,
   });
+
+  /// Enlace temporal firmado (~2 h) a la imagen. Se abre con un GET simple,
+  /// sin `Authorization`. No se guarda: si venció, se vuelve a pedir la lista.
+  /// `null` con un backend anterior o si el archivo ya no existe.
+  final String? url;
 
   /// `pod` | `damage` | `signature` | `id_document`.
   final String kind;
@@ -35,5 +41,18 @@ class DeliveryEvidenceItem {
           json['validation_status'] as String?,
         ),
         detail: json['validation_detail'] as String?,
+        url: _urlOrNull(json['url']),
       );
+
+  /// Copia con otra [url] (al deduplicar se conserva una imagen visible).
+  DeliveryEvidenceItem withUrl(String? url) => DeliveryEvidenceItem(
+    id: id,
+    kind: kind,
+    status: status,
+    detail: detail,
+    url: url,
+  );
+
+  static String? _urlOrNull(Object? raw) =>
+      raw is String && raw.isNotEmpty ? raw : null;
 }

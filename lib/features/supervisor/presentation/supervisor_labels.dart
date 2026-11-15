@@ -14,6 +14,7 @@ String alertTypeLabel(AlertType type) => switch (type) {
   AlertType.geofenceViolation => 'Violación de geocerca',
   AlertType.unauthorizedUse => 'Uso no autorizado',
   AlertType.speeding => 'Exceso de velocidad',
+  AlertType.routeDeviation => 'Desvío de la ruta',
   AlertType.$unknown => 'Alerta de telemetría',
 };
 
@@ -81,4 +82,35 @@ String? alertDetailText(Object? detail) {
     return parts.isEmpty ? null : parts.join(' · ');
   }
   return null;
+}
+
+/// Título de una parada: el pedido si se conoce; si no, su posición. Nunca un
+/// identificador interno.
+String stopTitle(String? orderReference, int position) =>
+    orderReference == null || orderReference.isEmpty
+    ? 'Parada $position'
+    : 'Pedido $orderReference';
+
+/// Cliente y dirección corta en una línea, o `null` si no se conoce ninguno.
+String? stopWho(String? customerName, String? shortAddress) {
+  final parts = [
+    if (customerName != null && customerName.isNotEmpty) customerName,
+    if (shortAddress != null && shortAddress.isNotEmpty) shortAddress,
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// "El cliente pidió entre 10:00 y 12:00" (hora que eligió el cliente).
+String timeWindowText(DateTime from, DateTime to) =>
+    'El cliente pidió entre ${formatHour(from)} y ${formatHour(to)}';
+
+/// Kilómetros con una cifra decimal y coma ("3,4 km").
+String formatKm(double km) =>
+    '${km.toStringAsFixed(1).replaceAll('.', ',')} km';
+
+/// Duración en horas y minutos ("2 h 15 min").
+String formatDuration(int minutes) {
+  if (minutes < 60) return '$minutes min';
+  final rest = minutes % 60;
+  return rest == 0 ? '${minutes ~/ 60} h' : '${minutes ~/ 60} h $rest min';
 }

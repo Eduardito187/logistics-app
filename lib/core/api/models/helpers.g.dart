@@ -7,7 +7,7 @@ part of 'helpers.dart';
 // **************************************************************************
 
 Helpers _$HelpersFromJson(Map<String, dynamic> json) =>
-    Helpers(id: json['id'] as String, name: json['name'] as String?);
+    Helpers(id: json['id'] as String?, name: json['name'] as String?);
 
 Map<String, dynamic> _$HelpersToJson(Helpers instance) => <String, dynamic>{
   'id': instance.id,

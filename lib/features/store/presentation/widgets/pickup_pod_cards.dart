@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,11 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/unit_tracking.dart';
 import '../../../../core/icons/icons.dart';
-import '../../../../core/widgets/field_icon.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/status_pill.dart';
+// La firma y la vista previa de evidencia son las MISMAS piezas de la entrega
+// del chofer (mismo proceso, pedido del dueño): se reutilizan, no se duplican.
+import '../../../driver/presentation/widgets/evidence_photo_preview.dart';
 import '../../domain/entities/unit_product.dart';
 import '../controllers/store_controllers.dart';
 import 'reception_units_card.dart';
@@ -60,44 +62,58 @@ class PickupCustomerCard extends StatelessWidget {
   }
 }
 
-/// Paso 1: confirmación del cliente (QR escaneado o documento escrito).
-class PickupConfirmationCard extends StatelessWidget {
-  const PickupConfirmationCard({
+/// Paso 1: firma del cliente en pantalla (igual que la entrega del chofer).
+class PickupSignatureCard extends StatelessWidget {
+  const PickupSignatureCard({
     super.key,
-    required this.controller,
-    required this.onChanged,
-    required this.onScan,
+    required this.signature,
+    required this.busy,
+    required this.onSign,
   });
 
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onScan;
+  /// PNG de la firma, o `null` si el cliente todavía no firmó.
+  final Uint8List? signature;
+  final bool busy;
+  final VoidCallback onSign;
 
   @override
   Widget build(BuildContext context) {
+    final signature = this.signature;
     return SectionCard(
-      title: '1 · Confirmación del cliente',
+      title: '1 · Firma del cliente',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: controller,
-            onChanged: onChanged,
-            decoration: const InputDecoration(
-              prefixIconConstraints: FieldIcon.prefixConstraints,
-              prefixIcon: FieldIcon(icon: AppIcon.badge),
-              labelText: 'QR del cliente o documento',
-              hintText: 'Escanea o escribe la confirmación',
+          if (signature != null) ...[
+            const Text('Firmado por el cliente.'),
+            const SizedBox(height: 8),
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: SignaturePreview(
+                key: const ValueKey('signature-preview'),
+                png: signature,
+              ),
             ),
-          ),
+          ] else
+            const Text('Pedile al cliente que firme.'),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: onScan,
+            onPressed: busy ? null : onSign,
             icon: const AnimatedAppIcon(
-              AppIcon.scan,
+              AppIcon.signature,
               excludeFromSemantics: true,
             ),
-            label: const Text('Escanear QR del cliente'),
+            label: Text(
+              signature == null ? 'Firma del cliente' : 'Volver a firmar',
+            ),
           ),
         ],
       ),
@@ -105,7 +121,50 @@ class PickupConfirmationCard extends StatelessWidget {
   }
 }
 
-/// Paso 2: foto de entrega con su vista previa reducida.
+/// Paso 3: foto del documento (carnet) del cliente. Opcional.
+class PickupDocumentCard extends StatelessWidget {
+  const PickupDocumentCard({
+    super.key,
+    required this.document,
+    required this.busy,
+    required this.onTakeDocument,
+  });
+
+  final File? document;
+  final bool busy;
+  final VoidCallback onTakeDocument;
+
+  @override
+  Widget build(BuildContext context) {
+    final document = this.document;
+    return SectionCard(
+      title: '3 · Documento del cliente (opcional)',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (document != null) ...[
+            EvidencePhotoPreview(path: document.path),
+            const SizedBox(height: 12),
+          ],
+          OutlinedButton.icon(
+            onPressed: busy ? null : onTakeDocument,
+            icon: const AnimatedAppIcon(
+              AppIcon.capture,
+              excludeFromSemantics: true,
+            ),
+            label: Text(
+              document == null
+                  ? 'Foto del documento'
+                  : 'Volver a tomar documento',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Paso 2: foto de entrega (obligatoria) con su vista previa reducida.
 class PickupPhotoCard extends StatelessWidget {
   const PickupPhotoCard({
     super.key,
@@ -126,7 +185,7 @@ class PickupPhotoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final photo = this.photo;
     return SectionCard(
-      title: '2 · Foto de entrega',
+      title: '2 · Foto de entrega (obligatoria)',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -192,8 +251,9 @@ class PickupPhotoCard extends StatelessWidget {
   }
 }
 
-/// Paso 3: productos del envío (foto, nombre, código) con su estado
-/// (entregado/pendiente).
+/// Paso 4: productos del pedido (foto, nombre, SKU, código de etiqueta) con su
+/// estado (entregado / escaneado / pendiente). Con eso el personal de tienda
+/// ubica cada producto en su almacén antes de escanearlo.
 ///
 /// Es un SLIVER (va dentro de un `CustomScrollView`): las filas se construyen a
 /// demanda y solo se decodifican las fotos visibles, aunque el pedido traiga
@@ -202,17 +262,19 @@ class PickupUnitsCard extends ConsumerWidget {
   const PickupUnitsCard({
     super.key,
     required this.shipmentId,
-    required this.hasConfirmation,
+    required this.scanned,
     required this.delivered,
   });
 
   final String shipmentId;
-  final bool hasConfirmation;
 
-  /// IDs de productos ya entregados en esta pantalla.
+  /// IDs de productos escaneados en esta pantalla, todavía sin registrar.
+  final Set<String> scanned;
+
+  /// IDs de productos ya entregados (confirmados o registrados acá).
   final Set<String> delivered;
 
-  static const String _title = '3 · Entregar productos';
+  static const String _title = '4 · Productos del pedido';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -236,18 +298,15 @@ class PickupUnitsCard extends ConsumerWidget {
       header: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!hasConfirmation)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Text(
-                'Primero captura la confirmación del cliente.',
-                style: TextStyle(color: AppColors.warning),
-              ),
-            ),
           Text(
             'Entregados ${delivered.length} de ${units.length} producto(s).',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
+          if (scanned.isNotEmpty)
+            Text(
+              'Escaneados para entregar: ${scanned.length}.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           const SizedBox(height: 8),
         ],
       ),
@@ -259,8 +318,11 @@ class PickupUnitsCard extends ConsumerWidget {
             key: ValueKey(unit.unitId),
             unitId: unit.unitId,
             product: trackingProduct(unit),
+            showLabelCode: true,
             status: delivered.contains(unit.unitId)
                 ? UnitRowStatus.delivered
+                : scanned.contains(unit.unitId)
+                ? UnitRowStatus.scanned
                 : UnitRowStatus.pending,
           );
         },

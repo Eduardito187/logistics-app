@@ -5,17 +5,19 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'alert.dart';
+import 'list_meta.dart';
 
 part 'get_app_telemetry_alerts_response.g.dart';
 
 @JsonSerializable()
 class GetAppTelemetryAlertsResponse {
-  const GetAppTelemetryAlertsResponse({required this.data});
+  const GetAppTelemetryAlertsResponse({required this.data, this.meta});
 
   factory GetAppTelemetryAlertsResponse.fromJson(Map<String, Object?> json) =>
       _$GetAppTelemetryAlertsResponseFromJson(json);
 
   final List<Alert> data;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$GetAppTelemetryAlertsResponseToJson(this);
 }

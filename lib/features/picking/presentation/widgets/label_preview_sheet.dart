@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-import '../../../../core/api/models/destination.dart';
+import '../../../../core/api/models/destination2.dart';
 import '../../../../core/api/models/dispatch_destination.dart';
 import '../../../../core/api/models/dispatch_destination_type.dart';
 import '../../../../core/api/models/emitted_label.dart';
-import '../../../../core/api/models/type3.dart';
+import '../../../../core/api/models/type4.dart';
 import '../../../../core/device/max_brightness_while_visible.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
@@ -18,19 +18,19 @@ import '../../../../core/widgets/tap_outside_to_dismiss.dart';
 /// Texto humano del destino de una etiqueta (nombres, sin uuid):
 /// "Domicilio · cliente · dirección", "Tienda nombre", "Almacén nombre".
 /// `null` si no hay destino.
-String? labelDestinationText(Destination? d) {
+String? labelDestinationText(Destination2? d) {
   if (d == null) return null;
   final name = d.name?.trim();
   final addr = d.address?.trim();
   final hasName = name != null && name.isNotEmpty;
   final hasAddr = addr != null && addr.isNotEmpty;
   switch (d.type) {
-    case Type3.home:
+    case Type4.home:
       final parts = <String>[if (hasName) name, if (hasAddr) addr];
       return parts.isEmpty ? 'Domicilio' : 'Domicilio · ${parts.join(' · ')}';
-    case Type3.store:
+    case Type4.store:
       return hasName ? 'Tienda $name' : 'Tienda';
-    case Type3.warehouse:
+    case Type4.warehouse:
       return hasName ? 'Almacén $name' : 'Almacén';
     default:
       if (hasName) return name;
@@ -146,7 +146,7 @@ class _LabelPreviewSheetState extends ConsumerState<_LabelPreviewSheet> {
         return;
       }
       final label = widget.label;
-      final producto = widget.productName ?? 'SKU ${label.sku}';
+      final producto = widget.productName ?? label.sku;
       await ref
           .read(shareServiceProvider)
           .shareImagePng(

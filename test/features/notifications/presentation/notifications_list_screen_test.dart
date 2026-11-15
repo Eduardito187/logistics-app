@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/message_type.dart';
 import 'package:logistics_app/core/network/api_exception.dart';
+import 'package:logistics_app/core/push/push_arrived.dart';
 import 'package:logistics_app/core/push/push_controller.dart';
+import 'package:logistics_app/core/realtime/realtime_bus.dart';
 import 'package:logistics_app/core/push/push_status.dart';
+import 'package:logistics_app/features/notifications/data/datasources/inbox_remote_data_source.dart';
 import 'package:logistics_app/features/notifications/data/repositories/notifications_repository_impl.dart';
 import 'package:logistics_app/features/notifications/presentation/controllers/notifications_controller.dart';
 import 'package:logistics_app/features/notifications/presentation/notifications_list_screen.dart';
@@ -26,6 +29,8 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         notificationsRepositoryProvider.overrideWithValue(repo),
+        // Bandeja de avisos de la empresa: sin red en los tests.
+        inboxUnreadCountProvider.overrideWith((ref) async => 0),
         pushRegistrationProvider.overrideWith(
           () => FakePushController(const PushStatus.idle()),
         ),
@@ -91,12 +96,45 @@ void main() {
 
     final more = find.text('Ver más notificaciones');
     await tester.scrollUntilVisible(more, 300);
+    await tester.ensureVisible(more);
+    await tester.pumpAndSettle();
     await tester.tap(more);
     await tester.pumpAndSettle();
 
     expect(repo.requestedLimits.last, notificationsPageSize * 2);
     // Con menos de una página completa ya no hay "Ver más".
     expect(find.text('Ver más notificaciones'), findsNothing);
+  });
+
+  testWidgets('con tiempo real no refresca por tiempo; sin socket, sí', (
+    tester,
+  ) async {
+    final repo = FakeNotificationsRepository()
+      ..items = [notificationView(id: 'n1')];
+    await _pump(tester, repo);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(NotificationsListScreen)),
+    );
+    final calls = repo.requestedLimits.length;
+
+    // Socket conectado: pasa el tiempo y no se vuelve a pedir nada.
+    container.read(realtimeLiveProvider.notifier).set({RealtimeTopic.user});
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pumpAndSettle();
+    expect(repo.requestedLimits, hasLength(calls));
+
+    // Un evento del socket (llega como "push en primer plano") refresca ya.
+    container.read(pushArrivedProvider.notifier).bump();
+    await tester.pumpAndSettle();
+    expect(repo.requestedLimits, hasLength(calls + 1));
+
+    // Se cae el socket: vuelve el refresco de respaldo.
+    container.read(realtimeLiveProvider.notifier).set({});
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+    expect(repo.requestedLimits, hasLength(calls + 2));
   });
 
   testWidgets('página incompleta: sin "Ver más"', (tester) async {

@@ -12,8 +12,8 @@ import '../models/material_mapping_collection.dart';
 import '../models/post_app_sap_material_mappings_response.dart';
 import '../models/post_app_sap_stock_transfers_dispatch_response.dart';
 import '../models/post_app_sap_stock_transfers_response.dart';
-import '../models/post_integrations_sap_orders_import_response.dart';
 import '../models/post_integrations_sap_stock_transfers_acknowledge_response.dart';
+import '../models/sap_async_request_accepted.dart';
 import '../models/stock_transfer_collection.dart';
 
 part 'sap_connector_client.g.dart';
@@ -37,14 +37,19 @@ abstract class SapConnectorClient {
 
   /// Enqueue a stock transfer to SAP from a node reception.
   ///
-  /// Encola un traspaso de stock al recibir un bulto en un nodo. Responde 202 de inmediato: el.
+  /// Encola un traspaso de stock al recibir un producto en un nodo. Responde 202 de inmediato: el.
   /// escaneo nunca espera a SAP. Idempotente por `event_id`.
   @POST('/app/sap/stock-transfers')
   Future<PostAppSapStockTransfersResponse> enqueueStockTransfer({
     @Body() required EnqueueStockTransferRequest body,
   });
 
-  /// Trigger a dispatch run for pending and failed stock transfers
+  /// Queue a reconciliation run for failed and stale pending stock transfers.
+  ///
+  /// Encola (cola `sap`) una corrida de reconciliación y responde de inmediato con 202: SAP nunca se.
+  /// llama dentro del request. La corrida reintenta los traspasos Failed y los Pending estancados.
+  /// (más viejos que `transfers.stale_pending_minutes`); los traspasos nuevos los empuja solo el.
+  /// reactor del outbox, para no duplicar el envío.
   @POST('/app/sap/stock-transfers/dispatch')
   Future<PostAppSapStockTransfersDispatchResponse>
   dispatchPendingStockTransfers();
@@ -57,12 +62,13 @@ abstract class SapConnectorClient {
   @GET('/app/sap/stock-transfers/pending')
   Future<StockTransferCollection> listPendingStockTransfers();
 
-  /// Import pending orders from SAP, translated to the platform model.
+  /// Request an asynchronous import of pending orders from SAP.
   ///
-  /// Lee los pedidos pendientes en SAP y los devuelve ya traducidos al modelo propio (sku propio,.
-  /// no material SAP). No empuja nada a SAP dentro del request.
+  /// Encola la lectura de pedidos pendientes en SAP (job en la cola `sap`) y responde de inmediato.
+  /// con 202. SAP NUNCA se llama dentro del request: su lentitud o caída no afecta a la plataforma.
+  /// El worker traduce los pedidos al modelo propio (sku propio, no material SAP).
   @POST('/integrations/sap/orders/import')
-  Future<PostIntegrationsSapOrdersImportResponse> importSapOrders();
+  Future<SapAsyncRequestAccepted> importSapOrders();
 
   /// Acknowledge a dispatched stock transfer (SAP callback).
   ///
