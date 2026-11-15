@@ -42,6 +42,9 @@ Delivery _$DeliveryFromJson(Map<String, dynamic> json) => Delivery(
   failureReason: json['failure_reason'] == null
       ? null
       : FailureReason.fromJson(json['failure_reason'] as String),
+  storeDropMissingUnits: (json['store_drop_missing_units'] as List<dynamic>?)
+      ?.map((e) => StoreDropMissingUnit.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$DeliveryToJson(Delivery instance) => <String, dynamic>{
@@ -68,4 +71,5 @@ Map<String, dynamic> _$DeliveryToJson(Delivery instance) => <String, dynamic>{
   'pod_photo_pending': instance.podPhotoPending,
   'failure_reason': instance.failureReason,
   'scans': instance.scans,
+  'store_drop_missing_units': instance.storeDropMissingUnits,
 };

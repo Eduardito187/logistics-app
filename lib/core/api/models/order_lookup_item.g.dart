@@ -50,6 +50,13 @@ OrderLookupItem _$OrderLookupItemFromJson(Map<String, dynamic> json) =>
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
       destinationNodeId: json['destination_node_id'] as String?,
+      originNode: json['origin_node'] == null
+          ? null
+          : OrderLookupNodeRef.fromJson(
+              json['origin_node'] as Map<String, dynamic>,
+            ),
+      originDepartment: json['origin_department'] as String?,
+      destinationDepartment: json['destination_department'] as String?,
     );
 
 Map<String, dynamic> _$OrderLookupItemToJson(OrderLookupItem instance) =>
@@ -78,4 +85,7 @@ Map<String, dynamic> _$OrderLookupItemToJson(OrderLookupItem instance) =>
       'destination_node': instance.destinationNode,
       'tracking': instance.tracking,
       'can_process': instance.canProcess,
+      'origin_node': instance.originNode,
+      'origin_department': instance.originDepartment,
+      'destination_department': instance.destinationDepartment,
     };

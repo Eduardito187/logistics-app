@@ -109,6 +109,13 @@ void main() {
       expect(orderStageClosed(OrderLookupStage.delivered), isTrue);
       expect(orderStageClosed(OrderLookupStage.onTheWay), isFalse);
     });
+
+    test('de qué ciudad a qué ciudad va, solo si cambia', () {
+      expect(orderTripText('cochabamba', 'la_paz'), 'Cochabamba → La Paz');
+      expect(orderTripText('potosi', 'santa_cruz'), 'Potosí → Santa Cruz');
+      expect(orderTripText('la_paz', 'la_paz'), isNull);
+      expect(orderTripText(null, 'la_paz'), isNull);
+    });
   });
 
   test('"Consultar pedido" es una tarea de TODOS los roles', () {

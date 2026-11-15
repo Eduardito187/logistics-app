@@ -17,6 +17,9 @@ _$AppDeliveriesShipmentIdStoreDropRequestBodyFromJson(
       : DateTime.parse(json['occurred_at'] as String),
   lat: json['lat'] as num?,
   lng: json['lng'] as num?,
+  missingUnits: (json['missing_units'] as List<dynamic>?)
+      ?.map((e) => StoreDropMissingUnit.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$AppDeliveriesShipmentIdStoreDropRequestBodyToJson(
@@ -27,4 +30,5 @@ Map<String, dynamic> _$AppDeliveriesShipmentIdStoreDropRequestBodyToJson(
   'occurred_at': instance.occurredAt?.toIso8601String(),
   'lat': instance.lat,
   'lng': instance.lng,
+  'missing_units': instance.missingUnits,
 };

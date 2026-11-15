@@ -18,6 +18,9 @@ AppStaffUserIdProfileRequestBody _$AppStaffUserIdProfileRequestBodyFromJson(
   address: json['address'] as String?,
   emergencyContactName: json['emergency_contact_name'] as String?,
   emergencyContactPhone: json['emergency_contact_phone'] as String?,
+  city: json['city'] == null
+      ? null
+      : Department.fromJson(json['city'] as String),
 );
 
 Map<String, dynamic> _$AppStaffUserIdProfileRequestBodyToJson(
@@ -30,4 +33,5 @@ Map<String, dynamic> _$AppStaffUserIdProfileRequestBodyToJson(
   'address': instance.address,
   'emergency_contact_name': instance.emergencyContactName,
   'emergency_contact_phone': instance.emergencyContactPhone,
+  'city': instance.city,
 };

@@ -83,6 +83,12 @@ enum ProblemCode {
   voucherHolderMismatch('voucher_holder_mismatch'),
   @JsonValue('voucher_revoked')
   voucherRevoked('voucher_revoked'),
+  @JsonValue('out_of_scope_city')
+  outOfScopeCity('out_of_scope_city'),
+  @JsonValue('out_of_scope_node')
+  outOfScopeNode('out_of_scope_node'),
+  @JsonValue('out_of_scope_assignment')
+  outOfScopeAssignment('out_of_scope_assignment'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

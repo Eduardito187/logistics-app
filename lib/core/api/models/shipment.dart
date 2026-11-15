@@ -6,6 +6,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'address_confidence_level.dart';
 import 'delivery_mode.dart';
+import 'order_lookup_node_ref.dart';
 import 'order_source.dart';
 import 'shipment_address_parts.dart';
 import 'shipment_line.dart';
@@ -37,6 +38,9 @@ class Shipment {
     this.lat,
     this.lng,
     this.destinationNodeId,
+    this.originNode,
+    this.originDepartment,
+    this.destinationDepartment,
   });
 
   factory Shipment.fromJson(Map<String, Object?> json) =>
@@ -81,6 +85,18 @@ class Shipment {
   @JsonKey(name: 'destination_node_id')
   final String? destinationNodeId;
   final List<ShipmentLine> lines;
+
+  /// Nodo del que sale el envío (informado por el origen del pedido o deducido: almacén central del departamento destino). Null mientras no se resuelve.
+  @JsonKey(name: 'origin_node')
+  final OrderLookupNodeRef? originNode;
+
+  /// Código del departamento del nodo de origen (la_paz, santa_cruz, …); null mientras no se resuelve.
+  @JsonKey(name: 'origin_department')
+  final String? originDepartment;
+
+  /// Código del departamento del destino (el del nodo destino, o el de la ciudad de entrega a domicilio); null mientras no se resuelve.
+  @JsonKey(name: 'destination_department')
+  final String? destinationDepartment;
 
   Map<String, Object?> toJson() => _$ShipmentToJson(this);
 }

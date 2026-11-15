@@ -770,6 +770,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/{shipmentId}/store-drop:
@@ -817,6 +819,12 @@ paths:
                 lng:
                   type: number
                   nullable: true
+                missing_units:
+                  type: array
+                  nullable: true
+                  description: 'Productos que el chofer NO pudo dejar en la tienda. Opcional: sin la lista, dejó el pedido completo. 422 si un producto no es del pedido o si se declara el pedido entero.'
+                  items:
+                    $ref: '#/components/schemas/StoreDropMissingUnit'
       responses:
         '200':
           $ref: '#/components/responses/DeliveryState'
@@ -834,6 +842,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/photos:
@@ -1021,6 +1031,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/{shipmentId}/complete:
@@ -1052,6 +1064,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/{shipmentId}/arrived:
@@ -1092,6 +1106,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/scans/batch:
@@ -1140,6 +1156,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/scans/node-reception:
@@ -1405,6 +1423,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/scans/unload:
@@ -1426,6 +1446,8 @@ paths:
           $ref: '#/components/responses/DeliveryState'
         '422':
           $ref: '#/components/responses/ExecutionValidationError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/{shipmentId}/issues:
@@ -1472,6 +1494,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExecutionError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/deliveries/{shipmentId}:
@@ -1909,6 +1933,12 @@ paths:
                     $ref: '#/components/schemas/PreTripChecklistResult'
         '422':
           $ref: '#/components/responses/FleetValidationError'
+        '409':
+          description: 'La ruta (route_id) ya tiene su inspección pre-salida válida (code pre_trip_checklist_already_recorded). Una inspección con falla crítica no cuenta y se puede repetir. Sin route_id no aplica.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       security:
       - appBearer: []
   /app/fleet/pre-trip-checklists/latest:
@@ -3010,9 +3040,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AcceptedEnvelope'
         '409':
-          description: >-
-            La ruta ya registró su odómetro de llegada (code route_already_closed): una ruta se cierra una sola
-            vez. Solo aplica a source=arrival con route_id.
+          description: 'La ruta ya registró esa lectura: code route_already_closed (source=arrival) o departure_already_recorded (source=departure). Solo aplica con route_id; una por ruta.'
           content:
             application/json:
               schema:
@@ -3418,6 +3446,24 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security:
+      - appBearer: []
+  /app/network/cities:
+    get:
+      tags:
+      - network
+      operationId: listNetworkCities
+      summary: List cities (departments) with their central warehouse (internal app gate)
+      description: 'Catálogo de ciudades: los nueve departamentos siempre, aunque no tengan nodos, con su almacén central si lo tienen. Para cualquier rol autenticado de la app.'
+      responses:
+        '200':
+          description: Cities catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkCityCollection'
+        '401':
+          description: Unauthenticated.
       security:
       - appBearer: []
   /app/network/corridors:
@@ -3855,6 +3901,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/orders/{orderNumber}/labels:
@@ -3908,6 +3956,8 @@ paths:
                 $ref: '#/components/schemas/LabelsError'
         '422':
           description: Invalid input
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/orders/{orderNumber}/labels/zpl:
@@ -4924,6 +4974,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ShipmentsError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/shipments/{shipment}/geocode:
@@ -4957,6 +5009,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ShipmentsError'
+        '403':
+          $ref: '#/components/responses/OrderScopeForbidden'
       security:
       - appBearer: []
   /app/tracking/shipments/{shipmentId}:
@@ -11446,6 +11500,18 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: city
+        in: query
+        required: false
+        description: 'Solo el personal de esa ciudad (código de departamento). Un código fuera del catálogo da 422.'
+        schema:
+          $ref: '#/components/schemas/Department'
+      - name: without_city
+        in: query
+        required: false
+        description: 'true = solo personal sin ciudad asignada.'
+        schema:
+          type: boolean
       - name: without_node
         in: query
         required: false
@@ -11745,6 +11811,11 @@ paths:
                 address: { type: string, nullable: true, maxLength: 500 }
                 emergency_contact_name: { type: string, nullable: true, maxLength: 160 }
                 emergency_contact_phone: { type: string, nullable: true, maxLength: 40 }
+                city:
+                  allOf:
+                  - $ref: '#/components/schemas/Department'
+                  nullable: true
+                  description: 'Ciudad de la persona: código del catálogo o null para quitarla. Si la persona tiene tienda / nodo debe coincidir con el departamento de ese nodo (422 si no).'
       responses:
         '200':
           description: Updated profile
@@ -12266,6 +12337,54 @@ components:
       description: Token de integración de la plataforma (prefix.secret) enviado como Bearer y validado por
         el middleware access.token. Convive con serviceCredential en la puerta /integrations/*.
   schemas:
+    StoreDropMissingUnit:
+      type: object
+      description: 'Producto que el chofer no pudo dejar en la entrega en tienda, con su motivo.'
+      required:
+      - unit_id
+      - reason
+      properties:
+        unit_id:
+          type: string
+          description: 'Id de la unidad del pedido (uno de unit_ids de la entrega).'
+        reason:
+          $ref: '#/components/schemas/MissingUnitReason'
+    NetworkCityCollection:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkCity'
+    NetworkCity:
+      type: object
+      required:
+      - code
+      - name
+      - central_warehouse
+      - nodes_count
+      properties:
+        code:
+          $ref: '#/components/schemas/Department'
+        name: { type: string, description: 'Nombre legible del departamento, p. ej. Potosí' }
+        central_warehouse:
+          allOf:
+          - $ref: '#/components/schemas/NetworkCityWarehouse'
+          nullable: true
+        nodes_count: { type: integer, description: 'Nodos activos de la red en ese departamento' }
+    NetworkCityWarehouse:
+      type: object
+      description: 'Almacén central de la ciudad: nodo activo de tipo distribution_center o central_warehouse; si hay varios, el primero por código'
+      required:
+      - node_id
+      - code
+      - name
+      properties:
+        node_id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
     OrderLookupResponse:
       type: object
       required:
@@ -12391,6 +12510,21 @@ components:
         can_process:
           type: boolean
           description: 'Si quien consulta podría operar este envío con su rol y asignación actual (preparador, supervisor y admin: siempre; tienda: su nodo es el destino; chofer: el envío está en una ruta suya abierta; transportista: está en un viaje suyo). false = solo consulta.'
+        origin_node:
+          description: 'Nodo del que sale el envío (informado por el origen del pedido o deducido: almacén central del departamento destino). Null mientras no se resuelve.'
+          oneOf:
+          - $ref: '#/components/schemas/OrderLookupNodeRef'
+          - type: 'null'
+        origin_department:
+          type:
+          - string
+          - 'null'
+          description: 'Código del departamento del nodo de origen (la_paz, santa_cruz, …); null mientras no se resuelve.'
+        destination_department:
+          type:
+          - string
+          - 'null'
+          description: 'Código del departamento del destino (el del nodo destino, o el de la ciudad de entrega a domicilio); null mientras no se resuelve.'
       description: Un envío como lo devuelve GET /app/shipments (siempre con `progress`), más los datos de la consulta abierta.
     OrderLookupTracking:
       type: object
@@ -13289,6 +13423,8 @@ components:
     StaffMember:
       type: object
       properties:
+        city: { type: string, nullable: true, description: 'Código del departamento de la persona (la_paz, santa_cruz, …) o null si no tiene ciudad asignada' }
+        city_name: { type: string, nullable: true, description: 'Nombre legible de la ciudad, p. ej. La Paz' }
         id: { type: integer }
         name: { type: string }
         email: { type: string }
@@ -15202,6 +15338,16 @@ components:
       - email
       - roles
       properties:
+        city:
+          type:
+          - string
+          - 'null'
+          description: 'Código del departamento de la persona (la_paz, santa_cruz, …) o null si no tiene ciudad asignada'
+        city_name:
+          type:
+          - string
+          - 'null'
+          description: 'Nombre legible de la ciudad, p. ej. La Paz'
         id:
           type: integer
           description: User primary key (auto-increment).
@@ -17529,6 +17675,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScanEvent'
+        store_drop_missing_units:
+          type: array
+          description: 'Productos que el chofer declaró que no pudo dejar en la tienda. Vacío si dejó el pedido completo.'
+          items:
+            $ref: '#/components/schemas/StoreDropMissingUnit'
     DeliveryStatus:
       type: string
       enum:
@@ -18309,6 +18460,16 @@ components:
             ends_at:
               type: string
               format: date-time
+        route_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Ruta (salida) vigente del chofer: la abierta de su camión o, si no hay, la última del día. Null si el camión no tiene ruta ese día.'
+        route_status:
+          allOf:
+          - $ref: '#/components/schemas/DriverRouteStatus'
+          nullable: true
+          description: 'Estado de esa ruta. Null cuando route_id es null.'
 
     Helper:
       type: object
@@ -19700,6 +19861,9 @@ components:
       - voucher_held
       - voucher_holder_mismatch
       - voucher_revoked
+      - out_of_scope_city
+      - out_of_scope_node
+      - out_of_scope_assignment
     Promise:
       type: object
       required:
@@ -21048,6 +21212,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ShipmentLine'
+        origin_node:
+          description: 'Nodo del que sale el envío (informado por el origen del pedido o deducido: almacén central del departamento destino). Null mientras no se resuelve.'
+          oneOf:
+          - $ref: '#/components/schemas/OrderLookupNodeRef'
+          - type: 'null'
+        origin_department:
+          type:
+          - string
+          - 'null'
+          description: 'Código del departamento del nodo de origen (la_paz, santa_cruz, …); null mientras no se resuelve.'
+        destination_department:
+          type:
+          - string
+          - 'null'
+          description: 'Código del departamento del destino (el del nodo destino, o el de la ciudad de entrega a domicilio); null mientras no se resuelve.'
     ShipmentLine:
       type: object
       required:
@@ -23420,6 +23599,12 @@ components:
         type: string
         format: uuid
   responses:
+    OrderScopeForbidden:
+      description: 'El pedido o envío está fuera del alcance del usuario autenticado. code: out_of_scope_city (preparador de otra ciudad), out_of_scope_node (tienda que no es origen ni destino) u out_of_scope_assignment (chofer o transportista sin esa asignación). El motivo viaja en detail y error.message. La consulta abierta (GET /app/orders/lookup) nunca responde esto.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
     CarrierTripState:
       description: Resulting trip state
       content:

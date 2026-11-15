@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 9a85d4dc-6dee-4d1d-8426-868a6db4e45d
-  modified: 2026-11-15T00:29:47.212Z
+  modified: 2026-11-15T01:42:41.415Z
 ---
 
 Reglas de negocio que fijó el dueño el 2026-11-14 (cruzan todo el proyecto):
@@ -38,6 +38,19 @@ Reglas de negocio que fijó el dueño el 2026-11-14 (cruzan todo el proyecto):
   exacto por `routeId` cuando el backend etiqueta las lecturas, por hora si no.
 - Backend ya soporta varias rutas por camión y día (una ABIERTA a la vez; cada salida = otro
   `DriverRoute.id`) → la inspección por `route_id` cubre la segunda salida.
+
+**Tanda ciudad/alcance del backend (2026-11-14, regenerado, sin deploy):** el dueño confirmó que se opera
+por ciudad (origen O destino) y que consultar/escanear queda abierto. El ALCANCE LO APLICA EL SERVIDOR (403
+`out_of_scope_city|node|assignment`, se muestra el `detail`); usuario sin ciudad = sin restricción. En la app:
+- Admin → Personal: filtro por ciudad / "Sin ciudad asignada", ciudad en tarjeta y ficha, y se asigna desde
+  "Editar datos personales" (con tienda asignada la ciudad la define la tienda: no se elige).
+  `departmentLabel`/`departmentOf`/`staffDepartments` en `staff_labels.dart`.
+- **Trampa:** `PUT /app/staff/{id}/profile` BORRA los campos que llegan en null y el cuerpo generado manda
+  todos → `updateStaffProfile` va por Dio directo solo con los campos del formulario.
+- Chofer "Entregar en tienda": botón "Faltan productos" (tras escanear al menos uno) → motivo → manda
+  `missing_units` en el `store-drop`. Solo si la parada trae `unit_ids`.
+- Consultar pedido: "Cochabamba → La Paz" si origen ≠ destino (`orderTripText`).
+- No cableado aún: `route_id`/`route_status` de `my-crew`; ciudad del propio usuario en la sesión.
 
 **Pendiente del backend** (`docs/backend-requests/2026-11-14-ciudades-alcance-por-rol-y-consulta.md`,
 enviado a logistics-53): `city` por usuario + catálogo de ciudades con almacén central; **alcance por rol en

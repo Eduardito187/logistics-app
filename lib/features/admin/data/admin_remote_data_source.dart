@@ -136,6 +136,8 @@ class AdminRemoteDataSource {
     String query = '',
     Role? role,
     String? nodeId,
+    Department? city,
+    bool withoutCity = false,
     int page = 1,
   }) => _guard(() async {
     final res = await _api.staff.listStaff(
@@ -144,6 +146,8 @@ class AdminRemoteDataSource {
       q: query.isEmpty ? null : query,
       role: role,
       nodeId: nodeId,
+      city: withoutCity ? null : city,
+      withoutCity: withoutCity ? true : null,
     );
     return Paged(items: res.data, hasMore: _hasMore(res.meta));
   });
@@ -200,26 +204,43 @@ class AdminRemoteDataSource {
     )).data,
   );
 
-  /// Actualiza los datos personales (cualquier rol). Solo cambia lo que se
-  /// manda; un campo vacío no se toca.
+  /// Guarda los datos personales del formulario (cualquier rol). El backend
+  /// solo cambia lo que viene en el cuerpo y un `null` BORRA el campo: por eso
+  /// va por Dio directo con SOLO los campos del formulario (el cuerpo generado
+  /// manda todas las claves y la fecha como fecha-hora).
+  /// [changeCity] en `false` no toca la ciudad (la define la tienda asignada).
   Future<void> updateStaffProfile(
     int userId, {
-    String? phone,
-    String? nationalId,
-    String? address,
-    String? emergencyContactName,
-    String? emergencyContactPhone,
+    required String? phone,
+    required String? phoneSecondary,
+    required DateTime? birthDate,
+    required String? nationalId,
+    required String? address,
+    required String? emergencyContactName,
+    required String? emergencyContactPhone,
+    Department? city,
+    bool changeCity = false,
   }) => _guard(() async {
-    await _api.staff.updateStaffProfile(
-      userId: userId,
-      body: AppStaffUserIdProfileRequestBody(
-        phone: phone,
-        nationalId: nationalId,
-        address: address,
-        emergencyContactName: emergencyContactName,
-        emergencyContactPhone: emergencyContactPhone,
-      ),
-    );
+    await _ref
+        .read(dioProvider)
+        .put<Object?>(
+          '/app/staff/$userId/profile',
+          data: <String, Object?>{
+            'phone': phone,
+            'phone_secondary': phoneSecondary,
+            // Fecha de calendario (`Y-m-d`), sin hora ni zona.
+            'birth_date': birthDate == null
+                ? null
+                : '${birthDate.year.toString().padLeft(4, '0')}-'
+                      '${birthDate.month.toString().padLeft(2, '0')}-'
+                      '${birthDate.day.toString().padLeft(2, '0')}',
+            'national_id': nationalId,
+            'address': address,
+            'emergency_contact_name': emergencyContactName,
+            'emergency_contact_phone': emergencyContactPhone,
+            if (changeCity) 'city': city?.json,
+          },
+        );
   });
 
   /// Sube la foto de perfil de la persona.

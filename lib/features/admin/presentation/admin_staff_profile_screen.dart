@@ -147,7 +147,7 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
     );
   }
 
-  /// Edita teléfono, documento, dirección y contacto de emergencia.
+  /// Edita ciudad, teléfono, documento, dirección y contacto de emergencia.
   Future<void> _editPersonalData() async {
     final data = await showDialog<StaffPersonalEdit>(
       context: context,
@@ -159,10 +159,14 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
       () => source.updateStaffProfile(
         widget.userId,
         phone: data.phone,
+        phoneSecondary: data.phoneSecondary,
+        birthDate: data.birthDate,
         nationalId: data.nationalId,
         address: data.address,
         emergencyContactName: data.emergencyName,
         emergencyContactPhone: data.emergencyPhone,
+        city: data.city,
+        changeCity: data.changeCity,
       ),
       'Datos actualizados.',
     );
@@ -224,8 +228,20 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
                       ),
                       Text(staffRolesText(_profile.roles)),
                       Text(_profile.email, style: muted),
+                      Text(
+                        _profile.cityName == null
+                            ? 'Sin ciudad asignada'
+                            : 'Ciudad: ${_profile.cityName}',
+                        style: muted,
+                      ),
                       if (_profile.phone != null)
                         Text('Teléfono: ${_profile.phone}', style: muted),
+                      if (_profile.personal.birthDate != null)
+                        Text(
+                          'Nacimiento: '
+                          '${staffDate(_profile.personal.birthDate!)}',
+                          style: muted,
+                        ),
                       if (_profile.nationalId != null)
                         Text('Documento: ${_profile.nationalId}', style: muted),
                       if (_profile.personal.address != null)
@@ -410,8 +426,13 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
   }
 }
 
-/// Datos personales editados en el diálogo. Un campo vacío no se cambia.
+/// Datos personales editados en el diálogo. Un campo vacío se borra.
+/// [changeCity] es `false` cuando la ciudad la define la tienda asignada.
 typedef StaffPersonalEdit = ({
+  Department? city,
+  bool changeCity,
+  String? phoneSecondary,
+  DateTime? birthDate,
   String? phone,
   String? nationalId,
   String? address,
@@ -444,8 +465,30 @@ class _PersonalDataDialogState extends State<_PersonalDataDialog> {
     text: widget.profile.personal.emergencyContactPhone ?? '',
   );
 
+  late final _phoneSecondary = TextEditingController(
+    text: widget.profile.personal.phoneSecondary ?? '',
+  );
+  late DateTime? _birthDate = widget.profile.personal.birthDate;
+  late Department? _city = departmentOf(widget.profile.city);
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 30),
+      firstDate: DateTime(1930),
+      lastDate: DateTime(now.year, now.month, now.day - 1),
+      helpText: 'Fecha de nacimiento',
+    );
+    if (picked != null && mounted) setState(() => _birthDate = picked);
+  }
+
+  /// Con tienda asignada la ciudad es la de la tienda: no se elige acá.
+  bool get _cityFixed => widget.profile.node?.id != null;
+
   @override
   void dispose() {
+    _phoneSecondary.dispose();
     _phone.dispose();
     _nationalId.dispose();
     _address.dispose();
@@ -454,7 +497,7 @@ class _PersonalDataDialogState extends State<_PersonalDataDialog> {
     super.dispose();
   }
 
-  /// Texto recortado, o `null` si quedó vacío (no se manda).
+  /// Texto recortado, o `null` si quedó vacío (se borra).
   static String? _value(TextEditingController controller) {
     final text = controller.text.trim();
     return text.isEmpty ? null : text;
@@ -468,10 +511,51 @@ class _PersonalDataDialogState extends State<_PersonalDataDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_cityFixed)
+              InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Ciudad',
+                  helperText: 'La define la tienda asignada',
+                ),
+                child: Text(widget.profile.cityName ?? 'Sin ciudad'),
+              )
+            else
+              DropdownButtonFormField<Department?>(
+                value: _city,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Ciudad'),
+                items: [
+                  const DropdownMenuItem(child: Text('Sin ciudad')),
+                  for (final department in staffDepartments)
+                    DropdownMenuItem(
+                      value: department,
+                      child: Text(departmentLabel(department)),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _city = value),
+              ),
             TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Teléfono'),
+            ),
+            TextField(
+              controller: _phoneSecondary,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Teléfono secundario',
+              ),
+            ),
+            InkWell(
+              onTap: _pickBirthDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Fecha de nacimiento',
+                ),
+                child: Text(
+                  _birthDate == null ? 'Sin fecha' : staffDate(_birthDate!),
+                ),
+              ),
             ),
             TextField(
               controller: _nationalId,
@@ -506,7 +590,11 @@ class _PersonalDataDialogState extends State<_PersonalDataDialog> {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop((
+            city: _city,
+            changeCity: !_cityFixed,
             phone: _value(_phone),
+            phoneSecondary: _value(_phoneSecondary),
+            birthDate: _birthDate,
             nationalId: _value(_nationalId),
             address: _value(_address),
             emergencyName: _value(_emergencyName),

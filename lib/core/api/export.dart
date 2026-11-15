@@ -40,6 +40,10 @@ export 'clients/invoicing_client.dart';
 export 'clients/search_client.dart';
 export 'clients/staff_client.dart';
 // Data classes
+export 'models/store_drop_missing_unit.dart';
+export 'models/network_city_collection.dart';
+export 'models/network_city.dart';
+export 'models/network_city_warehouse.dart';
 export 'models/order_lookup_response.dart';
 export 'models/order_lookup_meta.dart';
 export 'models/order_lookup_match.dart';

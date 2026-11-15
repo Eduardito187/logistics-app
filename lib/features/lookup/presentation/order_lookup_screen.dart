@@ -286,6 +286,10 @@ class OrderStatusCard extends StatelessWidget {
     final stops = stopsBeforeText(tracking.stopsBefore);
     final eta = tracking.etaAt?.toLocal();
     final store = tracking.currentNode?.name ?? order.destinationNode?.name;
+    final trip = orderTripText(
+      order.originDepartment,
+      order.destinationDepartment,
+    );
     String two(int n) => n.toString().padLeft(2, '0');
     return SectionCard(
       child: Column(
@@ -321,6 +325,7 @@ class OrderStatusCard extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           Text(deliveryModeText(order.deliveryMode), style: muted),
+          if (trip != null) Text(trip, style: muted),
           if (store != null) Text(store, style: muted),
           Text(order.shortAddress ?? order.addressText, style: muted),
           if (plate != null && !orderStageClosed(stage)) Text('Camión $plate'),

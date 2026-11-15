@@ -12,3 +12,20 @@ bool isStoreStop(DriverRouteStop stop) =>
 /// Nombre a mostrar de la tienda de la parada.
 String storeStopName(DriverRouteStop stop) =>
     stop.destinationNodeName ?? stop.customerName ?? 'la tienda';
+
+/// Motivos por los que un producto no se deja en la tienda, en el orden en
+/// que se le ofrecen al chofer.
+const List<MissingUnitReason> missingReasons = [
+  MissingUnitReason.notArrived,
+  MissingUnitReason.damaged,
+  MissingUnitReason.wrongStore,
+  MissingUnitReason.other,
+];
+
+/// Motivo en palabras del chofer.
+String missingReasonLabel(MissingUnitReason reason) => switch (reason) {
+  MissingUnitReason.notArrived => 'No vino en el camión',
+  MissingUnitReason.damaged => 'Llegó dañado',
+  MissingUnitReason.wrongStore => 'Era para otra tienda',
+  MissingUnitReason.other || MissingUnitReason.$unknown => 'Otro motivo',
+};

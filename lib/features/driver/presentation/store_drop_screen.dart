@@ -49,6 +49,11 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
   /// Cantidad de productos del pedido, o `null` si no se sabe (no se exige
   /// total: alcanza con uno).
   int? _expectedCount;
+
+  /// Motivo por el que NO se dejan los productos sin escanear, o `null` si
+  /// se deja el pedido completo. Con motivo, la entrega se puede registrar
+  /// aunque falten productos (el backend los anota como faltantes).
+  MissingUnitReason? _missingReason;
   XFile? _photo;
   bool _busy = false;
 
@@ -75,9 +80,13 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
   @override
   Widget build(BuildContext context) {
     final total = _expectedCount;
-    final complete =
-        _unitIds.isNotEmpty && (total == null || _unitIds.length >= total);
     final reachedTotal = total != null && _unitIds.length >= total;
+    final missing = _missingUnitIds();
+    // Faltantes declarados: vale con lo escaneado. Nunca el pedido entero
+    // (eso es una entrega fallida, otro flujo).
+    final declared = _missingReason != null && missing.isNotEmpty;
+    final complete =
+        _unitIds.isNotEmpty && (total == null || reachedTotal || declared);
     final ready = complete && _photo != null;
     final theme = Theme.of(context);
     return Scaffold(
@@ -120,6 +129,24 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
                           : 'Escanear siguiente',
                     ),
                   ),
+                  if (_unitIds.isNotEmpty && missing.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    if (declared)
+                      Text(
+                        '${_missingText(missing.length)}: '
+                        '${missingReasonLabel(_missingReason!)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    TextButton.icon(
+                      onPressed: _busy ? null : _declareMissing,
+                      icon: const AnimatedAppIcon(AppIcon.incident),
+                      label: Text(
+                        declared ? 'Cambiar motivo' : 'Faltan productos',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -171,6 +198,43 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
     return total == null
         ? 'Escaneados: ${_unitIds.length}'
         : 'Escaneados ${_unitIds.length} de $total';
+  }
+
+  /// Productos del pedido que todavía no se escanearon. Vacío si no se sabe
+  /// cuáles son (sin `unit_ids` no se pueden declarar faltantes).
+  List<String> _missingUnitIds() {
+    final expected = _stop.unitIds;
+    if (expected == null || expected.isEmpty) return const <String>[];
+    return [
+      for (final id in expected.toSet())
+        if (!_unitIds.contains(id)) id,
+    ];
+  }
+
+  static String _missingText(int count) =>
+      count == 1 ? 'Falta 1 producto' : 'Faltan $count productos';
+
+  /// Pregunta por qué no se dejan los productos que faltan escanear.
+  Future<void> _declareMissing() async {
+    final reason = await showModalBottomSheet<MissingUnitReason>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('¿Por qué faltan productos?')),
+            for (final reason in missingReasons)
+              ListTile(
+                minTileHeight: 56,
+                title: Text(missingReasonLabel(reason)),
+                onTap: () => Navigator.of(context).pop(reason),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (reason != null && mounted) setState(() => _missingReason = reason);
   }
 
   Future<void> _scan() async {
@@ -258,6 +322,10 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
         );
       }
       String? rejectDetail;
+      final missingReason = _missingReason;
+      final missing = missingReason == null
+          ? const <String>[]
+          : _missingUnitIds();
       final outcome = await queue.submit(
         onReject: (error) => rejectDetail ??= error.message,
         kind: 'recordStoreDrop',
@@ -267,6 +335,11 @@ class _StoreDropScreenState extends ConsumerState<StoreDropScreen> {
           'occurred_at': now.toUtc().toIso8601String(),
           if (fix != null) 'lat': fix.lat,
           if (fix != null) 'lng': fix.lng,
+          if (missing.isNotEmpty)
+            'missing_units': [
+              for (final unitId in missing)
+                {'unit_id': unitId, 'reason': missingReason!.json},
+            ],
         },
         label: 'Entrega en tienda · $tienda',
         occurredAt: now,

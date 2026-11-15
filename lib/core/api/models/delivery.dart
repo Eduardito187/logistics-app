@@ -8,6 +8,7 @@ import 'delivery_evidence_file.dart';
 import 'delivery_status.dart';
 import 'failure_reason.dart';
 import 'scan_event.dart';
+import 'store_drop_missing_unit.dart';
 
 part 'delivery.g.dart';
 
@@ -37,6 +38,7 @@ class Delivery {
     this.storeDropNodeId,
     this.podPhotoPending,
     this.failureReason,
+    this.storeDropMissingUnits,
   });
 
   factory Delivery.fromJson(Map<String, Object?> json) =>
@@ -98,6 +100,10 @@ class Delivery {
   @JsonKey(name: 'failure_reason')
   final FailureReason? failureReason;
   final List<ScanEvent> scans;
+
+  /// Productos que el chofer declaró que no pudo dejar en la tienda. Vacío si dejó el pedido completo.
+  @JsonKey(name: 'store_drop_missing_units')
+  final List<StoreDropMissingUnit>? storeDropMissingUnits;
 
   Map<String, Object?> toJson() => _$DeliveryToJson(this);
 }

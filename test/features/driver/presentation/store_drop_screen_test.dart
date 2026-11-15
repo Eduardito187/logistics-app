@@ -150,6 +150,54 @@ void main() {
     );
   });
 
+  testWidgets('faltan productos: se declara el motivo y se registra igual', (
+    tester,
+  ) async {
+    final queue = FakeOfflineQueue(SubmitOutcome.sent);
+    await pumpScoped(
+      tester,
+      child: StoreDropScreen(stop: _storeStop(unitIds: ['u1', 'u2', 'u3'])),
+      overrides: [
+        codeScannerProvider.overrideWithValue(
+          FakeCodeScanner([_qr('u1')]).call,
+        ),
+        labelScannerProvider.overrideWithValue(vectorLabelScanner()),
+        locationServiceProvider.overrideWithValue(FakeLocationService()),
+        photoPickerProvider.overrideWithValue(
+          FakePhotoPicker(['/tmp/tienda.jpg']).call,
+        ),
+        photoUploadQueueProvider.overrideWithValue(_PhotoQueue()),
+        offlineQueueProvider.overrideWithValue(queue),
+      ],
+      tall: true,
+    );
+
+    // Sin escanear nada no se ofrece: el pedido entero es entrega fallida.
+    expect(find.text('Faltan productos'), findsNothing);
+
+    await tester.tap(find.text('Escanear producto'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tomar foto'));
+    await tester.pumpAndSettle();
+    expect(_register(tester).onPressed, isNull);
+
+    await tester.tap(find.text('Faltan productos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Llegó dañado'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Faltan 2 productos: Llegó dañado'), findsOneWidget);
+    expect(_register(tester).onPressed, isNotNull);
+
+    await tester.tap(find.text('Registrar entrega en tienda'));
+    await tester.pumpAndSettle();
+
+    expect(queue.submissions.last['missing_units'], [
+      {'unit_id': 'u2', 'reason': 'damaged'},
+      {'unit_id': 'u3', 'reason': 'damaged'},
+    ]);
+  });
+
   testWidgets('un producto de otro pedido no se acepta', (tester) async {
     await pumpScoped(
       tester,

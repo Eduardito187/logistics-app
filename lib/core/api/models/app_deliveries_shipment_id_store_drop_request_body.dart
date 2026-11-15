@@ -4,6 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'store_drop_missing_unit.dart';
+
 part 'app_deliveries_shipment_id_store_drop_request_body.g.dart';
 
 @JsonSerializable()
@@ -14,6 +16,7 @@ class AppDeliveriesShipmentIdStoreDropRequestBody {
     this.occurredAt,
     this.lat,
     this.lng,
+    this.missingUnits,
   });
 
   factory AppDeliveriesShipmentIdStoreDropRequestBody.fromJson(
@@ -33,6 +36,10 @@ class AppDeliveriesShipmentIdStoreDropRequestBody {
   final DateTime? occurredAt;
   final num? lat;
   final num? lng;
+
+  /// Productos que el chofer NO pudo dejar en la tienda. Opcional: sin la lista, dejó el pedido completo. 422 si un producto no es del pedido o si se declara el pedido entero.
+  @JsonKey(name: 'missing_units')
+  final List<StoreDropMissingUnit>? missingUnits;
 
   Map<String, Object?> toJson() =>
       _$AppDeliveriesShipmentIdStoreDropRequestBodyToJson(this);

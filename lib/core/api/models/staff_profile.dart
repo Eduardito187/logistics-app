@@ -15,6 +15,8 @@ part 'staff_profile.g.dart';
 @JsonSerializable()
 class StaffProfile {
   const StaffProfile({
+    required this.city,
+    required this.cityName,
     required this.id,
     required this.name,
     required this.email,
@@ -35,6 +37,12 @@ class StaffProfile {
   factory StaffProfile.fromJson(Map<String, Object?> json) =>
       _$StaffProfileFromJson(json);
 
+  /// Código del departamento de la persona (la_paz, santa_cruz, …) o null si no tiene ciudad asignada
+  final String? city;
+
+  /// Nombre legible de la ciudad, p. ej. La Paz
+  @JsonKey(name: 'city_name')
+  final String? cityName;
   final int id;
   final String name;
   final String email;

@@ -12,6 +12,8 @@ AppUserProfile _$AppUserProfileFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       email: json['email'] as String,
       roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
+      city: json['city'] as String?,
+      cityName: json['city_name'] as String?,
       node: json['node'] == null
           ? null
           : Node.fromJson(json['node'] as Map<String, dynamic>),
@@ -22,6 +24,8 @@ AppUserProfile _$AppUserProfileFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$AppUserProfileToJson(AppUserProfile instance) =>
     <String, dynamic>{
+      'city': instance.city,
+      'city_name': instance.cityName,
       'id': instance.id,
       'name': instance.name,
       'email': instance.email,

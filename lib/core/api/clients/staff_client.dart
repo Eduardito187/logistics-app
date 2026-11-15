@@ -12,6 +12,7 @@ import '../models/accepted_envelope.dart';
 import '../models/app_broadcasts_request_body.dart';
 import '../models/app_staff_user_id_node_request_body.dart';
 import '../models/app_staff_user_id_profile_request_body.dart';
+import '../models/department.dart';
 import '../models/get_app_broadcasts_response.dart';
 import '../models/get_app_inbox_response.dart';
 import '../models/get_app_staff_response.dart';
@@ -42,6 +43,10 @@ abstract class StaffClient {
   ///
   /// [nodeId] - Solo el personal asignado a esa tienda / nodo.
   ///
+  /// [city] - Solo el personal de esa ciudad (código de departamento). Un código fuera del catálogo da 422.
+  ///
+  /// [withoutCity] - true = solo personal sin ciudad asignada.
+  ///
   /// [withoutNode] - true = solo personal sin tienda asignada.
   ///
   /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
@@ -56,6 +61,8 @@ abstract class StaffClient {
     @Query('q') String? q,
     @Query('role') Role? role,
     @Query('node_id') String? nodeId,
+    @Query('city') Department? city,
+    @Query('without_city') bool? withoutCity,
     @Query('without_node') bool? withoutNode,
     @Query('cursor') String? cursor,
   });

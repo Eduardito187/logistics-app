@@ -74,3 +74,39 @@ String staffDocumentTitle(StaffDocument document) {
   final text = type.replaceAll('_', ' ');
   return text[0].toUpperCase() + text.substring(1);
 }
+
+/// Los nueve departamentos (ciudades) donde se asigna al personal.
+const List<Department> staffDepartments = [
+  Department.laPaz,
+  Department.santaCruz,
+  Department.cochabamba,
+  Department.oruro,
+  Department.potosi,
+  Department.chuquisaca,
+  Department.tarija,
+  Department.beni,
+  Department.pando,
+];
+
+/// Nombre legible de un departamento.
+String departmentLabel(Department department) => switch (department) {
+  Department.laPaz => 'La Paz',
+  Department.santaCruz => 'Santa Cruz',
+  Department.cochabamba => 'Cochabamba',
+  Department.oruro => 'Oruro',
+  Department.potosi => 'Potosí',
+  Department.chuquisaca => 'Chuquisaca',
+  Department.tarija => 'Tarija',
+  Department.beni => 'Beni',
+  Department.pando => 'Pando',
+  Department.$unknown => 'Otra',
+};
+
+/// Departamento de un código del backend (`santa_cruz`), o `null`.
+Department? departmentOf(String? code) {
+  if (code == null) return null;
+  for (final department in staffDepartments) {
+    if (department.json == code) return department;
+  }
+  return null;
+}

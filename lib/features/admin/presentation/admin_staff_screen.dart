@@ -24,6 +24,15 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
   /// `null` = todos los roles.
   Role? _role;
 
+  /// Filtro por ciudad: `null` = todas.
+  Department? _city;
+
+  /// Solo el personal al que todavía no se le asignó ciudad.
+  bool _withoutCity = false;
+
+  /// Valor del desplegable para "Sin ciudad asignada".
+  static const String _noCity = '-';
+
   static const List<Role> _filters = [
     Role.chofer,
     Role.preparador,
@@ -41,20 +50,56 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
         searchHint: 'Nombre o correo',
         emptyTitle: 'Sin personal',
         emptyIcon: AppIcon.profile,
-        filterKey: _role,
-        filters: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _chip('Todos', null),
-              for (final role in _filters)
-                _chip(staffRoleLabel(role.json ?? ''), role),
-            ],
-          ),
+        filterKey: (_role, _city, _withoutCity),
+        filters: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _chip('Todos', null),
+                  for (final role in _filters)
+                    _chip(staffRoleLabel(role.json ?? ''), role),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _withoutCity ? _noCity : (_city?.json ?? ''),
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Ciudad'),
+              items: [
+                const DropdownMenuItem(
+                  value: '',
+                  child: Text('Todas las ciudades'),
+                ),
+                for (final department in staffDepartments)
+                  DropdownMenuItem(
+                    value: department.json,
+                    child: Text(departmentLabel(department)),
+                  ),
+                const DropdownMenuItem(
+                  value: _noCity,
+                  child: Text('Sin ciudad asignada'),
+                ),
+              ],
+              onChanged: (value) => setState(() {
+                _withoutCity = value == _noCity;
+                _city = _withoutCity ? null : departmentOf(value);
+              }),
+            ),
+          ],
         ),
         fetch: (query, page) => ref
             .read(adminRemoteDataSourceProvider)
-            .listStaff(query: query, role: _role, page: page),
+            .listStaff(
+              query: query,
+              role: _role,
+              city: _city,
+              withoutCity: _withoutCity,
+              page: page,
+            ),
         itemBuilder: (context, member) => _StaffCard(member: member),
       ),
     );
@@ -70,7 +115,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
   );
 }
 
-/// Tarjeta de una persona: foto/inicial, nombre, rol y tienda.
+/// Tarjeta de una persona: foto/inicial, nombre, rol, ciudad y tienda.
 class _StaffCard extends StatelessWidget {
   const _StaffCard({required this.member});
 
@@ -80,7 +125,10 @@ class _StaffCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final id = member.id;
-    final node = member.node?.name;
+    final place = [
+      member.cityName ?? 'Sin ciudad',
+      member.node?.name ?? 'Sin tienda asignada',
+    ].join(' · ');
     return SectionCard(
       onTap: () => context.push('/admin/staff/$id'),
       child: Row(
@@ -104,7 +152,7 @@ class _StaffCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium,
                 ),
                 Text(
-                  node ?? 'Sin tienda asignada',
+                  place,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(

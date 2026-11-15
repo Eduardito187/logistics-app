@@ -42,6 +42,18 @@ class FakeAdmin implements AdminRemoteDataSource {
 
   // Registro de escrituras.
   final List<({String query, Role? role})> staffRequests = [];
+  final List<({Department? city, bool withoutCity})> cityFilters = [];
+  final List<
+    ({
+      int userId,
+      String? phone,
+      String? phoneSecondary,
+      DateTime? birthDate,
+      Department? city,
+      bool changeCity,
+    })
+  >
+  profileUpdates = [];
   final List<({int userId, String? nodeId})> nodeAssignments = [];
   final List<({String driverId, String vehicleId})> vehicleAssignments = [];
   final List<String> removedCrews = [];
@@ -74,10 +86,13 @@ class FakeAdmin implements AdminRemoteDataSource {
     String query = '',
     Role? role,
     String? nodeId,
+    Department? city,
+    bool withoutCity = false,
     int page = 1,
   }) async {
     _fail();
     staffRequests.add((query: query, role: role));
+    cityFilters.add((city: city, withoutCity: withoutCity));
     return _all([
       for (final m in staff)
         if ((role == null || m.roles.contains(role.json)) &&
@@ -122,6 +137,30 @@ class FakeAdmin implements AdminRemoteDataSource {
     _fail();
     nodeAssignments.add((userId: userId, nodeId: nodeId));
     return profile!;
+  }
+
+  @override
+  Future<void> updateStaffProfile(
+    int userId, {
+    required String? phone,
+    required String? phoneSecondary,
+    required DateTime? birthDate,
+    required String? nationalId,
+    required String? address,
+    required String? emergencyContactName,
+    required String? emergencyContactPhone,
+    Department? city,
+    bool changeCity = false,
+  }) async {
+    _fail();
+    profileUpdates.add((
+      userId: userId,
+      phone: phone,
+      phoneSecondary: phoneSecondary,
+      birthDate: birthDate,
+      city: city,
+      changeCity: changeCity,
+    ));
   }
 
   @override

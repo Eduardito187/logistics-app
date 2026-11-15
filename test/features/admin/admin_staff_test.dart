@@ -16,11 +16,15 @@ StaffMember _member({
   required String name,
   required List<String> roles,
   StaffNode? node,
+  String? city,
+  String? cityName,
 }) => StaffMember(
   id: id,
   name: name,
   email: '$id@dismac.test',
   roles: roles,
+  city: city,
+  cityName: cityName,
   node: node,
   driverId: null,
   carrierId: null,
@@ -36,11 +40,15 @@ StaffProfile _profile({
   StaffNode? node,
   String? driverId,
   StaffDriverData? driver,
+  String? city,
+  String? cityName,
 }) => StaffProfile(
   id: id,
   name: name,
   email: '$id@dismac.test',
   roles: roles,
+  city: city,
+  cityName: cityName,
   node: node,
   driverId: driverId,
   carrierId: null,
@@ -77,6 +85,8 @@ void main() {
         id: 9,
         name: 'Ana Tienda',
         roles: ['tienda'],
+        city: 'santa_cruz',
+        cityName: 'Santa Cruz',
         node: const StaffNode(id: 'node-1', name: 'Tienda Norte'),
       ),
     ];
@@ -90,8 +100,28 @@ void main() {
 
       expect(find.text('Iker Corona'), findsOneWidget);
       expect(find.text('Chofer'), findsWidgets);
-      expect(find.text('Tienda Norte'), findsOneWidget);
-      expect(find.text('Sin tienda asignada'), findsOneWidget);
+      expect(find.text('Santa Cruz · Tienda Norte'), findsOneWidget);
+      expect(find.text('Sin ciudad · Sin tienda asignada'), findsOneWidget);
+    });
+
+    testWidgets('filtrar por ciudad consulta al servidor', (tester) async {
+      final fake = FakeAdmin(staff: staff);
+      await pumpAdmin(tester, fake, const AdminStaffScreen());
+
+      await tester.tap(find.text('Todas las ciudades'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cochabamba').last);
+      await tester.pumpAndSettle();
+      expect(fake.cityFilters.last, (
+        city: Department.cochabamba,
+        withoutCity: false,
+      ));
+
+      await tester.tap(find.text('Cochabamba'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sin ciudad asignada').last);
+      await tester.pumpAndSettle();
+      expect(fake.cityFilters.last, (city: null, withoutCity: true));
     });
 
     testWidgets('filtrar por rol consulta al servidor', (tester) async {
@@ -152,6 +182,45 @@ void main() {
       expect(find.text('Camión asignado'), findsNothing);
       expect(find.text('Licencia de conducir'), findsNothing);
       expect(find.text('Tienda Norte'), findsOneWidget);
+    });
+
+    testWidgets('asignar la ciudad desde los datos personales', (tester) async {
+      final fake = FakeAdmin(profile: _driver);
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+      expect(find.text('Sin ciudad asignada'), findsOneWidget);
+
+      await tester.tap(find.text('Editar datos personales'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sin ciudad'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('La Paz').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Teléfono secundario'),
+        '70000001',
+      );
+      expect(find.text('Sin fecha'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(fake.profileUpdates.single.city, Department.laPaz);
+      expect(fake.profileUpdates.single.changeCity, isTrue);
+      expect(fake.profileUpdates.single.phoneSecondary, '70000001');
+      // Lo que no se tocó viaja como estaba (acá, sin fecha).
+      expect(fake.profileUpdates.single.birthDate, isNull);
+    });
+
+    testWidgets('con tienda asignada la ciudad no se elige', (tester) async {
+      final fake = FakeAdmin(profile: _storeClerk);
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 9));
+
+      await tester.tap(find.text('Editar datos personales'));
+      await tester.pumpAndSettle();
+      expect(find.text('La define la tienda asignada'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(fake.profileUpdates.single.changeCity, isFalse);
     });
 
     testWidgets('asignar a una tienda desde la ficha', (tester) async {

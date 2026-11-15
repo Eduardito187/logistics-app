@@ -44,6 +44,9 @@ class OrderLookupItem {
     this.lat,
     this.lng,
     this.destinationNodeId,
+    this.originNode,
+    this.originDepartment,
+    this.destinationDepartment,
   });
 
   factory OrderLookupItem.fromJson(Map<String, Object?> json) =>
@@ -101,6 +104,18 @@ class OrderLookupItem {
   /// Si quien consulta podría operar este envío con su rol y asignación actual (preparador, supervisor y admin: siempre; tienda: su nodo es el destino; chofer: el envío está en una ruta suya abierta; transportista: está en un viaje suyo). false = solo consulta.
   @JsonKey(name: 'can_process')
   final bool canProcess;
+
+  /// Nodo del que sale el envío (informado por el origen del pedido o deducido: almacén central del departamento destino). Null mientras no se resuelve.
+  @JsonKey(name: 'origin_node')
+  final OrderLookupNodeRef? originNode;
+
+  /// Código del departamento del nodo de origen (la_paz, santa_cruz, …); null mientras no se resuelve.
+  @JsonKey(name: 'origin_department')
+  final String? originDepartment;
+
+  /// Código del departamento del destino (el del nodo destino, o el de la ciudad de entrega a domicilio); null mientras no se resuelve.
+  @JsonKey(name: 'destination_department')
+  final String? destinationDepartment;
 
   Map<String, Object?> toJson() => _$OrderLookupItemToJson(this);
 }

@@ -7,6 +7,8 @@ part of 'staff_member.dart';
 // **************************************************************************
 
 StaffMember _$StaffMemberFromJson(Map<String, dynamic> json) => StaffMember(
+  city: json['city'] as String?,
+  cityName: json['city_name'] as String?,
   id: (json['id'] as num).toInt(),
   name: json['name'] as String,
   email: json['email'] as String,
@@ -23,6 +25,8 @@ StaffMember _$StaffMemberFromJson(Map<String, dynamic> json) => StaffMember(
 
 Map<String, dynamic> _$StaffMemberToJson(StaffMember instance) =>
     <String, dynamic>{
+      'city': instance.city,
+      'city_name': instance.cityName,
       'id': instance.id,
       'name': instance.name,
       'email': instance.email,

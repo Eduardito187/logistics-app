@@ -39,3 +39,22 @@ String deliveryModeText(DeliveryMode? mode) => switch (mode) {
   DeliveryMode.homeDelivery => 'Entrega a domicilio',
   _ => 'Entrega',
 };
+
+/// "Cochabamba → La Paz" cuando el pedido cruza de ciudad; `null` si sale y
+/// llega en la misma (o si el backend no lo informa).
+String? orderTripText(String? origin, String? destination) {
+  if (origin == null || destination == null || origin == destination) {
+    return null;
+  }
+  return '${_departmentName(origin)} → ${_departmentName(destination)}';
+}
+
+/// Nombre legible de un código de departamento (`santa_cruz` → "Santa Cruz").
+String _departmentName(String code) => switch (code) {
+  'potosi' => 'Potosí',
+  _ =>
+    code
+        .split('_')
+        .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1))
+        .join(' '),
+};

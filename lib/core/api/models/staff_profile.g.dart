@@ -7,6 +7,8 @@ part of 'staff_profile.dart';
 // **************************************************************************
 
 StaffProfile _$StaffProfileFromJson(Map<String, dynamic> json) => StaffProfile(
+  city: json['city'] as String?,
+  cityName: json['city_name'] as String?,
   id: (json['id'] as num).toInt(),
   name: json['name'] as String,
   email: json['email'] as String,
@@ -40,6 +42,8 @@ StaffProfile _$StaffProfileFromJson(Map<String, dynamic> json) => StaffProfile(
 
 Map<String, dynamic> _$StaffProfileToJson(StaffProfile instance) =>
     <String, dynamic>{
+      'city': instance.city,
+      'city_name': instance.cityName,
       'id': instance.id,
       'name': instance.name,
       'email': instance.email,

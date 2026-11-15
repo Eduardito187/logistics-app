@@ -17,6 +17,10 @@ MyCrew _$MyCrewFromJson(Map<String, dynamic> json) => MyCrew(
   shift: json['shift'] == null
       ? null
       : Shift.fromJson(json['shift'] as Map<String, dynamic>),
+  routeId: json['route_id'] as String?,
+  routeStatus: json['route_status'] == null
+      ? null
+      : DriverRouteStatus.fromJson(json['route_status'] as String),
 );
 
 Map<String, dynamic> _$MyCrewToJson(MyCrew instance) => <String, dynamic>{
@@ -26,4 +30,6 @@ Map<String, dynamic> _$MyCrewToJson(MyCrew instance) => <String, dynamic>{
   'driver': instance.driver,
   'helpers': instance.helpers,
   'shift': instance.shift,
+  'route_id': instance.routeId,
+  'route_status': instance.routeStatus,
 };

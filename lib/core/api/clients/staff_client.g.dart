@@ -27,6 +27,8 @@ class _StaffClient implements StaffClient {
     String? q,
     Role? role,
     String? nodeId,
+    Department? city,
+    bool? withoutCity,
     bool? withoutNode,
     String? cursor,
   }) async {
@@ -37,6 +39,8 @@ class _StaffClient implements StaffClient {
       r'q': q,
       r'role': role?.toJson(),
       r'node_id': nodeId,
+      r'city': city?.toJson(),
+      r'without_city': withoutCity,
       r'without_node': withoutNode,
       r'cursor': cursor,
     };

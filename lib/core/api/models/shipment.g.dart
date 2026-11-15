@@ -39,6 +39,13 @@ Shipment _$ShipmentFromJson(Map<String, dynamic> json) => Shipment(
   lat: (json['lat'] as num?)?.toDouble(),
   lng: (json['lng'] as num?)?.toDouble(),
   destinationNodeId: json['destination_node_id'] as String?,
+  originNode: json['origin_node'] == null
+      ? null
+      : OrderLookupNodeRef.fromJson(
+          json['origin_node'] as Map<String, dynamic>,
+        ),
+  originDepartment: json['origin_department'] as String?,
+  destinationDepartment: json['destination_department'] as String?,
 );
 
 Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
@@ -62,4 +69,7 @@ Map<String, dynamic> _$ShipmentToJson(Shipment instance) => <String, dynamic>{
   'status': instance.status,
   'destination_node_id': instance.destinationNodeId,
   'lines': instance.lines,
+  'origin_node': instance.originNode,
+  'origin_department': instance.originDepartment,
+  'destination_department': instance.destinationDepartment,
 };
