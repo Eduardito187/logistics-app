@@ -5,12 +5,14 @@ import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
 import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../domain/store_stop.dart';
 import '../../controllers/driver_controllers.dart';
 import '../../controllers/locally_settled_stops.dart';
 import '../../failed_delivery_screen.dart';
 import '../../pod_screen.dart';
 import '../../scan_mode.dart';
 import '../../scan_units_screen.dart';
+import '../../store_drop_screen.dart';
 import 'delivery_sheet.dart';
 
 /// Abre un paso de la entrega y, al volver, refresca la ruta y el estado de la
@@ -48,13 +50,15 @@ class DeliveryActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(
-      deliveryStateProvider(stop.shipmentId).select((d) => d.value?.status),
-    );
+    // "Cerrada" se decide por el estado EFECTIVO de ESTA parada: lo que el
+    // chofer resolvió en este teléfono (POD/fallida ya hacen `settle`) o el
+    // estado de la parada del backend. NUNCA por `deliveryStateProvider` (el
+    // estado de la ENTREGA del envío): si el backend devolvía el envío como
+    // "delivered" por su cuenta, aparecía "Siguiente entrega" para una parada
+    // que el chofer NO había entregado y, al tocarla, la marcaba entregada.
+    final settled = ref.watch(locallySettledStopsProvider);
     final closed =
-        stop.status != DriverRouteStopStatus.pending ||
-        status == DeliveryStatus.delivered ||
-        status == DeliveryStatus.failed;
+        effectiveStopStatus(stop, settled) != DriverRouteStopStatus.pending;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -71,22 +75,11 @@ class DeliveryActionsBar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: closed
                   ? FilledButton.icon(
-                      onPressed: () {
-                        // Si el cierre lo sabe el estado de la entrega pero la
-                        // ruta todavía no, se avanza ya (sin esperar a la red).
-                        if (status == DeliveryStatus.delivered ||
-                            status == DeliveryStatus.failed) {
-                          ref
-                              .read(locallySettledStopsProvider.notifier)
-                              .settle(
-                                stop.id,
-                                status == DeliveryStatus.failed
-                                    ? DriverRouteStopStatus.failed
-                                    : DriverRouteStopStatus.completed,
-                              );
-                        }
-                        ref.invalidate(driverRouteProvider);
-                      },
+                      // La parada YA está resuelta (el POD/fallida hicieron
+                      // `settle`): este botón solo refresca la ruta para pasar a
+                      // la siguiente. NUNCA marca la parada por su cuenta (eso
+                      // entregaba paradas que el chofer no había entregado).
+                      onPressed: () => ref.invalidate(driverRouteProvider),
                       icon: const AnimatedAppIcon(AppIcon.arrowForward),
                       label: const Text('Siguiente entrega'),
                     )
@@ -102,11 +95,18 @@ class DeliveryActionsBar extends ConsumerWidget {
                         // (antes ocupaban 2 filas): "Entregar" destacado y las
                         // otras dos al lado. Ocupa menos alto → más mapa visible.
                         _ActionGroup(
+                          // Parada de TIENDA: el camión deja el pedido (escaneo
+                          // + foto), no es una entrega al cliente con firma.
+                          deliverLabel: isStoreStop(stop)
+                              ? 'Entregar en tienda'
+                              : 'Entregar',
                           onDeliver: () => openDeliveryStep(
                             context,
                             ref,
                             stop,
-                            PodScreen(stop: stop),
+                            isStoreStop(stop)
+                                ? StoreDropScreen(stop: stop)
+                                : PodScreen(stop: stop),
                           ),
                           onFailed: () => openDeliveryStep(
                             context,
@@ -131,8 +131,13 @@ class DeliveryActionsBar extends ConsumerWidget {
 /// tercer botón "Escanear" suelto: era redundante (la entrega ya escanea) y
 /// confundía, así que se quitó.
 class _ActionGroup extends StatelessWidget {
-  const _ActionGroup({required this.onDeliver, required this.onFailed});
+  const _ActionGroup({
+    required this.onDeliver,
+    required this.onFailed,
+    this.deliverLabel = 'Entregar',
+  });
 
+  final String deliverLabel;
   final VoidCallback onDeliver;
   final VoidCallback onFailed;
 
@@ -151,7 +156,7 @@ class _ActionGroup extends StatelessWidget {
             Expanded(
               child: _Segment(
                 icon: AppIcon.capture,
-                label: 'Entregar',
+                label: deliverLabel,
                 onTap: onDeliver,
                 background: AppColors.brand,
                 foreground: Colors.white,

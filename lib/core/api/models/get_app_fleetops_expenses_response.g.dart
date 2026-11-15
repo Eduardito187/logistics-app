@@ -12,8 +12,11 @@ GetAppFleetopsExpensesResponse _$GetAppFleetopsExpensesResponseFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => Expense.fromJson(e as Map<String, dynamic>))
       .toList(),
+  meta: json['meta'] == null
+      ? null
+      : ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GetAppFleetopsExpensesResponseToJson(
   GetAppFleetopsExpensesResponse instance,
-) => <String, dynamic>{'data': instance.data};
+) => <String, dynamic>{'data': instance.data, 'meta': instance.meta};

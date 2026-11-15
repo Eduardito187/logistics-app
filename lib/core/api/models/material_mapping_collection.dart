@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'material_mapping.dart';
-import 'meta12.dart';
+import 'meta6.dart';
 
 part 'material_mapping_collection.g.dart';
 
@@ -17,7 +17,7 @@ class MaterialMappingCollection {
       _$MaterialMappingCollectionFromJson(json);
 
   final List<MaterialMapping> data;
-  final Meta12 meta;
+  final Meta6 meta;
 
   Map<String, Object?> toJson() => _$MaterialMappingCollectionToJson(this);
 }

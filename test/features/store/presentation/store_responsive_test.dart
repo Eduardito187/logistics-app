@@ -126,7 +126,13 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('$_longName 11'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      // El de la LISTA: el buscador de arriba trae su propio Scrollable.
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(find.text('$_longName 11'), findsOneWidget);
   });
@@ -220,7 +226,7 @@ void main() {
     expect(findButtonWithText<FilledButton>('Escanear producto'), findsNothing);
   });
 
-  testOnScreens('POD de recojo: datos, pasos y botón de entrega fijo', (
+  testOnScreens('POD de recojo: datos, pasos y botón del paso fijo', (
     tester,
     screen,
   ) async {
@@ -229,30 +235,28 @@ void main() {
       shipmentUnitsProvider(_shipment.id).overrideWith(
         (ref) async => [
           for (var i = 0; i < 6; i++)
-            unit(unitId: 'unit-$i', label: 'Caja grande refrigerada $i'),
+            unit(
+              unitId: 'unit-largo-de-etiqueta-$i',
+              sku: 'SKU-REFRIGERADOR-$i',
+              productName: 'Refrigerador de dos puertas con dispensador $i',
+            ),
         ],
       ),
     ]);
 
     expect(find.text(_longName), findsOneWidget);
     _expectContentWidth(tester, screen, find.byType(CustomScrollView));
-    final deliver = findButtonWithText<FilledButton>(
-      'Escanear y entregar producto',
-    );
-    _expectOnScreen(tester, screen, deliver);
+    final scan = findButtonWithText<FilledButton>('Escanear productos');
+    _expectOnScreen(tester, screen, scan);
+    expect(tester.widget<FilledButton>(scan).onPressed, isNotNull);
 
-    // Al escribir la confirmación el teclado no rompe el layout.
-    final field = find.widgetWithText(TextField, 'QR del cliente o documento');
+    // Los pasos (firma, foto, documento) y la lista se alcanzan scrolleando.
     await tester.scrollUntilVisible(
-      field,
+      find.text('4 · Productos del pedido'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
-    addTearDown(tester.view.resetViewInsets);
-    await tester.enterText(field, 'CI-1');
-    await tester.pumpAndSettle();
-    expect(tester.widget<FilledButton>(deliver).onPressed, isNotNull);
+    expect(find.text('4 · Productos del pedido'), findsOneWidget);
   });
 }
 

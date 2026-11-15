@@ -12,7 +12,7 @@ StockTransferCollection _$StockTransferCollectionFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => StockTransfer.fromJson(e as Map<String, dynamic>))
       .toList(),
-  meta: Meta17.fromJson(json['meta'] as Map<String, dynamic>),
+  meta: Meta12.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$StockTransferCollectionToJson(

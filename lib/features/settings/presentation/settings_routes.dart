@@ -31,6 +31,8 @@ const List<RoleTask> settingsTasks = [
       UserRole.store,
       UserRole.carrier,
       UserRole.supervisor,
+      UserRole.planner,
+      UserRole.admin,
     },
   ),
 ];

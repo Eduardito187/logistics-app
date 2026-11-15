@@ -96,21 +96,23 @@ class _InventoryClient implements InventoryClient {
 
   @override
   Future<LotCollection> listLots({
-    int? limit = 100,
-    int? offset = 0,
+    int? page = 1,
+    int? perPage = 50,
     String? warehouseId,
     String? sku,
     String? ownerPartyId,
     FulfillmentMode? fulfillmentMode,
+    String? cursor,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
-      r'limit': limit,
-      r'offset': offset,
+      r'page': page,
+      r'per_page': perPage,
       r'warehouse_id': warehouseId,
       r'sku': sku,
       r'owner_party_id': ownerPartyId,
       r'fulfillment_mode': fulfillmentMode?.toJson(),
+      r'cursor': cursor,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

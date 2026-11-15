@@ -21,6 +21,7 @@ class ScanEvent {
     required this.userId,
     required this.occurredAt,
     required this.idempotencyKey,
+    this.accuracyM,
   });
 
   factory ScanEvent.fromJson(Map<String, Object?> json) =>
@@ -32,8 +33,12 @@ class ScanEvent {
   final ScanType type;
   @JsonKey(name: 'unit_id')
   final String unitId;
-  final double lat;
-  final double lng;
+
+  /// Null when the device had no position (never stored as 0,0).
+  final double? lat;
+  final double? lng;
+  @JsonKey(name: 'accuracy_m')
+  final num? accuracyM;
   @JsonKey(name: 'device_id')
   final String deviceId;
   @JsonKey(name: 'user_id')

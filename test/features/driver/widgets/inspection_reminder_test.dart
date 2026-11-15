@@ -11,7 +11,37 @@ import 'package:logistics_app/features/driver/presentation/widgets/daily_inspect
 PreTripChecklist _checklist(DateTime performedOn) =>
     PreTripChecklist(performedOn: performedOn, passed: true);
 
+PreTripChecklist _routeChecklist(String routeId, DateTime performedOn) =>
+    PreTripChecklist(routeId: routeId, performedOn: performedOn, passed: true);
+
 void main() {
+  group('inspectionForCurrentRoute (gate por ruta con auto-upgrade)', () {
+    final now = DateTime(2026, 11, 11, 15, 0);
+
+    test('sin route_id en ningún item => modo DIARIO (hecho hoy cuenta)', () {
+      expect(perRouteChecklistMode([_checklist(now)]), isFalse);
+      // En modo diario, una inspección de hoy cumple para cualquier ruta.
+      expect(
+        inspectionForCurrentRoute([_checklist(now)], 'route-x', now),
+        isNotNull,
+      );
+    });
+
+    test('modo por RUTA: cumple solo el checklist de ESA ruta', () {
+      final items = [_routeChecklist('route-1', now)];
+      expect(perRouteChecklistMode(items), isTrue);
+      expect(inspectionForCurrentRoute(items, 'route-1', now), isNotNull);
+      // Otra ruta (segunda salida) aún NO tiene inspección, aunque sea el mismo
+      // día: debe pedir el formulario.
+      expect(inspectionForCurrentRoute(items, 'route-2', now), isNull);
+    });
+
+    test('modo por ruta sin ruta en curso => null (no se puede ligar)', () {
+      final items = [_routeChecklist('route-1', now)];
+      expect(inspectionForCurrentRoute(items, null, now), isNull);
+    });
+  });
+
   group('inspectionDoneToday', () {
     final now = DateTime(2026, 11, 11, 15, 0);
 

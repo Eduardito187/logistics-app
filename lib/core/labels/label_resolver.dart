@@ -27,6 +27,10 @@ class LabelResolution {
     this.pieceTotal,
     this.revoked = false,
     this.orderNumber,
+    this.customerName,
+    this.customerDocumentId,
+    this.customerPhone,
+    this.destinationNodeId,
   });
 
   factory LabelResolution.fromJson(Map<String, dynamic> json) {
@@ -54,6 +58,10 @@ class LabelResolution {
       pieceTotal: asInt(piece?['total']) ?? asInt(json['piece_total']),
       revoked: json['revoked'] == true,
       orderNumber: asString(json['order_number']),
+      customerName: asString(json['customer_name']),
+      customerDocumentId: asString(json['customer_document_id']),
+      customerPhone: asString(json['customer_phone']),
+      destinationNodeId: asString(json['destination_node_id']),
     );
   }
 
@@ -80,6 +88,14 @@ class LabelResolution {
 
   /// Pedido de la etiqueta (para contexto / "no es de este pedido"). Aditivo.
   final String? orderNumber;
+
+  /// Cliente y nodo destino del pedido de la etiqueta (aditivos, nov 2026;
+  /// `null` con un backend anterior). Los usa "Recojo en tienda" para decir a
+  /// quién se entrega aunque el pedido no esté entre los cargados.
+  final String? customerName;
+  final String? customerDocumentId;
+  final String? customerPhone;
+  final String? destinationNodeId;
 
   /// Aceptable en terreno: el backend reconoció la etiqueta (resuelve) y tiene
   /// producto. Nada se rechaza por "anulada" (las etiquetas son permanentes).

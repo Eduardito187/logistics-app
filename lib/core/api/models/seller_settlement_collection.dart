@@ -4,18 +4,20 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'list_meta.dart';
 import 'seller_settlement.dart';
 
 part 'seller_settlement_collection.g.dart';
 
 @JsonSerializable()
 class SellerSettlementCollection {
-  const SellerSettlementCollection({required this.data});
+  const SellerSettlementCollection({required this.data, this.meta});
 
   factory SellerSettlementCollection.fromJson(Map<String, Object?> json) =>
       _$SellerSettlementCollectionFromJson(json);
 
   final List<SellerSettlement> data;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() => _$SellerSettlementCollectionToJson(this);
 }

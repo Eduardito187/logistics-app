@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta15.dart';
+import 'meta9.dart';
 import 'outbox_message.dart';
 
 part 'outbox_message_page.g.dart';
@@ -17,7 +17,7 @@ class OutboxMessagePage {
       _$OutboxMessagePageFromJson(json);
 
   final List<OutboxMessage> data;
-  final Meta15 meta;
+  final Meta9 meta;
 
   Map<String, Object?> toJson() => _$OutboxMessagePageToJson(this);
 }

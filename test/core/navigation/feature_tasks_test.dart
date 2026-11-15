@@ -21,30 +21,38 @@ void main() {
     expect(tasks, isNotEmpty);
   });
 
-  test('cada tarea declara al menos un rol de campo', () {
+  test('cada tarea declara al menos un rol de la app', () {
     const fieldRoles = {
+      // El administrador entra a la app desde nov 2026 (decisión del dueño).
+      UserRole.admin,
       UserRole.driver,
       UserRole.picker,
       UserRole.store,
       UserRole.carrier,
       UserRole.supervisor,
+      // Planificador: arma y publica los planes (nov 2026).
+      UserRole.planner,
     };
     for (final task in tasks) {
       expect(task.roles, isNotEmpty, reason: 'tarea ${task.id} sin roles');
       expect(
         task.roles.every(fieldRoles.contains),
         isTrue,
-        reason: 'tarea ${task.id} usa un rol fuera de los de campo',
+        reason: 'tarea ${task.id} usa un rol desconocido',
       );
     }
   });
 
-  test('ninguna ruta apunta al admin/oficina (/admin)', () {
-    for (final task in tasks) {
+  test('las rutas /admin son del administrador (y tres del planificador)', () {
+    // Envíos, reprogramar y calendario también son trabajo del planificador.
+    const shared = {'admin-shipments', 'admin-reschedule', 'admin-calendar'};
+    for (final task in tasks.where((t) => t.route.startsWith('/admin'))) {
       expect(
-        task.route.startsWith('/admin'),
-        isFalse,
-        reason: 'tarea ${task.id} apunta al admin',
+        task.roles,
+        shared.contains(task.id)
+            ? {UserRole.planner, UserRole.admin}
+            : {UserRole.admin},
+        reason: 'tarea ${task.id} de administración visible para otro rol',
       );
     }
   });
@@ -54,7 +62,9 @@ void main() {
     // Chofer, preparador, tienda, transportista y supervisor representados.
     expect(ids, containsAll(<String>['driver-route', 'driver-load']));
     expect(ids, containsAll(<String>['picking-orders', 'picking-prepare']));
-    expect(ids, containsAll(<String>['store-reception', 'store-pickup']));
+    // La tienda solo entrega al cliente final: sin recepción de mercadería.
+    expect(ids, contains('store-pickup'));
+    expect(ids, isNot(contains('store-reception')));
     expect(ids, containsAll(<String>['carrier-pickup', 'carrier-deliver']));
     expect(ids, containsAll(<String>['sup-dashboard', 'sup-alerts']));
     // Transversales compartidas.

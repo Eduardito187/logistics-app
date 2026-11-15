@@ -6,10 +6,12 @@ part of 'error8.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Error8 _$Error8FromJson(Map<String, dynamic> json) =>
-    Error8(type: json['type'] as String, message: json['message'] as String);
+Error8 _$Error8FromJson(Map<String, dynamic> json) => Error8(
+  code: ProblemCode.fromJson(json['code'] as String),
+  message: json['message'] as String,
+);
 
 Map<String, dynamic> _$Error8ToJson(Error8 instance) => <String, dynamic>{
-  'type': instance.type,
+  'code': instance.code,
   'message': instance.message,
 };

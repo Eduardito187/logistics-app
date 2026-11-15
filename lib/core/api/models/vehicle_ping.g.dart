@@ -16,6 +16,7 @@ VehiclePing _$VehiclePingFromJson(Map<String, dynamic> json) => VehiclePing(
   ignition: json['ignition'] as bool?,
   odometerM: (json['odometer_m'] as num?)?.toInt(),
   deviceId: json['device_id'] as String?,
+  fixId: json['fix_id'] as String?,
 );
 
 Map<String, dynamic> _$VehiclePingToJson(VehiclePing instance) =>
@@ -29,4 +30,5 @@ Map<String, dynamic> _$VehiclePingToJson(VehiclePing instance) =>
       'ignition': instance.ignition,
       'odometer_m': instance.odometerM,
       'device_id': instance.deviceId,
+      'fix_id': instance.fixId,
     };

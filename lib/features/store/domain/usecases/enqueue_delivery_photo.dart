@@ -14,9 +14,16 @@ class EnqueueDeliveryPhoto {
     required String shipmentId,
     required String filePath,
     required String kind,
+    // Snapshot del cliente para la evidencia anti-fraude (firma/documento).
+    Map<String, Object?>? clientSnapshot,
   }) => _ref
       .read(photoUploadQueueProvider)
-      .enqueue(shipmentId: shipmentId, filePath: filePath, kind: kind);
+      .enqueue(
+        shipmentId: shipmentId,
+        filePath: filePath,
+        kind: kind,
+        clientSnapshot: clientSnapshot,
+      );
 }
 
 final enqueueDeliveryPhotoProvider = Provider<EnqueueDeliveryPhoto>(

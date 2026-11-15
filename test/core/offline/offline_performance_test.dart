@@ -20,6 +20,7 @@ import 'package:logistics_app/core/offline/offline_queue.dart';
 
 const _loadOk = PostAppDeliveriesScansLoadResponse(
   data: Delivery(
+    reference: 'REF-1',
     id: 'd1',
     shipmentId: 's1',
     vehicleId: 'v1',

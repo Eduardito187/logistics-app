@@ -1,5 +1,6 @@
 import 'package:logistics_app/core/api/models/address_confidence_level.dart';
 import 'package:logistics_app/core/api/models/delivery.dart';
+import 'package:logistics_app/core/api/models/delivery_mode.dart';
 import 'package:logistics_app/core/api/models/delivery_status.dart';
 import 'package:logistics_app/core/api/models/node.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
@@ -59,7 +60,9 @@ Shipment shipment({
   String? customerDocumentId = '12345678',
   String? customerPhone,
   int lines = 2,
+  DeliveryMode? deliveryMode,
 }) => Shipment(
+  deliveryMode: deliveryMode,
   id: id,
   source: OrderSource.sap,
   externalId: externalId,
@@ -134,6 +137,7 @@ Delivery delivery({
   List<String> otherUnitIds = const [],
   String? podConfirmation,
 }) => Delivery(
+  reference: 'REF-1',
   id: id,
   shipmentId: shipmentId,
   vehicleId: 'vehicle-1',

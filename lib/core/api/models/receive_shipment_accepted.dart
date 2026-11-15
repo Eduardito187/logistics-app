@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data26.dart';
+import 'receive_shipment_accepted_data.dart';
 
 part 'receive_shipment_accepted.g.dart';
 
@@ -15,7 +15,7 @@ class ReceiveShipmentAccepted {
   factory ReceiveShipmentAccepted.fromJson(Map<String, Object?> json) =>
       _$ReceiveShipmentAcceptedFromJson(json);
 
-  final Data26 data;
+  final ReceiveShipmentAcceptedData data;
 
   Map<String, Object?> toJson() => _$ReceiveShipmentAcceptedToJson(this);
 }

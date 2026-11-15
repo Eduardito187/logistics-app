@@ -318,9 +318,23 @@ class _AccessClient implements AccessClient {
   }
 
   @override
-  Future<GetAppAccessUsersResponse> listUsers({Status6? status}) async {
+  Future<GetAppAccessUsersResponse> listUsers({
+    int? page = 1,
+    int? perPage = 50,
+    Status5? status,
+    String? role,
+    String? search,
+    String? cursor,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'status': status?.toJson()};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'status': status?.toJson(),
+      r'role': role,
+      r'search': search,
+      r'cursor': cursor,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -552,7 +566,7 @@ class _AccessClient implements AccessClient {
 
   @override
   Future<GetAppAccessTokensResponse> listIntegrationTokens({
-    Status7? status,
+    Status6? status,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'status': status?.toJson()};

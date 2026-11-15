@@ -66,7 +66,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     if (!mounted) return;
     if (ok) {
       setState(() => _step = 2);
-      showInfoSnack(context, 'Si el correo existe, te enviamos un código.');
+      // Pedido del dueño: solo "correo válido", sin explicar si existe o no.
+      showInfoSnack(context, 'Correo válido.');
     } else {
       final error = ref.read(forgotPasswordControllerProvider).error;
       showErrorSnack(context, error ?? 'No se pudo enviar el código.');
@@ -84,7 +85,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         .requestCode(email);
     if (!mounted) return;
     if (ok) {
-      showInfoSnack(context, 'Si el correo existe, te enviamos un código.');
+      // Pedido del dueño: solo "correo válido", sin explicar si existe o no.
+      showInfoSnack(context, 'Correo válido.');
     } else {
       final error = ref.read(forgotPasswordControllerProvider).error;
       showErrorSnack(context, error ?? 'No se pudo reenviar el código.');

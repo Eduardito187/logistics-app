@@ -10,23 +10,20 @@ import 'pickup_pod_screen.dart';
 import 'reception_detail_screen.dart';
 
 /// Tarjetas de inicio del rol Tienda.
+///
+/// Decisión del dueño (nov 2026): la tienda SOLO entrega al cliente final. La
+/// llegada del pedido a la tienda la marca el CHOFER al dejarlo ("Entregar en
+/// tienda"), no el personal de tienda: por eso ya no hay tarjeta de "Recepción
+/// de mercadería" (sus pantallas quedan sin acceso desde la app).
 const List<RoleTask> storeTasks = [
-  RoleTask(
-    id: 'store-reception',
-    label: 'Recepción de mercadería',
-    subtitle: 'Contra manifiesto',
-    appIcon: AppIcon.receive,
-    route: '/store/reception',
-    roles: {UserRole.store},
-    accent: true,
-  ),
   RoleTask(
     id: 'store-pickup',
     label: 'Recojo en tienda',
-    subtitle: 'Entrega en mostrador',
+    subtitle: 'Entrega al cliente',
     appIcon: AppIcon.pickupStore,
     route: '/store/pickup',
     roles: {UserRole.store},
+    accent: true,
   ),
 ];
 

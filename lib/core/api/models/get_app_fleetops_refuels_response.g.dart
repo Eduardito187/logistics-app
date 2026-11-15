@@ -12,8 +12,11 @@ GetAppFleetopsRefuelsResponse _$GetAppFleetopsRefuelsResponseFromJson(
   data: (json['data'] as List<dynamic>)
       .map((e) => Refuel.fromJson(e as Map<String, dynamic>))
       .toList(),
+  meta: json['meta'] == null
+      ? null
+      : ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GetAppFleetopsRefuelsResponseToJson(
   GetAppFleetopsRefuelsResponse instance,
-) => <String, dynamic>{'data': instance.data};
+) => <String, dynamic>{'data': instance.data, 'meta': instance.meta};

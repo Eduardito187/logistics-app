@@ -17,6 +17,14 @@ DriverRoute _$DriverRouteFromJson(Map<String, dynamic> json) => DriverRoute(
   stops: (json['stops'] as List<dynamic>)
       .map((e) => DriverRouteStop.fromJson(e as Map<String, dynamic>))
       .toList(),
+  startedAt: json['started_at'] == null
+      ? null
+      : DateTime.parse(json['started_at'] as String),
+  closedAt: json['closed_at'] == null
+      ? null
+      : DateTime.parse(json['closed_at'] as String),
+  failedStops: (json['failed_stops'] as num?)?.toInt(),
+  rescheduledStops: (json['rescheduled_stops'] as num?)?.toInt(),
   currentStop: json['current_stop'] == null
       ? null
       : DriverRouteStop.fromJson(json['current_stop'] as Map<String, dynamic>),
@@ -27,12 +35,16 @@ DriverRoute _$DriverRouteFromJson(Map<String, dynamic> json) => DriverRoute(
 
 Map<String, dynamic> _$DriverRouteToJson(DriverRoute instance) =>
     <String, dynamic>{
+      'started_at': instance.startedAt?.toIso8601String(),
+      'closed_at': instance.closedAt?.toIso8601String(),
       'id': instance.id,
       'vehicle_id': instance.vehicleId,
       'route_date': instance.routeDate.toIso8601String(),
       'status': instance.status,
       'total_stops': instance.totalStops,
       'completed_stops': instance.completedStops,
+      'failed_stops': instance.failedStops,
+      'rescheduled_stops': instance.rescheduledStops,
       'stops_remaining': instance.stopsRemaining,
       'current_stop': instance.currentStop,
       'stops': instance.stops,

@@ -8,7 +8,7 @@ import 'unit_status.dart';
 
 part 'public_unit.g.dart';
 
-/// Vista pública de un bulto (sin PII)
+/// Vista pública de un producto (sin PII)
 @JsonSerializable()
 class PublicUnit {
   const PublicUnit({
@@ -20,11 +20,11 @@ class PublicUnit {
   factory PublicUnit.fromJson(Map<String, Object?> json) =>
       _$PublicUnitFromJson(json);
 
-  /// Etiqueta humana del bulto, p. ej. "Bulto 1 de 2"
+  /// Etiqueta humana del producto, p. ej. "Producto 1 de 2"
   final String label;
   final UnitStatus status;
 
-  /// Mensaje por bulto en español, p. ej. "Cargado en el camión."
+  /// Mensaje por producto en español, p. ej. "Cargado en el camión."
   @JsonKey(name: 'status_message')
   final String statusMessage;
 

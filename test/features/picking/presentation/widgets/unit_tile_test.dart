@@ -45,7 +45,7 @@ void main() {
   ) async {
     await _pump(tester, prepared: false, sku: '789', lineNumber: 4);
 
-    expect(find.text('SKU 789'), findsOneWidget);
+    expect(find.text('789'), findsOneWidget);
     expect(find.text('Línea 4'), findsOneWidget);
     expect(find.text('Por preparar'), findsOneWidget);
     expect(

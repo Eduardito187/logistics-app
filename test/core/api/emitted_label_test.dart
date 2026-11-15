@@ -29,13 +29,12 @@ void main() {
     expect(label.labelId, '01M73HJXF8MZYBZ4YQW69YF3G7');
     expect(label.lineNumber, 2);
     expect(label.emittedAt, 1794341697);
-    // Sin el campo, nada queda "anulado".
-    expect(label.revoked, isFalse);
   });
 
   test('sigue parseando si el backend viejo todavía manda `revoked`', () {
+    // El campo ya no existe en el contrato: si llega, se ignora sin fallar.
     final label = EmittedLabel.fromJson({...backendJson(), 'revoked': true});
 
-    expect(label.revoked, isTrue); // se lee, pero ya no invalida nada
+    expect(label.labelId, '01M73HJXF8MZYBZ4YQW69YF3G7');
   });
 }

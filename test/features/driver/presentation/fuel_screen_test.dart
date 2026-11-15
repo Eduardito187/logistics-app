@@ -84,7 +84,7 @@ void main() {
     // Documenta el desenlace esperado del 202 que FuelScreen no puede ejercitar
     // en test por llamar directo a la API.
     final outcome = CommandOutcome.fromAccepted(
-      const AcceptedEnvelope(data: Data22(accepted: true)),
+      const AcceptedEnvelope(data: AcceptedEnvelopeData(accepted: true)),
     );
     expect(outcome.isAccepted, isTrue);
 

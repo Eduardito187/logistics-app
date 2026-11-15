@@ -51,7 +51,7 @@ class _SellersClient implements SellersClient {
   }
 
   @override
-  Future<SellerCollection> listSellers({Status8? status}) async {
+  Future<SellerCollection> listSellers({Status7? status}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'status': status?.toJson()};
     queryParameters.removeWhere((k, v) => v == null);

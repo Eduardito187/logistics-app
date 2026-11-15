@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data22.dart';
+import 'accepted_envelope_data.dart';
 
 part 'accepted_envelope.g.dart';
 
@@ -15,7 +15,7 @@ class AcceptedEnvelope {
   factory AcceptedEnvelope.fromJson(Map<String, Object?> json) =>
       _$AcceptedEnvelopeFromJson(json);
 
-  final Data22 data;
+  final AcceptedEnvelopeData data;
 
   Map<String, Object?> toJson() => _$AcceptedEnvelopeToJson(this);
 }

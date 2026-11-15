@@ -17,10 +17,18 @@ import 'submit_outcome.dart';
 ///
 /// Offline invisible: lo encolado se informa igual que lo enviado. El usuario
 /// no ve si hubo señal o no; la cola sube todo por debajo (ver `SyncNotice`).
-String submitOutcomeMessage(SubmitOutcome outcome) => switch (outcome) {
-  SubmitOutcome.sent || SubmitOutcome.queued => 'Registrado.',
-  SubmitOutcome.failed => 'No se pudo registrar. Intentá de nuevo.',
-};
+/// [failureDetail] (opcional) es el MOTIVO real del backend para un rechazo
+/// (`ApiException.message` = su `detail`); si viene, se muestra en vez del
+/// genérico, así el usuario ve POR QUÉ falló (p. ej. "no hay entrega abierta
+/// para el envío …") en lugar de "No se pudo registrar" a secas.
+String submitOutcomeMessage(SubmitOutcome outcome, {String? failureDetail}) =>
+    switch (outcome) {
+      SubmitOutcome.sent || SubmitOutcome.queued => 'Registrado.',
+      SubmitOutcome.failed =>
+        (failureDetail != null && failureDetail.trim().isNotEmpty)
+            ? failureDetail
+            : 'No se pudo registrar. Intentá de nuevo.',
+    };
 
 /// Color semántico para teñir el aviso según el desenlace.
 Color submitOutcomeColor(SubmitOutcome outcome) => switch (outcome) {
@@ -37,12 +45,13 @@ void showSubmitOutcome(
   BuildContext context,
   SubmitOutcome outcome, {
   double? bottomClearance,
+  String? failureDetail,
 }) {
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
     ..showSnackBar(
       buildAppSnackBar(
-        submitOutcomeMessage(outcome),
+        submitOutcomeMessage(outcome, failureDetail: failureDetail),
         submitOutcomeColor(outcome),
         duration: outcome == SubmitOutcome.failed
             ? kErrorSnackDuration

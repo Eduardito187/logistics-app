@@ -31,7 +31,7 @@ abstract class TrackingClient {
 
   /// Internal per-parcel tracking detail by shipment id.
   ///
-  /// Puerta app (personal interno). Devuelve el detalle per-bulto del seguimiento del envío: estado, última ubicación (nodo) y último escaneo de cada bulto. Alimenta la reconciliación de bultos.
+  /// Puerta app (personal interno). Devuelve el detalle por producto del seguimiento del envío: estado, última ubicación (nodo) y último escaneo de cada producto. Alimenta la reconciliación de productos.
   ///
   /// [shipmentId] - UUID del envío.
   @GET('/app/tracking/shipments/{shipmentId}/units')
@@ -56,19 +56,25 @@ abstract class TrackingClient {
   /// Puerta channels. Devuelve el estado visible del envío, cuántas paradas faltan antes de la del cliente (remaining_stops), su posición en la ruta (route_position), un mensaje legible en español ("Tu pedido está a N paradas"), la ETA y la última posición del camión. No expone datos personales ni claves internas.
   ///
   /// [token] - Token opaco del enlace de rastreo.
+  ///
+  /// [ifNoneMatch] - ETag devuelto por una respuesta anterior. Si la vista no cambió, responde 304 sin cuerpo.
   @GET('/channels/tracking/{token}')
   Future<GetChannelsTrackingTokenResponse> getPublicTracking({
     @Path('token') required String token,
+    @Header('If-None-Match') String? ifNoneMatch,
   });
 
   /// Public per-parcel breakdown by opaque token (no PII).
   ///
-  /// Puerta channels. Devuelve el desglose de bultos del envío (etiqueta humana, estado y un mensaje en español por bulto), sin datos personales ni claves internas. Mismo token que la página pública del envío.
+  /// Puerta channels. Devuelve el desglose de productos del envío (etiqueta humana, estado y un mensaje en español por producto), sin datos personales ni claves internas. Mismo token que la página pública del envío.
   ///
   /// [token] - Token opaco del enlace de rastreo.
+  ///
+  /// [ifNoneMatch] - ETag devuelto por una respuesta anterior. Si la vista no cambió, responde 304 sin cuerpo.
   @GET('/channels/tracking/{token}/units')
   Future<GetChannelsTrackingTokenUnitsResponse> getPublicUnits({
     @Path('token') required String token,
+    @Header('If-None-Match') String? ifNoneMatch,
   });
 
   /// Ingest live GPS position from external telemetry.

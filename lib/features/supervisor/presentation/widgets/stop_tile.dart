@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/planned_stop.dart';
+import '../supervisor_labels.dart';
 
 /// Fila de parada (solo lectura) dentro de la secuencia de un plan.
 class StopTile extends StatelessWidget {
@@ -12,6 +13,8 @@ class StopTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final who = stopWho(stop.customerName, stop.shortAddress ?? stop.address);
+    final window = stop.timeWindow;
     final subtitleParts = <String>[
       'Carga #${stop.loadOrder}',
       if (stop.lane != null) 'Carril ${stop.lane}',
@@ -38,9 +41,18 @@ class StopTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Envío ${stop.shipmentId}',
+                  stopTitle(stop.orderReference, position),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
+                if (who != null) Text(who),
+                if (window != null)
+                  Text(
+                    timeWindowText(window.from, window.to),
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 const SizedBox(height: 2),
                 Text(
                   subtitleParts.join(' · '),

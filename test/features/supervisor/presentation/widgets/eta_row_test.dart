@@ -23,7 +23,7 @@ void main() {
     );
 
     expect(find.text('2'), findsOneWidget); // secuencia en el avatar
-    expect(find.text('Envío SHP-7'), findsOneWidget);
+    expect(find.text('Parada 2'), findsOneWidget);
     expect(find.text('14:05'), findsOneWidget);
   });
 

@@ -31,7 +31,10 @@ class EtaRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Envío ${stop.shipmentId}',
+              [
+                stopTitle(stop.orderReference, stop.sequence),
+                if (stop.customerName != null) stop.customerName!,
+              ].join(' · '),
               overflow: TextOverflow.ellipsis,
             ),
           ),

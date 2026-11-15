@@ -65,8 +65,8 @@ void main() {
     expect(find.text('Camión CAM-7'), findsOneWidget);
     expect(find.text('Publicado'), findsOneWidget); // pastilla de estado
     expect(find.text('Fecha'), findsOneWidget);
-    expect(find.text('Plan'), findsOneWidget);
-    expect(find.text('p1'), findsOneWidget); // valor del id
+    expect(find.text('Plan'), findsNothing); // sin UUID a la vista
+    expect(find.text('p1'), findsNothing);
     // Métricas: etiqueta de paradas y ETA final (última por secuencia con ETA).
     // El conteo numérico "2" colisiona con el avatar de la parada 2, así que se
     // afirma por etiqueta; la ETA final (13:30) es la hora del último stop.
@@ -75,10 +75,9 @@ void main() {
     expect(find.text('13:30'), findsOneWidget);
     // Secuencia de paradas (StopTile) y ETA por parada (EtaRow), con ids propios.
     expect(find.text('Secuencia de paradas'), findsOneWidget);
-    expect(find.text('Envío S1'), findsOneWidget);
-    expect(find.text('Envío S2'), findsOneWidget);
+    expect(find.text('Parada 1'), findsWidgets);
+    expect(find.text('Parada 2'), findsOneWidget);
     expect(find.text('ETA por parada'), findsOneWidget);
-    expect(find.text('Envío E1'), findsOneWidget);
   });
 
   testWidgets(

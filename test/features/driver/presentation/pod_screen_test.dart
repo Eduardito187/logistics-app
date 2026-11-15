@@ -82,8 +82,8 @@ List<Object> _overrides(
 /// QR de etiqueta ABIERTA (k:0, sin firma) con un [id] y [order] cualquiera: se
 /// valida por pertenencia (orden), no por firma. Sirve para probar el POD con
 /// varios productos y el rechazo por orden.
-String _openLabelQr(String id, {String order = 'DM-1'}) =>
-    '{"v":1,"t":"PKG","k":0,"id":"$id","o":"$order","ln":1,"sku":"SKU-1",'
+String _openLabelQr(String id, {String order = 'DM-1', String sku = 'SKU-1'}) =>
+    '{"v":1,"t":"PKG","k":0,"id":"$id","o":"$order","ln":1,"sku":"$sku",'
     '"u":[1,1],"pc":[1,1],"org":"CD01","dst":"C","ts":1700000000,"s":""}';
 
 FilledButton _registerButton(WidgetTester tester) =>
@@ -203,10 +203,10 @@ void main() {
       expect(payload['confirmation'], 'FIRMA_DIGITAL');
       expect(payload['lat'], -17.78);
       expect(payload['lng'], -63.18);
-      expect(
-        payload['photo_path'],
-        'pendiente',
-      ); // foto obligatoria, se sube aparte
+      // Foto obligatoria, se sube aparte por su cola y el backend la liga al
+      // envío (opción A). El POD NO manda una ruta inventada: `'pendiente'`
+      // hacía que el backend lo rechazara con 422. photo_path viaja en null.
+      expect(payload['photo_path'], isNull);
 
       // Feedback y regreso a la pantalla anterior.
       expect(find.text('Registrado.'), findsOneWidget);
@@ -402,6 +402,80 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('U-OK'), findsOneWidget);
       expect(find.text('Escaneados: 1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('etiqueta DUPLICADA del mismo SKU no cuenta como otra entrega', (
+    tester,
+  ) async {
+    // Pedido de 2 productos DISTINTOS (SKU-1 y SKU-2, 1 c/u). Por una
+    // re-emisión quedaron 2 etiquetas del MISMO SKU-1 (ids distintos). Escanear
+    // las dos de SKU-1 NO puede contar como 2 entregas: la 2ª se rechaza por
+    // duplicada aunque el total del pedido (2) no se haya alcanzado.
+    final queue = FakeOfflineQueue(SubmitOutcome.sent);
+    final fake = FakeCodeScanner([
+      _openLabelQr('A1', order: 'DM-1', sku: 'SKU-1'),
+      _openLabelQr('A2', order: 'DM-1', sku: 'SKU-1'), // duplicada
+      _openLabelQr('B1', order: 'DM-1', sku: 'SKU-2'),
+    ]);
+    await pumpPushed(
+      tester,
+      child: PodScreen(
+        stop: buildStop(
+          orderReference: 'DM-1',
+          items: const [
+            Items3(sku: 'SKU-1', name: 'Colchón', quantity: 1),
+            Items3(sku: 'SKU-2', name: 'Base', quantity: 1),
+          ],
+        ),
+      ),
+      overrides: _overrides(fake, queue: queue),
+      tall: true,
+    );
+    await tester.pumpAndSettle();
+
+    // 1er escaneo: SKU-1 → 1 de 2.
+    await tester.tap(find.text('Escanear producto'));
+    await tester.pumpAndSettle();
+    expect(find.text('Escaneados 1 de 2'), findsOneWidget);
+
+    // 2º escaneo: OTRA etiqueta del MISMO SKU-1 → rechazada (duplicada); sigue
+    // 1 de 2 y no se agrega el segundo id.
+    await tester.tap(find.text('Escanear siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('duplicada'), findsOneWidget);
+    expect(find.text('Escaneados 1 de 2'), findsOneWidget);
+    expect(find.text('A2'), findsNothing);
+
+    // 3er escaneo: SKU-2 (el producto que falta) → aceptado, 2 de 2.
+    await tester.tap(find.text('Escanear siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text('Escaneados 2 de 2'), findsOneWidget);
+  });
+
+  testWidgets(
+    'unidades DUPLICADAS en unit_ids: el total se acota a la cantidad del pedido',
+    (tester) async {
+      // El backend trajo 2 unit_ids para un pedido de 1 solo producto (duplicado
+      // por una re-emisión). El total NO debe ser 2: se acota a la cantidad real
+      // del pedido (1 de SKU-1), así una etiqueta duplicada no suma de más.
+      final queue = FakeOfflineQueue(SubmitOutcome.sent);
+      await pumpPushed(
+        tester,
+        child: PodScreen(
+          stop: buildStop(
+            orderReference: 'DM-1',
+            items: const [Items3(sku: 'SKU-1', name: 'Colchón', quantity: 1)],
+            unitIds: const ['u-1', 'u-2'], // 2 duplicados para 1 producto real
+          ),
+        ),
+        overrides: _overrides(FakeCodeScanner([]), queue: queue),
+        tall: true,
+      );
+      await tester.pumpAndSettle();
+
+      // Total acotado a 1 (min(unit_ids=2, cantidad=1)), no 2.
+      expect(find.text('Escaneá los 1 productos del pedido.'), findsOneWidget);
     },
   );
 

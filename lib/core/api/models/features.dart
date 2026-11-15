@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'type2.dart';
+import 'type5.dart';
 import 'geo_json_polygon.dart';
 
 part 'features.g.dart';
@@ -20,7 +20,7 @@ class Features {
   factory Features.fromJson(Map<String, Object?> json) =>
       _$FeaturesFromJson(json);
 
-  final Type2 type;
+  final Type5 type;
   final GeoJsonPolygon geometry;
 
   /// Nombre de la zona, área padre y reglas en forma primitiva.

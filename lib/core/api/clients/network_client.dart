@@ -10,6 +10,7 @@ import '../models/define_leg_request.dart';
 import '../models/department.dart';
 import '../models/leg_collection.dart';
 import '../models/leg_envelope.dart';
+import '../models/network_city_collection.dart';
 import '../models/node_collection.dart';
 import '../models/node_envelope.dart';
 import '../models/node_status.dart';
@@ -39,6 +40,12 @@ abstract class NetworkClient {
   /// [leg] - Leg UUID.
   @GET('/app/network/legs/{leg}')
   Future<LegEnvelope> getNetworkLeg({@Path('leg') required String leg});
+
+  /// List cities (departments) with their central warehouse (internal app gate).
+  ///
+  /// Catálogo de ciudades: los nueve departamentos siempre, aunque no tengan nodos, con su almacén central si lo tienen. Para cualquier rol autenticado de la app.
+  @GET('/app/network/cities')
+  Future<NetworkCityCollection> listNetworkCities();
 
   /// List operational corridors in a department (internal app gate).
   ///

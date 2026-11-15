@@ -54,15 +54,93 @@ class _ExecutionClient implements ExecutionClient {
   }
 
   @override
-  Future<PostAppDeliveriesPhotosResponse> uploadDeliveryPhoto({
+  Future<PostAppDeliveriesShipmentIdStoreDropResponse> recordStoreDrop({
     required String shipmentId,
-    required File photo,
-    Enum0? kind = Enum0.pod,
+    String? idempotencyKey,
+    AppDeliveriesShipmentIdStoreDropRequestBody? body,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
+    final _data = <String, dynamic>{};
+    _data.addAll(body?.toJson() ?? <String, dynamic>{});
+    final _options =
+        _setStreamType<PostAppDeliveriesShipmentIdStoreDropResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/deliveries/${shipmentId}/store-drop',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppDeliveriesShipmentIdStoreDropResponse _value;
+    try {
+      _value = PostAppDeliveriesShipmentIdStoreDropResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppDeliveriesShipmentIdCloseTransferResponse>
+  closeTransferWithShortage({
+    required String shipmentId,
+    required CloseTransferWithShortageRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options =
+        _setStreamType<PostAppDeliveriesShipmentIdCloseTransferResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/deliveries/${shipmentId}/close-transfer',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppDeliveriesShipmentIdCloseTransferResponse _value;
+    try {
+      _value = PostAppDeliveriesShipmentIdCloseTransferResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppDeliveriesPhotosResponse> uploadDeliveryPhoto({
+    required String shipmentId,
+    required File photo,
+    Enum0? kind = Enum0.pod,
+    String? idempotencyKey,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
     final _data = FormData();
     _data.fields.add(MapEntry('shipment_id', shipmentId));
     _data.files.add(
@@ -104,6 +182,111 @@ class _ExecutionClient implements ExecutionClient {
   }
 
   @override
+  Future<DeliveryEvidenceCollection> captureDeliveryEvidence({
+    required String shipmentId,
+    required Enum1 kind,
+    required File photo,
+    String? customerId,
+    String? documentId,
+    String? customerName,
+    String? customerPhone,
+    num? lat,
+    num? lng,
+    DateTime? capturedAt,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    final _data = FormData();
+    _data.fields.add(MapEntry('shipment_id', shipmentId));
+    _data.fields.add(MapEntry('kind', kind.toJson()));
+    _data.files.add(
+      MapEntry(
+        'photo',
+        MultipartFile.fromFileSync(
+          photo.path,
+          filename: photo.path.split(Platform.pathSeparator).last,
+        ),
+      ),
+    );
+    if (customerId != null) {
+      _data.fields.add(MapEntry('customer_id', customerId));
+    }
+    if (documentId != null) {
+      _data.fields.add(MapEntry('document_id', documentId));
+    }
+    if (customerName != null) {
+      _data.fields.add(MapEntry('customer_name', customerName));
+    }
+    if (customerPhone != null) {
+      _data.fields.add(MapEntry('customer_phone', customerPhone));
+    }
+    if (lat != null) {
+      _data.fields.add(MapEntry('lat', lat.toString()));
+    }
+    if (lng != null) {
+      _data.fields.add(MapEntry('lng', lng.toString()));
+    }
+    if (capturedAt != null) {
+      _data.fields.add(MapEntry('captured_at', capturedAt.toIso8601String()));
+    }
+    final _options = _setStreamType<DeliveryEvidenceCollection>(
+      Options(
+            method: 'POST',
+            headers: _headers,
+            extra: _extra,
+            contentType: 'multipart/form-data',
+          )
+          .compose(
+            _dio.options,
+            '/app/deliveries/evidence',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late DeliveryEvidenceCollection _value;
+    try {
+      _value = DeliveryEvidenceCollection.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<DeliveryEvidenceCollection> getDeliveryEvidence({
+    required String shipmentId,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<DeliveryEvidenceCollection>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/deliveries/${shipmentId}/evidence',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late DeliveryEvidenceCollection _value;
+    try {
+      _value = DeliveryEvidenceCollection.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<PostAppDeliveriesProofOfDeliveryResponse> recordProofOfDelivery({
     required ProofOfDeliveryRequest body,
     String? idempotencyKey,
@@ -129,6 +312,111 @@ class _ExecutionClient implements ExecutionClient {
     late PostAppDeliveriesProofOfDeliveryResponse _value;
     try {
       _value = PostAppDeliveriesProofOfDeliveryResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppDeliveriesShipmentIdCompleteResponse> completeDelivery({
+    required String shipmentId,
+    required ProofOfDeliveryRequest body,
+    String? idempotencyKey,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options =
+        _setStreamType<PostAppDeliveriesShipmentIdCompleteResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/deliveries/${shipmentId}/complete',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppDeliveriesShipmentIdCompleteResponse _value;
+    try {
+      _value = PostAppDeliveriesShipmentIdCompleteResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppDeliveriesShipmentIdArrivedResponse> markStopArrived({
+    required String shipmentId,
+    required StopArrivedRequest body,
+    String? idempotencyKey,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppDeliveriesShipmentIdArrivedResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/deliveries/${shipmentId}/arrived',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppDeliveriesShipmentIdArrivedResponse _value;
+    try {
+      _value = PostAppDeliveriesShipmentIdArrivedResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<ScanBatchResponse> recordScanBatch({
+    required ScanBatchRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<ScanBatchResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/deliveries/scans/batch',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late ScanBatchResponse _value;
+    try {
+      _value = ScanBatchResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -230,6 +518,124 @@ class _ExecutionClient implements ExecutionClient {
     late PostAppNodeReceptionsResponse _value;
     try {
       _value = PostAppNodeReceptionsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppNodeReceptionsResponse> listNodeReceptions({
+    int? page = 1,
+    int? perPage = 50,
+    String? nodeId,
+    Status2? status,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'node_id': nodeId,
+      r'status': status?.toJson(),
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<GetAppNodeReceptionsResponse>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/node-receptions',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late GetAppNodeReceptionsResponse _value;
+    try {
+      _value = GetAppNodeReceptionsResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppNodeReceptionsShipmentIdUnitsUnitIdLocationResponse>
+  assignShelfLocation({
+    required String shipmentId,
+    required String unitId,
+    required AssignShelfLocationRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options =
+        _setStreamType<
+          PostAppNodeReceptionsShipmentIdUnitsUnitIdLocationResponse
+        >(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/node-receptions/${shipmentId}/units/${unitId}/location',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppNodeReceptionsShipmentIdUnitsUnitIdLocationResponse _value;
+    try {
+      _value =
+          PostAppNodeReceptionsShipmentIdUnitsUnitIdLocationResponse.fromJson(
+            _result.data!,
+          );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppNodeReceptionsShipmentIdUnitsLocationResponse>
+  assignShelfLocationBatch({
+    required String shipmentId,
+    required AssignShelfLocationRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options =
+        _setStreamType<PostAppNodeReceptionsShipmentIdUnitsLocationResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/app/node-receptions/${shipmentId}/units/location',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppNodeReceptionsShipmentIdUnitsLocationResponse _value;
+    try {
+      _value = PostAppNodeReceptionsShipmentIdUnitsLocationResponse.fromJson(
+        _result.data!,
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -499,11 +905,54 @@ class _ExecutionClient implements ExecutionClient {
   }
 
   @override
-  Future<GetAppVehiclesVehicleIdDeliveriesResponse> listVehicleDeliveries({
-    required String vehicleId,
+  Future<PostAppOrdersOrderNumberVehicleResponse> assignOrderVehicle({
+    required String orderNumber,
+    required AppOrdersOrderNumberVehicleRequestBody body,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppOrdersOrderNumberVehicleResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/orders/${orderNumber}/vehicle',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppOrdersOrderNumberVehicleResponse _value;
+    try {
+      _value = PostAppOrdersOrderNumberVehicleResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<GetAppVehiclesVehicleIdDeliveriesResponse> listVehicleDeliveries({
+    required String vehicleId,
+    int? page = 1,
+    int? perPage = 50,
+    String? status,
+    bool? open,
+    String? cursor,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+      r'status': status,
+      r'open': open,
+      r'cursor': cursor,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<GetAppVehiclesVehicleIdDeliveriesResponse>(
@@ -520,6 +969,72 @@ class _ExecutionClient implements ExecutionClient {
     late GetAppVehiclesVehicleIdDeliveriesResponse _value;
     try {
       _value = GetAppVehiclesVehicleIdDeliveriesResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppVehiclesVehicleIdRouteStartResponse> startDriverRoute({
+    required String vehicleId,
+    required RouteLifecycleRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppVehiclesVehicleIdRouteStartResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/vehicles/${vehicleId}/route/start',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppVehiclesVehicleIdRouteStartResponse _value;
+    try {
+      _value = PostAppVehiclesVehicleIdRouteStartResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostAppVehiclesVehicleIdRouteCloseResponse> closeDriverRoute({
+    required String vehicleId,
+    required RouteLifecycleRequest body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body.toJson());
+    final _options = _setStreamType<PostAppVehiclesVehicleIdRouteCloseResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/app/vehicles/${vehicleId}/route/close',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostAppVehiclesVehicleIdRouteCloseResponse _value;
+    try {
+      _value = PostAppVehiclesVehicleIdRouteCloseResponse.fromJson(
         _result.data!,
       );
     } on Object catch (e, s) {
@@ -556,6 +1071,44 @@ class _ExecutionClient implements ExecutionClient {
     late PostAppVehiclesVehicleIdIncidentsResponse _value;
     try {
       _value = PostAppVehiclesVehicleIdIncidentsResponse.fromJson(
+        _result.data!,
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<PostIntegrationsEvidenceEvidenceIdValidationResponse>
+  recordEvidenceValidation({
+    required String evidenceId,
+    IntegrationsEvidenceEvidenceIdValidationRequestBody? body,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body?.toJson() ?? <String, dynamic>{});
+    final _options =
+        _setStreamType<PostIntegrationsEvidenceEvidenceIdValidationResponse>(
+          Options(method: 'POST', headers: _headers, extra: _extra)
+              .compose(
+                _dio.options,
+                '/integrations/evidence/${evidenceId}/validation',
+                queryParameters: queryParameters,
+                data: _data,
+              )
+              .copyWith(
+                baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl),
+              ),
+        );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late PostIntegrationsEvidenceEvidenceIdValidationResponse _value;
+    try {
+      _value = PostIntegrationsEvidenceEvidenceIdValidationResponse.fromJson(
         _result.data!,
       );
     } on Object catch (e, s) {

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# DisTrack — ADB inalámbrico desde WSL (Linux). VS Code en Remote-WSL usa el
-# Flutter de WSL, así que el teléfono debe estar en el adb de WSL (este).
+# DisTrack — ADB inalámbrico. Corre tanto en WSL/Linux como en Windows nativo
+# (Git Bash, que es con lo que VS Code en Windows ejecuta `bash`): el adb se
+# autodetecta más abajo (WSL: ~/Android/Sdk; Windows: %LOCALAPPDATA%\...adb.exe).
 #
-# La clave ~/.android/adbkey se copió desde Windows, así que el teléfono YA
-# confía en este adb (no hace falta re-vincular).
+# La clave ~/.android/adbkey ya la conoce el teléfono, así que YA confía en este
+# adb (no hace falta re-vincular).
 #
 # Uso (el subcomando es opcional si pasás ip:puerto):
 #   ./scripts/adb-wireless.sh 192.168.1.42:5555          # conecta (atajo de 'connect')
@@ -16,7 +17,21 @@
 #   ./scripts/adb-wireless.sh pair 192.168.1.50:37123 123456 [192.168.1.50:40777]
 set -euo pipefail
 
-ADB="${ADB:-$HOME/Android/Sdk/platform-tools/adb}"
+# adb según el entorno: en WSL/Linux vive en ~/Android/Sdk/platform-tools/adb;
+# en Windows nativo (Git Bash, que es como lo corre VS Code en Windows) el SDK
+# está en %LOCALAPPDATA%\Android\Sdk y el binario es adb.exe. Un ADB explícito
+# en el entorno manda. Como último recurso, el adb del PATH.
+if [ -n "${ADB:-}" ]; then
+  :
+elif [ -x "$HOME/Android/Sdk/platform-tools/adb" ]; then
+  ADB="$HOME/Android/Sdk/platform-tools/adb"              # WSL/Linux/macOS
+elif [ -x "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe" ]; then
+  ADB="$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"  # Windows nativo
+elif command -v adb >/dev/null 2>&1; then
+  ADB="$(command -v adb)"
+else
+  ADB="$HOME/Android/Sdk/platform-tools/adb"
+fi
 # OJO: mDNS openscreen (ADB_MDNS_OPENSCREEN) NO se activa por defecto. En redes
 # que dejan pasar multicast (casa) autodescubre bien, pero en redes corporativas
 # (trabajo) el multicast suele estar BLOQUEADO: el dispositivo se auto-conecta
@@ -31,7 +46,13 @@ PORT=8110   # backend local (Docker) al que el teléfono llega por 'adb reverse'
 # está dormido o el puerto rotó, 'adb connect' puede colgarse indefinidamente y
 # deja la tarea de VS Code "pensando" para siempre. Con esto nunca bloquea.
 NET_TIMEOUT=7
-adb_net() { timeout "$NET_TIMEOUT" "$ADB" "$@"; }
+# `timeout` existe en WSL y en el Git Bash moderno; si faltara, se corre el adb
+# directo (sin tope) en vez de fallar por "timeout: command not found".
+if command -v timeout >/dev/null 2>&1; then
+  adb_net() { timeout "$NET_TIMEOUT" "$ADB" "$@"; }
+else
+  adb_net() { "$ADB" "$@"; }
+fi
 
 # ¿Hay entradas fantasma de mDNS? (serial que NO es ip:puerto).
 has_ghost() { "$ADB" devices | awk 'NR>1 && $1 !~ /^[0-9.]+:[0-9]+$/ && NF>=2 {f=1} END{exit f?0:1}'; }
@@ -123,7 +144,7 @@ bridge() {
 connect() {
   local t="$1"
   clean_server            # saca fantasmas mDNS antes de conectar por IP
-  echo "Conectando (WSL) a $t ..."
+  echo "Conectando a $t (adb: $ADB) ..."
   adb_net connect "$t" >/dev/null 2>&1 || true   # con timeout: no se cuelga
   printf '%s' "$t" > "$LAST"
   bridge || true

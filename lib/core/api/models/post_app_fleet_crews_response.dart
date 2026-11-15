@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data3.dart';
+import 'fleet_assemble_crew_data.dart';
 
 part 'post_app_fleet_crews_response.g.dart';
 
@@ -15,7 +15,7 @@ class PostAppFleetCrewsResponse {
   factory PostAppFleetCrewsResponse.fromJson(Map<String, Object?> json) =>
       _$PostAppFleetCrewsResponseFromJson(json);
 
-  final Data3? data;
+  final FleetAssembleCrewData? data;
 
   Map<String, Object?> toJson() => _$PostAppFleetCrewsResponseToJson(this);
 }

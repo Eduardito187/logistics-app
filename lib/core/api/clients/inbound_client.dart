@@ -31,13 +31,22 @@ abstract class InboundClient {
     @Body() required AnnounceAsnRequest body,
   });
 
-  /// List ASNs
+  /// List ASNs.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/integrations/inbound/asn')
   Future<AsnCollection> listAsns({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('seller_id') String? sellerId,
     @Query('warehouse_id') String? warehouseId,
     @Query('status') AsnStatus? status,
     @Query('appointment_date') DateTime? appointmentDate,
+    @Query('cursor') String? cursor,
   });
 
   /// Record the arrival of a seller's truck

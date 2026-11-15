@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'error8.dart';
+import 'error9.dart';
 
 part 'promise_error.g.dart';
 
@@ -15,7 +15,7 @@ class PromiseError {
   factory PromiseError.fromJson(Map<String, Object?> json) =>
       _$PromiseErrorFromJson(json);
 
-  final Error8 error;
+  final Error9 error;
 
   Map<String, Object?> toJson() => _$PromiseErrorToJson(this);
 }

@@ -7,6 +7,8 @@ import '../../../core/icons/icons.dart';
 import '../../../core/navigation/app_nav.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../domain/entities/route_navigation.dart';
+import '../domain/route_progress.dart';
 import 'controllers/driver_controllers.dart';
 import 'controllers/locally_settled_stops.dart';
 import 'driver_vehicle_gate.dart';
@@ -38,11 +40,22 @@ void _closeOrHome(BuildContext context, WidgetRef ref) {
 /// mapa) y los botones del paso: entregar con foto, escanear productos, no se
 /// pudo.
 /// "Ayuda" reúne llamar, navegar y reportar problemas.
-class ActiveDeliveryScreen extends ConsumerWidget {
+class ActiveDeliveryScreen extends ConsumerStatefulWidget {
   const ActiveDeliveryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActiveDeliveryScreen> createState() =>
+      _ActiveDeliveryScreenState();
+}
+
+class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
+  /// Ya se re-verificó el estado "ruta terminada" con un refresco. Evita un
+  /// bucle de refrescos y que se pida de más: un solo fetch por episodio
+  /// "terminada".
+  bool _reverifiedFinish = false;
+
+  @override
+  Widget build(BuildContext context) {
     return DriverVehicleGate(
       title: 'Entrega en curso',
       immersive: true,
@@ -56,7 +69,23 @@ class ActiveDeliveryScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(driverRouteProvider),
           data: (data) {
             final stop = currentStopOf(data, settled);
-            if (stop == null) return _RouteFinished(route: data);
+            if (stop == null) {
+              // La ruta PARECE terminada. Puede ser un estado STALE: el prefetch
+              // del inicio cacheó un fetch transitorio del backend (sin parada
+              // pendiente) y la pantalla mostraba "Sin entregas" hasta recargar
+              // a mano. Se re-verifica UNA sola vez con un refresco en segundo
+              // plano (un fetch, solo al verse terminada) antes de darla por
+              // terminada. Si tras el refresco sigue sin parada, es real.
+              if (!_reverifiedFinish) {
+                _reverifiedFinish = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) ref.invalidate(driverRouteProvider);
+                });
+              }
+              return _RouteFinished(route: data);
+            }
+            // Hay parada en curso: re-armar el chequeo para el próximo episodio.
+            _reverifiedFinish = false;
             return _ActiveDelivery(route: data, stop: stop);
           },
         );
@@ -134,17 +163,93 @@ class _ActiveDelivery extends ConsumerWidget {
 /// Tarjeta de estado que sí observa la posición en vivo: es el único widget que
 /// se reconstruye con cada fix del GPS para recalcular lo que falta a la parada.
 /// Aislarla evita reconstruir el mapa padre, la hoja y la barra de acciones.
-class _LiveStatusCard extends ConsumerWidget {
+class _LiveStatusCard extends ConsumerStatefulWidget {
   const _LiveStatusCard({required this.route, required this.stop});
 
   final DriverRoute route;
   final DriverRouteStop stop;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LiveStatusCard> createState() => _LiveStatusCardState();
+}
+
+class _LiveStatusCardState extends ConsumerState<_LiveStatusCard> {
+  /// Avance del tramo hacia la parada en curso (ver [LegProgress]).
+  final LegProgress _leg = LegProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    final route = widget.route;
+    final stop = widget.stop;
     final fix = ref.watch(deliveryDriverFixProvider).value;
     final remaining = remainingToStop(route, stop, fix);
-    return DeliveryStatusCard(route: route, stop: stop, remaining: remaining);
+    // Avance item por item (incluye lo resuelto en este teléfono): misma fuente
+    // que el resumen y la lista, para que la barra no se contradiga.
+    final settled = ref.watch(locallySettledStopsProvider);
+    final progress = RouteProgress.of(route, settled);
+    return DeliveryStatusCard(
+      route: route,
+      stop: stop,
+      progress: progress,
+      remaining: remaining,
+      legFraction: _leg.sample(
+        stopId: stop.id,
+        remaining: remaining,
+        now: DateTime.now(),
+      ),
+    );
+  }
+}
+
+/// Avance del TRAMO hacia la parada en curso, de 0 a 1, para pintar su tramo
+/// de la barra a medida que el camión se acerca.
+///
+/// - El 100 % del tramo es la mayor distancia vista hacia ESA parada (la del
+///   primer fix, salvo que el camión se aleje): no hace falta otro dato ni otra
+///   llamada al backend, sale del mismo cálculo de "Faltan X km".
+/// - Se MUESTREA como mucho cada [interval] (10 s): el GPS llega cada segundo y
+///   mover la barra en cada fix se vería nerviosa; entre muestras la barra anima
+///   suave hasta el nuevo valor.
+/// - Nunca retrocede (un salto de GPS no despinta lo ya avanzado) y se reinicia
+///   al cambiar de parada.
+class LegProgress {
+  LegProgress({this.interval = const Duration(seconds: 10)});
+
+  final Duration interval;
+
+  String? _stopId;
+  double? _startMeters;
+  double _fraction = 0;
+  DateTime? _sampledAt;
+
+  double sample({
+    required String stopId,
+    required RemainingEstimate? remaining,
+    required DateTime now,
+  }) {
+    if (_stopId != stopId) {
+      _stopId = stopId;
+      _startMeters = null;
+      _fraction = 0;
+      _sampledAt = null;
+    }
+    if (remaining == null) return _fraction;
+    final meters = remaining.meters;
+    final start = _startMeters;
+    if (start == null || meters > start) _startMeters = meters;
+    // Dentro de la geocerca: tramo completo ya, sin esperar la próxima muestra.
+    if (arrivedAtStop(remaining)) {
+      _sampledAt = now;
+      return _fraction = 1;
+    }
+    final at = _sampledAt;
+    if (at != null && now.difference(at) < interval) return _fraction;
+    _sampledAt = now;
+    final total = _startMeters!;
+    if (total <= 0) return _fraction;
+    final next = (1 - meters / total).clamp(0.0, 1.0).toDouble();
+    if (next > _fraction) _fraction = next;
+    return _fraction;
   }
 }
 

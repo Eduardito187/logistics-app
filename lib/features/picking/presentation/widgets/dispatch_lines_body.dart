@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/dispatch_authorization_reason_code.dart';
 import '../../../../core/api/models/dispatch_line.dart';
 import '../../../../core/api/models/dispatch_line_label_status.dart';
 import '../../../../core/api/models/dispatch_lines_response.dart';
@@ -208,7 +209,7 @@ class _DispatchLineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      hasName ? name : 'SKU ${line.sku}',
+                      hasName ? name : line.sku,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -217,7 +218,7 @@ class _DispatchLineCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'SKU ${line.sku} · x${line.quantity} · Línea ${line.lineNumber}',
+                      '${line.sku} · x${line.quantity} · Línea ${line.lineNumber}',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.outline,
                       ),
@@ -238,17 +239,24 @@ class _DispatchLineCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const AnimatedAppIcon(
-                  AppIcon.error,
+                // Sin camión asignado NO es un error: el pedido se destraba
+                // asignándole un camión acá mismo. Se muestra como pendiente
+                // (ámbar), no como falla (rojo).
+                AnimatedAppIcon(
+                  needsVehicle(line) ? AppIcon.pending : AppIcon.error,
                   size: 18,
-                  color: AppColors.danger,
+                  color: needsVehicle(line)
+                      ? AppColors.warning
+                      : AppColors.danger,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    line.authorizedReason ?? 'Sin autorizar para etiquetar.',
+                    dispatchBlockText(line),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.danger,
+                      color: needsVehicle(line)
+                          ? AppColors.warning
+                          : AppColors.danger,
                     ),
                   ),
                 ),
@@ -282,6 +290,13 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!line.authorized) {
+      if (needsVehicle(line)) {
+        return const StatusPill(
+          'Falta asignar camión',
+          tone: PillTone.warning,
+          icon: AppIcon.pending,
+        );
+      }
       return const StatusPill(
         'Sin autorizar',
         tone: PillTone.danger,
@@ -338,3 +353,21 @@ class _Thumb extends StatelessWidget {
     );
   }
 }
+
+/// `true` si el producto no se puede etiquetar SOLO porque su pedido todavía no
+/// tiene camión asignado (`authorized_reason_code: not_assigned`). No es un
+/// problema del pedido: se destraba asignándole un camión.
+bool needsVehicle(DispatchLine line) =>
+    !line.authorized &&
+    line.authorizedReasonCode == DispatchAuthorizationReasonCode.notAssigned;
+
+/// Qué decirle al preparador cuando un producto no se puede etiquetar. Se
+/// decide por el CÓDIGO del backend, no por su texto.
+String dispatchBlockText(DispatchLine line) =>
+    switch (line.authorizedReasonCode) {
+      DispatchAuthorizationReasonCode.notAssigned =>
+        'Asigná un camión al pedido para poder etiquetarlo.',
+      DispatchAuthorizationReasonCode.vehicleUnfit =>
+        'El camión asignado no está apto para salir. Asigná otro camión.',
+      _ => line.authorizedReason ?? 'Sin autorizar para etiquetar.',
+    };

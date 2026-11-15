@@ -16,6 +16,8 @@ enum OrderSource {
   manual('MANUAL'),
   @JsonValue('EXCEL')
   excel('EXCEL'),
+  @JsonValue('TRANSFER')
+  transfer('TRANSFER'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

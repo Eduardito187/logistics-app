@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'available_slot.dart';
-import 'meta8.dart';
+import 'meta.dart';
 
 part 'available_slot_collection.g.dart';
 
@@ -17,7 +17,7 @@ class AvailableSlotCollection {
       _$AvailableSlotCollectionFromJson(json);
 
   final List<AvailableSlot> data;
-  final Meta8 meta;
+  final Meta meta;
 
   Map<String, Object?> toJson() => _$AvailableSlotCollectionToJson(this);
 }

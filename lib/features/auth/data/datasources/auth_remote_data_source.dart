@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/export.dart';
+import '../../../../core/api/export.dart'
+    hide TwoFactorChallenge, TwoFactorEnrollment;
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/two_factor_challenge.dart';

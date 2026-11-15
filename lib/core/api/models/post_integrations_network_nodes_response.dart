@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'data19.dart';
+import 'register_network_node_data.dart';
 
 part 'post_integrations_network_nodes_response.g.dart';
 
@@ -16,7 +16,7 @@ class PostIntegrationsNetworkNodesResponse {
     Map<String, Object?> json,
   ) => _$PostIntegrationsNetworkNodesResponseFromJson(json);
 
-  final Data19 data;
+  final RegisterNetworkNodeData data;
 
   Map<String, Object?> toJson() =>
       _$PostIntegrationsNetworkNodesResponseToJson(this);

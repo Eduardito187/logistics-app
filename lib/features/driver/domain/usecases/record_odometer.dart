@@ -17,6 +17,10 @@ class RecordOdometer {
     required RecordOdometerRequestSource source,
     required DateTime readAt,
     String? note,
+    // Salida (ruta) a la que pertenece la lectura: el chofer puede salir varias
+    // veces en el día, con el mismo camión o con otro; cada salida tiene su
+    // odómetro de salida y de llegada.
+    String? routeId,
   }) => _repo.recordOdometer(
     RecordOdometerRequest(
       vehicleId: vehicleId,
@@ -24,6 +28,7 @@ class RecordOdometer {
       source: source,
       readAt: readAt,
       note: note,
+      routeId: routeId,
     ),
   );
 }

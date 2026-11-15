@@ -15,6 +15,7 @@ const Map<String, OfflineActionHandler> offlineHandlers = {
   // --- Chofer: carga, descarga, entrega ---
   'recordLoadScan': _recordLoadScan,
   'recordUnloadScan': _recordUnloadScan,
+  'recordStoreDrop': _recordStoreDrop,
   'recordFailedDelivery': _recordFailedDelivery,
   'recordProofOfDelivery': _recordProofOfDelivery,
   'reportVehicleIncident': _reportVehicleIncident,
@@ -56,6 +57,24 @@ Future<void> _recordUnloadScan(
 ) {
   return api.execution.recordUnloadScan(
     body: UnloadScanRequest.fromJson(p),
+    idempotencyKey: key,
+  );
+}
+
+/// El chofer deja el pedido en la tienda. El envío va en el path (`@shipmentId`
+/// en el payload); el resto del payload es el body.
+Future<void> _recordStoreDrop(
+  LogisticsApi api,
+  String key,
+  Map<String, Object?> p,
+) {
+  final shipmentId = p['@shipmentId']! as String;
+  return api.execution.recordStoreDrop(
+    shipmentId: shipmentId,
+    body: AppDeliveriesShipmentIdStoreDropRequestBody.fromJson({
+      for (final entry in p.entries)
+        if (!entry.key.startsWith('@')) entry.key: entry.value,
+    }),
     idempotencyKey: key,
   );
 }

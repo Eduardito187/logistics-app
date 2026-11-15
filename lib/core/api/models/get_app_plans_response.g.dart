@@ -11,7 +11,7 @@ GetAppPlansResponse _$GetAppPlansResponseFromJson(Map<String, dynamic> json) =>
       data: (json['data'] as List<dynamic>)
           .map((e) => Plan.fromJson(e as Map<String, dynamic>))
           .toList(),
-      meta: Meta.fromJson(json['meta'] as Map<String, dynamic>),
+      meta: ListMeta.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$GetAppPlansResponseToJson(

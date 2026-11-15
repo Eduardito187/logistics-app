@@ -22,6 +22,8 @@ class NotificationView {
     required this.fcmTopic,
     required this.channels,
     required this.attempts,
+    this.createdAt,
+    this.readAt,
     this.shipmentExternalId,
   });
 
@@ -29,6 +31,12 @@ class NotificationView {
       _$NotificationViewFromJson(json);
 
   final String id;
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  /// When the authenticated user read it; null = unread. Per user, never shared.
+  @JsonKey(name: 'read_at')
+  final DateTime? readAt;
   @JsonKey(name: 'shipment_id')
   final String shipmentId;
 

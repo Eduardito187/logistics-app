@@ -12,7 +12,7 @@ part 'app_vehicles_vehicle_id_route_request_body.g.dart';
 class AppVehiclesVehicleIdRouteRequestBody {
   const AppVehiclesVehicleIdRouteRequestBody({
     required this.routeDate,
-    required this.stops,
+    this.stops,
   });
 
   factory AppVehiclesVehicleIdRouteRequestBody.fromJson(
@@ -21,7 +21,9 @@ class AppVehiclesVehicleIdRouteRequestBody {
 
   @JsonKey(name: 'route_date')
   final DateTime routeDate;
-  final List<Stops> stops;
+
+  /// Optional. Omit (or send []) to assemble from the published plan. If provided, these explicit stops are used instead.
+  final List<Stops>? stops;
 
   Map<String, Object?> toJson() =>
       _$AppVehiclesVehicleIdRouteRequestBodyToJson(this);

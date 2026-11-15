@@ -32,10 +32,19 @@ abstract class ReturnsClient {
   /// [sellerId] - Optional filter by owning seller.
   ///
   /// [status] - Optional filter by return status.
+  ///
+  /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
+  ///
+  /// [perPage] - Page size for offset or cursor pagination (max 200).
+  ///
+  /// [cursor] - Opaque cursor for cursor pagination (E-02), taken from a previous response's `meta.next_cursor`. Preferred over `page` for large, growing collections.
   @GET('/integrations/returns')
   Future<ReturnOrderCollection> listReturns({
+    @Query('page') int? page = 1,
+    @Query('per_page') int? perPage = 50,
     @Query('seller_id') String? sellerId,
     @Query('status') ReturnOrderStatus? status,
+    @Query('cursor') String? cursor,
   });
 
   /// Get a return

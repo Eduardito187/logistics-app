@@ -16,6 +16,9 @@ SubmitSettlementRequest _$SubmitSettlementRequestFromJson(
   amountCents: (json['amount_cents'] as num).toInt(),
   currency: json['currency'] as String,
   reference: json['reference'] as String,
+  vehicleClass: json['vehicle_class'] == null
+      ? null
+      : VehicleClass.fromJson(json['vehicle_class'] as String),
   documents: (json['documents'] as List<dynamic>?)
       ?.map((e) => CarrierDocument.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -24,6 +27,7 @@ SubmitSettlementRequest _$SubmitSettlementRequestFromJson(
 Map<String, dynamic> _$SubmitSettlementRequestToJson(
   SubmitSettlementRequest instance,
 ) => <String, dynamic>{
+  'vehicle_class': instance.vehicleClass,
   'corridor_from': instance.corridorFrom,
   'corridor_to': instance.corridorTo,
   'corridor_type': instance.corridorType,

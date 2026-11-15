@@ -5,10 +5,10 @@
 import 'package:dio/dio.dart';
 import 'package:logistics_app/core/api/clients/execution_client.dart';
 import 'package:logistics_app/core/api/logistics_api.dart';
-import 'package:logistics_app/core/api/models/data.dart';
+import 'package:logistics_app/core/api/models/upload_delivery_photo_data.dart';
+import 'package:logistics_app/core/api/models/upload_delivery_photo_data_kind.dart';
 import 'package:logistics_app/core/api/models/delivery.dart';
 import 'package:logistics_app/core/api/models/delivery_status.dart';
-import 'package:logistics_app/core/api/models/kind.dart';
 import 'package:logistics_app/core/api/models/post_app_deliveries_photos_response.dart';
 import 'package:logistics_app/core/api/models/post_app_deliveries_scans_load_response.dart';
 import 'package:logistics_app/core/background/sync_scheduler.dart';
@@ -16,6 +16,7 @@ import 'package:logistics_app/core/offline/failure_reporter.dart';
 
 const _loadOk = PostAppDeliveriesScansLoadResponse(
   data: Delivery(
+    reference: 'REF-1',
     id: 'd1',
     shipmentId: 's1',
     vehicleId: 'v1',
@@ -25,7 +26,12 @@ const _loadOk = PostAppDeliveriesScansLoadResponse(
 );
 
 const _photoOk = PostAppDeliveriesPhotosResponse(
-  data: Data(kind: Kind.pod, disk: 'local', path: 'p/1.jpg', url: null),
+  data: UploadDeliveryPhotoData(
+    kind: UploadDeliveryPhotoDataKind.pod,
+    disk: 'local',
+    path: 'p/1.jpg',
+    url: null,
+  ),
 );
 
 /// Cliente de ejecución guionizado: cada llamada (escaneo de carga o subida de

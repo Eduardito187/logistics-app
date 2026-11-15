@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'pre_trip_checklist.dart';
-import 'collection_meta.dart';
+import 'list_meta.dart';
 
 part 'get_app_fleet_pre_trip_checklists_response.g.dart';
 
@@ -18,7 +18,7 @@ class GetAppFleetPreTripChecklistsResponse {
   ) => _$GetAppFleetPreTripChecklistsResponseFromJson(json);
 
   final List<PreTripChecklist>? data;
-  final CollectionMeta? meta;
+  final ListMeta? meta;
 
   Map<String, Object?> toJson() =>
       _$GetAppFleetPreTripChecklistsResponseToJson(this);

@@ -4,31 +4,36 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'kind.dart';
+import 'checklist_template.dart';
+import 'checklist_template_item.dart';
+import 'vehicle_fitness.dart';
 
 part 'data.g.dart';
 
 @JsonSerializable()
 class Data {
   const Data({
-    required this.kind,
-    required this.disk,
-    required this.path,
-    required this.url,
+    required this.id,
+    required this.name,
+    required this.vehicleType,
+    required this.active,
+    required this.items,
+    required this.criticalKeys,
+    this.vehicleFitness,
   });
 
   factory Data.fromJson(Map<String, Object?> json) => _$DataFromJson(json);
 
-  final Kind kind;
-
-  /// Disco de evidencia donde quedó la foto
-  final String disk;
-
-  /// Referencia durable (relativa al disco); viaja como photo_path en la prueba de entrega
-  final String path;
-
-  /// URL de acceso si el disco la expone; null en discos privados
-  final String? url;
+  final String id;
+  final String name;
+  @JsonKey(name: 'vehicle_type')
+  final String? vehicleType;
+  final bool active;
+  final List<ChecklistTemplateItem> items;
+  @JsonKey(name: 'critical_keys')
+  final List<String> criticalKeys;
+  @JsonKey(name: 'vehicle_fitness')
+  final VehicleFitness? vehicleFitness;
 
   Map<String, Object?> toJson() => _$DataToJson(this);
 }

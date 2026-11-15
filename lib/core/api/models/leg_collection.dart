@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'leg.dart';
-import 'meta11.dart';
+import 'meta5.dart';
 
 part 'leg_collection.g.dart';
 
@@ -17,7 +17,7 @@ class LegCollection {
       _$LegCollectionFromJson(json);
 
   final List<Leg> data;
-  final Meta11 meta;
+  final Meta5 meta;
 
   Map<String, Object?> toJson() => _$LegCollectionToJson(this);
 }

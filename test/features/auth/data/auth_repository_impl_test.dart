@@ -404,10 +404,10 @@ ro.product.model=CPH2749
     );
 
     test(
-      'usuario sin rol operativo (admin): lanza 403 y no abre sesión',
+      'usuario sin rol de la app (contador): lanza 403 y no abre sesión',
       () async {
         final remote = _FakeAuthRemote(
-          loginResponse: _loginWithRoles(['admin']),
+          loginResponse: _loginWithRoles(['contador']),
         );
         final container = _container(remote);
 

@@ -8,6 +8,7 @@ import '../../../../core/map/dark_map_canvas.dart';
 import '../../../../core/map/osm_tile_layer.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../domain/effective_stop_status.dart';
 import '../driver_route_status.dart';
 import 'active_delivery/map_round_button.dart';
 import 'map_zoom_buttons.dart';
@@ -23,9 +24,19 @@ import 'stop_pin.dart';
 /// misma instancia de widget: reconstruir la pantalla (p. ej. el botón "Armar
 /// ruta") no vuelve a proyectar los puntos del trazo.
 class RouteMap extends StatefulWidget {
-  const RouteMap({super.key, required this.route, this.fullscreen = false});
+  const RouteMap({
+    super.key,
+    required this.route,
+    this.settled = const {},
+    this.fullscreen = false,
+  });
 
   final DriverRoute route;
+
+  /// Paradas resueltas en este teléfono (POD/fallida encolados sin señal): el
+  /// pin se colorea con el estado EFECTIVO, así una entrega sin señal ya se ve
+  /// verde en el mapa.
+  final Map<String, DriverRouteStopStatus> settled;
 
   /// `true` cuando el mapa se abrió a pantalla completa (desde el botón
   /// "Expandir"): ahí el botón de la esquina cierra en vez de expandir.
@@ -43,6 +54,7 @@ class _RouteMapState extends State<RouteMap> {
   // Derivados memoizados de la ruta (y el color con que se pintó el trazo).
   DriverRoute? _cachedRoute;
   Color? _cachedColor;
+  Map<String, DriverRouteStopStatus>? _cachedSettled;
   List<DriverRouteStop> _located = const [];
   List<LatLng> _fitPoints = const [];
   Widget _lineLayer = const SizedBox.shrink();
@@ -76,7 +88,11 @@ class _RouteMapState extends State<RouteMap> {
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
           body: SafeArea(
-            child: RouteMap(route: widget.route, fullscreen: true),
+            child: RouteMap(
+              route: widget.route,
+              settled: widget.settled,
+              fullscreen: true,
+            ),
           ),
         ),
       ),
@@ -84,11 +100,14 @@ class _RouteMapState extends State<RouteMap> {
   }
 
   void _ensureLayers(Color lineColor) {
-    if (identical(_cachedRoute, widget.route) && _cachedColor == lineColor) {
+    if (identical(_cachedRoute, widget.route) &&
+        _cachedColor == lineColor &&
+        identical(_cachedSettled, widget.settled)) {
       return;
     }
     _cachedRoute = widget.route;
     _cachedColor = lineColor;
+    _cachedSettled = widget.settled;
     _located = sortedStops(
       widget.route,
     ).where((s) => s.lat != null && s.lng != null).toList(growable: false);
@@ -123,7 +142,11 @@ class _RouteMapState extends State<RouteMap> {
             alignment: Alignment.topCenter,
             child: GestureDetector(
               onTap: () => openStopDetail(context, stop),
-              child: StopPin(stop: stop, size: pinSize),
+              child: StopPin(
+                stop: stop,
+                size: pinSize,
+                status: effectiveStopStatus(stop, widget.settled),
+              ),
             ),
           ),
       ],

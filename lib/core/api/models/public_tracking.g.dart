@@ -19,6 +19,10 @@ PublicTracking _$PublicTrackingFromJson(Map<String, dynamic> json) =>
             ),
       positionIsLive: json['position_is_live'] as bool?,
       stopsMessage: json['stops_message'] as String,
+      atStoreAt: json['at_store_at'] == null
+          ? null
+          : DateTime.parse(json['at_store_at'] as String),
+      readyForPickup: json['ready_for_pickup'] as bool?,
     );
 
 Map<String, dynamic> _$PublicTrackingToJson(PublicTracking instance) =>
@@ -30,4 +34,6 @@ Map<String, dynamic> _$PublicTrackingToJson(PublicTracking instance) =>
       'last_position': instance.lastPosition,
       'position_is_live': instance.positionIsLive,
       'stops_message': instance.stopsMessage,
+      'at_store_at': instance.atStoreAt?.toIso8601String(),
+      'ready_for_pickup': instance.readyForPickup,
     };

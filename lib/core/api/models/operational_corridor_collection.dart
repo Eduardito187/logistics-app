@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'meta14.dart';
+import 'meta8.dart';
 import 'operational_corridor.dart';
 
 part 'operational_corridor_collection.g.dart';
@@ -17,7 +17,7 @@ class OperationalCorridorCollection {
       _$OperationalCorridorCollectionFromJson(json);
 
   final List<OperationalCorridor> data;
-  final Meta14 meta;
+  final Meta8 meta;
 
   Map<String, Object?> toJson() => _$OperationalCorridorCollectionToJson(this);
 }

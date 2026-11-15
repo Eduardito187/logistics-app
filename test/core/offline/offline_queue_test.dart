@@ -22,6 +22,7 @@ import 'package:logistics_app/core/offline/offline_queue.dart';
 /// solo encolan `recordLoadScan`, así que basta una respuesta de este tipo.
 const _loadOk = PostAppDeliveriesScansLoadResponse(
   data: Delivery(
+    reference: 'REF-1',
     id: 'd1',
     shipmentId: 's1',
     vehicleId: 'v1',
@@ -214,6 +215,47 @@ void main() {
       expect(await submitScan(key: 'K1'), SubmitOutcome.failed);
       expect((await rows()).single.status, 'failed');
     });
+
+    test(
+      'onReject recibe el MOTIVO real del backend en un 4xx permanente',
+      () async {
+        build(
+          _FakeExecution([
+            _httpError(
+              422,
+              body: {'detail': 'no hay entrega abierta para el envío X'},
+            ),
+          ]),
+        );
+        String? motivo;
+        final outcome = await queue.submit(
+          kind: 'recordLoadScan',
+          payload: _scanPayload(),
+          label: 'Carga',
+          idempotencyKey: 'K1',
+          onReject: (e) => motivo = e.message,
+        );
+        expect(outcome, SubmitOutcome.failed);
+        expect(motivo, 'no hay entrega abierta para el envío X');
+      },
+    );
+
+    test(
+      'onReject NO se llama en un fallo transitorio (503 → queued)',
+      () async {
+        build(_FakeExecution([_httpError(503)]));
+        var llamado = false;
+        final outcome = await queue.submit(
+          kind: 'recordLoadScan',
+          payload: _scanPayload(),
+          label: 'Carga',
+          idempotencyKey: 'K1',
+          onReject: (_) => llamado = true,
+        );
+        expect(outcome, SubmitOutcome.queued);
+        expect(llamado, isFalse);
+      },
+    );
 
     // Un 429 es transitorio (rate limit): NO es culpa del dato, así que la fila
     // queda `pending` para reintentar (no se pierde la escritura de terreno).

@@ -21,7 +21,7 @@ class NotificationsRemoteDataSource {
       final api = _ref.read(logisticsApiProvider);
       final response = limit == null
           ? await api.notifications.appListNotifications()
-          : await api.notifications.appListNotifications(limit: limit);
+          : await api.notifications.appListNotifications(perPage: limit);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

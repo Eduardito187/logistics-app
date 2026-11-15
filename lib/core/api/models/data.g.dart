@@ -7,15 +7,29 @@ part of 'data.dart';
 // **************************************************************************
 
 Data _$DataFromJson(Map<String, dynamic> json) => Data(
-  kind: Kind.fromJson(json['kind'] as String),
-  disk: json['disk'] as String,
-  path: json['path'] as String,
-  url: json['url'] as String?,
+  id: json['id'] as String,
+  name: json['name'] as String,
+  vehicleType: json['vehicle_type'] as String?,
+  active: json['active'] as bool,
+  items: (json['items'] as List<dynamic>)
+      .map((e) => ChecklistTemplateItem.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  criticalKeys: (json['critical_keys'] as List<dynamic>)
+      .map((e) => e as String)
+      .toList(),
+  vehicleFitness: json['vehicle_fitness'] == null
+      ? null
+      : VehicleFitness.fromJson(
+          json['vehicle_fitness'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$DataToJson(Data instance) => <String, dynamic>{
-  'kind': instance.kind,
-  'disk': instance.disk,
-  'path': instance.path,
-  'url': instance.url,
+  'id': instance.id,
+  'name': instance.name,
+  'vehicle_type': instance.vehicleType,
+  'active': instance.active,
+  'items': instance.items,
+  'critical_keys': instance.criticalKeys,
+  'vehicle_fitness': instance.vehicleFitness,
 };

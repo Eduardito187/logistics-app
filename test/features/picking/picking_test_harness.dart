@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logistics_app/core/api/models/address_confidence_level.dart';
+import 'package:logistics_app/core/api/models/dispatch_authorization_reason_code.dart';
 import 'package:logistics_app/core/api/models/dispatch_destination.dart';
 import 'package:logistics_app/core/api/models/dispatch_destination_type.dart';
 import 'package:logistics_app/core/api/models/dispatch_line.dart';
@@ -247,7 +248,6 @@ EmittedLabel buildLabel({
   String labelId = 'LBL-00000001',
   String sku = 'SKU1',
   int lineNumber = 1,
-  bool revoked = false,
   String zpl = '^XA^FDuno^XZ',
 }) {
   return EmittedLabel(
@@ -259,7 +259,6 @@ EmittedLabel buildLabel({
     qrContent: '{"id":"$labelId"}',
     zpl: zpl,
     emittedAt: 1700000000,
-    revoked: revoked,
   );
 }
 
@@ -279,6 +278,7 @@ DispatchLine buildDispatchLine({
   String? shipmentReference = '100000001',
   bool authorized = true,
   String? authorizedReason,
+  DispatchAuthorizationReasonCode? authorizedReasonCode,
   DispatchLineLabelStatus labelStatus = DispatchLineLabelStatus.pending,
 }) {
   return DispatchLine(
@@ -298,6 +298,7 @@ DispatchLine buildDispatchLine({
     shipmentReference: shipmentReference,
     authorized: authorized,
     authorizedReason: authorizedReason,
+    authorizedReasonCode: authorizedReasonCode,
     labelStatus: labelStatus,
   );
 }
