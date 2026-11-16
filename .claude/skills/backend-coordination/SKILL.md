@@ -46,6 +46,13 @@ dueño.
 - Llamadas a endpoints que aún no están en el cliente generado: Dio directo en el `data source`, leyendo el
   mapa a un tipo de dominio (no un DTO a mano). Cuando el spec los traiga, regenerar el cliente.
 - Tests con fakes del `data source`: el contrato queda probado aunque el backend no exista.
+- **UN SOLO regen coordinado** cuando el backend tiene mucho spec en vuelo: regenerar el cliente trae TODO lo
+  acumulado de una (acopla trabajo no desplegado, puede renumerar tipos anónimos). Acordar con el backend una
+  señal **"SPEC ESTABLE"**: él avisa cuando su openapi deja de moverse (o cuando el dueño va a commitear/
+  desplegar) y pasa el resumen de todo lo que entró desde el último regen; recién ahí se regenera una vez y se
+  cablea todo junto. Mientras, consumir lo nuevo con Dio directo o esperar. Un campo que el backend hizo
+  **requerido** rompe la app contra el staging viejo (parseo) → desplegar backend + app juntos, o pedir que
+  sea nullable. Detalle del regen en el skill **flutter-feature**.
 
 ## ¿Es de la app o del backend? Medir antes de tocar
 

@@ -379,12 +379,14 @@ void main() {
     expect(sent['heading_deg'], 90);
     expect(sent['accuracy_m'], 8);
 
-    // Un fix sin esos datos no los incluye (el interceptor limpia los nulos).
+    // Un fix sin esos datos los deja en null en el payload; el interceptor
+    // de red (NullBodyStripInterceptor) los saca recién al mandar por HTTP,
+    // así que acá, antes de la cola, viajan como null.
     location.fixes.add(const GpsFix(lat: -16.6, lng: -68.2));
     await pumpEventQueue();
     final second = _queue.submitted.last.payload;
-    expect(second.containsKey('speed_mps'), isFalse);
-    expect(second.containsKey('heading_deg'), isFalse);
+    expect(second['speed_mps'], isNull);
+    expect(second['heading_deg'], isNull);
   });
 
   test('start estando activo re-apunta el envío sin reiniciar', () async {

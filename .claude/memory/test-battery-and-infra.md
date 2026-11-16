@@ -54,3 +54,5 @@ archivo SINTÁCTICAMENTE ROTO (llave de más + indentación mala en una función
 20+ min sin terminar el widget ni los tests. El coordinador debe correr `getDiagnostics` sobre CADA archivo
 que tocó el agente y completar lo que falte; no asumir que "cerró" = "quedó bien". Ver
 [[parallel-agents-method]].
+
+**Trampa de FECHA DE HOY en tests (2026-11-16):** un test que hardcodea la fecha actual (p. ej. un evento con `plan_date: '2026-11-15'` que se compara contra `plansDateProvider`, que vale HOY) PASA el día que se escribe y FALLA cuando cambia el día (le pasó al correr en CI al día siguiente). Regla: en tests, no atar "hoy" a una fecha literal — derivar del provider real (`c.read(plansDateProvider)`) o, si solo importa que el evento se procese, omitir el campo de fecha (p. ej. `planEventIsFor` devuelve true sin `plan_date`). También: el payload que captura un fake de la cola offline tiene las claves con `null` (toJson las incluye); los nulos los saca el NullBodyStripInterceptor recién en HTTP → afirmar `payload['x'] isNull`, no `containsKey isFalse`.

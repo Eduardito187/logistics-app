@@ -45,3 +45,5 @@ siempre tomados de `channels`.
 listas paginadas, `PagedSearchListState.refreshSilently()` con `RealtimeListener`. Son SEÑALES: se vuelve a
 pedir el endpoint de siempre. No va por sockets: escaneos/entregas/fotos (cola offline) ni el envío de GPS.
 Sin hacer: el detalle (hoja) de un envío del admin ya abierto no se actualiza en vivo.
+
+**2ª ola + ETA/ruta: EN EL CLIENTE (regen del 2026-11-16, sin deploy).** Modelos de los 5 temas (PickingUpdatedEvent, StoreUpdatedEvent, LoadingUpdatedEvent, Alerts/DashboardUpdatedEvent, TrackingUpdatedEvent) ya existen, pero la app los consume por nombre+payload (no por modelo tipado), así que el regen no cambió el consumo: funcionan al desplegar. Cableado nuevo: `off_route`(bool?)/`off_route_since` en DriverRoute → cartel "Fuera de ruta" del chofer (respaldo local si null); `route.updated` opcionales `off_route?/rerouted?/stops?[].eta_at` (ya se re-pide la ruta al recibirlo → ETAs frescas); campos GPS en TruckPositionInput. El backend NO redibuja la polilínea OSRM al reruteo (solo ETA) — pedir si molesta. Ver [[api-client-generation]].

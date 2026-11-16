@@ -205,11 +205,28 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 (o `scripts/regen_api_client.sh`). Genera en una copia temporal con `C:\sdk\flutter` y `tool/api_gen/`
 (pubspec Dart 3.13), preprocesa el spec con la Python de WSL (la de Windows no tiene PyYAML), parcha
 `MetaSealed?`, corre build_runner, formatea con 3.32 y copia solo `lib/core/api/`. **Avisa si cambió la
-numeración de tipos anónimos `DataN`**: renombrar las referencias de la app/tests y los imports `models/dataN.dart`
-comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
+numeración de tipos anónimos `DataN`** ("[6/7] Revisando tipos anonimos DataN" → "Sin cambios" o la lista):
+renombrar las referencias de la app/tests y los imports `models/dataN.dart` comparando campos (pasó:
+`Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
 - **Pasar SIEMPRE `-Spec C:\Users\ehhuallata\Documents\APP\logistics\openapi\v1.yaml`**: el valor por defecto
   apunta al backend viejo de WSL. Probar primero con `-DryRun`.
+- **`-DryRun` "falla" con exit 1 pero NO es un error:** el último paso es `git diff --no-index`, que devuelve 1
+  cuando HAY diferencias (lo normal). El dry-run igual generó: mirá el resumen de archivos y los avisos.
+- **No solo `DataN` se renumera: los `HelpersN` anónimos también** (pasó `Helpers2→Helpers3` en `my_crew`,
+  2026-11-16). El script solo chequea `DataN`; tras aplicar, `flutter analyze` caza el resto
+  (`List<Helpers2>` no asigna a `List<Helpers3>`) y se renombra en app/tests.
+- **Un campo que el backend hizo REQUERIDO rompe la app contra un backend AÚN NO DESPLEGADO** (el modelo
+  generado exige el campo; el staging viejo no lo manda → el parseo del objeto entero falla, p. ej. toda la
+  lista de envíos entregados). Avisar al dueño: desplegar backend + app juntos, no la app sola contra staging
+  viejo. Alternativa: pedir al backend que el campo sea nullable (pasó con `delivery_evidence.with_shortage`).
+- **UN SOLO regen coordinado** cuando el backend tiene mucho spec en vuelo sin commitear: regenerar trae TODO
+  de una (acopla trabajo no desplegado y puede renumerar). Esperar la señal "SPEC ESTABLE" del backend (o el
+  commit/deploy del dueño) y regenerar una vez con todo. Ver [[realtime-sockets-contract]], skill
+  **backend-coordination**.
+- **Verificación sin suite:** el dueño NO quiere que corras `flutter test`. Tras el regen, verificá con
+  `flutter analyze` (y el truco de abajo para el cliente generado, que está excluido); el build_runner que
+  corre dentro del regen ya probó que el cliente generado compila. Entregá el comando de tests al dueño.
 - El cliente generado está EXCLUIDO del analizador (`analysis_options.yaml`): `flutter analyze` en verde no
   prueba que compile. Para revisarlo: comentar un momento las exclusiones `lib/core/api/**` y `**/*.g.dart`,
   `dart analyze lib/core/api`, y restaurarlas.
@@ -218,8 +235,8 @@ comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
   (`<OperationId>Data`, `<Schema>Data`), tipos que chocan con Dart (`map` → `MapSettings`), JSON antes que
   multipart. Si un regen falla (Stack Overflow, `class Map`, un enum pisado, `.toJson()` sobre null), el
   arreglo va ahí, nunca a mano en `lib/core/api/`.
-- Tras regenerar: `flutter analyze` + suite completa; los renombres se aplican con un script de Python en el
-  scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
+- Tras regenerar: `flutter analyze` (la suite la corre el dueño); los renombres se aplican con un script de
+  Python en el scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
 
 ## Reglas de negocio vigentes (nov 2026)
 
