@@ -72,12 +72,14 @@ void main() {
     // afirma por etiqueta; la ETA final (13:30) es la hora del último stop.
     expect(find.text('Paradas'), findsOneWidget);
     expect(find.text('ETA final'), findsOneWidget);
-    expect(find.text('13:30'), findsOneWidget);
-    // Secuencia de paradas (StopTile) y ETA por parada (EtaRow), con ids propios.
+    expect(find.text('13:30'), findsNWidgets(2)); // ETA final + su parada
+    // Una sola línea de tiempo: cada parada en su tarjeta, con su hora de
+    // llegada adentro (ya no hay una lista aparte de ETA).
     expect(find.text('Secuencia de paradas'), findsOneWidget);
-    expect(find.text('Parada 1'), findsWidgets);
+    expect(find.text('Parada 1'), findsOneWidget);
     expect(find.text('Parada 2'), findsOneWidget);
-    expect(find.text('ETA por parada'), findsOneWidget);
+    expect(find.text('ETA por parada'), findsNothing);
+    expect(find.text('Llega'), findsWidgets);
   });
 
   testWidgets(
@@ -124,7 +126,7 @@ void main() {
     expect(find.text('El plan todavía no tiene paradas.'), findsOneWidget);
   });
 
-  testWidgets('ETA sin calcular muestra el texto de la sección', (
+  testWidgets('ETA sin calcular: la parada se ve igual, sin hora de llegada', (
     tester,
   ) async {
     final repo = FakeSupervisorRepository()
@@ -136,23 +138,27 @@ void main() {
 
     await _pump(tester, repo);
 
-    expect(find.text('Sin ETA calculada todavía.'), findsOneWidget);
+    expect(find.text('Parada 1'), findsOneWidget);
+    expect(find.text('Llega'), findsNothing);
   });
 
-  testWidgets('un fallo de ETA no tumba el detalle: error solo en su sección', (
+  testWidgets('un fallo de ETA no tumba el detalle ni muestra error', (
     tester,
   ) async {
     final repo = FakeSupervisorRepository()
-      ..planValue = plan(id: 'p1', vehicleId: 'CAM-7', stops: const [])
+      ..planValue = plan(
+        id: 'p1',
+        vehicleId: 'CAM-7',
+        stops: [plannedStop(sequence: 1, loadOrder: 1)],
+      )
       ..planEtaError = const ApiException(status: 500, title: 'x');
 
     await _pump(tester, repo);
 
-    // El detalle del plan sigue visible...
+    // El plan y sus paradas siguen visibles; la hora de llegada es un extra.
     expect(find.text('Camión CAM-7'), findsOneWidget);
-    // ...y el error aparece dentro de la sección de ETA.
-    expect(find.text('No se pudo cargar'), findsOneWidget);
-    expect(find.text('Reintentar'), findsOneWidget);
+    expect(find.text('Parada 1'), findsOneWidget);
+    expect(find.text('No se pudo cargar'), findsNothing);
   });
 
   testWidgets('si el plan falla al cargar, la pantalla muestra el error', (

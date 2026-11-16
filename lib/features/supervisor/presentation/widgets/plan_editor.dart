@@ -12,6 +12,7 @@ import '../../domain/usecases/publish_plan.dart';
 import '../../domain/usecases/remove_shipment_from_plan.dart';
 import '../supervisor_labels.dart';
 import '../../domain/usecases/reorder_plan_stops.dart';
+import '../controllers/planning_controllers.dart';
 import '../controllers/supervisor_controllers.dart';
 import 'stop_tile.dart';
 
@@ -198,8 +199,31 @@ class _PlanEditorState extends ConsumerState<PlanEditor> {
     }
   }
 
+  /// "Guardar orden" y "Publicar plan" van FIJOS al pie del detalle (no al
+  /// final de la lista): se le avisa a la pantalla qué mostrar.
+  void _publishActions() {
+    final notifier = ref.read(
+      planEditorActionsProvider(widget.plan.id).notifier,
+    );
+    final PlanEditorActions actions = (
+      busy: _busy,
+      dirty: _dirty,
+      // Con el orden sin guardar primero se guarda: así se publica lo que
+      // se ve en pantalla.
+      canPublish: !_dirty && _stops.isNotEmpty,
+      save: _saveOrder,
+      publish: _publish,
+    );
+    // Fuera del build: cambia el estado de otro provider.
+    Future<void>.microtask(() {
+      if (mounted) notifier.set(actions);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _publishActions();
+    final etas = ref.watch(planStopEtasProvider(widget.plan.id));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -209,60 +233,41 @@ class _PlanEditorState extends ConsumerState<PlanEditor> {
             child: Text('El plan todavía no tiene paradas.'),
           ),
         for (var i = 0; i < _stops.length; i++)
-          Column(
+          StopTile(
             key: ValueKey(_stops[i].shipmentId),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              StopTile(position: i + 1, stop: _stops[i]),
-              Wrap(
-                alignment: WrapAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _busy || i == 0 ? null : () => _move(i, -1),
-                    child: const Text('Subir'),
-                  ),
-                  TextButton(
-                    onPressed: _busy || i == _stops.length - 1
-                        ? null
-                        : () => _move(i, 1),
-                    child: const Text('Bajar'),
-                  ),
-                  TextButton(
-                    // Con el orden sin guardar no se quita: primero guardar.
-                    onPressed: _busy || _dirty
-                        ? null
-                        : () => _remove(_stops[i], i + 1),
-                    child: const Text('Quitar'),
-                  ),
-                ],
-              ),
-              const Divider(height: 8),
-            ],
-          ),
-        if (_dirty) ...[
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: _busy ? null : _saveOrder,
-            icon: const AnimatedAppIcon(
-              AppIcon.save,
-              excludeFromSemantics: true,
+            position: i + 1,
+            stop: _stops[i],
+            eta: etas[_stops[i].shipmentId] ?? _stops[i].etaAt,
+            isFirst: i == 0,
+            isLast: i == _stops.length - 1,
+            footer: Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _busy || i == 0 ? null : () => _move(i, -1),
+                  child: const Text('Subir'),
+                ),
+                TextButton(
+                  onPressed: _busy || i == _stops.length - 1
+                      ? null
+                      : () => _move(i, 1),
+                  child: const Text('Bajar'),
+                ),
+                TextButton(
+                  // Con el orden sin guardar no se quita: primero guardar.
+                  onPressed: _busy || _dirty
+                      ? null
+                      : () => _remove(_stops[i], i + 1),
+                  child: const Text('Quitar'),
+                ),
+              ],
             ),
-            label: const Text('Guardar orden'),
           ),
-        ],
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _busy ? null : _addOrder,
           icon: const AnimatedAppIcon(AppIcon.add, excludeFromSemantics: true),
           label: const Text('Agregar pedido'),
-        ),
-        const SizedBox(height: 8),
-        FilledButton.icon(
-          // Con el orden sin guardar primero se guarda: así se publica lo
-          // que se ve en pantalla.
-          onPressed: _busy || _dirty || _stops.isEmpty ? null : _publish,
-          icon: const AnimatedAppIcon(AppIcon.send, excludeFromSemantics: true),
-          label: const Text('Publicar plan'),
         ),
         const SizedBox(height: 8),
         TextButton(

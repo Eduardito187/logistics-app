@@ -14,6 +14,21 @@ abstract final class RealtimeTopic {
 
   /// Planes y corrida de planificación.
   static const String planning = 'planning';
+
+  /// Pedidos por preparar y su armado (escaneos, etiquetas, camión).
+  static const String picking = 'picking';
+
+  /// Lo que ve una tienda: pedidos que llegan, listos para retirar, retirados.
+  static const String store = 'store';
+
+  /// Cambios de estado de un pedido (seguimiento).
+  static const String tracking = 'tracking';
+
+  /// Operación del día: alertas de telemetría y números del tablero.
+  static const String operations = 'operations';
+
+  /// Carga del camión (escaneos de carga y entregas asignadas).
+  static const String loading = 'loading';
 }
 
 /// Punto de encuentro entre las pantallas y la conexión: las pantallas se

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/plan_status.dart';
+import '../../../../core/api/models/planned_stop.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/responsive_body.dart';
@@ -10,15 +11,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../controllers/planning_controllers.dart';
 import '../supervisor_labels.dart';
 import '../vehicle_label.dart';
 import 'detail_row.dart';
-import 'eta_section.dart';
 import 'plan_editor.dart';
 import 'stop_tile.dart';
 
-/// Cuerpo del detalle (solo lectura) de un plan: cabecera, métricas, ETA y la
-/// secuencia de paradas.
+/// Cuerpo del detalle de un plan: cabecera, métricas y el recorrido como una
+/// LÍNEA DE TIEMPO de tarjetas (una por parada, con su hora de llegada).
 ///
 /// Es `StatelessWidget`: lo único que lee de Riverpod (la placa del camión) va
 /// en [_VehicleTitle], así que la carga de placas reconstruye solo ese texto y
@@ -109,22 +110,41 @@ class PlanDetailBody extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('El plan todavía no tiene paradas.'),
             )
-          : Column(
-              children: [
-                for (var i = 0; i < stops.length; i++)
-                  StopTile(position: i + 1, stop: stops[i]),
-              ],
-            ),
+          : _StopsTimeline(planId: planId, stops: stops),
     );
-    final eta = EtaSection(planId: planId);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Tablet grande: ETA y secuencia de paradas lado a lado.
+        // Tablet grande: resumen a la izquierda y el recorrido a la derecha.
         final wide =
             AppBreakpoints.sizeFor(constraints.maxWidth) == WindowSize.expanded;
+        if (wide) {
+          return ResponsiveBody(
+            maxWidth: _maxWideWidth,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [header, const SizedBox(height: 16), stats],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 3, child: stopsCard),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
         return ResponsiveBody(
-          maxWidth: wide ? _maxWideWidth : AppBreakpoints.maxContentWidth,
+          maxWidth: AppBreakpoints.maxContentWidth,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
@@ -133,24 +153,38 @@ class PlanDetailBody extends StatelessWidget {
               const SizedBox(height: 16),
               stats,
               const SizedBox(height: 16),
-              if (wide)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: eta),
-                    const SizedBox(width: 16),
-                    Expanded(child: stopsCard),
-                  ],
-                )
-              else ...[
-                eta,
-                const SizedBox(height: 16),
-                stopsCard,
-              ],
+              stopsCard,
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Paradas de solo lectura como línea de tiempo, cada una con su hora
+/// estimada de llegada (lo único de acá que escucha la ETA).
+class _StopsTimeline extends ConsumerWidget {
+  const _StopsTimeline({required this.planId, required this.stops});
+
+  final String planId;
+  final List<PlannedStop> stops;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final etas = ref.watch(planStopEtasProvider(planId));
+    return Column(
+      children: [
+        for (var i = 0; i < stops.length; i++)
+          StopTile(
+            position: i + 1,
+            stop: stops[i],
+            // La ETA en vivo del plan; si no hay, la planificada.
+            eta: etas[stops[i].shipmentId] ?? stops[i].etaAt,
+            isFirst: i == 0,
+            isLast: i == stops.length - 1,
+          ),
+      ],
     );
   }
 }

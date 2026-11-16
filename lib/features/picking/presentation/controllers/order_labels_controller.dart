@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/dispatch_lines_response.dart';
 import '../../../../core/api/models/emitted_label.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import '../../domain/usecases/get_order_dispatch_lines.dart';
 import '../../domain/usecases/get_order_labels.dart';
 
@@ -16,6 +18,12 @@ import '../../domain/usecases/get_order_labels.dart';
 /// lecturas (tienda/transportista) y que el pull-to-refresh.
 final orderLabelsProvider = FutureProvider.autoDispose
     .family<List<EmittedLabel>, String>((ref, orderNumber) {
+      // Otro preparador emitió o reimprimió etiquetas de ESTE pedido.
+      ref.refreshOnRealtime(
+        RealtimeTopic.picking,
+        const {'picking.updated'},
+        when: (data) => realtimeMatches(data, 'order_reference', orderNumber),
+      );
       return ref.watch(getOrderLabelsProvider).call(orderNumber);
     });
 
@@ -24,5 +32,11 @@ final orderLabelsProvider = FutureProvider.autoDispose
 /// `autoDispose` por el mismo motivo que [orderLabelsProvider].
 final orderDispatchLinesProvider = FutureProvider.autoDispose
     .family<DispatchLinesResponse, String>((ref, orderNumber) {
+      // Lo que otro preparador ya escaneó de ESTE pedido se ve al instante.
+      ref.refreshOnRealtime(
+        RealtimeTopic.picking,
+        const {'picking.updated'},
+        when: (data) => realtimeMatches(data, 'order_reference', orderNumber),
+      );
       return ref.watch(getOrderDispatchLinesProvider).call(orderNumber);
     });

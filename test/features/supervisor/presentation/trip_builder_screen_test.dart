@@ -217,7 +217,7 @@ void main() {
     await tester.tap(_addButton('SO-1'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Guardar viaje'));
+    await tester.tap(find.text('Guardar viaje · 1 parada'));
     await tester.pumpAndSettle();
 
     expect(repo.createdTrips.single.vehicleId, 'v1');
@@ -236,7 +236,7 @@ void main() {
     await tester.tap(_addButton('SO-1'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Guardar viaje'));
+    await tester.tap(find.text('Guardar viaje · 1 parada'));
     await tester.pumpAndSettle();
 
     expect(find.text('Plan p-existente'), findsOneWidget);

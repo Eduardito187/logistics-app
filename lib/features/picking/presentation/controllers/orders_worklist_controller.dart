@@ -4,6 +4,8 @@ import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/auth/session.dart';
 import '../../domain/usecases/list_orders_to_prepare.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import 'locally_assigned_orders.dart';
 
 /// Estado de la worklist del preparador con carga incremental.
@@ -51,6 +53,9 @@ class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
     // veía la lista (o el vacío) del anterior hasta refrescar a mano. Se
     // observa el usuario y el rol, no el token (que rota al renovarse).
     ref.watch(sessionProvider.select((s) => (s?.userName, s?.role)));
+    // EN TIEMPO REAL: un plan publicado, un pedido nuevo o lo que preparó
+    // otro preparador actualiza la lista sola.
+    ref.refreshOnRealtime(RealtimeTopic.picking, const {'picking.updated'});
     // Se ocultan los pedidos ya asignados en esta sesión (el backend aún los
     // devuelve como PLANNED; ver [LocallyAssignedOrders]). `watch`: al asignar
     // uno, la lista se recalcula sola y el pedido desaparece al instante.

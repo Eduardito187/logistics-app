@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import '../../domain/usecases/get_delivery_state.dart';
 import '../../domain/usecases/get_shipment_detail.dart';
 import '../../domain/usecases/get_shipment_units.dart';
@@ -68,12 +70,28 @@ final driversProvider = FutureProvider.autoDispose<List<Driver>>((ref) {
 /// la ruta al instante sin spinner ni request. Al invalidarla (volver de un
 /// POD, "Siguiente entrega") el dato anterior sigue visible mientras se
 /// refresca.
+///
+/// EN TIEMPO REAL: el backend avisa por el canal del usuario (`route.updated`)
+/// cuando cambia la hoja de ruta —una entrega registrada desde otro teléfono,
+/// una parada sumada, quitada o reordenada, la ruta iniciada o cerrada— y la
+/// ruta se vuelve a pedir sola, sin consultar por tiempo.
 final driverRouteProvider = FutureProvider.autoDispose<DriverRoute>((
   ref,
 ) async {
   ref.cacheFor(CacheTtl.short);
   final vehicleId = ref.watch(assignedVehicleIdProvider);
   final date = ref.watch(selectedDateProvider);
+  ref.onDispose(
+    ref.read(realtimeBusProvider).listen(RealtimeTopic.user, (event) {
+      if (event.name != 'route.updated') return;
+      // De otro camión (el chofer cambió de vehículo): no es esta ruta.
+      final changed = event.data['vehicle_id'];
+      if (changed is String && vehicleId != null && changed != vehicleId) {
+        return;
+      }
+      ref.invalidateSelf();
+    }),
+  );
   if (vehicleId == null) {
     throw const ApiException(status: 0, title: 'Sin vehículo asignado');
   }
@@ -92,6 +110,13 @@ final vehicleDeliveriesProvider = FutureProvider.autoDispose<List<Delivery>>((
 ) {
   ref.cacheFor(CacheTtl.short);
   final vehicleId = ref.watch(assignedVehicleIdProvider);
+  // EN TIEMPO REAL: cada producto que se carga al camión (o un pedido que se
+  // le suma o se le quita) actualiza la hoja de carga del chofer que espera.
+  ref.refreshOnRealtime(
+    RealtimeTopic.loading,
+    const {'loading.updated'},
+    when: (data) => realtimeMatches(data, 'vehicle_id', vehicleId),
+  );
   if (vehicleId == null) {
     throw const ApiException(status: 0, title: 'Sin vehículo asignado');
   }

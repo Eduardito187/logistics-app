@@ -8,12 +8,14 @@ import '../../../core/api/export.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/media/photo_picker.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../data/admin_remote_data_source.dart';
 import 'staff_labels.dart';
+import 'widgets/personal_data_form.dart';
 import 'widgets/staff_avatar.dart';
 import 'widgets/staff_pickers.dart';
 import 'widgets/staff_tabs.dart';
@@ -122,15 +124,70 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
     final vehicle = await showVehiclePickerSheet(context);
     if (vehicle == null || !mounted) return;
     final source = ref.read(adminRemoteDataSourceProvider);
-    await _run(
-      () => source.assignVehicle(
-        driverId: driverId,
-        vehicleId: vehicle.id,
-        // La asignación de camión es por día: se arma la de HOY.
-        date: DateTime.now(),
-      ),
-      'Camión ${vehicle.displayPlate} asignado para hoy.',
+    final today = DateTime.now();
+    // Cambiar de camión es REEMPLAZAR: un chofer tiene un solo camión por
+    // día. La asignación de hoy que ya tenía se quita antes de armar la nueva
+    // (si no, el backend deja las dos y la ficha sigue mostrando la vieja).
+    final current = _profile.currentVehicle;
+    final currentDay = current?.assembledFor;
+    final replaces =
+        current?.crewId != null &&
+        (currentDay == null ||
+            (currentDay.year == today.year &&
+                currentDay.month == today.month &&
+                currentDay.day == today.day));
+    Future<void> assign({bool replace = false}) => source.assignVehicle(
+      driverId: driverId,
+      vehicleId: vehicle.id,
+      // La asignación de camión es por día: se arma la de HOY.
+      date: today,
+      replace: replace,
     );
+    final done = 'Camión ${vehicle.displayPlate} asignado para hoy.';
+    setState(() => _busy = true);
+    try {
+      if (replaces) await source.removeCrew(current!.crewId!);
+      try {
+        await assign();
+      } on ApiException catch (error) {
+        // 409: ese camión ya tiene OTRO chofer hoy. Se pregunta antes de
+        // quitárselo.
+        if (error.status != 409 || !mounted) rethrow;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('El camión ${vehicle.displayPlate} ya tiene chofer'),
+            content: const Text(
+              'Hoy está asignado a otro chofer. Si seguís, ese chofer se '
+              'queda sin camión.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Asignar igual'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        await assign(replace: true);
+      }
+      if (!mounted) return;
+      showSuccessSnack(context, done);
+    } on Object catch (error) {
+      if (mounted) showErrorSnack(context, error);
+    } finally {
+      if (mounted) {
+        // Siempre se vuelve a pedir la ficha: aunque algo falle a mitad,
+        // se ve el camión que quedó de verdad.
+        ref.invalidate(adminStaffProfileProvider(widget.userId));
+        setState(() => _busy = false);
+      }
+    }
   }
 
   /// Saca una foto y la deja como foto de perfil de la persona.
@@ -149,10 +206,7 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
 
   /// Edita ciudad, teléfono, documento, dirección y contacto de emergencia.
   Future<void> _editPersonalData() async {
-    final data = await showDialog<StaffPersonalEdit>(
-      context: context,
-      builder: (_) => _PersonalDataDialog(profile: _profile),
-    );
+    final data = await showPersonalDataForm(context, _profile);
     if (data == null || !mounted) return;
     final source = ref.read(adminRemoteDataSourceProvider);
     await _run(
@@ -426,187 +480,6 @@ class _StaffInfoTabState extends ConsumerState<_StaffInfoTab> {
           ],
         ],
       ),
-    );
-  }
-}
-
-/// Datos personales editados en el diálogo. Un campo vacío se borra.
-/// [changeCity] es `false` cuando la ciudad la define la tienda asignada.
-typedef StaffPersonalEdit = ({
-  Department? city,
-  bool changeCity,
-  String? phoneSecondary,
-  DateTime? birthDate,
-  String? phone,
-  String? nationalId,
-  String? address,
-  String? emergencyName,
-  String? emergencyPhone,
-});
-
-/// Formulario de datos personales (vale para cualquier rol).
-class _PersonalDataDialog extends StatefulWidget {
-  const _PersonalDataDialog({required this.profile});
-
-  final StaffProfile profile;
-
-  @override
-  State<_PersonalDataDialog> createState() => _PersonalDataDialogState();
-}
-
-class _PersonalDataDialogState extends State<_PersonalDataDialog> {
-  late final _phone = TextEditingController(text: widget.profile.phone ?? '');
-  late final _nationalId = TextEditingController(
-    text: widget.profile.nationalId ?? '',
-  );
-  late final _address = TextEditingController(
-    text: widget.profile.personal.address ?? '',
-  );
-  late final _emergencyName = TextEditingController(
-    text: widget.profile.personal.emergencyContactName ?? '',
-  );
-  late final _emergencyPhone = TextEditingController(
-    text: widget.profile.personal.emergencyContactPhone ?? '',
-  );
-
-  late final _phoneSecondary = TextEditingController(
-    text: widget.profile.personal.phoneSecondary ?? '',
-  );
-  late DateTime? _birthDate = widget.profile.personal.birthDate;
-  late Department? _city = departmentOf(widget.profile.city);
-
-  Future<void> _pickBirthDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 30),
-      firstDate: DateTime(1930),
-      lastDate: DateTime(now.year, now.month, now.day - 1),
-      helpText: 'Fecha de nacimiento',
-    );
-    if (picked != null && mounted) setState(() => _birthDate = picked);
-  }
-
-  /// Con tienda asignada la ciudad es la de la tienda: no se elige acá.
-  bool get _cityFixed => widget.profile.node?.id != null;
-
-  @override
-  void dispose() {
-    _phoneSecondary.dispose();
-    _phone.dispose();
-    _nationalId.dispose();
-    _address.dispose();
-    _emergencyName.dispose();
-    _emergencyPhone.dispose();
-    super.dispose();
-  }
-
-  /// Texto recortado, o `null` si quedó vacío (se borra).
-  static String? _value(TextEditingController controller) {
-    final text = controller.text.trim();
-    return text.isEmpty ? null : text;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Datos personales'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_cityFixed)
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Ciudad',
-                  helperText: 'La define la tienda asignada',
-                ),
-                child: Text(widget.profile.cityName ?? 'Sin ciudad'),
-              )
-            else
-              DropdownButtonFormField<Department?>(
-                value: _city,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Ciudad'),
-                items: [
-                  const DropdownMenuItem(child: Text('Sin ciudad')),
-                  for (final department in staffDepartments)
-                    DropdownMenuItem(
-                      value: department,
-                      child: Text(departmentLabel(department)),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _city = value),
-              ),
-            TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Teléfono'),
-            ),
-            TextField(
-              controller: _phoneSecondary,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono secundario',
-              ),
-            ),
-            InkWell(
-              onTap: _pickBirthDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Fecha de nacimiento',
-                ),
-                child: Text(
-                  _birthDate == null ? 'Sin fecha' : staffDate(_birthDate!),
-                ),
-              ),
-            ),
-            TextField(
-              controller: _nationalId,
-              decoration: const InputDecoration(
-                labelText: 'Documento de identidad',
-              ),
-            ),
-            TextField(
-              controller: _address,
-              decoration: const InputDecoration(labelText: 'Dirección'),
-            ),
-            TextField(
-              controller: _emergencyName,
-              decoration: const InputDecoration(
-                labelText: 'Contacto de emergencia',
-              ),
-            ),
-            TextField(
-              controller: _emergencyPhone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono de emergencia',
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop((
-            city: _city,
-            changeCity: !_cityFixed,
-            phone: _value(_phone),
-            phoneSecondary: _value(_phoneSecondary),
-            birthDate: _birthDate,
-            nationalId: _value(_nationalId),
-            address: _value(_address),
-            emergencyName: _value(_emergencyName),
-            emergencyPhone: _value(_emergencyPhone),
-          )),
-          child: const Text('Guardar'),
-        ),
-      ],
     );
   }
 }

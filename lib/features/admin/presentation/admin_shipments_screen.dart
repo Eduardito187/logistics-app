@@ -5,6 +5,8 @@ import '../../../core/api/models/department.dart';
 import '../../../core/api/models/shipment.dart';
 import '../../../core/api/models/shipment_status.dart';
 import '../../../core/icons/icons.dart';
+import '../../../core/realtime/realtime_bus.dart';
+import '../../../core/realtime/realtime_listener.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../picking/presentation/widgets/shipment_status_pill.dart';
 import '../data/admin_remote_data_source.dart';
@@ -23,6 +25,8 @@ class AdminShipmentsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
+  final GlobalKey<PagedSearchListState<Shipment>> _list = GlobalKey();
+
   /// `null` = todas las ciudades.
   Department? _city;
 
@@ -42,54 +46,65 @@ class _AdminShipmentsScreenState extends ConsumerState<AdminShipmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Envíos')),
-      body: PagedSearchList<Shipment>(
-        searchLabel: 'Buscar envío',
-        searchHint: 'Código de pedido, cliente o documento',
-        emptyTitle: 'Sin envíos',
-        emptyIcon: AppIcon.receive,
-        // Ciudad + estado: al cambiar cualquiera, vuelve a la página 1.
-        filterKey: (_city, _status),
-        filters: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DropdownButtonFormField<Department?>(
-              value: _city,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Ciudad'),
-              items: [
-                const DropdownMenuItem(child: Text('Todas las ciudades')),
-                for (final department in staffDepartments)
-                  DropdownMenuItem(
-                    value: department,
-                    child: Text(departmentLabel(department)),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _city = value),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<ShipmentStatus?>(
-              value: _status,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Estado'),
-              items: [
-                const DropdownMenuItem(child: Text('Todos los estados')),
-                for (final (label, status) in _filters)
-                  DropdownMenuItem(value: status, child: Text(label)),
-              ],
-              onChanged: (value) => setState(() => _status = value),
-            ),
-          ],
+      // EN TIEMPO REAL: cuando un pedido cambia de estado (en camino,
+      // entregado, cancelado…) la lista se actualiza en su lugar.
+      body: RealtimeListener(
+        topic: RealtimeTopic.tracking,
+        onEvent: (event) {
+          if (event.name == 'tracking.updated') {
+            _list.currentState?.refreshSilently();
+          }
+        },
+        child: PagedSearchList<Shipment>(
+          key: _list,
+          searchLabel: 'Buscar envío',
+          searchHint: 'Código de pedido, cliente o documento',
+          emptyTitle: 'Sin envíos',
+          emptyIcon: AppIcon.receive,
+          // Ciudad + estado: al cambiar cualquiera, vuelve a la página 1.
+          filterKey: (_city, _status),
+          filters: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<Department?>(
+                value: _city,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Ciudad'),
+                items: [
+                  const DropdownMenuItem(child: Text('Todas las ciudades')),
+                  for (final department in staffDepartments)
+                    DropdownMenuItem(
+                      value: department,
+                      child: Text(departmentLabel(department)),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _city = value),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ShipmentStatus?>(
+                value: _status,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Estado'),
+                items: [
+                  const DropdownMenuItem(child: Text('Todos los estados')),
+                  for (final (label, status) in _filters)
+                    DropdownMenuItem(value: status, child: Text(label)),
+                ],
+                onChanged: (value) => setState(() => _status = value),
+              ),
+            ],
+          ),
+          fetch: (query, page) => ref
+              .read(adminRemoteDataSourceProvider)
+              .listShipments(
+                query: query,
+                // Código del departamento: filtra por la ciudad de destino.
+                city: _city?.json ?? '',
+                status: _status,
+                page: page,
+              ),
+          itemBuilder: (context, shipment) => _ShipmentCard(shipment: shipment),
         ),
-        fetch: (query, page) => ref
-            .read(adminRemoteDataSourceProvider)
-            .listShipments(
-              query: query,
-              // Código del departamento: filtra por la ciudad de destino.
-              city: _city?.json ?? '',
-              status: _status,
-              page: page,
-            ),
-        itemBuilder: (context, shipment) => _ShipmentCard(shipment: shipment),
       ),
     );
   }

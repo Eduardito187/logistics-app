@@ -24,3 +24,24 @@ aplica en `FleetLive.apply`), máx. 1 por camión cada 5 s con emisión final, s
 
 **Migrado:** Notificaciones (20 s), Flota en vivo (30 s), corrida de planificación (5 s); además lista y
 detalle de planes ahora se refrescan solos. Ver [[run-environments-config]], [[planner-role-and-planning]].
+
+**Chofer (2026-11-15):** `driverRouteProvider` escucha `route.updated {route_id|null, vehicle_id}` en el canal
+del usuario y se vuelve a pedir solo (ignora eventos de otro camión). El backend lo dejó ESCRITO pero sin
+verificar ni desplegar: no darlo por disponible. Staging ya tiene contenedor de sockets, pero el resto del
+contrato (channels, fleet, planning) sigue sin deploy; hasta entonces corre el refresco de respaldo.
+Trampa de Riverpod: en `ref.onDispose` no se puede leer otro provider (por eso el hub guarda el bus en un
+campo); y un notifier no debe tocar otro provider dentro de `build` ni de un `dispose` de widget (microtarea).
+
+**Segunda tanda (2026-11-15, noche) — 5 temas más, app HECHA, backend en su "segunda ola" (sin emitir aún):**
+`picking` (`picking.updated` {shipment_id, plan_id, vehicle_id; pedido `order_reference`}) → lista de pedidos
+por preparar, etiquetas y productos del pedido; `store` (`store.updated` {node_id, shipment_id}) → bandeja de
+la tienda y recepción; `tracking` (`tracking.updated` {shipment_id, order_reference, status, event}, para
+TODOS los roles con su alcance) → "Consultar pedido" y Envíos del admin; `operations` (`alerts.updated`,
+`dashboard.updated` {plan_date}) → alertas y tablero; `loading` (`loading.updated` {vehicle_id, shipment_id})
+→ hoja de carga del chofer. Canales por dimensión (`<tema>.all|city.<dep>|node.<id>|driver.<id>|vehicle.<id>`),
+siempre tomados de `channels`.
+**Cómo sumar otra pantalla:** en su provider de lectura, `ref.refreshOnRealtime(tema, {eventos}, when: ...)`
+(`lib/core/realtime/realtime_refresh.dart`, debounce 400 ms, `realtimeMatches` para filtrar por id); para
+listas paginadas, `PagedSearchListState.refreshSilently()` con `RealtimeListener`. Son SEÑALES: se vuelve a
+pedir el endpoint de siempre. No va por sockets: escaneos/entregas/fotos (cola offline) ni el envío de GPS.
+Sin hacer: el detalle (hoja) de un envío del admin ya abierto no se actualiza en vivo.

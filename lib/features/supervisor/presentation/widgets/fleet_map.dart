@@ -71,8 +71,8 @@ class _FleetMapState extends State<FleetMap> {
         Marker(
           key: ValueKey(vehicle.vehicleId),
           point: LatLng(vehicle.lat, vehicle.lng),
-          width: 48,
-          height: 48,
+          width: 56,
+          height: 56,
           child: TruckMarker(
             vehicle: vehicle,
             onTap: () => VehicleSheet.show(context, vehicle),

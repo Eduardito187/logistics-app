@@ -258,6 +258,39 @@ class _TripBuilderScreenState extends ConsumerState<TripBuilderScreen> {
     );
     return Scaffold(
       appBar: AppBar(title: const Text('Armar un viaje')),
+      // FIJO al pie: no hay que deslizar toda la lista para guardar.
+      bottomNavigationBar: vehicle == null
+          ? null
+          : Material(
+              elevation: 8,
+              color: theme.colorScheme.surface,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                  child: SizedBox(
+                    height: 56,
+                    child: FilledButton.icon(
+                      onPressed: _saving || _trip.isEmpty ? null : _save,
+                      icon: AnimatedAppIcon(
+                        AppIcon.save,
+                        state: _saving
+                            ? AppIconState.loading
+                            : AppIconState.idle,
+                        excludeFromSemantics: true,
+                      ),
+                      label: Text(
+                        _trip.isEmpty
+                            ? 'Guardar viaje'
+                            : _trip.length == 1
+                            ? 'Guardar viaje · 1 parada'
+                            : 'Guardar viaje · ${_trip.length} paradas',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
       body: ResponsiveBody(
         maxWidth: AppBreakpoints.maxContentWidth,
         child: ListView(
@@ -314,19 +347,6 @@ class _TripBuilderScreenState extends ConsumerState<TripBuilderScreen> {
               _tripCard(theme, muted),
               const SizedBox(height: 16),
               _nearCard(theme, muted),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 56,
-                child: FilledButton.icon(
-                  onPressed: _saving || _trip.isEmpty ? null : _save,
-                  icon: AnimatedAppIcon(
-                    AppIcon.save,
-                    state: _saving ? AppIconState.loading : AppIconState.idle,
-                    excludeFromSemantics: true,
-                  ),
-                  label: const Text('Guardar viaje'),
-                ),
-              ),
             ],
           ],
         ),

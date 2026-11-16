@@ -78,13 +78,26 @@ void main() {
         find.widgetWithText(TextField, 'Número del documento'),
         '6284531',
       );
-      expect(
-        find.text('Se piden dos fotos: anverso y reverso.'),
-        findsOneWidget,
-      );
-      await tester.tap(find.text('Sacar foto del anverso'));
+      // Dos recuadros: cada uno se toca para sacar su foto. Sin las dos no
+      // se puede guardar.
+      expect(find.text('Anverso'), findsOneWidget);
+      expect(find.text('Reverso'), findsOneWidget);
+      await tester.tap(find.text('Anverso'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sacar foto del reverso'));
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(
+                of: find.text('Guardar documento'),
+                matching: find.bySubtype<FilledButton>(),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.text('Reverso'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar documento'));
       await tester.pumpAndSettle();
 
       expect(fake.uploads.map((u) => u.side), [
@@ -109,7 +122,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Contrato').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sacar foto'));
+      expect(find.text('Reverso'), findsNothing);
+      await tester.tap(find.text('Foto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar documento'));
       await tester.pumpAndSettle();
 
       expect(fake.uploads.single.type, 'Contrato');

@@ -6,6 +6,8 @@ import '../../../../core/api/models/plan.dart';
 import '../../../../core/api/models/vehicle_telemetry_summary.dart';
 import '../../../../core/auth/session.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import '../../domain/dashboard_metrics.dart';
 import '../../domain/usecases/get_dashboard_metrics.dart';
 import '../../domain/usecases/get_plan.dart';
@@ -47,6 +49,9 @@ final plansProvider = FutureProvider.autoDispose<List<Plan>>((ref) {
 /// Alertas de telemetría, filtradas según el selector de la pantalla.
 final alertsProvider = FutureProvider.autoDispose<List<Alert>>((ref) {
   _cachePerSession(ref);
+  // EN TIEMPO REAL: una alerta nueva (camión detenido, fuera de ruta) o una
+  // que otro supervisor reconoció aparece al instante.
+  ref.refreshOnRealtime(RealtimeTopic.operations, const {'alerts.updated'});
   final unacknowledgedOnly = ref.watch(alertsFilterProvider);
   return ref.watch(listAlertsProvider)(unacknowledgedOnly: unacknowledgedOnly);
 });
@@ -73,6 +78,21 @@ final dashboardMetricsProvider = FutureProvider.autoDispose<DashboardMetrics>((
 ) {
   _cachePerSession(ref);
   final date = ref.watch(plansDateProvider);
+  // EN TIEMPO REAL: los números del día se mueven con cada entrega, alerta
+  // o avance de carga, sin tirar para refrescar.
+  ref.refreshOnRealtime(
+    RealtimeTopic.operations,
+    const {'dashboard.updated', 'alerts.updated'},
+    when: (data) {
+      final raw = data['plan_date'];
+      if (raw is! String || raw.length < 10) return true;
+      final day = DateTime.tryParse(raw.substring(0, 10));
+      return day == null ||
+          (day.year == date.year &&
+              day.month == date.month &&
+              day.day == date.day);
+    },
+  );
   return ref.watch(getDashboardMetricsProvider)(
     date,
     plans: ref.watch(plansProvider.future),

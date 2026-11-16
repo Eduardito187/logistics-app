@@ -43,14 +43,16 @@ class _AdminVehiclesScreenState extends ConsumerState<AdminVehiclesScreen> {
         emptyTitle: 'Sin camiones',
         emptyIcon: AppIcon.deliver,
         filterKey: _status,
-        filters: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _chip('Todos', null),
-              for (final status in _filters) _chip(status.label, status),
-            ],
-          ),
+        filters: DropdownButtonFormField<AdminVehicleStatus?>(
+          value: _status,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Estado'),
+          items: [
+            const DropdownMenuItem(child: Text('Todos los estados')),
+            for (final status in _filters)
+              DropdownMenuItem(value: status, child: Text(status.label)),
+          ],
+          onChanged: (value) => setState(() => _status = value),
         ),
         fetch: (query, page) => ref
             .read(adminRemoteDataSourceProvider)
@@ -62,15 +64,6 @@ class _AdminVehiclesScreenState extends ConsumerState<AdminVehiclesScreen> {
       ),
     );
   }
-
-  Widget _chip(String label, AdminVehicleStatus? status) => Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: ChoiceChip(
-      label: Text(label),
-      selected: _status == status,
-      onSelected: (_) => setState(() => _status = status),
-    ),
-  );
 
   Future<void> _sendToMaintenance(AdminVehicle vehicle) async {
     final result = await showSendToMaintenanceSheet(context, vehicle);

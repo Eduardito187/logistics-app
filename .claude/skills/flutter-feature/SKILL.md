@@ -41,6 +41,12 @@ subagentes/workflows: 8 agentes con `flutter test` a la vez colgaron WSL ~20 min
 código, revisar estáticamente y entregarle los comandos, uno por bloque, para que los corra de a uno.
 Si él lo pide: UN proceso de Flutter a la vez en todo el equipo (`dart_test.yaml` ya limita a `concurrency: 2`).
 
+*Nota del agente (nov 2026, interpretación mía, no una regla nueva del dueño):* en Windows nativo el dueño
+viene pidiendo "completá al 100%" y espera números de `flutter analyze` y `flutter test` en cada cierre; en
+esas sesiones se corrieron desde la sesión principal, **un proceso a la vez**, sin objeción. Lo que sigue
+firme: nunca desde subagentes en paralelo, nunca apilar builds, y no correr emulador/Docker/builds sin
+pedido. Ante la duda, preguntar una vez.
+
 `flutter analyze`/`flutter test` corren en WSL sin más. **Correr/compilar la app también se puede en
 WSL**: ya está montado el toolchain Android (JDK 17 en `~/jdk`, SDK en `~/Android/Sdk`, NDK), con
 Flutter apuntado vía `flutter config --android-sdk ~/Android/Sdk --jdk-dir ~/jdk`. El APK sigue
@@ -114,6 +120,21 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   del paso, Ayuda sin chat). **Foto del POD obligatoria**; firma digital del cliente en pantalla.
 - **1 GB de RAM y pantallas de 320 dp a tablets**: ver "Base común" y probar con `testOnScreens`.
 - **iOS sí** (se compila en Mac/CI; protección de archivos hasta el primer desbloqueo).
+- **Tiempo real, no refresco por tiempo:** lo que tiene que estar al día va por sockets. Nada de
+  `Timer.periodic` para pedir datos en una pantalla nueva → skill **realtime-feature**.
+- **Diseño que el dueño ya corrigió varias veces** (no volver a lo anterior):
+  - Filtros y opciones como **SELECT** (`DropdownButtonFormField`): ciudad, estado, rol, destinatario. Nunca
+    chips ni un campo de texto para eso.
+  - **El botón principal va FIJO al pie** (`bottomNavigationBar` con `SafeArea`, 56 dp), no al final del scroll.
+  - Formularios con varios campos = **pantalla completa** agrupada en `SectionCard` (ver
+    `admin/.../widgets/personal_data_form.dart`), no un `AlertDialog` con campos apilados.
+  - Fotos = **recuadro que se toca y muestra la vista previa** (`DocumentPhotoTile`); documentos de dos caras
+    piden Anverso y Reverso. Sin botones tipo "Sacar foto del anverso".
+  - Listas de paradas/pasos = **línea de tiempo en tarjetas** (`supervisor/.../widgets/stop_tile.dart`).
+  - **Ningún dato cortado** (sin `ellipsis` en pedido, cliente, dirección), **ningún UUID** a la vista, el SKU
+    va solo (sin la palabra "SKU"), foto del producto en los detalles.
+  - Hojas (modales) del alto de su contenido; el camión en mapas es el visto desde arriba del chofer.
+  - Mientras algo carga se muestra carga, **nunca el estado vacío** ("Sin notificaciones" parpadeando).
 
 ## Base común (usar, no reinventar)
 
@@ -133,6 +154,12 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   precarga `prefetchRouteTiles(puntos)`; `openExternalNavigation(lat,lng)` para navegar.
 - **Push/monitoreo/versión:** `pushRegistrationProvider`, `pushTokenProvider`, `crashReporterProvider.breadcrumb('x.y')`
   (sin datos personales), `VersionGate` ya cableado en `app.dart`.
+- **Tiempo real:** `ref.refreshOnRealtime(tema, {eventos}, when:)` en el provider de lectura,
+  `RealtimeListener` / `PagedSearchListState.refreshSilently()` en pantallas (`lib/core/realtime/`). Detalle
+  y temas vigentes en el skill **realtime-feature**.
+- **Aviso en el teléfono sin Firebase:** `localAlertsProvider` (`core/push/local_alerts.dart`).
+- **Caché de lecturas:** `ref.cacheFor(CacheTtl.short|long)` + `ref.watch(sessionProvider.select(...))` para
+  que no sobreviva a otro usuario. Volver a una pantalla no debe mostrar spinner ni vacío.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
   `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`).
 - **Impresión:** `labelPrinterProvider.printLabel({zpl, render, jobName, to}) → PrintOutcome` (texto VERAZ; "aceptado"
@@ -164,8 +191,9 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 6. **Flutter 3.32:** no existen `RadioGroup` (usar `groupValue`/`onChanged` por tile) ni
    `DropdownButtonFormField(initialValue:)` (usar `value:`). Formatear con el `dart` de 3.32 (el de 3.13 formatea distinto y rompe CI).
 7. Toda pantalla nueva: test de widget + `testOnScreens` (`test/support/screen_sizes.dart`, 4 tamaños, `withTextScale(1.3)`).
-8. Pedidos al backend: doc en `docs/backend-requests/AAAA-MM-DD-tema.md` + fila en su `README.md` (no hay sesión
-   del backend para mensajear); si hay una abierta (`ListAgents`), mandarle el doc.
+8. Pedidos al backend: contrato concreto por `SendMessage` a la sesión del backend + doc en
+   `docs/backend-requests/AAAA-MM-DD-tema.md` y fila en su `README.md`. Cómo derivar, implementar contra un
+   contrato sin desplegar y diagnosticar datos: skill **backend-coordination**.
 
 ## Regenerar el cliente API
 
@@ -314,3 +342,10 @@ en uso (ver regla 0b).
 | Probar staging con una cuenta y el teléfono de esa cuenta se desloguea | Hay 1 sesión activa por tipo de cliente; un login de diagnóstico como app móvil pisa la del teléfono | Loguear el diagnóstico con `device.client_kind: "web"` |
 | Un test de widget falla con `contains(<Map>)` aunque el mapa "es igual" | `contains` compara por identidad los mapas | `contains(equals({...}))` |
 | El análisis pasa pero un test no compila tras regenerar el cliente | Los fakes de `test/` implementan data sources con tipos del cliente (`Role` vs `StaffRoleName`, `DataN`) | Revisar `test/features/*/fake_*.dart` y los helpers `fromJson` junto con cada regen |
+| Un test con `pumpAndSettle` no ve el efecto de un evento con debounce (tiempo real, búsqueda) | `pumpAndSettle` no avanza timers si no hay frames | `await tester.pump(const Duration(milliseconds: 500))` antes |
+| `find.widgetWithText(FilledButton, 'Guardar')` no encuentra el botón fijo al pie | `FilledButton.icon` es una subclase privada | `find.text('Guardar')` o `findButtonWithText<FilledButton>()` |
+| Un test toca "el día 24" y abre otra cosa, o no toca nada | El mismo texto está en la pantalla de atrás (grilla) y en el diálogo de arriba | `find.descendant(of: find.byType(DateRangePickerDialog), matching: ...)` |
+| El test de una pantalla larga no encuentra un campo | `ListView` es perezosa y el campo no se construyó | Agrandar la vista (`tester.view.physicalSize`) o `ensureVisible` |
+| `Cannot use Ref ... inside life-cycles` al cerrar un notifier | `ref.read` dentro de `ref.onDispose` | Guardar la referencia en un campo durante `build` |
+| `AutoDisposeFutureProvider` no existe | Riverpod 3 unificó los tipos | `FutureProvider<T>` (y `AsyncNotifierProvider.autoDispose`) |
+| El heredoc de Bash con código Dart falla ("unexpected EOF"), o Git Bash muere con `add_item ... errno 1` | Comillas y `$` del Dart; el crash es transitorio | Script de parche escrito con Write al scratchpad y corrido con `python`; repetir el comando tras el crash |
