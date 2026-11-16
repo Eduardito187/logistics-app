@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -27,6 +28,8 @@ import 'package:logistics_app/features/driver/data/repositories/driver_route_rep
 import 'package:logistics_app/features/driver/data/repositories/fleet_repository_impl.dart';
 import 'package:logistics_app/features/picking/data/repositories/picking_repository_impl.dart';
 import 'package:logistics_app/features/store/data/repositories/store_repository_impl.dart';
+import 'package:logistics_app/features/store/presentation/pickup_pod_screen.dart'
+    show pickupSignatureCaptureProvider;
 
 import '../../test/features/driver/support/driver_test_support.dart'
     show FakeFleetRepository, FakeLocationService, FakeTruckTracking;
@@ -195,6 +198,9 @@ Future<E2eHarness> pumpE2eApp(
     codeScannerProvider.overrideWithValue(h.scanner.call),
     continuousScannerProvider.overrideWithValue(h.scanner.callContinuous),
     photoPickerProvider.overrideWithValue(h.picker.call),
+    // Firma del cliente (recojo en tienda): el pad real necesita trazos; en
+    // el e2e devuelve un PNG fijo.
+    pickupSignatureCaptureProvider.overrideWithValue((_) async => e2eSignature),
     // GPS.
     locationServiceProvider.overrideWithValue(
       FakeLocationService(fix: e2eGpsFix),
@@ -306,6 +312,12 @@ Future<void> logout(WidgetTester tester) async {
   await tapVisible(tester, find.byTooltip('Cerrar sesión'));
   await pumpUntilFound(tester, find.text('Ingresar'));
 }
+
+/// Firma del cliente de prueba: un PNG de 1x1 (basta con que no sea vacío; el
+/// `SignatureFileStore` lo guarda en disco igual que la firma real).
+final Uint8List e2eSignature = base64.decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
 
 /// PNG de 1x1 escrito en un temporal: la foto "tomada" por la cámara falsa
 /// tiene que existir (la vista previa la decodifica de verdad en el

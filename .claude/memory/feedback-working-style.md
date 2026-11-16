@@ -19,3 +19,4 @@ metadata:
 
 **Why:** lo pidió repetidamente a lo largo de la sesión del 2026-10-16 y validó los resultados así entregados.
 **How to apply:** en tareas grandes planificar reparto por carpetas, instalar dependencias primero, integrar y verificar al final; en el reporte, decisiones tomadas + pendientes que son suyos.
+- **NUNCA correr la suite de tests (2026-11-16):** "nunca más vuelves a lanzar la suite de test, eso yo lo veo". No ejecutar `flutter test` en ninguna sesión — el dueño la corre y ve los números. Corrige mi interpretación previa de que estaba OK correrla. Verificar con `mcp__claude-vscode__getDiagnostics` (estático) y `flutter analyze`/`dart format` para dejar limpio; entregar el comando `flutter test` para que lo corra él, sin ejecutarlo. Ver [[test-battery-and-infra]], [[orphan-flutter-test-processes]].

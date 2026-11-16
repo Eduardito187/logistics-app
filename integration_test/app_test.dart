@@ -3,6 +3,7 @@ import 'package:integration_test/integration_test.dart';
 import 'flows/driver_delivery_flow.dart';
 import 'flows/login_flow.dart';
 import 'flows/picking_flow.dart';
+import 'flows/store_pickup_flow.dart';
 
 // Tests de integración (e2e) de los 4 flujos críticos con la app REAL
 // (`LogisticsApp`) y dobles solo en los bordes (backend, cámara, GPS,
@@ -19,6 +20,7 @@ void main() {
   driverDeliveryFlowTests();
   // El flujo de recepción en tienda (flows/store_reception_flow.dart) quedó
   // fuera: la tienda ya no recibe mercadería desde la app (la llegada la marca
-  // el chofer con "Entregar en tienda"). Falta su e2e de recojo del cliente.
+  // el chofer con "Entregar en tienda").
+  storePickupFlowTests();
   pickingFlowTests();
 }
