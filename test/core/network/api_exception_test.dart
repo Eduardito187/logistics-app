@@ -269,6 +269,26 @@ void main() {
       expect(e.isForbidden, isTrue);
     });
 
+    test('403 out_of_scope_assignment: mensaje claro para el chofer', () {
+      final e = ApiException.fromDio(
+        _withResponse(
+          statusCode: 403,
+          data: {
+            'title': 'Sin permiso',
+            'status': 403,
+            'detail': 'El vehículo no es de tu asignación.',
+            'code': 'out_of_scope_assignment',
+          },
+        ),
+      );
+      // El code no está en el enum todavía -> $unknown, pero el crudo se guarda.
+      expect(e.rawCode, 'out_of_scope_assignment');
+      expect(e.isOutOfScopeAssignment, isTrue);
+      expect(e.isForbidden, isTrue);
+      // Mensaje a medida, no el genérico de permiso.
+      expect(e.message, contains('Este camión no es tuyo hoy'));
+    });
+
     test('errores de validación 422: map de campo -> lista de mensajes', () {
       final e = ApiException.fromDio(
         _withResponse(

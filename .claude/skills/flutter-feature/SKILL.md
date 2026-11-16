@@ -41,11 +41,15 @@ subagentes/workflows: 8 agentes con `flutter test` a la vez colgaron WSL ~20 min
 código, revisar estáticamente y entregarle los comandos, uno por bloque, para que los corra de a uno.
 Si él lo pide: UN proceso de Flutter a la vez en todo el equipo (`dart_test.yaml` ya limita a `concurrency: 2`).
 
-*Nota del agente (nov 2026, interpretación mía, no una regla nueva del dueño):* en Windows nativo el dueño
-viene pidiendo "completá al 100%" y espera números de `flutter analyze` y `flutter test` en cada cierre; en
-esas sesiones se corrieron desde la sesión principal, **un proceso a la vez**, sin objeción. Lo que sigue
-firme: nunca desde subagentes en paralelo, nunca apilar builds, y no correr emulador/Docker/builds sin
-pedido. Ante la duda, preguntar una vez.
+**🛑 NUNCA correr la suite de tests (regla del dueño, 2026-11-16):** "nunca más vuelves a lanzar la suite de
+test, eso yo lo veo". NO ejecutar `flutter test` (ni la suite completa ni una carpeta) en ninguna sesión.
+El dueño la corre y mira los números él. Esto corrige una interpretación mía anterior de que estaba OK
+correrla desde la sesión principal: NO lo está. Para verificar, usar `mcp__claude-vscode__getDiagnostics`
+(estático, no lanza proceso; el hook ya lo muestra tras cada Edit) y, si hace falta, `flutter analyze` /
+`dart format` para dejar el código limpio y formateado (el formato debe ser el del Dart 3.32 o rompe CI).
+Al cerrar: entregar el código verificado estáticamente + los comandos para que los corra él (`dart format`
+→ `flutter analyze` → `flutter test`), sin ejecutar el último. Sigue firme: nunca builds/emulador/Docker
+sin pedido, nunca desde subagentes en paralelo.
 
 `flutter analyze`/`flutter test` corren en WSL sin más. **Correr/compilar la app también se puede en
 WSL**: ya está montado el toolchain Android (JDK 17 en `~/jdk`, SDK en `~/Android/Sdk`, NDK), con

@@ -213,10 +213,19 @@ class _CounterPickupScreenState extends ConsumerState<CounterPickupScreen> {
   /// (se ve todo, como antes).
   static List<Shipment>? _customerPickups(List<Shipment>? shipments) {
     if (shipments == null) return null;
-    if (!shipments.any((s) => s.deliveryMode != null)) return shipments;
+    final pickups = shipments.any((s) => s.deliveryMode != null)
+        ? [
+            for (final shipment in shipments)
+              if (shipment.deliveryMode == DeliveryMode.storePickup) shipment,
+          ]
+        : shipments;
+    // Los que el chofer YA dejó (listos para retirar) van arriba; dentro de
+    // cada grupo se conserva el orden del backend (partición estable).
     return [
-      for (final shipment in shipments)
-        if (shipment.deliveryMode == DeliveryMode.storePickup) shipment,
+      for (final s in pickups)
+        if (shipmentReadyForPickup(s)) s,
+      for (final s in pickups)
+        if (!shipmentReadyForPickup(s)) s,
     ];
   }
 

@@ -24,27 +24,19 @@ class SupervisorAlertsScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            // Wrap: con letra grande en un teléfono chico los dos filtros no
-            // entran en una fila y bajan a la siguiente en vez de desbordar.
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Sin reconocer'),
-                  selected: unacknowledgedOnly,
-                  onSelected: (_) => ref
-                      .read(alertsFilterProvider.notifier)
-                      .setUnacknowledgedOnly(value: true),
-                ),
-                ChoiceChip(
-                  label: const Text('Todas'),
-                  selected: !unacknowledgedOnly,
-                  onSelected: (_) => ref
-                      .read(alertsFilterProvider.notifier)
-                      .setUnacknowledgedOnly(value: false),
-                ),
-              ],
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Sin reconocer')),
+                  ButtonSegment(value: false, label: Text('Todas')),
+                ],
+                selected: {unacknowledgedOnly},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => ref
+                    .read(alertsFilterProvider.notifier)
+                    .setUnacknowledgedOnly(value: s.first),
+              ),
             ),
           ),
           Expanded(

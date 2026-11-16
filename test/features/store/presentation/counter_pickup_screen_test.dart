@@ -80,6 +80,33 @@ void main() {
     expect(find.text('Traslado CD'), findsNothing);
   });
 
+  testWidgets('los listos para retirar van arriba de los que están en camino', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      () async => [
+        // En camino primero en el backend, pero debe quedar ABAJO.
+        shipment(
+          id: 'ship-camino',
+          customerName: 'En Camino',
+          externalId: 'DM-1',
+        ),
+        shipment(
+          id: 'ship-listo',
+          customerName: 'Ya Llegó',
+          externalId: 'DM-2',
+          readyForPickupAt: DateTime(2026, 11, 16, 9, 30),
+        ),
+      ],
+    );
+
+    final cards = tester.widgetList<PickupCard>(find.byType(PickupCard));
+    expect(cards.first.shipment.id, 'ship-listo');
+    expect(cards.last.shipment.id, 'ship-camino');
+    expect(find.textContaining('Listo para retirar'), findsOneWidget);
+  });
+
   group('buscar por código del pedido', () {
     Future<List<Shipment>> two() async => [
       shipment(customerName: 'Ana Pérez', externalId: 'DM-1001'),
