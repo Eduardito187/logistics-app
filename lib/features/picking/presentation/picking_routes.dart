@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/models/shipment.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
@@ -44,6 +45,8 @@ final List<RouteBase> pickingRoutes = [
     path: '/picking/order/:orderNumber',
     builder: (context, state) => OrderPreparationScreen(
       orderNumber: state.pathParameters['orderNumber']!,
+      // El envío de la lista, para saber si ya tiene camión asignado.
+      shipment: state.extra is Shipment ? state.extra! as Shipment : null,
     ),
   ),
 ];

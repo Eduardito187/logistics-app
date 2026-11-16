@@ -24,7 +24,10 @@ class OrderCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SectionCard(
-        onTap: () => context.push('/picking/order/${shipment.externalId}'),
+        onTap: () => context.push(
+          '/picking/order/${shipment.externalId}',
+          extra: shipment,
+        ),
         child: Row(
           children: [
             Expanded(

@@ -252,6 +252,15 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   Widget? _streetsLayer;
   Widget _stopsLayer = const SizedBox.shrink();
 
+  /// Trazo por CALLES de la ruta (geometría del plan, simplificada). Se usa para
+  /// detectar localmente "fuera de ruta" (distancia del camión al trazo). Vacío
+  /// si el backend no mandó geometría: sin trazo real no se mide desvío.
+  List<LatLng> _streetLine = const [];
+
+  /// Trazo de RERUTEO del backend (posición actual → próxima parada) cuando el
+  /// motor de ETA detecta desvío sostenido. Vacío salvo que el backend lo mande.
+  List<LatLng> _reroute = const [];
+
   /// Precarga de tiles diferida: arranca después de la transición de entrada
   /// para no competir con el primer dibujo del mapa (los tiles visibles).
   Timer? _prefetchTimer;
@@ -319,6 +328,53 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   LatLng? get _destination {
     final s = widget.stop;
     return s.lat != null && s.lng != null ? LatLng(s.lat!, s.lng!) : null;
+  }
+
+  /// Trazo de respaldo cuando el backend no tiene geometría por calles: une las
+  /// paradas de la ruta en orden de secuencia (las que tienen coordenadas). Así
+  /// "la ruta del viaje" siempre se ve como un recorrido que conecta las
+  /// paradas, aunque el plan no haya calculado el trazo por calles.
+  static List<LatLng> _stopsPath(DriverRoute route) => [
+    for (final s in sortedStops(route))
+      if (s.lat != null && s.lng != null) LatLng(s.lat!, s.lng!),
+  ];
+
+  /// ¿La polilínea es DIBUJABLE? Tiene al menos 2 puntos DISTINTOS. Una línea de
+  /// N puntos todos iguales (geometría degenerada del plan) no es una ruta: se
+  /// descarta igual que lo hace el backend (guardia isDrawable).
+  static bool _hasTwoDistinctPoints(List<LatLng> points) {
+    if (points.length < 2) return false;
+    final first = points.first;
+    for (final p in points) {
+      if (p.latitude != first.latitude || p.longitude != first.longitude) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// ¿El camión está FUERA de la ruta? Manda la verdad del backend
+  /// (`route.offRoute`, con histéresis, la misma que ve el supervisor) cuando la
+  /// informa; si no (motor de ETA sin desplegar), se mide localmente la
+  /// distancia del camión al trazo por calles. Sin trazo por calles no se mide
+  /// (un respaldo que une paradas lejanas no es una ruta real).
+  bool _isOffRoute(LatLng? driver) {
+    final backend = widget.route.offRoute;
+    if (backend != null) return backend;
+    if (driver == null || _streetLine.length < 2) return false;
+    final d = distanceToPolylineMeters(driver, _streetLine);
+    return d != null && d > kOffRouteThresholdMeters;
+  }
+
+  /// Trazo a dibujar como RERUTEO cuando el camión está fuera de ruta: el que
+  /// recalculó el backend (`reroute_geometry`) si llegó; si no, una línea
+  /// directa camión → destino, para "reconectar" el recorrido al vuelo mientras
+  /// el backend recalcula.
+  List<LatLng> _rerouteLine(LatLng? driver) {
+    if (_hasTwoDistinctPoints(_reroute)) return _reroute;
+    final dest = _destination;
+    if (driver != null && dest != null) return [driver, dest];
+    return const [];
   }
 
   @override
@@ -411,6 +467,27 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     _layersColor = lineColor;
     _layersSettled = settled;
     final streets = simplifiedRoutePoints(widget.route.routeGeometry);
+    // Solo se usa el trazo por calles si es DIBUJABLE: ≥2 puntos DISTINTOS. El
+    // plan a veces trae geometría degenerada (p. ej. 4 coordenadas idénticas =
+    // un punto) y con el viejo chequeo `length>=2` el mapa dibujaba un punto y
+    // el respaldo no entraba. Esta guardia iguala la del backend (isDrawable).
+    final streetsDrawable = _hasTwoDistinctPoints(streets);
+    // Trazo por calles (para medir desvío) y reruteo del backend (si lo mandó).
+    // Si la geometría es degenerada, _streetLine queda vacío: no se mide desvío
+    // contra un "trazo" que es un punto.
+    _streetLine = streetsDrawable ? streets : const [];
+    _reroute = [
+      for (final p in widget.route.rerouteGeometry ?? const <LatLngPoint>[])
+        LatLng(p.lat, p.lng),
+    ];
+    // Lo que se DIBUJA como ruta: el trazo por calles si es dibujable; si no, una
+    // línea que une las paradas en orden (respaldo) para que "la ruta del viaje"
+    // siempre se vea. Si ni el respaldo es dibujable, null → el build cae a la
+    // línea directa camión → destino.
+    final fallback = _stopsPath(widget.route);
+    final drawLine = streetsDrawable
+        ? streets
+        : (_hasTwoDistinctPoints(fallback) ? fallback : const <LatLng>[]);
     // Paradas SIGUIENTES (aún pendientes por estado efectivo, sin la actual).
     _upcomingStops = [
       for (final s in widget.route.stops)
@@ -433,15 +510,15 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     ];
     // Trazo con glow: línea ancha translúcida de marca por debajo y una fina
     // sólida de marca encima (StrokeCap.round por defecto en flutter_map v7).
-    _streetsLayer = streets.length >= 2
+    _streetsLayer = drawLine.length >= 2
         ? PolylineLayer(
             polylines: [
               Polyline(
-                points: streets,
+                points: drawLine,
                 strokeWidth: 12,
                 color: lineColor.withValues(alpha: 0.28),
               ),
-              Polyline(points: streets, strokeWidth: 4, color: lineColor),
+              Polyline(points: drawLine, strokeWidth: 4, color: lineColor),
             ],
           )
         : null;
@@ -622,6 +699,12 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     required LatLng? driver,
   }) {
     final destination = _destination;
+    // Fuera de ruta: se dibuja un trazo de RERUTEO (ámbar) camión → destino,
+    // el que recalculó el backend o, si no llegó, una línea directa. Así el
+    // recorrido se "reconecta" al camión en vez de dejar la ruta planificada
+    // colgada cuando se salió del camino.
+    final offRoute = _isOffRoute(driver);
+    final reroute = offRoute ? _rerouteLine(driver) : const <LatLng>[];
     return Stack(
       children: [
         // El mapa en su propia capa: la tarjeta, la hoja y los botones de
@@ -651,6 +734,23 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
                   ],
                 ),
               _stopsLayer,
+              // Trazo de reruteo (ámbar) por encima de la ruta planificada
+              // cuando el camión se salió del camino.
+              if (reroute.length >= 2)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: reroute,
+                      strokeWidth: 12,
+                      color: AppColors.warning.withValues(alpha: 0.25),
+                    ),
+                    Polyline(
+                      points: reroute,
+                      strokeWidth: 5,
+                      color: AppColors.warning,
+                    ),
+                  ],
+                ),
               // Capas que cambian con cada fix del GPS: el radar debajo del
               // camión (solo con fix en vivo) y el marcador del camión encima.
               if (driver != null) ...[

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/emitted_label.dart';
+import '../../../core/api/models/shipment.dart';
 import '../../../core/api/models/vehicle.dart';
 import '../../../core/labels/signed_label.dart';
 import '../../../core/layout/adaptive_card_rows.dart';
@@ -33,9 +34,18 @@ import 'widgets/unit_tile.dart';
 /// unidad, escanear el EAN del producto para registrar la preparación e
 /// imprimir su etiqueta QR en la Zebra.
 class OrderPreparationScreen extends ConsumerStatefulWidget {
-  const OrderPreparationScreen({super.key, required this.orderNumber});
+  const OrderPreparationScreen({
+    super.key,
+    required this.orderNumber,
+    this.shipment,
+  });
 
   final String orderNumber;
+
+  /// El envío de la lista (llega por `extra` al tocar la tarjeta): si el
+  /// backend ya le asignó un camión (`progress.vehicle_id`/`plate`), la
+  /// pantalla arranca mostrando "Cambiar camión" en vez de "Asignar".
+  final Shipment? shipment;
 
   @override
   ConsumerState<OrderPreparationScreen> createState() =>
@@ -51,6 +61,30 @@ class _OrderPreparationScreenState
   bool _orderBusy = false;
 
   String get _orderNumber => widget.orderNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si el envío YA trae camión (lo asignó un plan u otra sesión), la pantalla
+    // arranca con "Cambiar camión", no "Asignar". Se siembra una sola vez y
+    // solo si no hay nada local (no pisa lo que el preparador esté eligiendo).
+    final progress = widget.shipment?.progress;
+    final vehicleId = progress?.vehicleId;
+    if (vehicleId == null || vehicleId.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = ref.read(
+        preparationControllerProvider(_orderNumber).notifier,
+      );
+      if (ref.read(preparationControllerProvider(_orderNumber)).hasAssignment) {
+        return;
+      }
+      controller.assign(
+        vehicleId: vehicleId,
+        lane: (progress?.plate?.isNotEmpty ?? false) ? progress!.plate : null,
+      );
+    });
+  }
 
   /// Unidades vigentes (sin revocadas) de la última lista de etiquetas. Se
   /// recalcula solo si llega otra lista: cada escaneo hace dos `setState`

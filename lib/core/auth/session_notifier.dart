@@ -73,6 +73,10 @@ class SessionNotifier extends Notifier<Session?> {
         final int id => id,
         _ => null,
       },
+      city: snapshot['city'] is String ? snapshot['city'] as String : null,
+      cityName: snapshot['cityName'] is String
+          ? snapshot['cityName'] as String
+          : null,
       tokenExpiresAt: _dateFrom(snapshot['tokenExpiresAt']),
       tokenIssuedAt: _dateFrom(snapshot['tokenIssuedAt']),
     );
@@ -92,6 +96,8 @@ class SessionNotifier extends Notifier<Session?> {
     List<String> abilities = const [],
     Node? storeNode,
     int? userId,
+    String? city,
+    String? cityName,
     DateTime? expiresAt,
   }) async {
     await _store.writeToken(token);
@@ -105,6 +111,8 @@ class SessionNotifier extends Notifier<Session?> {
       abilities: abilities,
       storeNode: storeNode,
       userId: userId,
+      city: city,
+      cityName: cityName,
       tokenExpiresAt: expiresAt,
       tokenIssuedAt: now,
     );
@@ -122,6 +130,8 @@ class SessionNotifier extends Notifier<Session?> {
         'abilities': session.abilities,
         'storeNode': session.storeNode?.toJson(),
         'userId': session.userId,
+        'city': session.city,
+        'cityName': session.cityName,
         'tokenExpiresAt': session.tokenExpiresAt?.toIso8601String(),
         'tokenIssuedAt': session.tokenIssuedAt?.toIso8601String(),
       });
@@ -139,7 +149,13 @@ class SessionNotifier extends Notifier<Session?> {
     if (current == null) {
       return;
     }
-    _update(current, abilities: abilities, storeNode: current.storeNode);
+    _update(
+      current,
+      abilities: abilities,
+      storeNode: current.storeNode,
+      city: current.city,
+      cityName: current.cityName,
+    );
   }
 
   /// Aplica lo que devuelve `/app/auth/me` (abilities + tienda asignada) y lo
@@ -148,6 +164,8 @@ class SessionNotifier extends Notifier<Session?> {
     required List<String> abilities,
     Node? storeNode,
     int? userId,
+    String? city,
+    String? cityName,
   }) {
     final current = state;
     if (current == null) return;
@@ -156,6 +174,8 @@ class SessionNotifier extends Notifier<Session?> {
       abilities: abilities,
       storeNode: storeNode,
       userId: userId,
+      city: city,
+      cityName: cityName,
     );
   }
 
@@ -164,6 +184,8 @@ class SessionNotifier extends Notifier<Session?> {
     required List<String> abilities,
     required Node? storeNode,
     int? userId,
+    String? city,
+    String? cityName,
   }) {
     final updated = Session(
       userName: current.userName,
@@ -172,6 +194,10 @@ class SessionNotifier extends Notifier<Session?> {
       abilities: abilities,
       storeNode: storeNode,
       userId: userId ?? current.userId,
+      // La ciudad llega por `/app/auth/me`; si una llamada no la trae (p. ej.
+      // `setAbilities`) se conserva la última conocida.
+      city: city ?? current.city,
+      cityName: cityName ?? current.cityName,
       tokenExpiresAt: current.tokenExpiresAt,
       tokenIssuedAt: current.tokenIssuedAt,
     );
@@ -244,6 +270,8 @@ class SessionNotifier extends Notifier<Session?> {
         abilities: latest.abilities,
         storeNode: latest.storeNode,
         userId: latest.userId,
+        city: latest.city,
+        cityName: latest.cityName,
         tokenExpiresAt: response.expiresAt,
         tokenIssuedAt: DateTime.now(),
       );

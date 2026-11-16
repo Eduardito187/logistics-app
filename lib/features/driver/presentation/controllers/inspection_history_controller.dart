@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
 import '../../domain/usecases/list_vehicle_checklists.dart';
+import 'driver_controllers.dart';
 
 /// Historial de inspecciones diarias (checklists pre-salida) de un vehículo,
 /// más reciente primero. Family por `vehicleId` (el gate del chofer lo provee).
@@ -11,6 +12,30 @@ final inspectionHistoryProvider = FutureProvider.autoDispose
           .watch(listVehicleChecklistsProvider)
           .call(vehicleId: vehicleId);
     });
+
+/// ¿Falta la inspección pre-salida de la ruta/salida EN CURSO? El chofer no debe
+/// empezar a entregar sin haber hecho el checklist del camión de esa salida.
+///
+/// Combina el historial de inspecciones del vehículo asignado con la ruta del
+/// día (su `route_id`), reusando [inspectionForCurrentRoute] (modo por ruta o,
+/// con backend viejo, diario).
+///
+/// Es **fail-open**: mientras no se SEPA (sin vehículo, historial cargando o en
+/// error, o en modo por ruta todavía sin ruta ligable) devuelve `false` y no
+/// bloquea. El checklist se hace con señal antes de salir; trabar al chofer por
+/// una lectura que no llegó sería peor (offline invisible). Solo devuelve `true`
+/// cuando el historial llegó y confirma que la inspección de esta salida falta.
+final preTripChecklistPendingProvider = Provider.autoDispose<bool>((ref) {
+  final vehicleId = ref.watch(assignedVehicleIdProvider);
+  if (vehicleId == null) return false;
+  final routeId = ref.watch(driverRouteProvider).value?.id;
+  final checklists = ref.watch(inspectionHistoryProvider(vehicleId)).value;
+  if (checklists == null) return false;
+  // En modo por ruta sin ruta todavía no se puede ligar la inspección: no se
+  // bloquea (no hay salida que iniciar sin ruta).
+  if (perRouteChecklistMode(checklists) && routeId == null) return false;
+  return inspectionForCurrentRoute(checklists, routeId, DateTime.now()) == null;
+});
 
 /// True si la inspección más reciente de [checklists] se hizo HOY (mismo día que
 /// [now] en zona local). La lista se asume ordenada DESC por `performedOn`, pero

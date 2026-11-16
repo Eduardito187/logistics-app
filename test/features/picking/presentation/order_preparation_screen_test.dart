@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/models/emitted_label.dart';
+import 'package:logistics_app/core/api/models/shipment.dart';
+import 'package:logistics_app/core/api/models/shipment_progress.dart';
 import 'package:logistics_app/core/api/models/vehicle.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/features/picking/data/available_vehicles.dart';
@@ -37,6 +39,7 @@ Future<FakeLabelPrinter> _pump(
   FakeLabelPrinter? printer,
   PreparationState? seedState,
   String orderNumber = 'EXT-1',
+  Shipment? shipment,
 }) async {
   final fakePrinter = printer ?? FakeLabelPrinter();
   await tester.pumpWidget(
@@ -55,7 +58,10 @@ Future<FakeLabelPrinter> _pump(
           ).overrideWith(() => _SeededPrep(seedState)),
       ],
       child: MaterialApp(
-        home: OrderPreparationScreen(orderNumber: orderNumber),
+        home: OrderPreparationScreen(
+          orderNumber: orderNumber,
+          shipment: shipment,
+        ),
       ),
     ),
   );
@@ -178,6 +184,41 @@ void main() {
     expect(find.byType(UnitTile), findsNWidgets(2));
     expect(find.text('0/2'), findsOneWidget); // ninguna preparada aún
   });
+
+  testWidgets(
+    'envío con camión ya asignado: muestra la placa y "Cambiar", no "Asignar"',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 3600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await _pump(
+        tester,
+        repo: FakePickingRepository(
+          onGetOrderLabels: (_) async => [
+            buildLabel(labelId: 'L1', sku: 'SKU1', lineNumber: 1),
+          ],
+        ),
+        // El backend ya le asignó un camión al pedido (plan o asignación
+        // previa): no debe pedir "Asignar" de nuevo.
+        shipment: buildShipment(
+          progress: const ShipmentProgress(
+            vehicleId: 'v9',
+            plate: '904U10',
+            assignedAt: null,
+            preparedAt: null,
+            loadedAt: null,
+            deliveredAt: null,
+            labelsEmittedCount: null,
+            executionStatus: null,
+          ),
+        ),
+      );
+
+      expect(find.text('Vehículo: 904U10'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Cambiar'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Asignar'), findsNothing);
+    },
+  );
 
   testWidgets('etiquetas PERMANENTES: todas cuentan (ninguna se anula)', (
     tester,

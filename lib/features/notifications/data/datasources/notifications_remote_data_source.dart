@@ -14,8 +14,10 @@ class NotificationsRemoteDataSource {
 
   final Ref _ref;
 
-  /// GET `/app/notifications`. Lista global de notificaciones de la operación,
-  /// las [limit] más recientes (`null` = default del backend, 100).
+  /// GET `/app/notifications/all` (`appListNotifications`): lista global de la
+  /// operación con alcance por rol, las [limit] más recientes (`null` = default
+  /// del backend). NO es `/app/notifications` (ese es por envío y exige
+  /// `shipment_id`, da 422 sin él).
   Future<List<NotificationView>> listNotifications({int? limit}) async {
     try {
       final api = _ref.read(logisticsApiProvider);

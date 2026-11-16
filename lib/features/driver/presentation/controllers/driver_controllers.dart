@@ -38,9 +38,15 @@ final selectedDateProvider = NotifierProvider<SelectedDateNotifier, DateTime>(
 /// pantallas del chofer (gate, ruta, carga, GPS) y el rastreo automático;
 /// liberarlo al cambiar de pantalla obligaría a pedirlo de nuevo a la red en
 /// cada navegación (y sin señal dejaría al chofer bloqueado en el gate).
-final myCrewProvider = FutureProvider<MyCrew>(
-  (ref) => ref.watch(getMyCrewProvider).call(ref.watch(selectedDateProvider)),
-);
+final myCrewProvider = FutureProvider<MyCrew>((ref) {
+  // EN TIEMPO REAL: al publicar un plan, el backend arma la tripulación del
+  // camión (auto-crew) y dispara `route.updated` en el canal del usuario. Sin
+  // esto, la tripulación recién creada NO se recargaba: `assignedVehicleId`
+  // seguía en null y el chofer quedaba en "sin vehículo asignado" hasta reabrir
+  // la app, aunque la ruta ya existiera. Al recargarla, el gate entra solo.
+  ref.refreshOnRealtime(RealtimeTopic.user, const {'route.updated'});
+  return ref.watch(getMyCrewProvider).call(ref.watch(selectedDateProvider));
+});
 
 /// Id del vehículo ASIGNADO al chofer (derivado de la tripulación del día).
 /// `null` mientras carga o cuando no hay asignación. Varias pantallas (ruta,

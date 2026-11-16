@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/presentation/admin_routes.dart';
 import '../../features/carrier/presentation/carrier_routes.dart';
+import '../../features/crew/presentation/crew_routes.dart';
 import '../../features/driver/presentation/driver_routes.dart';
 import '../../features/lookup/presentation/lookup_routes.dart';
 import '../../features/picking/presentation/picking_routes.dart';
@@ -18,6 +19,7 @@ final featureTasksProvider = Provider<List<RoleTask>>((ref) {
   return [
     ...pickingTasks,
     ...driverTasks,
+    ...crewTasks,
     ...storeTasks,
     ...carrierTasks,
     ...supervisorTasks,

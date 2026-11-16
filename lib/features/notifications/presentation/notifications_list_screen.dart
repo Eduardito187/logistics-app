@@ -173,7 +173,19 @@ class _NotificationsListScreenState
                               ),
                             ),
                         ],
-                // Cargando o error: vista estándar, centrada en el resto.
+                // Error en la lista operativa pero con avisos ya cargados: los
+                // avisos SON la bandeja unificada, así que no se muestra ningún
+                // cartel de error (el dueño lo pidió: "avisos unificados, sin
+                // ese error debajo"). La lista operativa se reintenta sola por
+                // socket/push y al tirar para refrescar. Solo si NO hay avisos
+                // se muestra el error (rama `_` de abajo), para no dejar la
+                // pantalla muda sin explicación.
+                AsyncValue(hasError: true) when hasInbox => [
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: navScrollBottomPadding(context)),
+                  ),
+                ],
+                // Cargando, o error sin avisos: vista estándar, centrada.
                 _ => [
                   SliverFillRemaining(
                     hasScrollBody: false,

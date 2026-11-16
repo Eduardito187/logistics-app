@@ -12,19 +12,28 @@ import '../../../../core/realtime/realtime_bus.dart';
 import '../../data/datasources/inbox_remote_data_source.dart';
 import '../widgets/inbox_item_card.dart';
 
-/// Un aviso de la empresa que llega por la conexión de TIEMPO REAL se muestra
-/// como notificación del teléfono (suena y queda en la barra), igual que un
-/// push, aunque el entorno no tenga push configurado.
+/// Un aviso de la empresa se muestra como notificación del teléfono (suena y
+/// queda en la barra), igual que un push, aunque el entorno no tenga push
+/// configurado (sin credenciales FCM) ni sockets desplegados.
 ///
-/// - Al entrar activa las notificaciones (pide el permiso del sistema una vez).
-/// - Solo avisa cuando la cantidad de avisos sin leer SUBE: marcar uno como
-///   leído no dispara nada.
-/// - Si el push del teléfono ya está registrado no hace nada: ese aviso lo
-///   muestra el push y saldría dos veces.
+/// Se entera de un aviso nuevo por DOS vías, con la app abierta:
+/// - en tiempo real, por el canal del usuario (`inbox.updated`), si hay socket;
+/// - por un sondeo propio cada [_pollEvery] de la cantidad sin leer, que cubre
+///   el caso SIN socket (la mayoría hoy): así "avisos con push" funciona igual.
+///
+/// Reglas: al entrar activa las notificaciones (pide el permiso una vez); solo
+/// avisa cuando la cantidad sin leer SUBE (marcar leído no dispara nada); y si
+/// el push FCM ya está registrado no hace nada (ese aviso lo muestra el push y
+/// saldría dos veces). Background real (app cerrada) necesita FCM: eso no lo
+/// cubre este sondeo, solo la app en primer plano.
 class InboxAlerts extends Notifier<void> {
-  /// Sin leer que informó el último aviso (`null` = todavía no se sabe).
+  /// Sin leer de la última vez (`null` = todavía no se sabe la base).
   int? _unread;
   bool _disposed = false;
+  Timer? _poll;
+
+  /// Cada cuánto se consulta la cantidad sin leer mientras no hay socket.
+  static const Duration _pollEvery = Duration(seconds: 45);
 
   @override
   void build() {
@@ -38,6 +47,8 @@ class InboxAlerts extends Notifier<void> {
         .listen(RealtimeTopic.user, _onEvent);
     ref.onDispose(() {
       _disposed = true;
+      _poll?.cancel();
+      _poll = null;
       stop();
     });
     if (!signedIn.$1) return;
@@ -56,6 +67,21 @@ class InboxAlerts extends Notifier<void> {
     } on Object {
       // Sin la cuenta inicial, el primer aviso que llegue fija la base.
     }
+    if (_disposed) return;
+    _poll ??= Timer.periodic(_pollEvery, (_) => _pollUnread());
+  }
+
+  /// Sondeo: ¿subió la cantidad sin leer desde la última vez? → notificar.
+  Future<void> _pollUnread() async {
+    if (_disposed) return;
+    try {
+      final unread = await ref
+          .read(inboxRemoteDataSourceProvider)
+          .unreadCount();
+      await _notifyIfGrew(unread);
+    } on Object {
+      // Sin señal: se reintenta en el próximo tick.
+    }
   }
 
   /// ¿El push del teléfono ya está activo? Entonces el aviso lo muestra él.
@@ -69,7 +95,12 @@ class InboxAlerts extends Notifier<void> {
     if (_disposed || event.name != 'inbox.updated') return;
     final raw = event.data['unread'];
     if (raw is! num) return;
-    final unread = raw.toInt();
+    await _notifyIfGrew(raw.toInt());
+  }
+
+  /// Muestra la notificación del teléfono si [unread] subió respecto de la
+  /// última base conocida (y el push FCM no la va a mostrar él).
+  Future<void> _notifyIfGrew(int unread) async {
     final before = _unread;
     _unread = unread;
     if (before == null || unread <= before || _pushActive) return;

@@ -39,6 +39,22 @@ enum UserRole {
     icon: AppIcon.handshake,
     tasks: ['Escanear al recoger', 'Escanear al entregar'],
   ),
+
+  /// Tripulante: ayudante que va en el camión con el chofer. Rol de SOLO
+  /// lectura. Ve los envíos del camión al que lo asignaron (programados o en
+  /// curso), consulta pedidos escaneando la etiqueta, y tiene avisos y perfil.
+  /// No carga, no entrega, no asigna: esas acciones son del chofer.
+  crewMember(
+    label: 'Tripulante',
+    backendKey: 'tripulante',
+    icon: AppIcon.deliver,
+    tasks: [
+      'Envíos del camión en el que vas (programados y en curso)',
+      'Consultar un pedido escaneando su etiqueta',
+      'Avisos y perfil',
+    ],
+  ),
+
   supervisor(
     label: 'Supervisor',
     backendKey: 'supervisor',

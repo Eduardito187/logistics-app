@@ -160,6 +160,8 @@ class AuthRepositoryImpl implements AuthRepository {
       role: role,
       storeNode: response.user.node,
       userId: response.user.id,
+      city: response.user.city,
+      cityName: response.user.cityName,
       // Vencimiento real del token: deja que la renovación proactiva caiga
       // justo antes de vencer (sin esto se usa la política por antigüedad).
       expiresAt: response.expiresAt,
@@ -175,6 +177,8 @@ class AuthRepositoryImpl implements AuthRepository {
         abilities: me.abilities,
         storeNode: me.user.node,
         userId: me.user.id,
+        city: me.user.city,
+        cityName: me.user.cityName,
       );
     } on ApiException {
       // Sesión sin abilities: la home no oculta nada por permiso (ver regla).

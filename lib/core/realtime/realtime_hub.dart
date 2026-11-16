@@ -168,6 +168,8 @@ class RealtimeHub extends Notifier<void> {
             abilities: me.abilities,
             storeNode: me.user.node,
             userId: me.user.id,
+            city: me.user.city,
+            cityName: me.user.cityName,
           );
       return me.user.id;
     } on Object {
