@@ -81,7 +81,9 @@ void main() {
         assignedVehicleIdProvider.overrideWithValue('v1'),
         driverRouteProvider.overrideWith((ref) async => buildRoute(id: 'r1')),
         inspectionHistoryProvider('v1').overrideWith(
-          (ref) async => [_checklist(performedOn: DateTime.now(), routeId: 'r1')],
+          (ref) async => [
+            _checklist(performedOn: DateTime.now(), routeId: 'r1'),
+          ],
         ),
       ]);
       expect(await _pending(container, vehicleId: 'v1'), isFalse);
@@ -94,9 +96,7 @@ void main() {
     ) async {
       await pumpScoped(
         tester,
-        overrides: [
-          preTripChecklistPendingProvider.overrideWithValue(true),
-        ],
+        overrides: [preTripChecklistPendingProvider.overrideWithValue(true)],
         child: DeliveryActionsBar(stop: buildStop(orderReference: 'PED-1')),
       );
 
@@ -110,9 +110,7 @@ void main() {
     ) async {
       await pumpScoped(
         tester,
-        overrides: [
-          preTripChecklistPendingProvider.overrideWithValue(false),
-        ],
+        overrides: [preTripChecklistPendingProvider.overrideWithValue(false)],
         child: DeliveryActionsBar(stop: buildStop(orderReference: 'PED-1')),
       );
 

@@ -127,7 +127,8 @@ class _StopsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stops = [...route.stops]..sort((a, b) => a.sequence.compareTo(b.sequence));
+    final stops = [...route.stops]
+      ..sort((a, b) => a.sequence.compareTo(b.sequence));
     if (stops.isEmpty) {
       return ListView(
         children: [
@@ -135,7 +136,8 @@ class _StopsList extends StatelessWidget {
           const EmptyState(
             icon: AppIcon.route,
             title: 'Sin envíos este día',
-            message: 'Cuando el camión tenga pedidos programados aparecerán acá.',
+            message:
+                'Cuando el camión tenga pedidos programados aparecerán acá.',
           ),
         ],
       );
@@ -282,8 +284,9 @@ class _DateStrip extends ConsumerWidget {
           ),
           if (!isToday)
             TextButton(
-              onPressed: () =>
-                  ref.read(selectedDateProvider.notifier).select(DateTime.now()),
+              onPressed: () => ref
+                  .read(selectedDateProvider.notifier)
+                  .select(DateTime.now()),
               child: const Text('Hoy'),
             ),
         ],
@@ -351,7 +354,10 @@ class _RouteError extends StatelessWidget {
           icon: AppIcon.cloudOff,
           title: 'No se pudieron cargar los envíos',
           message: 'Revisá tu conexión e intentá de nuevo.',
-          action: FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
+          action: FilledButton(
+            onPressed: onRetry,
+            child: const Text('Reintentar'),
+          ),
         ),
       ],
     );
