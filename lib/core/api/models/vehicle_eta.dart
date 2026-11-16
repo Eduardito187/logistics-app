@@ -4,6 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'lat_lng_point.dart';
 import 'position.dart';
 import 'stops2.dart';
 
@@ -13,6 +14,9 @@ part 'vehicle_eta.g.dart';
 @JsonSerializable()
 class VehicleEta {
   const VehicleEta({
+    this.offRoute,
+    this.offRouteSince,
+    this.rerouteGeometry,
     this.shipmentId,
     this.vehicleId,
     this.plate,
@@ -25,6 +29,15 @@ class VehicleEta {
 
   factory VehicleEta.fromJson(Map<String, Object?> json) =>
       _$VehicleEtaFromJson(json);
+
+  @JsonKey(name: 'off_route')
+  final bool? offRoute;
+  @JsonKey(name: 'off_route_since')
+  final DateTime? offRouteSince;
+
+  /// Polilínea (posición actual → próxima parada pendiente) para redibujar la ruta cuando el vehículo está fuera de ruta. null salvo off_route=true.
+  @JsonKey(name: 'reroute_geometry')
+  final List<LatLngPoint>? rerouteGeometry;
 
   /// Only in the per-shipment endpoint
   @JsonKey(name: 'shipment_id')

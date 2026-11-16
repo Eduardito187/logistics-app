@@ -16,6 +16,8 @@ Days _$DaysFromJson(Map<String, dynamic> json) => Days(
       ? null
       : DateTime.parse(json['active_until'] as String),
   available: json['available'] as bool?,
+  capacityTotal: json['capacity_total'] as num?,
+  capacityUsed: json['capacity_used'] as num?,
 );
 
 Map<String, dynamic> _$DaysToJson(Days instance) => <String, dynamic>{
@@ -26,4 +28,6 @@ Map<String, dynamic> _$DaysToJson(Days instance) => <String, dynamic>{
   'within_horizon': instance.withinHorizon,
   'active_until': instance.activeUntil?.toIso8601String(),
   'available': instance.available,
+  'capacity_total': instance.capacityTotal,
+  'capacity_used': instance.capacityUsed,
 };

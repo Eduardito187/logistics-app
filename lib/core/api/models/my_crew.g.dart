@@ -12,7 +12,7 @@ MyCrew _$MyCrewFromJson(Map<String, dynamic> json) => MyCrew(
   vehicle: CrewVehicle.fromJson(json['vehicle'] as Map<String, dynamic>),
   driver: CrewDriver.fromJson(json['driver'] as Map<String, dynamic>),
   helpers: (json['helpers'] as List<dynamic>)
-      .map((e) => Helpers2.fromJson(e as Map<String, dynamic>))
+      .map((e) => Helpers3.fromJson(e as Map<String, dynamic>))
       .toList(),
   shift: json['shift'] == null
       ? null

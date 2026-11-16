@@ -182,7 +182,13 @@ class _LiveStatusCardState extends ConsumerState<_LiveStatusCard> {
     final route = widget.route;
     final stop = widget.stop;
     final fix = ref.watch(deliveryDriverFixProvider).value;
-    final remaining = remainingToStop(route, stop, fix);
+    var remaining = remainingToStop(route, stop, fix);
+    // Fuera de ruta: manda la verdad del backend (misma que ve el supervisor,
+    // con histéresis) cuando la informa; si no (sin deploy), la medición local.
+    final backendOffRoute = route.offRoute;
+    if (remaining != null && backendOffRoute != null) {
+      remaining = remaining.withOffRoute(backendOffRoute);
+    }
     // Avance item por item (incluye lo resuelto en este teléfono): misma fuente
     // que el resumen y la lista, para que la barra no se contradiga.
     final settled = ref.watch(locallySettledStopsProvider);

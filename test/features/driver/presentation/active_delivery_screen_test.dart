@@ -38,11 +38,13 @@ DriverRoute _route({
   DriverRouteStop? current,
   int completed = 1,
   List<DriverRouteStop>? stops,
+  bool? offRoute,
 }) => buildRoute(
   totalStops: 5,
   completedStops: completed,
   stopsRemaining: 5 - completed,
   currentStop: current,
+  offRoute: offRoute,
   // 5 paradas reales (todas pendientes salvo la en curso) para que
   // RouteProgress.total (que cuenta sobre `stops`) coincida con totalStops. El
   // relleno NO tiene coordenadas → no afecta el mapa ni el encuadre.
@@ -230,6 +232,36 @@ void main() {
     // La foto de la entrega es obligatoria, y el POD escanea el producto.
     expect(find.text('3. Foto de entrega (obligatoria)'), findsOneWidget);
     expect(find.text('1. Productos entregados'), findsOneWidget);
+  });
+
+  testWidgets('fuera de ruta lo decide el backend (no la medición local)', (
+    tester,
+  ) async {
+    // Sin trazo, la medición local nunca marca fuera de ruta; el cartel sale
+    // solo porque el backend lo informa.
+    await _pump(
+      tester,
+      overrides: _overrides(
+        route: _route(current: _stop, offRoute: true),
+        fix: const GpsFix(lat: -17.78, lng: -63.18),
+      ),
+    );
+
+    expect(find.text('Fuera de ruta'), findsOneWidget);
+  });
+
+  testWidgets('sin fuera de ruta del backend ni local, no sale el cartel', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      overrides: _overrides(
+        route: _route(current: _stop, offRoute: false),
+        fix: const GpsFix(lat: -17.78, lng: -63.18),
+      ),
+    );
+
+    expect(find.text('Fuera de ruta'), findsNothing);
   });
 
   testWidgets('"No se pudo" abre la entrega fallida', (tester) async {

@@ -8,6 +8,8 @@ import 'package:retrofit/retrofit.dart';
 import '../models/accepted_envelope.dart';
 import '../models/app_delivery_calendar_blocked_request_body.dart';
 import '../models/app_delivery_calendar_blocked_request_body2.dart';
+import '../models/app_delivery_calendar_blocked_slots_request_body.dart';
+import '../models/app_delivery_calendar_blocked_slots_request_body2.dart';
 import '../models/app_delivery_calendar_open_request_body.dart';
 import '../models/capacity_amount_request.dart';
 import '../models/capacity_bucket_envelope.dart';
@@ -15,9 +17,11 @@ import '../models/capacity_calendar_envelope.dart';
 import '../models/capacity_unit.dart';
 import '../models/define_capacity_request.dart';
 import '../models/effective_capacity_envelope.dart';
+import '../models/get_app_delivery_calendar_day_response.dart';
 import '../models/get_app_delivery_calendar_options_response.dart';
 import '../models/get_app_delivery_calendar_response.dart';
 import '../models/open_delivery_slots_with_defaults_request.dart';
+import '../models/post_app_delivery_calendar_blocked_slots_response.dart';
 import '../models/post_app_delivery_calendar_open_default_response.dart';
 
 part 'capacity_client.g.dart';
@@ -201,6 +205,31 @@ abstract class CapacityClient {
     @Query('from') DateTime? from,
     @Query('to') DateTime? to,
     @Query('municipality_id') String? municipalityId,
+  });
+
+  /// Delivery calendar for a single day (time slots).
+  ///
+  /// Admin/supervisor/planificador. Bloqueo de día + sus franjas horarias con cupo, consumo, unidad y bloqueo por franja. Sin municipality_id es el consolidado GLOBAL (suma por time_slot+unit de todos los municipios).
+  @GET('/app/delivery-calendar/day')
+  Future<GetAppDeliveryCalendarDayResponse> appGetDeliveryCalendarDay({
+    @Query('date') required DateTime date,
+    @Query('municipality_id') String? municipalityId,
+  });
+
+  /// Block a single delivery time slot (not the whole day).
+  ///
+  /// Admin/supervisor/planificador. Bloquea SOLO esa franja; no se ofrece al cliente ni admite reprogramación. Idempotente. Ruta separada de /blocked (día entero) a propósito.
+  @POST('/app/delivery-calendar/blocked-slots')
+  Future<PostAppDeliveryCalendarBlockedSlotsResponse> appBlockDeliverySlot({
+    @Body() required AppDeliveryCalendarBlockedSlotsRequestBody body,
+  });
+
+  /// Remove a delivery time-slot block (idempotent).
+  ///
+  /// Admin/supervisor/planificador. Quita el bloqueo de esa franja; 204 aunque no existiera.
+  @DELETE('/app/delivery-calendar/blocked-slots')
+  Future<void> appUnblockDeliverySlot({
+    @Body() required AppDeliveryCalendarBlockedSlotsRequestBody2 body,
   });
 
   /// Block a delivery day (holiday, closure) for a municipality or globally

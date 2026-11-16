@@ -40,7 +40,7 @@ CrewDriver buildDriver({String id = 'd1', String? name = 'Juan Pérez'}) =>
 MyCrew buildMyCrew({
   CrewVehicle? vehicle,
   CrewDriver? driver,
-  List<Helpers2> helpers = const [],
+  List<Helpers3> helpers = const [],
   Shift? shift,
 }) => MyCrew(
   crewId: 'crew-1',
@@ -101,6 +101,7 @@ DriverRoute buildRoute({
   List<DriverRouteStop>? stops,
   DriverRouteStop? currentStop,
   RouteGeometry? routeGeometry,
+  bool? offRoute,
 }) => DriverRoute(
   id: id,
   vehicleId: vehicleId,
@@ -112,6 +113,7 @@ DriverRoute buildRoute({
   currentStop: currentStop,
   stops: stops ?? const [],
   routeGeometry: routeGeometry,
+  offRoute: offRoute,
 );
 
 /// Ruta vacía (sin paradas pendientes) para que el autostart del rastreo no

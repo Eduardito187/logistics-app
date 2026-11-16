@@ -16,6 +16,8 @@ class Days {
     this.withinHorizon,
     this.activeUntil,
     this.available,
+    this.capacityTotal,
+    this.capacityUsed,
   });
 
   factory Days.fromJson(Map<String, Object?> json) => _$DaysFromJson(json);
@@ -34,6 +36,14 @@ class Days {
 
   /// No bloqueado y dentro del horizonte activo
   final bool? available;
+
+  /// Cupo total de entregas del día (consolidado o por municipio).
+  @JsonKey(name: 'capacity_total')
+  final num? capacityTotal;
+
+  /// Cupo de entregas ya usado ese día.
+  @JsonKey(name: 'capacity_used')
+  final num? capacityUsed;
 
   Map<String, Object?> toJson() => _$DaysToJson(this);
 }

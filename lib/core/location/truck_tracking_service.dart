@@ -505,6 +505,12 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
           lat: item.fix.lat,
           lng: item.fix.lng,
           reportedAt: item.at,
+          // Opcionales: ayudan al backend a detectar salida de ruta y a
+          // calcular la ETA. Si el fix no los trae van nulos y el backend
+          // deriva velocidad/rumbo de dos posiciones seguidas.
+          speedMps: item.fix.speedMps,
+          headingDeg: item.fix.headingDeg,
+          accuracyM: item.fix.accuracy,
         ).toJson(),
         '@shipmentId': item.shipmentId,
       };

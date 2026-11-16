@@ -14,6 +14,7 @@ import '../models/app_staff_user_id_node_request_body.dart';
 import '../models/app_staff_user_id_profile_request_body.dart';
 import '../models/broadcast_auth_request.dart';
 import '../models/broadcast_auth_response.dart';
+import '../models/broadcast_config.dart';
 import '../models/department.dart';
 import '../models/get_app_broadcasts_response.dart';
 import '../models/get_app_inbox_response.dart';
@@ -183,6 +184,12 @@ abstract class StaffClient {
     @Path('userId') required int userId,
     @Part(name: 'photo') required File photo,
   });
+
+  /// Real-time connection settings of this environment (Pusher protocol).
+  ///
+  /// El servidor de sockets se publica por el MISMO host y puerto que la API: la app conecta a `ws(s)://<host de la API>/app/<key>` (wss cuando la API es https) y firma los canales privados en `POST /app/broadcasting/auth`. Con `enabled: false` el entorno no tiene tiempo real y la app sigue con su refresco normal.
+  @GET('/app/broadcasting/config')
+  Future<BroadcastConfig> getBroadcastConfig();
 
   /// Sign the subscription to a private real-time channel (Pusher protocol).
   ///

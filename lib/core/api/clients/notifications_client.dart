@@ -59,6 +59,7 @@ abstract class NotificationsClient {
   /// List a shipment's notifications (internal app).
   ///
   /// Returns the notification log of a shipment, newest first. App gate (operations/support visibility). The shipment id is passed as a query parameter.
+  /// Alcance por rol: solo se ven las notificaciones de envíos que el usuario puede ver (misma regla que los pedidos: admin/supervisor sin restricción; preparador/planificador por ciudad de origen o destino; tienda por su nodo; chofer/transportista por asignación). Los totales y el no-leído cuentan solo lo visible; una notificación fuera de alcance responde 404 y un envío fuera de alcance devuelve lista vacía.
   @GET('/app/notifications')
   Future<NotificationListEnvelope> appListShipmentNotifications({
     @Query('shipment_id') required String shipmentId,
@@ -67,6 +68,7 @@ abstract class NotificationsClient {
   /// List the global notification log (internal app).
   ///
   /// Returns the latest notifications across the whole operation, newest first. App gate.
+  /// Alcance por rol: solo se ven las notificaciones de envíos que el usuario puede ver (misma regla que los pedidos: admin/supervisor sin restricción; preparador/planificador por ciudad de origen o destino; tienda por su nodo; chofer/transportista por asignación). Los totales y el no-leído cuentan solo lo visible; una notificación fuera de alcance responde 404 y un envío fuera de alcance devuelve lista vacía.
   ///
   /// [page] - 1-based page number for offset pagination (E-02). When present, the response is sliced and a `meta` object is added. Omitting all pagination params returns the full collection unchanged.
   ///

@@ -7,7 +7,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'crew_driver.dart';
 import 'crew_vehicle.dart';
 import 'driver_route_status.dart';
-import 'helpers2.dart';
+import 'helpers3.dart';
 import 'shift.dart';
 
 part 'my_crew.g.dart';
@@ -33,7 +33,7 @@ class MyCrew {
   final DateTime date;
   final CrewVehicle vehicle;
   final CrewDriver driver;
-  final List<Helpers2> helpers;
+  final List<Helpers3> helpers;
 
   /// Work-shift hours, or null when the crew was assembled without fixed hours.
   final Shift? shift;

@@ -267,18 +267,28 @@ class _EvidenceTags extends StatelessWidget {
       if (evidence.photo) ('Foto de entrega', AppIcon.capture),
       if (evidence.document) ('Foto de documento', AppIcon.badge),
     ];
-    if (tags.isEmpty) {
+    if (tags.isEmpty && !evidence.withShortage) {
       return const Align(
         alignment: Alignment.centerLeft,
         child: StatusPill('Sin evidencia registrada'),
       );
     }
+    final missing = evidence.missingCount;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final (label, icon) in tags)
           StatusPill(label, tone: PillTone.success, icon: icon),
+        // Se entregó pero faltaron productos: se marca aparte, en ámbar.
+        if (evidence.withShortage)
+          StatusPill(
+            missing == null
+                ? 'Entregado con faltante'
+                : 'Entregado con faltante ($missing)',
+            tone: PillTone.warning,
+            icon: AppIcon.incident,
+          ),
       ],
     );
   }

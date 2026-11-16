@@ -356,6 +356,37 @@ void main() {
     expect(state.sent, 1);
   });
 
+  test('el fix con velocidad/rumbo los manda; sin ellos, ausentes', () async {
+    final location = _FakeLocationService();
+    final container = _container(location);
+    await container
+        .read(truckTrackingProvider.notifier)
+        .start(shipmentId: 'SHP-1');
+
+    location.fixes.add(
+      const GpsFix(
+        lat: -16.5,
+        lng: -68.1,
+        accuracy: 8,
+        speedMps: 12.5,
+        headingDeg: 90,
+      ),
+    );
+    await pumpEventQueue();
+
+    final sent = _queue.submitted.single.payload;
+    expect(sent['speed_mps'], 12.5);
+    expect(sent['heading_deg'], 90);
+    expect(sent['accuracy_m'], 8);
+
+    // Un fix sin esos datos no los incluye (el interceptor limpia los nulos).
+    location.fixes.add(const GpsFix(lat: -16.6, lng: -68.2));
+    await pumpEventQueue();
+    final second = _queue.submitted.last.payload;
+    expect(second.containsKey('speed_mps'), isFalse);
+    expect(second.containsKey('heading_deg'), isFalse);
+  });
+
   test('start estando activo re-apunta el envío sin reiniciar', () async {
     final location = _FakeLocationService();
     final container = _container(location);
