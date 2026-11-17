@@ -93,7 +93,11 @@ NextDeliveryPayload nextDeliveryPayloadFor({
   return NextDeliveryPayload(
     state: HomeWidgetState.ok,
     route: kNextDeliveryRoute,
-    stopIndex: status.stopIndex,
+    // "Parada N de M": N = atendidas + 1 (misma fuente única item-por-item que
+    // la tarjeta de estado y la isla), NO la secuencia de la parada. Con
+    // entregas fuera de orden la secuencia contradecía a la app ("Parada 1 de 7"
+    // en el widget mientras la pantalla decía "Parada 2 de 7").
+    stopIndex: (status.completedCount + 1).clamp(1, status.stopCount),
     stopCount: status.stopCount,
     customer: hideCustomer ? kHiddenCustomer : status.customer,
     etaText: status.etaText,

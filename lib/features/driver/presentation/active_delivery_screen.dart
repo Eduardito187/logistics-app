@@ -128,12 +128,16 @@ class _ActiveDelivery extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        // "X" SIEMPRE visible (cierra o vuelve al Inicio).
-                        MapRoundButton(
-                          tooltip: 'Cerrar',
-                          icon: AppIcon.close,
-                          onPressed: () => _closeOrHome(context, ref),
-                        ),
+                        // "X" SOLO cuando la pantalla se abrió EMPUJADA (se puede
+                        // volver atrás). Como pestaña central del inicio
+                        // (seguimiento del chofer) NO se muestra: la salida es la
+                        // barra de navegación, y una "X" ahí confundía.
+                        if (Navigator.of(context).canPop())
+                          MapRoundButton(
+                            tooltip: 'Cerrar',
+                            icon: AppIcon.close,
+                            onPressed: () => _closeOrHome(context, ref),
+                          ),
                         const Spacer(),
                         // "Ayuda" a la DERECHA (llamar, navegar, reportar).
                         MapPillButton(
@@ -270,18 +274,20 @@ class _RouteFinished extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          // "X" SIEMPRE visible, consistente con la entrega en curso.
-          Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: MapRoundButton(
-                tooltip: 'Cerrar',
-                icon: AppIcon.close,
-                onPressed: () => _closeOrHome(context, ref),
+          // "X" solo si se abrió empujada (no como pestaña central del inicio),
+          // consistente con la entrega en curso.
+          if (Navigator.of(context).canPop())
+            Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: MapRoundButton(
+                  tooltip: 'Cerrar',
+                  icon: AppIcon.close,
+                  onPressed: () => _closeOrHome(context, ref),
+                ),
               ),
             ),
-          ),
           Expanded(
             child: EmptyState(
               icon: AppIcon.deliverScan,

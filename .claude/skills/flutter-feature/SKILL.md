@@ -250,6 +250,54 @@ renombrar las referencias de la app/tests y los imports `models/dataN.dart` comp
 - Inspección y odómetro van por SALIDA (`route_id`), no por día: el chofer sale N veces.
 - Lo que decide el dueño se implementa tal cual, sin dejar el flujo viejo "como control".
 
+## Robustez por marca / plataforma (crítico: la app debe andar en TODAS las marcas)
+
+Regla dura del dueño: que la app NO funcione en algunas marcas/teléfonos es crítico. No depender de
+permisos o capacidades específicas de marca.
+
+- **Ubicación: exigir solo PRIMER PLANO ("mientras se usa la app"), NUNCA "Permitir siempre" (background).**
+  El rastreo corre con un **foreground service de tipo `location`** (manifest ya tiene
+  `FOREGROUND_SERVICE_LOCATION` + `foregroundServiceType="location"`), y un FGS cuenta como uso activo → con
+  primer plano alcanza para rastrear (incluida la app minimizada). Exigir `Permission.locationAlways`
+  (ACCESS_BACKGROUND_LOCATION) dejaba BLOQUEADOS a Honor/Magic OS y a quien da solo "mientras se usa la app"
+  (Android 11+ ni lo pide por diálogo). El gate (`LocationPermissionGate`) y `TruckTrackingService._start`
+  usan `ensurePermission()` (primer plano). `ensureBackgroundPermission` sigue en `LocationService` pero NO
+  se usa para gatear. Ver `.claude/memory/location-permission-foreground-honor.md`.
+- **Sin Google Play Services (algunas marcas/regiones):** FCM/maps/Data Layer degradan sin tumbar la app
+  (push "No disponible", etc.). Nunca asumir GMS presente.
+- **Matanza agresiva de procesos (Xiaomi/Honor/HyperOS):** el foreground service mitiga; no romper su
+  configuración (`-Xmx`, wake lock, id de servicio = id de la Live Update).
+
+## Wear OS / smartwatch
+
+- **Widgets del teléfono ≠ tiles del reloj.** Los App Widgets de Android (`lib/core/home_widgets/` + nativo
+  en `android/app/.../widgets/`) YA existen y son del TELÉFONO. El reloj es aparte: un **módulo `:wear`**
+  (nativo, Jetpack Tiles + ProtoLayout). No se "comparte" un widget del teléfono al reloj.
+- **Dos caminos, trade-off real:**
+  1. **Notificación espejada (SIN instalar app de reloj):** el teléfono postea una notificación NORMAL
+     (no-ongoing, que alerta ≥1 vez; `WearMirror.kt`). El reloj la espeja como las de WhatsApp. **Las
+     notificaciones de foreground service (ongoing) NO se espejan** → por eso la de la ruta/isla no llegaba.
+     Es best-effort: depende del ajuste POR-APP del reloj (Galaxy Wearable / Wear OS). No se puede forzar
+     desde la app.
+  2. **App de reloj (`:wear`, Data Layer, SIN login):** el teléfono empuja el resumen (`WearBridge` →
+     DataClient) y el reloj muestra **su propio tile + notificación** (no depende del espejado). Es lo
+     ÚNICO confiable en todas las marcas, pero hay que instalar el `:wear` una vez (`./gradlew
+     :wear:assembleDebug` + `adb install`).
+- **El envío al reloj es AUTOMÁTICO** (en `LiveUpdatesChannel.show()`/`end()`), nunca un botón manual (el
+  dueño lo pidió así; se quitó el botón de Ajustes).
+- **Tile ProtoLayout: simple o no renderiza.** `EdgeContentLayout`/`CircularProgressIndicator`/`PrimaryLayout`/
+  `screenShape` quedaban en BLANCO en algunos relojes. Usar una **caja centrada + texto** (`Box`+`Column`+
+  `Text`), que se ve en redondo y cuadrado. El tile NUNCA debe quedar vacío (default "Sin ruta activa").
+- Ver `.claude/memory/wear-os-data-layer.md`.
+
+## Código nativo (Kotlin / Gradle / Wear): NO se verifica con analyze
+
+`flutter analyze` y `getDiagnostics` solo cubren Dart. El código Kotlin/Gradle (canales, widgets, módulo
+`:wear`) **no se valida acá**: se valida compilando/instalando en el dispositivo (lo corre el dueño).
+Entregar el código + el comando y pedir el error de build si falla (iterar como con NDK/CameraX). Un
+`include(":<módulo>")` nuevo en `settings.gradle.kts` ACOPLA su build al del teléfono: si rompe, comentar
+el include para destrabar.
+
 ## Definición de terminado
 
 `dart format` sin cambios + `flutter analyze` sin issues + `flutter test` verde (+ e2e si tocaste un flujo crítico),
@@ -370,3 +418,6 @@ en uso (ver regla 0b).
 | `Cannot use Ref ... inside life-cycles` al cerrar un notifier | `ref.read` dentro de `ref.onDispose` | Guardar la referencia en un campo durante `build` |
 | `AutoDisposeFutureProvider` no existe | Riverpod 3 unificó los tipos | `FutureProvider<T>` (y `AsyncNotifierProvider.autoDispose`) |
 | El heredoc de Bash con código Dart falla ("unexpected EOF"), o Git Bash muere con `add_item ... errno 1` | Comillas y `$` del Dart; el crash es transitorio | Script de parche escrito con Write al scratchpad y corrido con `python`; repetir el comando tras el crash |
+| El chofer da permiso de ubicación pero la app lo deja en la **pantalla bloqueada** (Honor/Magic OS, otros) | El gate exigía "Permitir siempre" (`locationAlways`/ACCESS_BACKGROUND_LOCATION); Android 11+ no lo da por diálogo y Honor lo esconde/reporta mal | Exigir solo PRIMER PLANO (`ensurePermission`): el foreground service de tipo `location` alcanza. Ver sección "Robustez por marca" y `location-permission-foreground-honor` |
+| La notificación de ruta (o la isla) **no se espeja al reloj** (Samsung/Wear OS) pero WhatsApp sí | Es de **foreground service (ongoing)**; los relojes NO espejan las ongoing. La isla es un overlay del teléfono, nunca viaja | Postear una notificación NORMAL aparte (`WearMirror`, no-ongoing, que alerta ≥1 vez). Igual depende del ajuste por-app del reloj. Lo garantizado = app de reloj `:wear` (Data Layer). Ver `wear-os-data-layer` |
+| El **tile de Wear OS queda en blanco** aunque el `:wear` esté instalado | `EdgeContentLayout`/`CircularProgressIndicator`/`PrimaryLayout`/`screenShape` de ProtoLayout no renderizan en algunos relojes | Caja centrada + texto (`Box`+`Column`+`Text`); nunca dejar el tile vacío (default "Sin ruta activa"). Validar compilando en el reloj (no lo cubre `analyze`) |

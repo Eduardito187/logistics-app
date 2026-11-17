@@ -29,30 +29,38 @@ class TrackingProfile {
   });
 
   /// En marcha, energía normal.
+  ///
+  /// Cadencia pedida por el dueño (nov 2026) para que el camión se vea FLUIDO en
+  /// el mapa (antes saltaba: solo se movía cada 15 s): se CAPTURA/encola una
+  /// posición cada **2 s** (si cambió de lugar) y se ENVÍA al backend en lote
+  /// cada **10 s** (la radio despierta 1 vez cada 10 s, no por cada punto). El
+  /// backend desglosa el lote punto por punto.
   static const TrackingProfile moving = TrackingProfile._(
     name: 'moving',
     accuracy: LocationAccuracy.high,
     // Android: sin filtro de distancia para recibir una lectura por intervalo
-    // (15 s) y así detectar enseguida que el camión se detuvo. El GPS está
-    // prendido igual; lo caro (la radio) se controla con el envío por lotes.
+    // (2 s). El GPS está prendido igual; lo caro (la radio) se controla con el
+    // envío por lotes cada 10 s.
     androidDistanceFilterMeters: 0,
-    // iOS ignora el intervalo: sin filtro entregaría ~1 lectura por segundo.
-    iosDistanceFilterMeters: 25,
-    interval: Duration(seconds: 15),
-    minEnqueueInterval: Duration(seconds: 15),
-    flushInterval: Duration(seconds: 60),
+    // iOS ignora el intervalo: un filtro chico para ~1 lectura cada pocos metros.
+    iosDistanceFilterMeters: 8,
+    interval: Duration(seconds: 2),
+    minEnqueueInterval: Duration(seconds: 2),
+    flushInterval: Duration(seconds: 10),
     heartbeatInterval: Duration(minutes: 5),
   );
 
-  /// En marcha con ahorro de energía o batería baja.
+  /// En marcha con ahorro de energía o batería baja: se espacia para cuidar la
+  /// batería, pero sigue bastante más fluido que antes.
   static const TrackingProfile movingSaving = TrackingProfile._(
     name: 'movingSaving',
     accuracy: LocationAccuracy.high,
     androidDistanceFilterMeters: 0,
-    iosDistanceFilterMeters: 50,
-    interval: Duration(seconds: 30),
-    minEnqueueInterval: Duration(seconds: 30),
-    flushInterval: Duration(seconds: 120),
+    iosDistanceFilterMeters: 16,
+    // El doble de `moving` (ahorro de energía): 4 s captura, 20 s envío.
+    interval: Duration(seconds: 4),
+    minEnqueueInterval: Duration(seconds: 4),
+    flushInterval: Duration(seconds: 20),
     heartbeatInterval: Duration(minutes: 10),
   );
 

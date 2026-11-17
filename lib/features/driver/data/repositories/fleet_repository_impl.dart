@@ -11,7 +11,7 @@ class FleetRepositoryImpl implements FleetRepository {
   final FleetDataSource _remote;
 
   @override
-  Future<MyCrew> getMyCrew(DateTime date) => _remote.getMyCrew(date);
+  Future<MyCrew> getMyCrew([DateTime? date]) => _remote.getMyCrew(date);
 
   @override
   Future<List<Driver>> listActiveDrivers() => _remote.listActiveDrivers();

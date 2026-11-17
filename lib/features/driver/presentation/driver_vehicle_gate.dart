@@ -42,41 +42,52 @@ class DriverVehicleGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final crew = ref.watch(myCrewProvider);
-    if (crew.hasValue) {
+    // ÚLTIMO camión conocido: se conserva aunque la recarga falle (red caída,
+    // 5xx transitorio). Antes, un error transitorio de `my-crew` tiraba el gate
+    // a "camión no asignado" y el mapa dejaba de cargar, aunque el camión ya se
+    // conocía. Con esto, una vez cargado, un blip de red NO desasigna el camión:
+    // la ruta y el mapa siguen; el tiempo real / reintento lo corrige. Solo se
+    // bloquea cuando NUNCA hubo camión (sin asignación real / sin red al abrir).
+    final myCrew = crew.value;
+    if (myCrew != null) {
       // La ruta se pide en cuanto hay vehículo, EN PARALELO al chequeo del
       // permiso de ubicación (que solo condiciona el GPS/mapa, no los datos):
       // cuando el permiso responde, la ruta ya está llegando o en caché.
       ref.listen(driverRouteProvider, (_, _) {});
     }
-    final bare = immersive && crew.hasValue;
+    final bare = immersive && myCrew != null;
+    final Widget body;
+    if (myCrew != null) {
+      body = LocationPermissionGate(
+        child: DriverTrackingAutostart(
+          child: immersive
+              ? builder(context, myCrew.vehicle.id)
+              : Column(
+                  children: [
+                    AssignmentHeader(crew: myCrew),
+                    const Divider(height: 1),
+                    Expanded(child: builder(context, myCrew.vehicle.id)),
+                  ],
+                ),
+        ),
+      );
+    } else if (crew.isLoading) {
+      body = const Center(
+        child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
+      );
+    } else {
+      // Sin camión conocido Y con error: ahí sí es sin asignación / sin red.
+      final error = crew.error;
+      body = NoAssignment(
+        message: error is ApiException && error.isConnectionError
+            ? error.message
+            : null,
+        onRetry: () => ref.invalidate(myCrewProvider),
+      );
+    }
     return Scaffold(
       appBar: bare ? null : AppBar(title: Text(title), actions: actions),
-      body: crew.when(
-        skipLoadingOnReload: true,
-        skipLoadingOnRefresh: true,
-        loading: () => const Center(
-          child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
-        ),
-        error: (error, _) => NoAssignment(
-          message: error is ApiException && error.isConnectionError
-              ? error.message
-              : null,
-          onRetry: () => ref.invalidate(myCrewProvider),
-        ),
-        data: (myCrew) => LocationPermissionGate(
-          child: DriverTrackingAutostart(
-            child: immersive
-                ? builder(context, myCrew.vehicle.id)
-                : Column(
-                    children: [
-                      AssignmentHeader(crew: myCrew),
-                      const Divider(height: 1),
-                      Expanded(child: builder(context, myCrew.vehicle.id)),
-                    ],
-                  ),
-          ),
-        ),
-      ),
+      body: body,
     );
   }
 }

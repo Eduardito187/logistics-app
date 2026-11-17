@@ -20,9 +20,9 @@ esa sesión). Parche del lado app: al cambiar camión se borra la tripulación d
 `replace: true`. La ruta de 31 paradas NO tiene arreglo en la app: hay que esperar al backend + saneo.
 `route.updated` (canal del usuario) ya lo escucha `driverRouteProvider`, pero el backend aún no lo emite.
 
-**Cómo diagnosticar algo así:** leer la base de STAGING en solo lectura (tablas `fleet_crews`,
-`execution_driver_routes`, `execution_driver_route_stops`, `planning_plans`); el acceso está en la memoria
-de la PC, no en el repo. La base local de Docker NO es la que usa el teléfono.
+**Cómo diagnosticar algo así:** `ssh oci` + `docker exec logistics-staging-postgres-1 psql` con
+`SET default_transaction_read_only = on` (tablas `fleet_crews`, `execution_driver_routes`,
+`execution_driver_route_stops`, `planning_plans`). La base local de Docker NO es la que usa el teléfono.
 
 **Preferencias de UI que fijó el dueño ese día:** el botón principal de una pantalla larga va FIJO al pie
 (`bottomNavigationBar`), nunca al final del scroll; listas de paradas como LÍNEA DE TIEMPO en tarjetas, sin

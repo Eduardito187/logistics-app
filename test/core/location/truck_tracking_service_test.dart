@@ -29,6 +29,11 @@ class _FakeLocationService extends LocationService {
   bool background = true;
   final StreamController<GpsFix> fixes = StreamController<GpsFix>.broadcast();
 
+  // El rastreo arranca con el permiso de PRIMER PLANO (el foreground service
+  // alcanza); `background` conserva el nombre pero representa ese permiso.
+  @override
+  Future<bool> ensurePermission() async => background;
+
   @override
   Future<bool> ensureBackgroundPermission() async => background;
 
@@ -379,6 +384,10 @@ void main() {
     expect(sent['heading_deg'], 90);
     expect(sent['accuracy_m'], 8);
 
+    // El reloj avanza más que el intervalo de encolado/envío (15 s / 60 s del
+    // perfil "en marcha"): si no, el segundo fix se descarta por el throttle y
+    // nunca se encola (quedaría como "último" el primero, con velocidad/rumbo).
+    _now = _now.add(const Duration(seconds: 90));
     // Un fix sin esos datos los deja en null en el payload; el interceptor
     // de red (NullBodyStripInterceptor) los saca recién al mandar por HTTP,
     // así que acá, antes de la cola, viajan como null.
@@ -519,13 +528,13 @@ void main() {
       await pumpEventQueue();
     }
 
-    test('arranca en el perfil "en marcha" (GPS preciso, 15 s)', () async {
+    test('arranca en el perfil "en marcha" (GPS preciso, 2 s)', () async {
       final (container, location) = await started();
       final notifier = container.read(truckTrackingProvider.notifier);
       expect(notifier.profile, TrackingProfile.moving);
       expect(location.profiles.single, TrackingProfile.moving);
       expect(TrackingProfile.moving.accuracy, LocationAccuracy.high);
-      expect(TrackingProfile.moving.interval, const Duration(seconds: 15));
+      expect(TrackingProfile.moving.interval, const Duration(seconds: 2));
     });
 
     test(
@@ -537,9 +546,9 @@ void main() {
         await fixAt(location, _a);
         expect(_queue.submitted, hasLength(1)); // primera: inmediata
 
-        await fixAt(location, _b, after: const Duration(seconds: 20));
-        await fixAt(location, _c, after: const Duration(seconds: 20));
-        // Juntadas en memoria: sin fila ni POST todavía (la radio duerme).
+        await fixAt(location, _b, after: const Duration(seconds: 3));
+        await fixAt(location, _c, after: const Duration(seconds: 3));
+        // Juntadas en memoria (dentro de la ventana de 10 s): sin POST todavía.
         expect(_queue.submitted, hasLength(1));
         expect(notifier.pendingBatch, 2);
         // El mapa igual ve la última posición.
@@ -559,9 +568,9 @@ void main() {
     test('pasado el intervalo del lote, la próxima lectura lo envía', () async {
       final (container, location) = await started();
       await fixAt(location, _a);
-      await fixAt(location, _b, after: const Duration(seconds: 20));
+      await fixAt(location, _b, after: const Duration(seconds: 3));
       expect(_queue.submitted, hasLength(1));
-      // > 60 s desde el último envío: el lote sale con la lectura siguiente.
+      // > 10 s desde el último envío: el lote sale con la lectura siguiente.
       await fixAt(location, _c, after: const Duration(seconds: 50));
       expect(_queue.submitted, hasLength(3));
       expect(container.read(truckTrackingProvider.notifier).pendingBatch, 0);
@@ -646,7 +655,7 @@ void main() {
     test('stop encola lo juntado antes de soltar el envío', () async {
       final (container, location) = await started();
       await fixAt(location, _a);
-      await fixAt(location, _b, after: const Duration(seconds: 20));
+      await fixAt(location, _b, after: const Duration(seconds: 3));
       expect(_queue.submitted, hasLength(1));
 
       await container.read(truckTrackingProvider.notifier).stop();
@@ -657,7 +666,7 @@ void main() {
     test('pasar a segundo plano encola el lote pendiente', () async {
       final (container, location) = await started();
       await fixAt(location, _a);
-      await fixAt(location, _b, after: const Duration(seconds: 20));
+      await fixAt(location, _b, after: const Duration(seconds: 3));
       expect(_queue.submitted, hasLength(1));
 
       await _toBackground();
@@ -669,7 +678,7 @@ void main() {
       final (container, location) = await started();
       final notifier = container.read(truckTrackingProvider.notifier);
       await fixAt(location, _a);
-      await fixAt(location, _b, after: const Duration(seconds: 20));
+      await fixAt(location, _b, after: const Duration(seconds: 3));
 
       await notifier.start(shipmentId: 'SHP-2');
       await pumpEventQueue();

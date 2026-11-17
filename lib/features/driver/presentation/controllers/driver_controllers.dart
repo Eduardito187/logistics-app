@@ -30,9 +30,15 @@ final selectedDateProvider = NotifierProvider<SelectedDateNotifier, DateTime>(
   SelectedDateNotifier.new,
 );
 
-/// Asignación del chofer autenticado para la fecha activa: vehículo +
-/// tripulación. El chofer NO elige; se le asigna. 404/sin asignación llega como
-/// error del `AsyncValue` (lo maneja `DriverVehicleGate`).
+/// Asignación VIGENTE del chofer autenticado: vehículo + tripulación. El chofer
+/// NO elige; se le asigna. 404/sin asignación llega como error del `AsyncValue`
+/// (lo maneja `DriverVehicleGate`).
+///
+/// Se pide SIN fecha a propósito (no "hoy"): así el backend devuelve la
+/// cuadrilla de la ruta EN CURSO aunque sea de otro día. Antes se pedía por
+/// `hoy` y a la medianoche —o en una entrega larga/de otra ciudad/multi-día— el
+/// chofer quedaba "sin pedidos asignados" con la entrega todavía abierta. La
+/// asignación la rige el ESTADO de la ruta, no el calendario.
 ///
 /// NO es `autoDispose` a propósito: es un objeto chico que usan todas las
 /// pantallas del chofer (gate, ruta, carga, GPS) y el rastreo automático;
@@ -45,7 +51,8 @@ final myCrewProvider = FutureProvider<MyCrew>((ref) {
   // seguía en null y el chofer quedaba en "sin vehículo asignado" hasta reabrir
   // la app, aunque la ruta ya existiera. Al recargarla, el gate entra solo.
   ref.refreshOnRealtime(RealtimeTopic.user, const {'route.updated'});
-  return ref.watch(getMyCrewProvider).call(ref.watch(selectedDateProvider));
+  // Sin fecha = asignación vigente (midnight-safe).
+  return ref.watch(getMyCrewProvider).call();
 });
 
 /// Id del vehículo ASIGNADO al chofer (derivado de la tripulación del día).
@@ -86,7 +93,6 @@ final driverRouteProvider = FutureProvider.autoDispose<DriverRoute>((
 ) async {
   ref.cacheFor(CacheTtl.short);
   final vehicleId = ref.watch(assignedVehicleIdProvider);
-  final date = ref.watch(selectedDateProvider);
   ref.onDispose(
     ref.read(realtimeBusProvider).listen(RealtimeTopic.user, (event) {
       if (event.name != 'route.updated') return;
@@ -101,9 +107,12 @@ final driverRouteProvider = FutureProvider.autoDispose<DriverRoute>((
   if (vehicleId == null) {
     throw const ApiException(status: 0, title: 'Sin vehículo asignado');
   }
+  // Sin fecha = ruta ABIERTA del camión (de cualquier día) → si la entrega
+  // sigue en curso tras la medianoche, no se pierde. La asignación ya la dio
+  // `myCrewProvider` (vigente), que puede ser de otro día.
   final route = await ref
       .watch(getDriverRouteProvider)
-      .call(vehicleId: vehicleId, date: date);
+      .call(vehicleId: vehicleId);
   // Lo que el backend ya devuelve resuelto deja de contarse como resuelto
   // localmente (fuera del build: después del await).
   ref.read(locallySettledStopsProvider.notifier).reconcile(route);

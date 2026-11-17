@@ -90,8 +90,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   static const Duration minFixInterval = Duration(seconds: 15);
 
   /// Distancia mínima (m) a la última posición encolada para encolar otra; por
-  /// debajo es el mismo lugar (jitter) y solo cuenta el latido.
-  static const double minEnqueueMeters = 25;
+  /// debajo es el mismo lugar (jitter) y solo cuenta el latido. Chico (8 m) para
+  /// que con lecturas cada 2 s el camión en marcha se vea FLUIDO (se encola casi
+  /// cada lectura mientras avanza); parado, el jitter < 8 m no ensucia la cola.
+  static const double minEnqueueMeters = 8;
 
   /// Tope del lote en memoria: llegado a esta cantidad se envía ya.
   static const int maxBatch = 10;
@@ -289,9 +291,14 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// asociado (la parada en curso puede cambiar durante la ruta), de modo que
   /// las posiciones siguientes se encolan con el `shipmentId` vigente.
   ///
-  /// El permiso de segundo plano debe estar concedido antes (el gate de
-  /// ubicación lo exige al entrar a la operación); acá se vuelve a verificar
-  /// para no arrancar un servicio que no podrá leer la ubicación.
+  /// El permiso de ubicación (primer plano, "mientras se usa la app") debe estar
+  /// concedido antes (el gate lo exige al entrar a la operación); acá se vuelve a
+  /// verificar para no arrancar un servicio que no podrá leer la ubicación. NO se
+  /// exige "Permitir siempre": el foreground service cuenta como uso activo, así
+  /// que con el permiso de primer plano alcanza para rastrear (incluida la app
+  /// minimizada). Exigir "siempre" dejaba bloqueados a los que conceden solo
+  /// "mientras se usa la app" (Android 11+ ni siquiera lo pide por diálogo; en
+  /// Honor/Magic OS la opción queda escondida).
   Future<bool> start({required String shipmentId}) async {
     if (state.active) {
       if (_shipmentId != shipmentId) {
@@ -327,7 +334,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   Future<bool> _start(String shipmentId) async {
     _pendingShipmentId = null;
     final location = ref.read(locationServiceProvider);
-    if (!await location.ensureBackgroundPermission()) return false;
+    // Primer plano alcanza (el foreground service mantiene el acceso). Ver el
+    // doc de [start]: exigir "siempre" bloqueaba a Honor y a quien da "mientras
+    // se usa la app".
+    if (!await location.ensurePermission()) return false;
 
     final current = _pendingShipmentId ?? shipmentId;
     _pendingShipmentId = null;

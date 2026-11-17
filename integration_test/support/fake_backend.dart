@@ -562,7 +562,7 @@ class FakeDriverRouteRepository implements DriverRouteRepository {
   @override
   Future<DriverRoute> getDriverRoute({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   }) async => backend.driverRoute();
 
   @override

@@ -6,8 +6,15 @@ import 'location_gate_status.dart';
 import 'location_required_view.dart';
 import 'location_service.dart';
 
-/// Resultado del permiso de ubicación "siempre" verificado en esta sesión:
+/// Resultado del permiso de ubicación verificado en esta sesión:
 /// `null` = todavía no se verificó, `true` = concedido, `false` = denegado.
+///
+/// Se exige el permiso de PRIMER PLANO ("mientras se usa la app"), NO "Permitir
+/// siempre": el rastreo corre con un foreground service, que cuenta como uso
+/// activo, así que con el permiso de primer plano alcanza. Exigir "siempre"
+/// dejaba bloqueados a quienes conceden solo "mientras se usa la app" (Android
+/// 11+ no lo pide por diálogo; en Honor/Magic OS la opción queda escondida o se
+/// reporta como no concedida).
 ///
 /// NO es autoDispose a propósito: una vez concedido, las pantallas siguientes
 /// del chofer no vuelven a preguntar a la plataforma ni muestran el spinner
@@ -81,9 +88,10 @@ class _LocationPermissionGateState extends ConsumerState<LocationPermissionGate>
     if (mounted && _status != LocationGateStatus.checking) {
       setState(() => _status = LocationGateStatus.checking);
     }
-    final granted = await ref
-        .read(locationServiceProvider)
-        .ensureBackgroundPermission();
+    // PRIMER PLANO ("mientras se usa la app"): alcanza para rastrear con el
+    // foreground service. NO se exige "Permitir siempre" (bloqueaba a Honor y a
+    // quien no concede el de segundo plano, que Android 11+ ni ofrece por diálogo).
+    final granted = await ref.read(locationServiceProvider).ensurePermission();
     if (!mounted) return;
     ref.read(backgroundLocationPermissionProvider.notifier).set(granted);
     setState(

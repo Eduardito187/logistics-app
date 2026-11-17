@@ -53,12 +53,16 @@ Plan plan({
   DateTime? planDate,
   List<PlannedStop> stops = const [],
   bool withRouteGeometry = false,
+  String? plate,
+  String? driverName,
 }) => Plan(
   id: id,
   planDate: planDate ?? DateTime(2026, 3, 9),
   vehicleId: vehicleId,
   status: status,
   stops: stops,
+  plate: plate,
+  driverName: driverName,
   // routeGeometry se deja en null salvo que el test pida el trazado; se evita
   // construir el modelo generado directamente para no acoplar a su forma.
   routeGeometry: null,

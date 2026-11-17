@@ -314,7 +314,7 @@ class FakeFleetRepository implements FleetRepository {
   Map<String, bool>? lastItems;
 
   @override
-  Future<MyCrew> getMyCrew(DateTime date) async {
+  Future<MyCrew> getMyCrew([DateTime? date]) async {
     if (crewError != null) throw crewError!;
     return crew ?? buildMyCrew();
   }

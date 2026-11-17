@@ -29,6 +29,8 @@ void main() {
       UserRole.picker,
       UserRole.store,
       UserRole.carrier,
+      // Tripulante (ayudante del camión): login de solo lectura (nov 2026).
+      UserRole.crewMember,
       UserRole.supervisor,
       // Planificador: arma y publica los planes (nov 2026).
       UserRole.planner,

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../icons/icons.dart';
 
-/// Pantalla de bloqueo cuando falta el permiso de ubicación "siempre".
+/// Pantalla de bloqueo cuando falta la ubicación (GPS apagado o permiso de
+/// primer plano no concedido).
 ///
-/// La usa internamente [LocationPermissionGate] cuando el permiso de segundo
-/// plano no está concedido: explica por qué la ubicación es obligatoria y ofrece
-/// abrir los Ajustes del sistema o reintentar.
+/// La usa internamente [LocationPermissionGate]: explica por qué la ubicación es
+/// obligatoria y ofrece abrir los Ajustes del sistema o reintentar. Pide el
+/// permiso de PRIMER PLANO ("mientras se usa la app"), no "Permitir siempre".
 class LocationRequiredView extends StatelessWidget {
   const LocationRequiredView({
     super.key,
@@ -41,10 +42,12 @@ class LocationRequiredView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'El rastreo GPS del camión se envía de forma automática mientras '
-            'estás en ruta, también con la app en segundo plano. Para eso '
-            'necesitamos el permiso de ubicación en modo "Permitir siempre".\n\n'
-            'Activá "Permitir siempre" en Ajustes y volvé para continuar.',
+            'El rastreo GPS del camión se envía automáticamente mientras estás '
+            'en ruta. Necesitamos dos cosas:\n\n'
+            '1) La ubicación del teléfono encendida (GPS).\n'
+            '2) Permitir el acceso a la ubicación de DisTrack: con '
+            '"Mientras se usa la app" alcanza.\n\n'
+            'Activalos en Ajustes y volvé para continuar.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge,
           ),

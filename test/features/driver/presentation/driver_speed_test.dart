@@ -47,7 +47,7 @@ class _CountingGetDriverRoute extends GetDriverRoute {
   @override
   Future<DriverRoute> call({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   }) async {
     calls++;
     return route;

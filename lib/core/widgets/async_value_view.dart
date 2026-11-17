@@ -22,28 +22,34 @@ class AsyncValueView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return value.when(
-      skipLoadingOnReload: true,
-      skipLoadingOnRefresh: true,
-      data: data,
-      loading: () => const LoadingView(),
-      error: (error, _) {
-        final message = error is ApiException
-            ? error.message
-            : 'Ocurrió un error.';
-        return EmptyState(
-          icon: AppIcon.cloudOff,
-          title: 'No se pudo cargar',
-          message: message,
-          action: onRetry == null
-              ? null
-              : FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const AnimatedAppIcon(AppIcon.refresh),
-                  label: const Text('Reintentar'),
-                ),
-        );
-      },
+    // Mientras la consulta está EN CURSO (primera carga O recarga tras un error)
+    // se muestra el CARGANDO, NUNCA el error: el error de una consulta anterior
+    // no debe tapar la nueva que está corriendo. Antes `.when` caía al error
+    // durante la recarga y "No se pudo cargar" parpadeaba hasta que llegaba el
+    // dato. El error SOLO se muestra cuando la consulta YA TERMINÓ en error
+    // (sin estar cargando) y no hay ningún dato para mostrar.
+    if (value.isLoading && !value.hasValue) {
+      return const LoadingView();
+    }
+    // Con dato: se muestra (aunque esté refrescando en segundo plano) → la
+    // pantalla nunca queda vacía ni con error mientras revalida.
+    if (value.hasValue) {
+      return data(value.requireValue);
+    }
+    // Sin dato y sin estar cargando: ahí sí es un error real.
+    final error = value.error;
+    final message = error is ApiException ? error.message : 'Ocurrió un error.';
+    return EmptyState(
+      icon: AppIcon.cloudOff,
+      title: 'No se pudo cargar',
+      message: message,
+      action: onRetry == null
+          ? null
+          : FilledButton.icon(
+              onPressed: onRetry,
+              icon: const AnimatedAppIcon(AppIcon.refresh),
+              label: const Text('Reintentar'),
+            ),
     );
   }
 }

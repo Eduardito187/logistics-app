@@ -218,6 +218,11 @@ object LiveUpdatesChannel {
         val notification = buildNotification(context, args)
         lastArgs = args
         manager.notify(NOTIFICATION_ID, notification)
+        // Para el RELOJ, SIN instalar ninguna app: una notificación normal
+        // (espejable) que el reloj refleja solo (la del foreground service es
+        // "ongoing" y los relojes no la espejan). El reloj la dibuja en su estilo
+        // circular/cuadrado por su cuenta. Ver WearMirror.
+        WearMirror.show(context, args)
         return true
     }
 
@@ -237,6 +242,8 @@ object LiveUpdatesChannel {
         } else {
             manager.cancel(NOTIFICATION_ID)
         }
+        // El reloj baja su notificación espejada: ya no hay ruta activa.
+        WearMirror.clear(context)
         return true
     }
 

@@ -15,7 +15,7 @@ class DriverRouteRepositoryImpl implements DriverRouteRepository {
   @override
   Future<DriverRoute> getDriverRoute({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   }) => _remote.getDriverRoute(vehicleId: vehicleId, date: date);
 
   @override

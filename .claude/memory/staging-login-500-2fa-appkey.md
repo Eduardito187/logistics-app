@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
   originSessionId: 09382079-47de-4656-9b51-88ca4bb40fff
-  modified: 2026-11-11T16:47:00.527Z
+  modified: 2026-11-12T15:37:51.182Z
 ---
 
 Nov 2026. El dueño reportó que la app no entraba en staging: **"Error del servidor"** al dar login. NO era
@@ -40,3 +40,5 @@ no copiar secretos 2FA entre entornos, y/o que el login **tolere un secreto inde
 visible mientras volaba el request y se veían "dos errores" (el viejo y el nuevo). Ver [[product-ux-decisions]].
 
 **Otro 500 de staging (11-nov): emitir etiquetas.** `POST /app/orders/{n}/labels` → 500 `RuntimeException: LABELS_SIGNING_KEY is not configured` (LabelsServiceProvider.php:82). Falta la env de la clave de firma Ed25519 en el contenedor app de staging. Es backend/ops: `php artisan logistics:labels:keygen` + setear LABELS_SIGNING_KEY. Derivado a logistics-2d + `docs/backend-requests/2026-11-11-labels-signing-key-staging-500.md`.
+
+**Otro 500 de staging (12-nov): TODO autenticado cae tras migraciones — PgBouncer "cached plan".** El dueño marcó una entrega y le salió "Error del servidor" a pantalla completa (estado de error de `AsyncValueView`). Log: `SQLSTATE[0A000]: Feature not supported: 7 ERROR: cached plan must not change result type (Host: pgbouncer, Port: 6432, SQL: select * from "users" where id = 3 limit 1)`, revienta en `laravel/sanctum/src/Guard.php:130` (carga del user autenticado) → cae ANTES de cualquier endpoint, así que **toda** petición autenticada da 500. Causa: se corrieron **migraciones** (columnas nuevas: pod_photo_pending, last_ip, vehicle_class…) y **PgBouncer en transaction pooling sigue sirviendo PLANES PREPARADOS cacheados** con el esquema viejo → el plan ya no coincide con el nuevo result type. Fix inmediato: `docker restart logistics-staging-app-1 logistics-staging-worker-1` (y si persiste `logistics-staging-pgbouncer-1`). Fix de fondo: desactivar prepared statements en la conexión pgsql de Laravel (`PDO::ATTR_EMULATE_PREPARES=true` / `prepared_statements=false` / `plan_cache_mode=force_custom_plan`) o PgBouncer en session pooling. **Lado app: sin acción** — el POD se encola y el 5xx es transitorio (`SyncRetryPolicy.isTransient`), la entrega NO se pierde. Derivado a logistics-5b + `docs/backend-requests/2026-11-12-staging-500-pgbouncer-cached-plan.md`. **Regla general: "Error del servidor" a pantalla completa ⇒ 5xx real del backend; primero `docker logs` de staging, no tocar el app.**
