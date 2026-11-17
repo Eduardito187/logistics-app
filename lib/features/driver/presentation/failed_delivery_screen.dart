@@ -157,7 +157,9 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             ],
             const SizedBox(height: 16),
             SectionCard(
-              title: needsPhoto ? '3. Foto (obligatoria)' : '3. Foto (opcional)',
+              title: needsPhoto
+                  ? '3. Foto (obligatoria)'
+                  : '3. Foto (opcional)',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -177,7 +179,9 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-              onPressed: ready && !_busy ? () => _register(selected!) : null, // ignore: unnecessary_non_null_assertion
+              onPressed: ready && !_busy
+                  ? () => _register(selected!)
+                  : null, // ignore: unnecessary_non_null_assertion
               icon: AnimatedAppIcon(
                 AppIcon.cancel,
                 state: _busy ? AppIconState.loading : AppIconState.idle,

@@ -735,9 +735,7 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
               // chofer siempre ve hacia dónde ir; no depende de que se mueva ni
               // de estar fuera de ruta. Cuando el backend sí manda el trazo real
               // por calles, ese es la sugerencia y esta línea no hace falta.
-              if (!_hasRealStreetRoute &&
-                  destination != null &&
-                  driver != null)
+              if (!_hasRealStreetRoute && destination != null && driver != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(

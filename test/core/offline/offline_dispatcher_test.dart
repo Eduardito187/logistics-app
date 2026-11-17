@@ -168,21 +168,24 @@ void main() {
       expect(execRec.named[#idempotencyKey], 'KEY-1');
     });
 
-    test('recordFailedDelivery → POST /app/deliveries/failed (Dio directo)', () async {
-      // `reason` es un CÓDIGO libre (puede ser un motivo que creó el admin,
-      // fuera del enum generado) + `note` opcional. Por eso va por Dio directo.
-      await run('recordFailedDelivery', {
-        ..._scanBase(),
-        'reason': 'ZONA_INSEGURA',
-        'note': 'calle cerrada',
-      });
-      expect(capturedRequest, isNotNull);
-      expect(capturedRequest!.path, '/app/deliveries/failed');
-      final data = capturedRequest!.data as Map<String, Object?>;
-      expect(data['reason'], 'ZONA_INSEGURA');
-      expect(data['note'], 'calle cerrada');
-      expect(capturedRequest!.headers['Idempotency-Key'], 'KEY-1');
-    });
+    test(
+      'recordFailedDelivery → POST /app/deliveries/failed (Dio directo)',
+      () async {
+        // `reason` es un CÓDIGO libre (puede ser un motivo que creó el admin,
+        // fuera del enum generado) + `note` opcional. Por eso va por Dio directo.
+        await run('recordFailedDelivery', {
+          ..._scanBase(),
+          'reason': 'ZONA_INSEGURA',
+          'note': 'calle cerrada',
+        });
+        expect(capturedRequest, isNotNull);
+        expect(capturedRequest!.path, '/app/deliveries/failed');
+        final data = capturedRequest!.data as Map<String, Object?>;
+        expect(data['reason'], 'ZONA_INSEGURA');
+        expect(data['note'], 'calle cerrada');
+        expect(capturedRequest!.headers['Idempotency-Key'], 'KEY-1');
+      },
+    );
 
     test('recordProofOfDelivery → execution.recordProofOfDelivery', () async {
       await run('recordProofOfDelivery', {

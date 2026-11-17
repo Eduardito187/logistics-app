@@ -59,7 +59,10 @@ void main() {
 
     final active = await repo.listActive();
 
-    expect(active.map((e) => e.code).toList(), ['C', 'A']); // B oculto; por orden
+    expect(active.map((e) => e.code).toList(), [
+      'C',
+      'A',
+    ]); // B oculto; por orden
   });
 
   test('listActive cae a los de fábrica si no hay endpoint/red', () async {
@@ -72,13 +75,16 @@ void main() {
     expect(active.length, kDefaultFailureReasons.where((r) => r.active).length);
   });
 
-  test('listAll cae a los de fábrica si el backend aún no lo tiene (404)', () async {
-    final repo = _repo(_dioFail(404));
+  test(
+    'listAll cae a los de fábrica si el backend aún no lo tiene (404)',
+    () async {
+      final repo = _repo(_dioFail(404));
 
-    final all = await repo.listAll();
+      final all = await repo.listAll();
 
-    expect(all.length, kDefaultFailureReasons.length);
-  });
+      expect(all.length, kDefaultFailureReasons.length);
+    },
+  );
 
   test('listAll propaga un error real (500) como ApiException', () async {
     final repo = _repo(_dioFail(500));

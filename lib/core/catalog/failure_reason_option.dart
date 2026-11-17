@@ -31,10 +31,12 @@ class FailureReasonOption {
       label: (json['label'] as String?)?.trim() ?? '',
       // Si el backend no manda `active`, se asume visible (compatibilidad).
       active: json['active'] is bool ? json['active']! as bool : true,
-      requiresPhoto:
-          json['requires_photo'] is bool ? json['requires_photo']! as bool : false,
-      requiresNote:
-          json['requires_note'] is bool ? json['requires_note']! as bool : false,
+      requiresPhoto: json['requires_photo'] is bool
+          ? json['requires_photo']! as bool
+          : false,
+      requiresNote: json['requires_note'] is bool
+          ? json['requires_note']! as bool
+          : false,
       noteLabel: note is String && note.trim().isNotEmpty ? note.trim() : null,
       sortOrder: order is num ? order.toInt() : 0,
     );
@@ -137,7 +139,11 @@ const List<FailureReasonOption> kDefaultFailureReasons = [
     label: 'Dirección incorrecta',
     sortOrder: 1,
   ),
-  FailureReasonOption(code: 'REJECTED', label: 'Pedido rechazado', sortOrder: 2),
+  FailureReasonOption(
+    code: 'REJECTED',
+    label: 'Pedido rechazado',
+    sortOrder: 2,
+  ),
   FailureReasonOption(code: 'DAMAGED', label: 'Producto dañado', sortOrder: 3),
   FailureReasonOption(code: 'OTHER', label: 'Otro motivo', sortOrder: 4),
 ];

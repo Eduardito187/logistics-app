@@ -256,11 +256,7 @@ class _TripBuilderScreenState extends ConsumerState<TripBuilderScreen> {
       );
     } on Object catch (error) {
       if (mounted) {
-        showErrorSnack(
-          context,
-          error,
-          bottomClearance: kBottomActionClearance,
-        );
+        showErrorSnack(context, error, bottomClearance: kBottomActionClearance);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

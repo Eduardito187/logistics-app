@@ -60,7 +60,9 @@ List<Object> _overrides({
   FakeSignatureFileStore? signatures,
 }) => [
   // Motivos de fallida servidos sin red (los de fábrica, todos activos).
-  activeFailureReasonsProvider.overrideWith((ref) async => kDefaultFailureReasons),
+  activeFailureReasonsProvider.overrideWith(
+    (ref) async => kDefaultFailureReasons,
+  ),
   photoPickerProvider.overrideWithValue(picker.call),
   photoUploadQueueProvider.overrideWithValue(photos),
   offlineQueueProvider.overrideWithValue(queue),

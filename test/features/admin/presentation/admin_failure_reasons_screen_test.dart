@@ -34,7 +34,8 @@ class _FakeReasonsRepo implements FailureReasonsRepository {
   Future<void> update(FailureReasonOption option) async {
     updated.add(option);
     items = [
-      for (final o in items) if (o.code == option.code) option else o,
+      for (final o in items)
+        if (o.code == option.code) option else o,
     ];
   }
 
@@ -63,7 +64,10 @@ void main() {
     tester,
   ) async {
     final repo = _FakeReasonsRepo([
-      const FailureReasonOption(code: 'CUSTOMER_ABSENT', label: 'Cliente ausente'),
+      const FailureReasonOption(
+        code: 'CUSTOMER_ABSENT',
+        label: 'Cliente ausente',
+      ),
       const FailureReasonOption(
         code: 'DAMAGED',
         label: 'Producto dañado',
@@ -81,7 +85,9 @@ void main() {
     expect(find.text('Agregar motivo'), findsOneWidget);
   });
 
-  testWidgets('desactivar un motivo lo manda como active=false', (tester) async {
+  testWidgets('desactivar un motivo lo manda como active=false', (
+    tester,
+  ) async {
     final repo = _FakeReasonsRepo([
       const FailureReasonOption(code: 'REJECTED', label: 'Pedido rechazado'),
     ]);
@@ -142,10 +148,11 @@ void main() {
     expect(find.text('Qué preguntarle (opcional)'), findsOneWidget);
   });
 
-  testOnScreens('la pantalla de motivos no se desborda', (tester, screen) async {
-    final repo = _FakeReasonsRepo([
-      for (final r in kDefaultFailureReasons) r,
-    ]);
+  testOnScreens('la pantalla de motivos no se desborda', (
+    tester,
+    screen,
+  ) async {
+    final repo = _FakeReasonsRepo([for (final r in kDefaultFailureReasons) r]);
     await _pump(tester, repo, scaled: true);
 
     expect(find.text('Motivos de no entrega'), findsOneWidget);

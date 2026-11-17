@@ -46,13 +46,12 @@ class _AdminFailureReasonsScreenState
     }
   }
 
-  Future<void> _toggleActive(FailureReasonOption option, bool active) =>
-      _run(
-        () => ref
-            .read(failureReasonsRepositoryProvider)
-            .update(option.copyWith(active: active)),
-        active ? 'Motivo activado.' : 'Motivo oculto.',
-      );
+  Future<void> _toggleActive(FailureReasonOption option, bool active) => _run(
+    () => ref
+        .read(failureReasonsRepositoryProvider)
+        .update(option.copyWith(active: active)),
+    active ? 'Motivo activado.' : 'Motivo oculto.',
+  );
 
   Future<void> _create(List<FailureReasonOption> current) async {
     final taken = {for (final o in current) o.code};
@@ -209,10 +208,7 @@ class _ReasonTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
-                value: option.active,
-                onChanged: busy ? null : onToggle,
-              ),
+              Switch(value: option.active, onChanged: busy ? null : onToggle),
             ],
           ),
         ),

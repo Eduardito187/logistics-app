@@ -46,8 +46,9 @@ class FailureReasonsRepository {
       final res = await _dio.get<Map<String, Object?>>(
         '/app/config/failure-reasons',
       );
-      final active = _parse(res.data).where((r) => r.active && r.code.isNotEmpty).toList()
-        ..sort(_byOrder);
+      final active = _parse(
+        res.data,
+      ).where((r) => r.active && r.code.isNotEmpty).toList()..sort(_byOrder);
       return active.isEmpty ? _defaultsActive() : active;
     } on DioException {
       // Sin red o sin endpoint: el chofer igual tiene con qué registrar.
@@ -110,10 +111,9 @@ final failureReasonsRepositoryProvider = Provider<FailureReasonsRepository>(
 );
 
 /// Motivos ACTIVOS para el chofer (pantalla de entrega fallida).
-final activeFailureReasonsProvider =
-    FutureProvider<List<FailureReasonOption>>(
-      (ref) => ref.read(failureReasonsRepositoryProvider).listActive(),
-    );
+final activeFailureReasonsProvider = FutureProvider<List<FailureReasonOption>>(
+  (ref) => ref.read(failureReasonsRepositoryProvider).listActive(),
+);
 
 /// TODOS los motivos para la pantalla de administración (se recarga con
 /// `ref.invalidate` tras cada cambio).
