@@ -624,9 +624,12 @@ class _CandidateRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  candidate.orderReference == null
-                      ? 'Pedido'
-                      : 'Pedido ${candidate.orderReference}',
+                  // Nunca el UUID: si no hay código legible, solo "Pedido" (el
+                  // cliente/dirección van debajo).
+                  switch (readableOrderReference(candidate.orderReference)) {
+                    final ref? => 'Pedido $ref',
+                    _ => 'Pedido',
+                  },
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 if (who != null) Text(who),
