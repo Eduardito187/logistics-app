@@ -179,9 +179,8 @@ class _FailedDeliveryScreenState extends ConsumerState<FailedDeliveryScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-              onPressed: ready && !_busy
-                  ? () => _register(selected!)
-                  : null, // ignore: unnecessary_non_null_assertion
+              // `ready` ya garantiza selected != null (promovido por el flujo).
+              onPressed: ready && !_busy ? () => _register(selected) : null,
               icon: AnimatedAppIcon(
                 AppIcon.cancel,
                 state: _busy ? AppIconState.loading : AppIconState.idle,
