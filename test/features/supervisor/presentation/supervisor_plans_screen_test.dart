@@ -34,23 +34,24 @@ Future<void> _pump(
 }
 
 // Dos planes con estado, placa y chofer distintos para probar los filtros.
-FakeSupervisorRepository _twoPlans() => FakeSupervisorRepository()
-  ..plansByDate = [
-    plan(
-      id: 'p1',
-      vehicleId: 'CAM-1',
-      status: PlanStatus.published,
-      plate: '1234ABC',
-      driverName: 'Juan Pérez',
-    ),
-    plan(
-      id: 'p2',
-      vehicleId: 'CAM-2',
-      status: PlanStatus.draft,
-      plate: '5678XYZ',
-      driverName: 'María López',
-    ),
-  ];
+FakeSupervisorRepository _twoPlans() =>
+    FakeSupervisorRepository()
+      ..plansByDate = [
+        plan(
+          id: 'p1',
+          vehicleId: 'CAM-1',
+          status: PlanStatus.published,
+          plate: '1234ABC',
+          driverName: 'Juan Pérez',
+        ),
+        plan(
+          id: 'p2',
+          vehicleId: 'CAM-2',
+          status: PlanStatus.draft,
+          plate: '5678XYZ',
+          driverName: 'María López',
+        ),
+      ];
 
 void main() {
   testWidgets('con datos muestra la barra de fecha y las tarjetas de plan', (
@@ -169,11 +170,7 @@ void main() {
     tester,
     screen,
   ) async {
-    await _pump(
-      tester,
-      _twoPlans(),
-      wrap: (child) => withTextScale(child),
-    );
+    await _pump(tester, _twoPlans(), wrap: (child) => withTextScale(child));
 
     // Si algo se desborda en cualquier tamaño, el framework falla solo.
     expect(find.byType(PlansFilterBar), findsOneWidget);

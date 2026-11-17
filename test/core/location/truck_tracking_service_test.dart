@@ -361,6 +361,43 @@ void main() {
     expect(state.sent, 1);
   });
 
+  test(
+    'con vehículo, el fix se encola por TELEMETRÍA (recordVehiclePings)',
+    () async {
+      final location = _FakeLocationService();
+      final container = _container(location);
+      // Con camión + ruta: el GPS va al camino que alimenta el motor de
+      // desvío/reruteo del backend (no al endpoint por-envío).
+      await container
+          .read(truckTrackingProvider.notifier)
+          .start(shipmentId: 'SHP-1', vehicleId: 'veh-7', routeId: 'route-3');
+
+      location.fixes.add(
+        const GpsFix(
+          lat: -16.5,
+          lng: -68.1,
+          speedMps: 10,
+          headingDeg: 90,
+          accuracy: 8,
+        ),
+      );
+      await pumpEventQueue();
+
+      final sent = _queue.submitted.single;
+      expect(sent.kind, 'recordVehiclePings');
+      expect(sent.payload['@vehicleId'], 'veh-7');
+      expect(sent.payload['@routeId'], 'route-3');
+      expect(sent.payload['lat'], -16.5);
+      // m/s → km/h.
+      expect(sent.payload['speed_kph'], closeTo(36, 1e-9));
+      expect(sent.payload['heading'], 90);
+      expect(sent.payload['recorded_at'], isNotNull);
+      expect(sent.payload['fix_id'], startsWith('veh-7:'));
+      // La etiqueta sigue nombrando el envío asociado.
+      expect(sent.label, 'GPS · SHP-1');
+    },
+  );
+
   test('el fix con velocidad/rumbo los manda; sin ellos, ausentes', () async {
     final location = _FakeLocationService();
     final container = _container(location);

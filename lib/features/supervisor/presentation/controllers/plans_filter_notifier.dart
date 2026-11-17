@@ -21,8 +21,7 @@ class PlansFilterNotifier extends Notifier<PlansFilter> {
       state = (status: status, query: state.query);
 
   /// Texto de búsqueda (placa o chofer); vacío = no filtra por texto.
-  void setQuery(String query) =>
-      state = (status: state.status, query: query);
+  void setQuery(String query) => state = (status: state.status, query: query);
 
   /// Vuelve a "todos" y sin texto (botón "Limpiar filtro").
   void clear() => state = (status: null, query: '');

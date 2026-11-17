@@ -142,6 +142,29 @@ class _PodScreenState extends ConsumerState<PodScreen> {
         _expectedCount != null && _unitIds.length >= _expectedCount!;
     return Scaffold(
       appBar: AppBar(title: const Text('Comprobante de entrega')),
+      // Botón fijo al pie: visible en todo momento, sin tener que scrollear
+      // hasta el final de la lista para registrar la entrega.
+      bottomNavigationBar: Material(
+        elevation: 8,
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: ready && !_busy ? _register : null,
+                icon: AnimatedAppIcon(
+                  AppIcon.success,
+                  state: _busy ? AppIconState.loading : AppIconState.idle,
+                ),
+                label: const Text('Registrar entrega'),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: ResponsiveBody(
         maxWidth: AppBreakpoints.maxFormWidth,
         child: ListView(
@@ -286,15 +309,8 @@ class _PodScreenState extends ConsumerState<PodScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: ready && !_busy ? _register : null,
-              icon: AnimatedAppIcon(
-                AppIcon.success,
-                state: _busy ? AppIconState.loading : AppIconState.idle,
-              ),
-              label: const Text('Registrar entrega'),
-            ),
+            // El botón "Registrar entrega" va fijo al pie (bottomNavigationBar),
+            // no acá: así no hay que scrollear hasta el final para verlo.
           ],
         ),
       ),
@@ -320,18 +336,27 @@ class _PodScreenState extends ConsumerState<PodScreen> {
         orderRef == null
             ? 'Ese producto es de otro pedido.'
             : 'Ese producto es de otro pedido. Escaneá un producto de $orderRef.',
+        bottomClearance: kBottomActionClearance,
       );
       return;
     }
     final unitId = await verifyUnitLabel(ref, qr);
     if (!mounted) return;
     if (unitId == null) {
-      showInfoSnack(context, 'Etiqueta no válida');
+      showInfoSnack(
+        context,
+        'Etiqueta no válida',
+        bottomClearance: kBottomActionClearance,
+      );
       return;
     }
     // Mismo producto escaneado dos veces (MISMA etiqueta): avisar y no duplicar.
     if (_unitIds.contains(unitId)) {
-      showInfoSnack(context, 'Ese producto ya lo escaneaste.');
+      showInfoSnack(
+        context,
+        'Ese producto ya lo escaneaste.',
+        bottomClearance: kBottomActionClearance,
+      );
       return;
     }
     // Guardia anti-DUPLICADOS por SKU: una etiqueta distinta del MISMO producto
@@ -348,6 +373,7 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           showInfoSnack(
             context,
             'Ese producto ($sku) ya está completo: esa etiqueta está duplicada.',
+            bottomClearance: kBottomActionClearance,
           );
           return;
         }
@@ -586,7 +612,13 @@ class _PodScreenState extends ConsumerState<PodScreen> {
           ? SubmitOutcome.queued
           : SubmitOutcome.sent;
       if (!mounted) return;
-      showSubmitOutcome(context, combined, failureDetail: rejectDetail);
+      showSubmitOutcome(
+        context,
+        combined,
+        failureDetail: rejectDetail,
+        // El aviso se levanta por encima del botón fijo al pie.
+        bottomClearance: kBottomActionClearance,
+      );
       if (combined != SubmitOutcome.failed) {
         // Encolado o enviado: la parada queda resuelta en la UI ya mismo (la
         // entrega en curso pasa a la siguiente aunque no haya señal).

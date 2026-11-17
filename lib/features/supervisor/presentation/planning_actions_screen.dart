@@ -40,7 +40,8 @@ class PlanningActionsScreen extends ConsumerWidget {
           : const EmptyState(
               icon: AppIcon.plans,
               title: 'Solo lectura',
-              message: 'No tenés permiso para planificar. Mirá las rutas en '
+              message:
+                  'No tenés permiso para planificar. Mirá las rutas en '
                   'la sección de rutas.',
             ),
     );

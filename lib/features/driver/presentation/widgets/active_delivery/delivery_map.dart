@@ -19,10 +19,9 @@ import '../../../domain/entities/route_navigation.dart';
 import '../../controllers/locally_settled_stops.dart';
 import '../map_motion.dart';
 import '../map_zoom_buttons.dart';
-import '../radar_pulse.dart';
 import '../route_points.dart';
 import '../stop_pin.dart';
-import 'truck_marker.dart';
+import 'animated_driver_markers.dart';
 
 export '../route_points.dart'
     show routeGeometryPoints, routePrefetchPoints, simplifiedRoutePoints;
@@ -261,6 +260,13 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
   /// motor de ETA detecta desvío sostenido. Vacío salvo que el backend lo mande.
   List<LatLng> _reroute = const [];
 
+  /// `true` si el trazo dibujado es la ruta REAL por calles del backend. Cuando
+  /// es `false` (sin geometría del plan: solo respaldo que une paradas, o nada),
+  /// se dibuja además una DIRECCIÓN sugerida directa desde la posición actual al
+  /// siguiente punto, para que el chofer SIEMPRE vea hacia dónde ir —aunque el
+  /// camión esté quieto y aunque el backend no haya mandado el trazo—.
+  bool _hasRealStreetRoute = false;
+
   /// Precarga de tiles diferida: arranca después de la transición de entrada
   /// para no competir con el primer dibujo del mapa (los tiles visibles).
   Timer? _prefetchTimer;
@@ -472,6 +478,9 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
     // un punto) y con el viejo chequeo `length>=2` el mapa dibujaba un punto y
     // el respaldo no entraba. Esta guardia iguala la del backend (isDrawable).
     final streetsDrawable = _hasTwoDistinctPoints(streets);
+    // ¿El trazo dibujado es la ruta REAL por calles del backend? De eso depende
+    // si además hace falta la dirección directa sugerida al siguiente punto.
+    _hasRealStreetRoute = streetsDrawable;
     // Trazo por calles (para medir desvío) y reruteo del backend (si lo mandó).
     // Si la geometría es degenerada, _streetLine queda vacío: no se mide desvío
     // contra un "trazo" que es un punto.
@@ -648,10 +657,11 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
       final f = plausibleDriverFix(widget.route, next.value);
       if (f == null) return;
       final pos = LatLng(f.lat, f.lng);
-      // Siempre se mide la quietud del camión (para el auto-enfoque); el modo
-      // seguir, si está activo, acompaña además cada movimiento.
+      // Solo se mide la quietud del camión (para el auto-enfoque). El modo
+      // seguir NO se mueve acá con el fix crudo: lo hace `AnimatedDriverMarkers`
+      // vía onGlide con la posición INTERPOLADA, así la cámara desliza suave en
+      // vez de pegar el tirón de cada fix.
       _trackStillness(pos);
-      if (_follow) _followTo(pos);
     });
     final fix = plausibleDriverFix(
       widget.route,
@@ -716,9 +726,18 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
             children: [
               const DarkMapTiles(),
               const DarkMapScrim(),
-              if (_streetsLayer != null)
-                _streetsLayer!
-              else if (destination != null && driver != null)
+              // Trazo por calles: el REAL del backend, o el respaldo que une las
+              // paradas (contexto del recorrido). Independiente del movimiento.
+              if (_streetsLayer != null) _streetsLayer!,
+              // DIRECCIÓN sugerida directa a la próxima parada: siempre que NO
+              // haya ruta real por calles del backend y tengamos posición
+              // (aunque sea la última conocida, con el camión QUIETO). Así el
+              // chofer siempre ve hacia dónde ir; no depende de que se mueva ni
+              // de estar fuera de ruta. Cuando el backend sí manda el trazo real
+              // por calles, ese es la sugerencia y esta línea no hace falta.
+              if (!_hasRealStreetRoute &&
+                  destination != null &&
+                  driver != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(
@@ -751,33 +770,20 @@ class _DeliveryMapState extends ConsumerState<DeliveryMap>
                     ),
                   ],
                 ),
-              // Capas que cambian con cada fix del GPS: el radar debajo del
-              // camión (solo con fix en vivo) y el marcador del camión encima.
-              if (driver != null) ...[
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: driver,
-                      width: 120,
-                      height: 120,
-                      // trigger: cada fix del GPS dispara un ping finito.
-                      child: RadarPulse(size: 120, trigger: driver),
-                    ),
-                  ],
+              // Capa del camión: radar + marcador, deslizándose SUAVE entre un
+              // fix y el siguiente (como las apps de taxi) para que no se note
+              // el salto cada ~2 s. El rumbo lo anima el propio marcador. En
+              // modo "seguir", la cámara acompaña la posición INTERPOLADA (no el
+              // tirón del fix crudo) vía onGlide.
+              if (driver != null)
+                AnimatedDriverMarkers(
+                  target: driver,
+                  heading: _heading,
+                  reduceMotion: MediaQuery.disableAnimationsOf(context),
+                  onGlide: (p) {
+                    if (_follow) _followTo(p);
+                  },
                 ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: driver,
-                      width: 52,
-                      height: 52,
-                      // Camión visto desde arriba que apunta al rumbo (Uber/
-                      // inDrive): rota suave al doblar o retroceder.
-                      child: TruckMarker(headingDegrees: _heading, size: 52),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),

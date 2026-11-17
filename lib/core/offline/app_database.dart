@@ -234,15 +234,19 @@ class AppDatabase extends _$AppDatabase {
     return query.go();
   }
 
-  /// Descarta las posiciones GPS del camión (`ingestTruckPosition`) que siguen
-  /// pendientes desde antes de [before]. Son las únicas acciones descartables:
-  /// con días sin señal se acumulan ~360 por hora y una posición vieja ya no
-  /// sirve para seguir el camión. Escaneos, entregas y fotos NUNCA se tocan.
+  /// Descarta las posiciones GPS del camión que siguen pendientes desde antes de
+  /// [before]. Cubre los DOS caminos de GPS: `recordVehiclePings` (telemetría, el
+  /// vigente que alimenta el motor de desvío) y `ingestTruckPosition` (por-envío,
+  /// respaldo/legado, por si quedan filas viejas). Son las únicas acciones
+  /// descartables: con días sin señal se acumulan ~360 por hora y una posición
+  /// vieja ya no sirve para seguir el camión. Escaneos, entregas y fotos NUNCA
+  /// se tocan.
   Future<int> purgeStaleTruckPositions({required DateTime before}) {
     final query = delete(outboxActions)
       ..where(
         (t) =>
-            t.kind.equals('ingestTruckPosition') &
+            (t.kind.equals('recordVehiclePings') |
+                t.kind.equals('ingestTruckPosition')) &
             t.status.equals('pending') &
             t.createdAt.isSmallerThanValue(before),
       );

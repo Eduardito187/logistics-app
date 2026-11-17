@@ -240,12 +240,23 @@ class FakeTruckTracking extends TruckTrackingService {
   int startCount = 0;
   int stopCount = 0;
 
+  /// Últimos ids recibidos en `start` (para asserts del camino de telemetría).
+  String? lastStartVehicleId;
+  String? lastStartRouteId;
+
   @override
   TruckTrackingState build() => initial;
 
   @override
-  Future<bool> start({required String shipmentId}) async {
+  Future<bool> start({
+    required String shipmentId,
+    String? vehicleId,
+    String? routeId,
+    String? driverId,
+  }) async {
     startCount++;
+    lastStartVehicleId = vehicleId;
+    lastStartRouteId = routeId;
     // El autostart invoca start/stop desde `initState` (listen con
     // fireImmediately), así que la mutación del estado debe diferirse fuera de
     // la fase síncrona de build para no disparar "Tried to modify a provider

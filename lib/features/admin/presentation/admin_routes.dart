@@ -95,10 +95,8 @@ final List<RouteBase> adminRoutes = [
   // "Planes": listado de TODOS los planes del día, filtrable por estado.
   GoRoute(
     path: '/admin/plans',
-    builder: (context, state) => const SupervisorPlansScreen(
-      applyPreset: true,
-      titleOverride: 'Planes',
-    ),
+    builder: (context, state) =>
+        const SupervisorPlansScreen(applyPreset: true, titleOverride: 'Planes'),
   ),
   // "Rutas": el mismo listado, pero preseteado a las PUBLICADAS (las que ya son
   // rutas en ejecución). Tocar una abre su detalle con paradas y pedidos.

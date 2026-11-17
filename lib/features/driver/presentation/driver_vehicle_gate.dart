@@ -108,7 +108,9 @@ class DriverVehicleGate extends ConsumerWidget {
     }
     final bareScaffold = immersive && vehicleId != null;
     return Scaffold(
-      appBar: bareScaffold ? null : AppBar(title: Text(title), actions: actions),
+      appBar: bareScaffold
+          ? null
+          : AppBar(title: Text(title), actions: actions),
       body: body,
     );
   }

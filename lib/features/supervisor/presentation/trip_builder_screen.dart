@@ -208,6 +208,9 @@ class _TripBuilderScreenState extends ConsumerState<TripBuilderScreen> {
   Future<void> _save() async {
     final vehicle = _vehicle;
     if (vehicle == null || _trip.isEmpty) return;
+    // Los pedidos que armó el usuario, para verificar que el plan guardado sea
+    // EL SUYO (no uno ajeno que el backend pudiera devolver).
+    final requested = _ids.toSet();
     setState(() => _saving = true);
     try {
       final plan = await ref
@@ -219,17 +222,46 @@ class _TripBuilderScreenState extends ConsumerState<TripBuilderScreen> {
             shipmentIds: _ids,
           );
       if (!mounted) return;
+      // Guarda de integridad: el plan creado DEBE contener los pedidos que armé.
+      // Si el backend devolvió OTRO plan (p. ej. uno ya existente de ese camión
+      // ese día, con pedidos que nunca elegí), NO decir "guardado" ni mandar en
+      // silencio a un plan ajeno: se avisa y se CONSERVA el viaje armado para no
+      // perder el trabajo. (Si la respuesta no trae paradas todavía —se calculan
+      // async— no se puede verificar: se confía y se abre.)
+      final saved = plan.stops.map((s) => s.shipmentId).toSet();
+      if (plan.stops.isNotEmpty && !saved.containsAll(requested)) {
+        showErrorSnack(
+          context,
+          'El viaje no se guardó con los pedidos que armaste: ese camión ya '
+          'tiene un viaje ese día. Elegí otro camión o abrí el viaje existente.',
+          actionLabel: 'Ver viaje',
+          onAction: () => _openPlan(plan.id, plan: plan),
+          bottomClearance: kBottomActionClearance,
+        );
+        return; // conserva el builder con las paradas armadas
+      }
       _openPlan(plan.id, plan: plan);
       showSuccessSnack(context, 'Viaje guardado. Revisalo y publicalo.');
     } on TripAlreadyPlanned catch (existing) {
       if (!mounted) return;
-      _openPlan(existing.planId);
-      showInfoSnack(
+      // NO destruir el viaje armado ni abrir un plan ajeno en silencio: se avisa
+      // claro y se conserva el armado; con el botón se abre el viaje existente.
+      showErrorSnack(
         context,
-        'Ese camión ya tiene un viaje ese día. Sumá los pedidos acá.',
+        'Ese camión ya tiene un viaje ese día. Elegí otro camión o abrí el '
+        'viaje existente para sumarle los pedidos.',
+        actionLabel: 'Ver viaje',
+        onAction: () => _openPlan(existing.planId),
+        bottomClearance: kBottomActionClearance,
       );
     } on Object catch (error) {
-      if (mounted) showErrorSnack(context, error);
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          bottomClearance: kBottomActionClearance,
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

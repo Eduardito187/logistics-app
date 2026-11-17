@@ -1,13 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-    <!-- androidx.wear:wear-ongoing declara minSdk 25 y el proyecto está fijo en
-         24 (regla del proyecto; flutter_secure_storage exige >=23). Se fuerza la
-         librería a 24: el único uso (OngoingActivity en WearMirror, chip de ruta
-         en el reloj) está envuelto en try/catch, así en un hipotético equipo API
-         24 simplemente NO se anota la actividad en curso (la notificación igual
-         se postea y se espeja). No baja el piso real de la app. -->
-    <uses-sdk tools:overrideLibrary="androidx.wear.ongoing"/>
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Red: sincronización offline-first y API. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -38,6 +29,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Exención de optimización de batería: sin esto los OEM agresivos
+         (OnePlus/OxygenOS, Honor, Xiaomi) matan el proceso a los pocos minutos
+         en segundo plano aun con foreground service, y la app se reabre "desde
+         cero". Se pide con un diálogo del sistema al arrancar el rastreo. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Notificaciones (Android 13+): push y servicio en primer plano. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Android 16+: notificación de ruta "promovida" (chip en la barra de

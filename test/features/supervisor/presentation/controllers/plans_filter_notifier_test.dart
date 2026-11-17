@@ -62,10 +62,7 @@ void main() {
     });
 
     test('filtra por estado', () {
-      final result = filterPlans(plans, (
-        status: PlanStatus.draft,
-        query: '',
-      ));
+      final result = filterPlans(plans, (status: PlanStatus.draft, query: ''));
       expect(result.map((p) => p.id), ['p2']);
     });
 

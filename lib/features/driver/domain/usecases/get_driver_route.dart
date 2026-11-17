@@ -12,10 +12,8 @@ class GetDriverRoute {
 
   final DriverRouteRepository _repo;
 
-  Future<DriverRoute> call({
-    required String vehicleId,
-    DateTime? date,
-  }) => _repo.getDriverRoute(vehicleId: vehicleId, date: date);
+  Future<DriverRoute> call({required String vehicleId, DateTime? date}) =>
+      _repo.getDriverRoute(vehicleId: vehicleId, date: date);
 }
 
 final getDriverRouteProvider = Provider<GetDriverRoute>(

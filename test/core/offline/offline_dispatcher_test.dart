@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/clients/execution_client.dart';
+import 'package:logistics_app/core/api/clients/telemetry_client.dart';
 import 'package:logistics_app/core/api/clients/tracking_client.dart';
 import 'package:logistics_app/core/api/logistics_api.dart';
+import 'package:logistics_app/core/api/models/app_telemetry_pings_request_body.dart';
 import 'package:logistics_app/core/api/models/app_vehicles_vehicle_id_incidents_request_body.dart';
 import 'package:logistics_app/core/api/models/failed_delivery_request.dart';
 import 'package:logistics_app/core/api/models/node_reception_request.dart';
@@ -46,14 +48,28 @@ class _RecordingTracking implements TrackingClient {
   }
 }
 
+class _RecordingTelemetry implements TelemetryClient {
+  _RecordingTelemetry(this._rec);
+  final _Recorder _rec;
+  @override
+  dynamic noSuchMethod(Invocation i) {
+    _rec.member = i.memberName;
+    _rec.named = i.namedArguments;
+    return Future<Never>.error(_boom);
+  }
+}
+
 class _RecordingApi extends LogisticsApi {
-  _RecordingApi(this.execRec, this.trackRec) : super(Dio());
+  _RecordingApi(this.execRec, this.trackRec, this.telemetryRec) : super(Dio());
   final _Recorder execRec;
   final _Recorder trackRec;
+  final _Recorder telemetryRec;
   @override
   ExecutionClient get execution => _RecordingExecution(execRec);
   @override
   TrackingClient get tracking => _RecordingTracking(trackRec);
+  @override
+  TelemetryClient get telemetry => _RecordingTelemetry(telemetryRec);
 }
 
 Map<String, Object?> _scanBase() => {
@@ -67,12 +83,14 @@ Map<String, Object?> _scanBase() => {
 void main() {
   late _Recorder execRec;
   late _Recorder trackRec;
+  late _Recorder telemetryRec;
   late _RecordingApi api;
 
   setUp(() {
     execRec = _Recorder();
     trackRec = _Recorder();
-    api = _RecordingApi(execRec, trackRec);
+    telemetryRec = _Recorder();
+    api = _RecordingApi(execRec, trackRec, telemetryRec);
   });
 
   /// Corre el handler de [kind] con [payload] y espera a que (tras registrar)
@@ -97,6 +115,7 @@ void main() {
         'reportDeliveryIssue',
         'updateDevicePushToken',
         'ingestTruckPosition',
+        'recordVehiclePings',
         'recordNodeReception',
         'receiveUnitAtNode',
       });
@@ -205,6 +224,33 @@ void main() {
         // Nota: por diseño (GPS de alta frecuencia) este handler NO reenvía la
         // Idempotency-Key; no debe esperarse en los argumentos.
         expect(trackRec.named.containsKey(#idempotencyKey), isFalse);
+      },
+    );
+
+    test(
+      'recordVehiclePings → telemetry.recordAppVehiclePings con vehicle/route',
+      () async {
+        await run('recordVehiclePings', {
+          '@vehicleId': 'veh-7',
+          '@routeId': 'route-3',
+          'lat': -16.5,
+          'lng': -68.1,
+          'recorded_at': '2026-10-15T12:00:00.000Z',
+          'speed_kph': 36.0,
+          'heading': 90,
+          'fix_id': 'veh-7:2026-10-15T12:00:00.000Z',
+        });
+        expect(telemetryRec.member, #recordAppVehiclePings);
+        final body = telemetryRec.named[#body] as AppTelemetryPingsRequestBody;
+        expect(body.vehicleId, 'veh-7');
+        expect(body.routeId, 'route-3');
+        expect(body.pings, hasLength(1));
+        expect(body.pings.single.lat, -16.5);
+        expect(body.pings.single.speedKph, 36.0);
+        expect(body.pings.single.fixId, 'veh-7:2026-10-15T12:00:00.000Z');
+        // Mismo diseño que el GPS por-envío: sin Idempotency-Key (idempotencia
+        // por fix_id del ping).
+        expect(telemetryRec.named.containsKey(#idempotencyKey), isFalse);
       },
     );
   });

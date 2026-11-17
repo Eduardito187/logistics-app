@@ -20,6 +20,7 @@ const Map<String, OfflineActionHandler> offlineHandlers = {
   'recordProofOfDelivery': _recordProofOfDelivery,
   'reportVehicleIncident': _reportVehicleIncident,
   'ingestTruckPosition': _ingestTruckPosition,
+  'recordVehiclePings': _recordVehiclePings,
   'reportDeliveryIssue': _reportDeliveryIssue,
   // --- Push ---
   'updateDevicePushToken': _updateDevicePushToken,
@@ -123,6 +124,34 @@ Future<void> _ingestTruckPosition(
   return api.tracking.ingestTruckPositionFromApp(
     shipmentId: shipmentId,
     body: TruckPositionInput.fromJson(p),
+  );
+}
+
+/// Posición GPS del camión por el camino de TELEMETRÍA (lote), que es el único
+/// que alimenta el motor de desvío/reruteo del backend (el endpoint por-envío
+/// solo deja la miga de pan; `/telemetry/pings` hace fan-out a tracking Y
+/// dispara el off-route). El vehículo va en `@vehicleId` (requerido); la ruta y
+/// el chofer, opcionales, en `@routeId`/`@driverId`. El resto del payload es el
+/// `VehiclePing`. Idempotencia por `fix_id` del ping (no por Idempotency-Key: el
+/// endpoint no lo lleva). Se manda un ping por fila (cada fila = un POST de la
+/// cola), dentro de un lote de 1.
+Future<void> _recordVehiclePings(
+  LogisticsApi api,
+  String key,
+  Map<String, Object?> p,
+) {
+  final vehicleId = p['@vehicleId']! as String;
+  final ping = VehiclePing.fromJson({
+    for (final entry in p.entries)
+      if (!entry.key.startsWith('@')) entry.key: entry.value,
+  });
+  return api.telemetry.recordAppVehiclePings(
+    body: AppTelemetryPingsRequestBody(
+      vehicleId: vehicleId,
+      routeId: p['@routeId'] as String?,
+      driverId: p['@driverId'] as String?,
+      pings: [ping],
+    ),
   );
 }
 
