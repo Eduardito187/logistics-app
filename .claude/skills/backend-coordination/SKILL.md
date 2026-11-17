@@ -65,6 +65,12 @@ dueño.
 3. No hacer login de diagnóstico con una cuenta que el dueño está usando en el teléfono: hay una sesión
    activa por tipo de cliente y lo desloguea.
 4. **Nunca mutar** datos de staging ni etiquetas (ver memoria `no-label-mutations-rule`).
+5. **Un bug puede tener lado-app Y lado-backend.** Arreglar el mío primero (y reportarlo con archivos) y
+   derivar el del backend, confirmando el CONTRATO entre ambos por `SendMessage`. Caso real (midnight,
+   nov 2026): el chofer perdía la entrega en curso a las 00:00. Lado app = pedir `my-crew`/ruta **sin
+   `?date`** (vigente); lado backend = que `my-crew` sin fecha devuelva la cuadrilla de la ruta en curso
+   aunque sea de otro día. Verifiqué en el código del backend que la app sola no podía resolver la
+   cuadrilla → derivé esa parte; la parte de la llamada la arreglé yo. Ver `driver-midnight-open-assignment`.
 
 ## Reportarle al dueño
 
@@ -86,3 +92,5 @@ primera frase. No repetir como pendiente algo que el dueño descartó.
 | El backend cambió nombres de canal/evento respecto del pedido | Tomar los suyos (los canales salen de `channels`), ajustar tests y doc |
 | Staging no tiene lo último | Normal: el backend no despliega, despliega el dueño |
 | Un 404 nuevo viene como `application/problem+json` | La app ya lee `detail ?? error.message`; ramificar por `code` |
+| El estado que quiere la UI no existe como campo (vive derivado en otra tabla/contexto) | Pedir que el backend lo exponga ADITIVO en la proyección (cross-context read), sin mover el estado interno. Caso: "en curso/cerrada" de un plan vive en la ruta → se pidió enriquecer `Plan` |
+| El backend ofrece exponer su enum interno crudo | Pedir un **enum ESTABLE pensado para la UI** (p. ej. `execution_status: NOT_STARTED/IN_PROGRESS/COMPLETED`), no el interno, para no acoplar la app a su modelo de ejecución |

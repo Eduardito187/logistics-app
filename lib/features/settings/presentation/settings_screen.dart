@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/session.dart';
+import '../../../core/auth/user_role.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/layout/nav_clearance.dart';
 import '../../../core/layout/responsive_body.dart';
@@ -57,8 +58,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
             const FieldUseSection(),
             const SizedBox(height: 12),
-            // Isla de ruta (chofer): se oculta sola para otros roles.
+            // Isla de ruta (chofer): se oculta sola para otros roles. Lleva su
+            // propia separación SOLO cuando se muestra (para el chofer), así no
+            // queda pegada a la sección de abajo y no deja un doble espacio en
+            // los roles que no la ven.
             const RouteIslandSettingsTile(),
+            if (session?.role == UserRole.driver) const SizedBox(height: 12),
             // Widgets de la pantalla de inicio (vacío sin sesión o sin widgets
             // para el rol).
             const HomeWidgetsSection(),

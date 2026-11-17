@@ -166,6 +166,13 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   que no sobreviva a otro usuario. Volver a una pantalla no debe mostrar spinner ni vacío.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
   `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`).
+  - **Estados async SIEMPRE con `AsyncValueView` (nunca `.when` a mano):** mientras carga muestra skeleton,
+    nunca el error; con dato lo muestra aunque revalide; el error solo cuando la consulta terminó SIN dato.
+    El dueño rechaza ver "No se pudo cargar" durante la consulta. Si una pantalla filtra el dato antes de
+    pintar, hacelo DENTRO de `data:` (ver `supervisor_plans_screen.dart`) y da un `EmptyState` propio de
+    "nada coincide con el filtro", distinto del vacío real.
+  - **Contenedores de Ajustes = `SectionCard(title:, child:)`** (no un `ListTile`/`Column` suelto, se "sale"
+    del contenedor y no se ve como las demás). Pasó con la isla de ruta.
 - **Impresión:** `labelPrinterProvider.printLabel({zpl, render, jobName, to}) → PrintOutcome` (texto VERAZ; "aceptado"
   nunca = éxito). **Zebra** = ZPL por Bluetooth/USB/WiFi-9100 (+`~HS`). **Oficina (Ricoh/láser)** = `OfficePrinter`:
   Ricoh se detecta y va por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + código de
@@ -341,6 +348,9 @@ en uso (ver regla 0b).
 | `logout`/acción no surte efecto o cuelga en test | `flutter_secure_storage` y otros plugins no existen en widget tests | En `signOut` limpiar estado **síncrono primero**, luego `await` del almacén en try/catch |
 | App no monta en test / push revienta en dispositivo sin Google Play | Firebase lanza **Error** (no Exception) sin plugin o sin credenciales | Bootstrap del push con `catch` amplio (`on Object`); sin `FIREBASE_*` el push queda "No disponible", nunca tumbar la app |
 | `AsyncValue.valueOrNull` no existe | Riverpod 3.x | Usar `.value` (nullable) |
+| "No se pudo cargar / Intentelo nuevamente" en TODAS las pantallas del teléfono | Build de **dev** (localhost:8110) con el backend local caído o sin `adb reverse`: el login entra pero ningún servicio responde | Compilar con `config/staging.json` (OCI, está arriba) para probar en teléfono; `curl` al endpoint, 000 = backend caído. Ver `run-environments-config` |
+| El error "No se pudo cargar" PARPADEA mientras carga o al recargar tras un error | Se usó `.when` (cae al error durante `isLoading`) en vez de `AsyncValueView` | `AsyncValueView`: skeleton mientras `isLoading && !hasValue`, error solo al terminar SIN dato |
+| El chofer pierde la entrega en curso a la medianoche ("sin pedidos asignados") | Se pidió `my-crew`/ruta por fecha=HOY; al cambiar el día queda vacío | Pedir `my-crew` y `vehicles/{id}/route` **sin `?date`** = vigente (lo rige el estado de la ruta). Ver `driver-midnight-open-assignment` |
 | `RadioGroup` / `DropdownButtonFormField(initialValue:)` no existen | El proyecto usa Flutter 3.32 | `groupValue`/`onChanged` en cada `RadioListTile`; `value:` en el dropdown |
 | `package:latlong2/latlong2.dart` no existe | nombre del archivo | Importar `package:latlong2/latlong.dart` |
 | `swagger_parser` falla (`List` no es `Map`) al generar | anchors YAML + `parameters` a nivel path | Preprocesar a JSON (ver "Cliente API generado" / `scripts/preprocess_openapi.py`) |
