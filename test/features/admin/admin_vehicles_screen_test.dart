@@ -134,7 +134,10 @@ void main() {
     final fake = _FakeAdmin(fleet);
     await _pump(tester, fake);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'En mantenimiento'));
+    // El estado es un select.
+    await tester.tap(find.text('Todos los estados'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('En mantenimiento').last);
     await tester.pumpAndSettle();
 
     expect(fake.requests.last.status, AdminVehicleStatus.maintenance);

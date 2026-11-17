@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import '../../domain/usecases/list_shipments.dart';
 import 'selected_store_node_notifier.dart';
 import 'store_shipments_state.dart';
@@ -36,6 +38,11 @@ class StoreShipmentsNotifier extends AsyncNotifier<StoreShipmentsState> {
   Future<StoreShipmentsState> build() async {
     ref.cacheFor(CacheTtl.short);
     final nodeId = ref.watch(selectedStoreNodeProvider.select((n) => n?.id));
+    // EN TIEMPO REAL: el chofer dejó un pedido en la tienda, se recibió, se
+    // entregó al cliente o se canceló → la bandeja se vuelve a pedir sola.
+    ref.refreshOnRealtime(RealtimeTopic.store, const {
+      'store.updated',
+    }, when: (data) => realtimeMatches(data, 'node_id', nodeId));
     // Cambió la tienda: el acumulado anterior no sirve, se arranca de cero.
     _nodeId = nodeId;
     _page = 1;

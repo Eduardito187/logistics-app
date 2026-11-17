@@ -199,22 +199,33 @@ class _TruckPainter extends CustomPainter {
     canvas.restore();
   }
 
-  /// Camión visto desde arriba apuntando hacia -Y (arriba), centrado en (0,0).
+  /// Furgón (box truck) visto DESDE ARRIBA apuntando hacia -Y (arriba), centrado
+  /// en (0,0): cabina roja corta adelante + caja/contenedor carbón largo atrás,
+  /// como un camión de reparto real (el ejemplo que pidió el dueño, en rojo).
+  /// Simétrico a propósito para que al rotar con el rumbo NUNCA se vea torcido.
   void _paintTruck(Canvas canvas, double s) {
-    // Silueta: largo > ancho para que se lea como camión y hacia dónde apunta.
-    final halfLen = s * 0.30; // mitad del largo (de trompa a cola).
-    final halfWid = s * 0.165; // mitad del ancho de la carrocería.
-    final top = -halfLen; // trompa (adelante).
-    final bottom = halfLen; // cola.
+    // Caja carbón (como el contenedor gris del ejemplo) y azul del parabrisas.
+    const boxColor = Color(0xFF3A3B3E);
+    const boxEdge = Color(0xFF2A2B2D);
+    const glassColor = Color(0xFFDCEBF4);
+
+    final halfLen = s * 0.345; // mitad del largo (trompa → cola).
+    final halfWid = s * 0.17; // mitad del ancho de la carrocería.
+    final front = -halfLen; // trompa (adelante).
+    final back = halfLen; // cola.
     final left = -halfWid;
     final right = halfWid;
 
-    // Ruedas: rectángulos oscuros que asoman a los costados (realismo Uber).
-    final wheel = Paint()..color = const Color(0xFF1A1A1A);
-    final wheelW = s * 0.05;
-    final wheelLen = s * 0.12;
-    final wheelOut = halfWid + wheelW * 0.35;
-    for (final cy in [top + halfLen * 0.55, bottom - halfLen * 0.45]) {
+    // Unión cabina/caja: la cabina ocupa ~28% del largo adelante.
+    final cabBack = front + halfLen * 0.56;
+
+    // --- Ruedas: rectángulos oscuros que asoman a los costados (eje delantero
+    // bajo la cabina, eje trasero bajo la caja). Van primero (debajo). ---
+    final wheel = Paint()..color = const Color(0xFF141414);
+    final wheelW = s * 0.055;
+    final wheelLen = s * 0.145;
+    final wheelOut = halfWid + wheelW * 0.25;
+    for (final cy in [front + halfLen * 0.42, back - halfLen * 0.34]) {
       for (final cx in [-wheelOut, wheelOut]) {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
@@ -230,72 +241,73 @@ class _TruckPainter extends CustomPainter {
       }
     }
 
-    // Carrocería roja de marca, puntas redondeadas (la trompa un poco más).
-    final bodyRect = RRect.fromRectAndCorners(
-      Rect.fromLTRB(left, top, right, bottom),
-      topLeft: Radius.circular(halfWid * 0.95),
-      topRight: Radius.circular(halfWid * 0.95),
-      bottomLeft: Radius.circular(halfWid * 0.55),
-      bottomRight: Radius.circular(halfWid * 0.55),
+    // --- Caja / contenedor (carbón), desde la unión hasta la cola ---
+    final boxRect = RRect.fromRectAndCorners(
+      Rect.fromLTRB(left, cabBack, right, back),
+      topLeft: Radius.circular(halfWid * 0.28),
+      topRight: Radius.circular(halfWid * 0.28),
+      bottomLeft: Radius.circular(halfWid * 0.5),
+      bottomRight: Radius.circular(halfWid * 0.5),
     );
-    canvas.drawRRect(bodyRect, Paint()..color = AppColors.brand);
-    // Borde interno más oscuro para dar volumen.
+    canvas.drawRRect(boxRect, Paint()..color = boxColor);
     canvas.drawRRect(
-      bodyRect,
+      boxRect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = s * 0.018
+        ..strokeWidth = s * 0.016
+        ..color = boxEdge,
+    );
+    // Nervaduras del techo del contenedor (líneas finas a lo ancho).
+    final rib = Paint()
+      ..color = Colors.black.withValues(alpha: 0.22)
+      ..strokeWidth = s * 0.012
+      ..strokeCap = StrokeCap.round;
+    const ribCount = 3;
+    for (var i = 1; i <= ribCount; i++) {
+      final y = cabBack + (back - cabBack) * (i / (ribCount + 1));
+      canvas.drawLine(
+        Offset(left + halfWid * 0.22, y),
+        Offset(right - halfWid * 0.22, y),
+        rib,
+      );
+    }
+
+    // --- Cabina roja de marca (adelante), con techo redondeado en la trompa ---
+    final cabRect = RRect.fromRectAndCorners(
+      Rect.fromLTRB(left, front, right, cabBack + halfLen * 0.04),
+      topLeft: Radius.circular(halfWid * 0.92),
+      topRight: Radius.circular(halfWid * 0.92),
+      bottomLeft: Radius.circular(halfWid * 0.2),
+      bottomRight: Radius.circular(halfWid * 0.2),
+    );
+    canvas.drawRRect(cabRect, Paint()..color = AppColors.brand);
+    canvas.drawRRect(
+      cabRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.016
         ..color = AppColors.brandDark,
     );
 
-    // Caja/furgón: franja trasera algo más oscura (cabina al frente, caja
-    // atrás), separada por la línea de techo blanca.
-    final boxTop = top + halfLen * 0.78;
-    final boxRect = RRect.fromRectAndCorners(
-      Rect.fromLTRB(left, boxTop, right, bottom),
-      bottomLeft: Radius.circular(halfWid * 0.55),
-      bottomRight: Radius.circular(halfWid * 0.55),
-    );
-    canvas.save();
-    canvas.clipRRect(bodyRect);
-    canvas.drawRRect(boxRect, Paint()..color = AppColors.brandDark);
-    canvas.restore();
-
-    // Parabrisas blanco cerca de la trompa (marca la dirección).
+    // Parabrisas azulado cerca de la trompa (marca la dirección de avance).
     final windshield = RRect.fromRectAndRadius(
       Rect.fromLTRB(
-        left + halfWid * 0.42,
-        top + halfLen * 0.20,
-        right - halfWid * 0.42,
-        top + halfLen * 0.52,
+        left + halfWid * 0.32,
+        front + halfLen * 0.14,
+        right - halfWid * 0.32,
+        front + halfLen * 0.36,
       ),
-      Radius.circular(halfWid * 0.35),
+      Radius.circular(halfWid * 0.3),
     );
-    canvas.drawRRect(windshield, Paint()..color = Colors.white);
+    canvas.drawRRect(windshield, Paint()..color = glassColor);
 
-    // Línea de techo blanca que separa cabina de la caja.
-    canvas.drawLine(
-      Offset(left + halfWid * 0.2, boxTop),
-      Offset(right - halfWid * 0.2, boxTop),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.85)
-        ..strokeWidth = s * 0.02,
-    );
-
-    // Chevron blanco en la trompa: refuerza "hacia dónde apunta".
-    final chevron = Path()
-      ..moveTo(-halfWid * 0.5, top + halfLen * 0.10)
-      ..lineTo(0, top - halfLen * 0.02)
-      ..lineTo(halfWid * 0.5, top + halfLen * 0.10);
-    canvas.drawPath(
-      chevron,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = s * 0.03
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round
-        ..color = Colors.white,
-    );
+    // Faros: dos puntos claros en las esquinas de la trompa (refuerzan "hacia
+    // dónde apunta" sin un chevron que se viera torcido al rotar).
+    final headlight = Paint()..color = const Color(0xFFFFF3D6);
+    final hlR = s * 0.028;
+    for (final cx in [-halfWid * 0.55, halfWid * 0.55]) {
+      canvas.drawCircle(Offset(cx, front + halfLen * 0.06), hlR, headlight);
+    }
   }
 
   @override

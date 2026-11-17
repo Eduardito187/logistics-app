@@ -120,8 +120,8 @@ void main() {
       );
     });
 
-    test('envío por lotes: en marcha cada 60 s (no un POST por lectura)', () {
-      expect(TrackingProfile.moving.flushInterval, const Duration(seconds: 60));
+    test('envío por lotes: en marcha cada 10 s (no un POST por lectura)', () {
+      expect(TrackingProfile.moving.flushInterval, const Duration(seconds: 10));
       expect(
         TrackingProfile.moving.flushInterval,
         greaterThan(TrackingProfile.moving.minEnqueueInterval),
@@ -129,7 +129,7 @@ void main() {
     });
 
     test(
-      'Android: perfil en marcha sin filtro de distancia, intervalo 15 s',
+      'Android: perfil en marcha sin filtro de distancia, intervalo 2 s',
       () {
         final s = LocationService.settingsForProfile(
           TrackingProfile.moving,
@@ -138,7 +138,7 @@ void main() {
         expect(s, isA<AndroidSettings>());
         final android = s as AndroidSettings;
         expect(android.distanceFilter, 0);
-        expect(android.intervalDuration, const Duration(seconds: 15));
+        expect(android.intervalDuration, const Duration(seconds: 2));
         expect(android.accuracy, LocationAccuracy.high);
       },
     );
@@ -167,7 +167,8 @@ void main() {
           platform: TargetPlatform.iOS,
         );
         expect(s, isA<AppleSettings>());
-        expect(s.distanceFilter, greaterThanOrEqualTo(25), reason: '$p');
+        // iOS ignora el intervalo: siempre usa ALGÚN filtro de distancia (>0).
+        expect(s.distanceFilter, greaterThan(0), reason: '$p');
         expect(s.accuracy, p.accuracy);
       }
     });

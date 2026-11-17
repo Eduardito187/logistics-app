@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/plan.dart';
+import '../../../core/api/models/plan_status.dart';
+import '../../../core/icons/icons.dart';
 import '../../../core/realtime/realtime_bus.dart';
 import '../../../core/realtime/realtime_listener.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -16,6 +18,62 @@ import 'widgets/plan_detail_body.dart';
 /// [initial] es el plan de la lista (llega por `extra` al tocar la tarjeta):
 /// se muestra al instante mientras el detalle fresco llega, sin spinner. El
 /// plan y su ETA se piden **en paralelo** (antes el ETA esperaba al plan).
+/// Acciones principales del plan, FIJAS al pie: no hay que deslizar toda la
+/// lista de paradas para guardar el orden o publicar. Solo aparece cuando el
+/// plan se puede editar.
+class _PlanActionsBar extends ConsumerWidget {
+  const _PlanActionsBar({required this.planId});
+
+  final String planId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actions = ref.watch(planEditorActionsProvider(planId));
+    // Solo mientras el plan se puede editar: publicado (o para quien solo
+    // mira) no hay barra, aunque el editor haya dejado sus acciones.
+    final editable =
+        ref.watch(canPlanProvider) &&
+        ref.watch(
+          planDetailProvider(
+            planId,
+          ).select((plan) => plan.value?.status != PlanStatus.published),
+        );
+    if (actions == null || !editable) return const SizedBox.shrink();
+    return Material(
+      elevation: 8,
+      color: Theme.of(context).colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: SizedBox(
+            height: 56,
+            child: actions.dirty
+                ? FilledButton.icon(
+                    onPressed: actions.busy ? null : actions.save,
+                    icon: const AnimatedAppIcon(
+                      AppIcon.save,
+                      excludeFromSemantics: true,
+                    ),
+                    label: const Text('Guardar orden'),
+                  )
+                : FilledButton.icon(
+                    onPressed: actions.busy || !actions.canPublish
+                        ? null
+                        : actions.publish,
+                    icon: const AnimatedAppIcon(
+                      AppIcon.send,
+                      excludeFromSemantics: true,
+                    ),
+                    label: const Text('Publicar plan'),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SupervisorPlanDetailScreen extends ConsumerWidget {
   const SupervisorPlanDetailScreen({
     super.key,
@@ -42,6 +100,7 @@ class SupervisorPlanDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalle del plan')),
+      bottomNavigationBar: _PlanActionsBar(planId: planId),
       // En tiempo real: si este plan cambia en otro teléfono, se vuelve a
       // pedir (los cambios sin guardar del editor no se pisan).
       body: RealtimeListener(

@@ -4,9 +4,11 @@ import '../../../../core/api/export.dart';
 /// checklist pre-salida. La capa `data` lo implementa; la `presentation` lo usa
 /// sólo vía casos de uso. Lanza `ApiException` ante un error.
 abstract interface class FleetRepository {
-  /// Asignación (vehículo + tripulación) del chofer autenticado para la fecha.
-  /// Lanza `ApiException` con status 404 cuando no hay asignación.
-  Future<MyCrew> getMyCrew(DateTime date);
+  /// Asignación (vehículo + tripulación) del chofer autenticado. Sin fecha =
+  /// asignación VIGENTE (la ruta en curso manda sobre el calendario; midnight-
+  /// safe). Con fecha = ese día puntual. Lanza `ApiException` 404 si no hay
+  /// asignación.
+  Future<MyCrew> getMyCrew([DateTime? date]);
 
   /// Choferes activos (para firmar el checklist pre-salida).
   Future<List<Driver>> listActiveDrivers();

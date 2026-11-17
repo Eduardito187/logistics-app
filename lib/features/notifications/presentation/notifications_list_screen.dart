@@ -88,6 +88,11 @@ class _NotificationsListScreenState
     // Llegó un push (o un evento del socket) con la app abierta: refrescar ya.
     ref.listen(pushArrivedProvider, (_, _) => _refresh());
     final notifications = ref.watch(notificationsListProvider);
+    // Los avisos de la empresa van en esta misma pantalla: mientras cargan
+    // todavía no se sabe si está vacía, y si hay alguno NO está vacía.
+    final inbox = ref.watch(inboxPreviewProvider);
+    final inboxLoading = inbox.isLoading && !inbox.hasValue;
+    final hasInbox = inbox.value?.items.isNotEmpty ?? false;
     final limit = ref.watch(notificationsLimitProvider);
 
     return Scaffold(
@@ -113,17 +118,29 @@ class _NotificationsListScreenState
                 // Con datos (también mientras recarga): lista perezosa.
                 AsyncValue(:final value?, hasError: false) =>
                   value.isEmpty
-                      ? const [
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: EmptyState(
-                              icon: AppIcon.alertsOff,
-                              title: 'Sin notificaciones',
-                              message:
-                                  'No hay notificaciones en la operación por '
-                                  'ahora.',
+                      ? [
+                          if (inboxLoading)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: LoadingView(),
+                            )
+                          else if (hasInbox)
+                            SliverToBoxAdapter(
+                              child: SizedBox(
+                                height: navScrollBottomPadding(context),
+                              ),
+                            )
+                          else
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: EmptyState(
+                                icon: AppIcon.alertsOff,
+                                title: 'Sin notificaciones',
+                                message:
+                                    'No hay notificaciones en la operación '
+                                    'por ahora.',
+                              ),
                             ),
-                          ),
                         ]
                       : [
                           _NotificationsSliver(items: value),
@@ -156,7 +173,19 @@ class _NotificationsListScreenState
                               ),
                             ),
                         ],
-                // Cargando o error: vista estándar, centrada en el resto.
+                // Error en la lista operativa pero con avisos ya cargados: los
+                // avisos SON la bandeja unificada, así que no se muestra ningún
+                // cartel de error (el dueño lo pidió: "avisos unificados, sin
+                // ese error debajo"). La lista operativa se reintenta sola por
+                // socket/push y al tirar para refrescar. Solo si NO hay avisos
+                // se muestra el error (rama `_` de abajo), para no dejar la
+                // pantalla muda sin explicación.
+                AsyncValue(hasError: true) when hasInbox => [
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: navScrollBottomPadding(context)),
+                  ),
+                ],
+                // Cargando, o error sin avisos: vista estándar, centrada.
                 _ => [
                   SliverFillRemaining(
                     hasScrollBody: false,

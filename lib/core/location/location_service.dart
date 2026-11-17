@@ -122,8 +122,15 @@ class LocationService {
     _lastFixAt = at;
   }
 
-  static GpsFix _toFix(Position p) =>
-      GpsFix(lat: p.latitude, lng: p.longitude, accuracy: p.accuracy);
+  static GpsFix _toFix(Position p) => GpsFix(
+    lat: p.latitude,
+    lng: p.longitude,
+    accuracy: p.accuracy,
+    // El plugin da speed/heading del sensor; valores sin sentido (negativos o
+    // cero de "desconocido") se descartan para no mandar ruido al backend.
+    speedMps: p.speed > 0 ? p.speed : null,
+    headingDeg: p.heading >= 0 && p.heading <= 360 ? p.heading : null,
+  );
 
   /// Posición actual, o `null` si no hay permiso ni ninguna posición conocida.
   ///

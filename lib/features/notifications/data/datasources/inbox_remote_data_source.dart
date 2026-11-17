@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/auth/session.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/performance/cache_for.dart';
 import '../../../../core/push/push_arrived.dart';
 import '../../../../core/widgets/paged.dart';
 
@@ -61,6 +63,8 @@ final inboxRemoteDataSourceProvider = Provider<InboxRemoteDataSource>(
 /// Avisos sin leer, para el acceso de la pantalla de notificaciones. Si falla
 /// (sin señal, backend anterior) vale 0: la bandeja igual se puede abrir.
 final inboxUnreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  ref.cacheFor(CacheTtl.short);
+  ref.watch(sessionProvider.select((s) => (s?.token != null, s?.userName)));
   ref.watch(pushArrivedProvider);
   try {
     return await ref.watch(inboxRemoteDataSourceProvider).unreadCount();
@@ -75,6 +79,11 @@ final inboxUnreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
 final inboxPreviewProvider = FutureProvider.autoDispose<Paged<StaffInboxItem>>((
   ref,
 ) async {
+  // Caché corta atada a la sesión: al volver a la pantalla los avisos están
+  // al instante (sin el hueco en blanco mientras cargan), y un push o un
+  // aviso de tiempo real los vuelve a pedir igual.
+  ref.cacheFor(CacheTtl.short);
+  ref.watch(sessionProvider.select((s) => (s?.token != null, s?.userName)));
   ref.watch(pushArrivedProvider);
   try {
     return await ref.watch(inboxRemoteDataSourceProvider).list(1);

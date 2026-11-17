@@ -116,6 +116,12 @@ abstract class PlanningClient {
   @GET('/app/plans/{planId}')
   Future<PlanEnvelope> getPlan({@Path('planId') required String planId});
 
+  /// Delete an unpublished plan with all its stops.
+  ///
+  /// Borra un plan SIN publicar (borrador o propuesta) y sus paradas; sus pedidos quedan libres para armar otro viaje. Emite `plans.updated` con `deleted: true`.
+  @DELETE('/app/plans/{planId}')
+  Future<void> deletePlan({@Path('planId') required String planId});
+
   /// ETA per stop of the plan
   @GET('/app/plans/{planId}/eta')
   Future<GetAppPlansPlanIdEtaResponse> getPlanEta({

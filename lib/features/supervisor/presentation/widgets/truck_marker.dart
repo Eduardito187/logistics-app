@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/models/vehicle_live.dart';
-import '../../../../core/icons/icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../driver/presentation/widgets/active_delivery/truck_marker.dart'
+    as driver_map;
 
-/// Marcador de un camión en el mapa de flota; verde si se mueve, ámbar si está
-/// detenido.
+/// Marcador de un camión en el mapa de flota: el MISMO camión visto desde
+/// arriba que ve el chofer en su mapa, apuntando hacia donde avanza (rumbo de
+/// la telemetría). Un punto en la esquina dice si se mueve (verde) o está
+/// detenido (ámbar).
 class TruckMarker extends StatelessWidget {
   const TruckMarker({super.key, required this.vehicle, required this.onTap});
 
@@ -15,19 +18,38 @@ class TruckMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = vehicle.moving ? AppColors.success : AppColors.warning;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: const AnimatedAppIcon(
-          AppIcon.deliver,
-          color: Colors.white,
-          size: 24,
-          semanticLabel: 'Camión',
+    final plate = vehicle.plate;
+    return Semantics(
+      button: true,
+      label:
+          '${plate == null ? 'Camión' : 'Camión $plate'}, '
+          '${vehicle.moving ? 'en movimiento' : 'detenido'}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: driver_map.TruckMarker(
+                headingDegrees: vehicle.heading?.toDouble(),
+              ),
+            ),
+            Positioned(
+              right: 2,
+              top: 2,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -15,6 +15,7 @@ import 'package:logistics_app/core/api/models/origin2.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
 import 'package:logistics_app/core/api/models/shipment.dart';
 import 'package:logistics_app/core/api/models/shipment_line.dart';
+import 'package:logistics_app/core/api/models/shipment_progress.dart';
 import 'package:logistics_app/core/api/models/shipment_status.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/offline/app_database.dart';
@@ -220,6 +221,7 @@ Shipment buildShipment({
   ShipmentStatus status = ShipmentStatus.received,
   int lineCount = 1,
   int quantityPerLine = 1,
+  ShipmentProgress? progress,
 }) {
   return Shipment(
     id: 'id-$externalId',
@@ -230,6 +232,7 @@ Shipment buildShipment({
     addressConfidenceScore: 80,
     addressConfidenceLevel: AddressConfidenceLevel.high,
     status: status,
+    progress: progress,
     lines: List<ShipmentLine>.generate(
       lineCount,
       (i) => ShipmentLine(

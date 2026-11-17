@@ -43,6 +43,10 @@ class HomePrefetcher {
         prefetch(ref, ordersToPrepareProvider);
       case UserRole.carrier:
         break;
+      case UserRole.crewMember:
+        // Tripulante: ve los envíos del camión con los mismos providers de
+        // lectura del chofer (tripulación + ruta del día). Sí precarga avisos.
+        prefetchDriverDay(ref);
     }
     // La campana abre al instante.
     prefetch(ref, notificationsListProvider);

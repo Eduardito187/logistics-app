@@ -40,7 +40,7 @@ CrewDriver buildDriver({String id = 'd1', String? name = 'Juan Pérez'}) =>
 MyCrew buildMyCrew({
   CrewVehicle? vehicle,
   CrewDriver? driver,
-  List<Helpers2> helpers = const [],
+  List<Helpers3> helpers = const [],
   Shift? shift,
 }) => MyCrew(
   crewId: 'crew-1',
@@ -101,6 +101,7 @@ DriverRoute buildRoute({
   List<DriverRouteStop>? stops,
   DriverRouteStop? currentStop,
   RouteGeometry? routeGeometry,
+  bool? offRoute,
 }) => DriverRoute(
   id: id,
   vehicleId: vehicleId,
@@ -112,6 +113,7 @@ DriverRoute buildRoute({
   currentStop: currentStop,
   stops: stops ?? const [],
   routeGeometry: routeGeometry,
+  offRoute: offRoute,
 );
 
 /// Ruta vacía (sin paradas pendientes) para que el autostart del rastreo no
@@ -238,12 +240,23 @@ class FakeTruckTracking extends TruckTrackingService {
   int startCount = 0;
   int stopCount = 0;
 
+  /// Últimos ids recibidos en `start` (para asserts del camino de telemetría).
+  String? lastStartVehicleId;
+  String? lastStartRouteId;
+
   @override
   TruckTrackingState build() => initial;
 
   @override
-  Future<bool> start({required String shipmentId}) async {
+  Future<bool> start({
+    required String shipmentId,
+    String? vehicleId,
+    String? routeId,
+    String? driverId,
+  }) async {
     startCount++;
+    lastStartVehicleId = vehicleId;
+    lastStartRouteId = routeId;
     // El autostart invoca start/stop desde `initState` (listen con
     // fireImmediately), así que la mutación del estado debe diferirse fuera de
     // la fase síncrona de build para no disparar "Tried to modify a provider
@@ -312,7 +325,7 @@ class FakeFleetRepository implements FleetRepository {
   Map<String, bool>? lastItems;
 
   @override
-  Future<MyCrew> getMyCrew(DateTime date) async {
+  Future<MyCrew> getMyCrew([DateTime? date]) async {
     if (crewError != null) throw crewError!;
     return crew ?? buildMyCrew();
   }

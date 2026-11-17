@@ -6,8 +6,8 @@ import 'package:logistics_app/core/auth/user_role.dart';
 import 'package:logistics_app/features/lookup/data/order_lookup_data_source.dart';
 import 'package:logistics_app/features/supervisor/data/repositories/supervisor_repository_impl.dart';
 import 'package:logistics_app/features/supervisor/presentation/controllers/planning_controllers.dart';
+import 'package:logistics_app/features/supervisor/presentation/planning_actions_screen.dart';
 import 'package:logistics_app/features/supervisor/presentation/supervisor_plan_detail_screen.dart';
-import 'package:logistics_app/features/supervisor/presentation/supervisor_plans_screen.dart';
 
 import '../support/fake_supervisor_repository.dart';
 import '../support/supervisor_fixtures.dart';
@@ -96,9 +96,8 @@ void main() {
     ) async {
       final repo = FakeSupervisorRepository()
         ..runAfterGenerate = _run(AutoPlanRunStatus.completed, unassigned: 2);
-      await _pump(tester, repo, const SupervisorPlansScreen());
+      await _pump(tester, repo, const PlanningActionsScreen());
 
-      expect(find.text('Planificación'), findsOneWidget);
       expect(find.text('Este día todavía no se planificó.'), findsOneWidget);
 
       await tester.tap(find.text('Planificar el día'));
@@ -122,7 +121,7 @@ void main() {
             supervisorRepositoryProvider.overrideWithValue(repo),
             canPlanProvider.overrideWithValue(true),
           ],
-          child: const MaterialApp(home: SupervisorPlansScreen()),
+          child: const MaterialApp(home: PlanningActionsScreen()),
         ),
       );
       await tester.pump();
@@ -153,7 +152,7 @@ void main() {
           plan(id: 'p2', vehicleId: 'CAM-2'),
           plan(id: 'p3', vehicleId: 'CAM-3', status: PlanStatus.draft),
         ];
-      await _pump(tester, repo, const SupervisorPlansScreen());
+      await _pump(tester, repo, const PlanningActionsScreen());
 
       await tester.tap(find.text('Publicar 1 plan'));
       await tester.pumpAndSettle();
@@ -168,9 +167,10 @@ void main() {
       tester,
     ) async {
       final repo = FakeSupervisorRepository()..plansByDate = [_draft];
-      await _pump(tester, repo, const SupervisorPlansScreen(), canPlan: false);
+      await _pump(tester, repo, const PlanningActionsScreen(), canPlan: false);
 
-      expect(find.text('Rutas en curso'), findsOneWidget);
+      // El que solo mira no entra a planificar: ve el aviso de solo lectura.
+      expect(find.text('Solo lectura'), findsOneWidget);
       expect(find.text('Planificar el día'), findsNothing);
       expect(find.text('Publicar 1 plan'), findsNothing);
     });

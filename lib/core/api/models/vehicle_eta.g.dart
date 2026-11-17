@@ -7,6 +7,13 @@ part of 'vehicle_eta.dart';
 // **************************************************************************
 
 VehicleEta _$VehicleEtaFromJson(Map<String, dynamic> json) => VehicleEta(
+  offRoute: json['off_route'] as bool?,
+  offRouteSince: json['off_route_since'] == null
+      ? null
+      : DateTime.parse(json['off_route_since'] as String),
+  rerouteGeometry: (json['reroute_geometry'] as List<dynamic>?)
+      ?.map((e) => LatLngPoint.fromJson(e as Map<String, dynamic>))
+      .toList(),
   shipmentId: json['shipment_id'] as String?,
   vehicleId: json['vehicle_id'] as String?,
   plate: json['plate'] as String?,
@@ -25,6 +32,9 @@ VehicleEta _$VehicleEtaFromJson(Map<String, dynamic> json) => VehicleEta(
 
 Map<String, dynamic> _$VehicleEtaToJson(VehicleEta instance) =>
     <String, dynamic>{
+      'off_route': instance.offRoute,
+      'off_route_since': instance.offRouteSince?.toIso8601String(),
+      'reroute_geometry': instance.rerouteGeometry,
       'shipment_id': instance.shipmentId,
       'vehicle_id': instance.vehicleId,
       'plate': instance.plate,

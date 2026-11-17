@@ -84,12 +84,33 @@ String? alertDetailText(Object? detail) {
   return null;
 }
 
-/// Título de una parada: el pedido si se conoce; si no, su posición. Nunca un
-/// identificador interno.
-String stopTitle(String? orderReference, int position) =>
-    orderReference == null || orderReference.isEmpty
-    ? 'Parada $position'
-    : 'Pedido $orderReference';
+/// Patrón de UUID (8-4-4-4-12 hex). Algunos pedidos traen el UUID de la orden
+/// como `order_reference` (dispatcher OMS→logística); el dueño NO quiere ver
+/// UUIDs, así que ese "código" se trata como si no hubiera referencia legible.
+final RegExp _uuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+  r'[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// `true` si [value] parece un UUID (no es un código legible para mostrar).
+bool looksLikeUuid(String? value) =>
+    value != null && _uuidPattern.hasMatch(value.trim());
+
+/// Referencia de pedido LEGIBLE, o `null` si no hay o si es un UUID (que no se
+/// muestra). Úsese para no pintar nunca un identificador interno.
+String? readableOrderReference(String? orderReference) =>
+    orderReference == null ||
+        orderReference.isEmpty ||
+        looksLikeUuid(orderReference)
+    ? null
+    : orderReference;
+
+/// Título de una parada: el pedido si se conoce y es legible; si no, su
+/// posición. Nunca un identificador interno (UUID).
+String stopTitle(String? orderReference, int position) {
+  final ref = readableOrderReference(orderReference);
+  return ref == null ? 'Parada $position' : 'Pedido $ref';
+}
 
 /// Cliente y dirección corta en una línea, o `null` si no se conoce ninguno.
 String? stopWho(String? customerName, String? shortAddress) {

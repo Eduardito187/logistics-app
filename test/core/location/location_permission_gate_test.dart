@@ -23,8 +23,10 @@ class _FakeLocationService extends LocationService {
   Completer<bool>? completer;
   int calls = 0;
 
+  // El gate exige el permiso de PRIMER PLANO (no "siempre"): verifica con
+  // `ensurePermission`.
   @override
-  Future<bool> ensureBackgroundPermission() {
+  Future<bool> ensurePermission() {
     calls++;
     final c = completer;
     if (c != null) return c.future;

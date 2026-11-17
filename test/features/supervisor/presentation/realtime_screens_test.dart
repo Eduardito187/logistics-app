@@ -195,12 +195,11 @@ void main() {
       expect(find.text('Planificando…'), findsOneWidget);
 
       final plansBefore = repo.plansCalls;
+      // Sin plan_date el evento vale para el día que se mira (no se ata a una
+      // fecha fija, que se rompía al cambiar el día).
       c
           .read(realtimeBusProvider)
-          .dispatch(
-            RealtimeTopic.planning,
-            _event('planning.run.updated', {'plan_date': '2026-11-15'}),
-          );
+          .dispatch(RealtimeTopic.planning, _event('planning.run.updated'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
       expect(find.text('Planificado: 3 camiones, 12 paradas.'), findsOneWidget);

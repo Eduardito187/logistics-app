@@ -6,6 +6,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'driver_route_status.dart';
 import 'driver_route_stop.dart';
+import 'lat_lng_point.dart';
 import 'route_geometry.dart';
 
 part 'driver_route.g.dart';
@@ -22,6 +23,9 @@ class DriverRoute {
     required this.completedStops,
     required this.stopsRemaining,
     required this.stops,
+    this.offRoute,
+    this.offRouteSince,
+    this.rerouteGeometry,
     this.startedAt,
     this.closedAt,
     this.failedStops,
@@ -33,6 +37,17 @@ class DriverRoute {
   factory DriverRoute.fromJson(Map<String, Object?> json) =>
       _$DriverRouteFromJson(json);
 
+  /// Verdad del backend (motor único de ETA) sobre si el camión está fuera de su ruta planificada por desvío sostenido. Reemplaza el cálculo local de la app para el cartel "Fuera de ruta".
+  @JsonKey(name: 'off_route')
+  final bool? offRoute;
+
+  /// Desde cuándo se sostiene el desvío (ISO 8601), o null.
+  @JsonKey(name: 'off_route_since')
+  final DateTime? offRouteSince;
+
+  /// Polilínea (posición actual → próxima parada pendiente) para redibujar la ruta cuando el vehículo está fuera de ruta. null salvo off_route=true.
+  @JsonKey(name: 'reroute_geometry')
+  final List<LatLngPoint>? rerouteGeometry;
   @JsonKey(name: 'started_at')
   final DateTime? startedAt;
   @JsonKey(name: 'closed_at')

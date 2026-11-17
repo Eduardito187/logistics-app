@@ -5,10 +5,11 @@ import '../../../../core/api/export.dart';
 /// `presentation` sólo lo conoce a través de los casos de uso. Lanza
 /// `ApiException` ante un error.
 abstract interface class DriverRouteRepository {
-  /// Ruta del día del vehículo en la fecha dada (paradas ordenadas).
+  /// Ruta del vehículo (paradas ordenadas). Sin fecha = ruta ABIERTA del camión
+  /// (de cualquier día; midnight-safe). Con fecha = la de ese día.
   Future<DriverRoute> getDriverRoute({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   });
 
   /// Detalle del envío de una parada (teléfono del cliente y productos).

@@ -217,7 +217,7 @@ void main() {
     await tester.tap(_addButton('SO-1'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Guardar viaje'));
+    await tester.tap(find.text('Guardar viaje · 1 parada'));
     await tester.pumpAndSettle();
 
     expect(repo.createdTrips.single.vehicleId, 'v1');
@@ -225,22 +225,61 @@ void main() {
     expect(find.text('Plan p9'), findsOneWidget);
   });
 
-  testWidgets('si el camión ya tiene viaje ese día, abre ese plan', (
-    tester,
-  ) async {
-    final repo = FakeSupervisorRepository()
-      ..candidates = _near
-      ..createTripError = const TripAlreadyPlanned('p-existente');
-    await _pump(tester, repo);
-    await _pickVehicle(tester);
-    await tester.tap(_addButton('SO-1'));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'camión ya planificado (409): avisa y CONSERVA el viaje armado; no abre el '
+    'plan ajeno en silencio. El botón abre el viaje existente',
+    (tester) async {
+      final repo = FakeSupervisorRepository()
+        ..candidates = _near
+        ..createTripError = const TripAlreadyPlanned('p-existente');
+      await _pump(tester, repo);
+      await _pickVehicle(tester);
+      await tester.tap(_addButton('SO-1'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Guardar viaje'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar viaje · 1 parada'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Plan p-existente'), findsOneWidget);
-  });
+      // NO navega en silencio: sigue en el armador con el pedido puesto.
+      expect(find.text('Plan p-existente'), findsNothing);
+      expect(find.text('2. Tu viaje · 1 parada'), findsOneWidget);
+      expect(find.textContaining('ya tiene un viaje ese día'), findsOneWidget);
+
+      // El botón del aviso abre el viaje existente.
+      await tester.tap(find.text('Ver viaje'));
+      await tester.pumpAndSettle();
+      expect(find.text('Plan p-existente'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'si el backend devuelve un plan SIN los pedidos armados, avisa y no navega',
+    (tester) async {
+      final repo = FakeSupervisorRepository()
+        ..candidates = _near
+        // Plan devuelto con OTRO pedido (no 's1'): no es el viaje que armé.
+        ..planValue = plan(
+          id: 'p-ajeno',
+          status: PlanStatus.draft,
+          stops: [plannedStop(sequence: 1, loadOrder: 1, shipmentId: 'otro')],
+        );
+      await _pump(tester, repo);
+      await _pickVehicle(tester);
+      await tester.tap(_addButton('SO-1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Guardar viaje · 1 parada'));
+      await tester.pumpAndSettle();
+
+      // No se abre el plan ajeno y el armado se conserva.
+      expect(find.text('Plan p-ajeno'), findsNothing);
+      expect(find.text('2. Tu viaje · 1 parada'), findsOneWidget);
+      expect(
+        find.textContaining('no se guardó con los pedidos que armaste'),
+        findsOneWidget,
+      );
+    },
+  );
 
   test('avisos del orden sugerido, en palabras', () {
     expect(

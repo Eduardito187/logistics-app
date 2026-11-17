@@ -42,4 +42,32 @@ void main() {
     await _pump(tester, withDoc: false);
     expect(find.textContaining('Doc:'), findsNothing);
   });
+
+  testWidgets('listo para retirar: badge verde con la hora, sin pastilla', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PickupCard(
+            shipment: shipment(
+              readyForPickupAt: DateTime(2026, 11, 16, 10, 52),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Listo para retirar · Llegó 10:52'), findsOneWidget);
+    // Cuando ya se puede entregar, no se muestra la pastilla de estado.
+    expect(find.byType(ShipmentStatusPill), findsNothing);
+  });
+
+  testWidgets('en camino: muestra la pastilla de estado, sin badge', (
+    tester,
+  ) async {
+    await _pump(tester, withDoc: false);
+    expect(find.textContaining('Listo para retirar'), findsNothing);
+    expect(find.byType(ShipmentStatusPill), findsOneWidget);
+  });
 }

@@ -203,17 +203,35 @@ case "$cmd" in
       # Solo si dieron un puerto de CONEXIÓN distinto del de vinculación.
       connect "$4"
     else
-      # El puerto de vinculación NO sirve para conectar (se cierra al terminar).
-      # mDNS (openscreen) suele reconectar solo por el puerto real; esperamos y
-      # armamos el puente con el serial que aparezca.
-      echo "Vinculado. Buscando el dispositivo por mDNS ..."
-      sleep 3
-      "$ADB" devices -l
-      if bridge; then
-        echo "Listo: ya podés darle play a la app."
+      # El puerto de VINCULACIÓN no sirve para conectar (se cierra al terminar) y
+      # es DISTINTO del puerto de CONEXIÓN (Wear OS/Android 11+). Autodescubrimos
+      # el endpoint real por mDNS (_adb-tls-connect) y conectamos a ÉSE. Esto
+      # cubre el Galaxy Watch (el connect port no se adivina; está en la pantalla
+      # principal de "Depuración inalámbrica").
+      echo "Vinculado. Autodescubriendo el puerto de CONEXIÓN por mDNS ..."
+      echo "  (mantené ABIERTA la pantalla 'Depuración inalámbrica' en el dispositivo)"
+      "$ADB" kill-server >/dev/null 2>&1 || true
+      ADB_MDNS_OPENSCREEN=1 "$ADB" start-server >/dev/null 2>&1
+      # Reintentos: el dispositivo tarda unos segundos en anunciarse por mDNS tras
+      # vincular, y la 1.ª consulta suele volver vacía. 5 intentos (~12 s).
+      conn=""
+      for _i in 1 2 3 4 5; do
+        sleep 2
+        conn="$(ADB_MDNS_OPENSCREEN=1 "$ADB" mdns services 2>/dev/null \
+                | awk '/_adb-tls-connect/{print $NF; exit}')"
+        [ -n "$conn" ] && break
+        echo "  ...intento $_i sin resultado, reintentando ..."
+      done
+      if [ -n "$conn" ]; then
+        echo "Encontrado en $conn — conectando ..."
+        adb_net connect "$conn" >/dev/null 2>&1 || true
+        printf '%s' "$conn" > "$LAST"
+        "$ADB" devices -l
+        echo "Listo: conectado en $conn (guardado; la próxima: reconnect)."
       else
-        echo "Si no apareció, abrí 'Depuración inalámbrica' y pasá el ip:puertoConexion de la pantalla principal:"
-        echo "  $0 connect <ip:puertoConexion>"
+        echo "No apareció por mDNS (red sin multicast o pantalla cerrada)."
+        echo "Abrí 'Depuración inalámbrica' en el dispositivo y pasá el ip:puertoConexion"
+        echo "de la pantalla PRINCIPAL (NO el de vincular):  $0 connect <ip:puertoConexion>"
       fi
     fi
     ;;

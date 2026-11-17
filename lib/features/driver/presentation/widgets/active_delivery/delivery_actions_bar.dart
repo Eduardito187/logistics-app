@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../core/api/export.dart';
 import '../../../../../core/icons/icons.dart';
@@ -7,6 +8,7 @@ import '../../../../../core/layout/breakpoints.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/store_stop.dart';
 import '../../controllers/driver_controllers.dart';
+import '../../controllers/inspection_history_controller.dart';
 import '../../controllers/locally_settled_stops.dart';
 import '../../failed_delivery_screen.dart';
 import '../../pod_screen.dart';
@@ -50,6 +52,13 @@ class DeliveryActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // BLOQUEO PRE-SALIDA: si la inspección (checklist) del camión de esta salida
+    // está pendiente, el chofer NO puede empezar a entregar. Se reemplazan las
+    // acciones por un llamado a hacer la inspección. Es fail-open: solo bloquea
+    // cuando SE SABE que falta (ver `preTripChecklistPendingProvider`).
+    if (ref.watch(preTripChecklistPendingProvider)) {
+      return const _ChecklistRequiredBar();
+    }
     // "Cerrada" se decide por el estado EFECTIVO de ESTA parada: lo que el
     // chofer resolvió en este teléfono (POD/fallida ya hacen `settle`) o el
     // estado de la parada del backend. NUNCA por `deliveryStateProvider` (el
@@ -313,6 +322,70 @@ class _DeliverySummary extends StatelessWidget {
                 excludeFromSemantics: true,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Barra de bloqueo: el chofer debe hacer la inspección pre-salida del camión
+/// antes de poder iniciar las entregas de esta salida. Reemplaza las acciones
+/// de entrega por un llamado claro a completar el checklist.
+class _ChecklistRequiredBar extends StatelessWidget {
+  const _ChecklistRequiredBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      elevation: 12,
+      child: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppBreakpoints.maxContentWidth,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const AnimatedAppIcon(
+                        AppIcon.checklist,
+                        size: 24,
+                        color: AppColors.hcWarning,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Primero hacé la inspección del camión. Sin el '
+                          'checklist pre-salida no podés empezar a entregar.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: () => context.push('/driver/checklist'),
+                    icon: const AnimatedAppIcon(
+                      AppIcon.checklist,
+                      color: Colors.white,
+                    ),
+                    label: const Text('Hacer inspección pre-salida'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

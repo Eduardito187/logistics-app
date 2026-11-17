@@ -214,20 +214,29 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
           return Column(
             children: [
               if (cities.isNotEmpty)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      _cityChip('Todo el país', null, vehicles.length, city),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: DropdownButtonFormField<String?>(
+                    value: city,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Ciudad',
+                      isDense: true,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        child: Text('Todo el país · ${vehicles.length}'),
+                      ),
                       for (final name in cities)
-                        _cityChip(
-                          name,
-                          name,
-                          vehicles.where((v) => v.city == name).length,
-                          city,
+                        DropdownMenuItem(
+                          value: name,
+                          child: Text(
+                            '$name · '
+                            '${vehicles.where((v) => v.city == name).length}',
+                          ),
                         ),
                     ],
+                    onChanged: (value) => setState(() => _city = value),
                   ),
                 ),
               Expanded(
@@ -244,16 +253,6 @@ class _SupervisorFleetScreenState extends ConsumerState<SupervisorFleetScreen>
       ),
     );
   }
-
-  Widget _cityChip(String label, String? value, int count, String? selected) =>
-      Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text('$label · $count'),
-          selected: selected == value,
-          onSelected: (_) => setState(() => _city = value),
-        ),
-      );
 }
 
 /// Ciudades (sede del camión) presentes en la flota en vivo, ordenadas.

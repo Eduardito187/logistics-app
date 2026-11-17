@@ -128,6 +128,35 @@ class PagedSearchListState<T> extends State<PagedSearchList<T>> {
     }
   }
 
+  /// Vuelve a pedir las páginas YA cargadas sin spinner y sin mover la lista
+  /// (para avisos de tiempo real: el dato cambia en su lugar). Si algo falla
+  /// se conserva lo que se ve.
+  Future<void> refreshSilently() async {
+    if (_loading || _loadingMore) return;
+    final generation = _generation;
+    final pages = _page;
+    try {
+      final items = <T>[];
+      var hasMore = false;
+      var loaded = 0;
+      for (var page = 1; page <= pages; page++) {
+        final result = await widget.fetch(_query, page);
+        if (!mounted || generation != _generation) return;
+        items.addAll(result.items);
+        hasMore = result.hasMore;
+        loaded = page;
+        if (!hasMore) break;
+      }
+      setState(() {
+        _items = items;
+        _hasMore = hasMore;
+        _page = loaded;
+      });
+    } on Object {
+      // Se queda con lo visible.
+    }
+  }
+
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore) return;
     final generation = _generation;

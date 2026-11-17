@@ -20,6 +20,8 @@ class Session {
     this.abilities = const [],
     this.storeNode,
     this.userId,
+    this.city,
+    this.cityName,
     this.tokenExpiresAt,
     this.tokenIssuedAt,
   });
@@ -44,6 +46,17 @@ class Session {
   /// tiempo real. `null` en el dev-login o en una sesión guardada por una
   /// versión anterior (se completa con `/app/auth/me`).
   final int? userId;
+
+  /// Código del departamento/ciudad del usuario (`santa_cruz`, `la_paz`, …) tal
+  /// como lo devuelve `/app/auth/me` (`user.city`). `null` si el backend no le
+  /// asignó ciudad o en una sesión guardada por una versión anterior. El
+  /// preparador opera SOLO sobre pedidos de su ciudad; si el backend no scopea,
+  /// la app lo usa para no mostrarle pedidos de otra ciudad (ver worklist).
+  final String? city;
+
+  /// Nombre legible de la ciudad (`Santa Cruz`), para mostrar. `null` igual que
+  /// [city].
+  final String? cityName;
 
   /// Vencimiento del token (`expires_at` del login o del refresh). `null` si el
   /// backend no lo informó o si el login no lo pasó: en ese caso el refresh

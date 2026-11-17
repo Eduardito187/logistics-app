@@ -4,6 +4,8 @@ import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_status.dart';
 import '../../../../core/auth/session.dart';
 import '../../domain/usecases/list_orders_to_prepare.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
 import 'locally_assigned_orders.dart';
 
 /// Estado de la worklist del preparador con carga incremental.
@@ -51,27 +53,67 @@ class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
     // veía la lista (o el vacío) del anterior hasta refrescar a mano. Se
     // observa el usuario y el rol, no el token (que rota al renovarse).
     ref.watch(sessionProvider.select((s) => (s?.userName, s?.role)));
+    // Ciudad del preparador: con ella se descartan pedidos de OTRA ciudad que
+    // el backend no haya scopeado (cuenta sin ciudad asignada → fail-open).
+    final city = ref.watch(sessionProvider.select((s) => s?.city));
+    // EN TIEMPO REAL: un plan publicado, un pedido nuevo o lo que preparó
+    // otro preparador actualiza la lista sola.
+    ref.refreshOnRealtime(RealtimeTopic.picking, const {'picking.updated'});
     // Se ocultan los pedidos ya asignados en esta sesión (el backend aún los
     // devuelve como PLANNED; ver [LocallyAssignedOrders]). `watch`: al asignar
     // uno, la lista se recalcula sola y el pedido desaparece al instante.
     final assigned = ref.watch(locallyAssignedOrdersProvider);
     final batch = await ref.watch(listOrdersToPrepareProvider).call();
     return OrdersWorklistState(
-      orders: _withoutAssigned(batch.items, assigned),
+      orders: _scoped(batch.items, assigned, city),
       nextPages: batch.nextPages,
     );
   }
 
-  /// Quita de la tanda los pedidos ya asignados localmente (por `externalId`).
-  static List<Shipment> _withoutAssigned(
+  /// Deja la tanda lista para mostrar: sin los pedidos ya asignados en esta
+  /// sesión, sin los que YA preparó cualquiera (según el backend) y sin los que
+  /// claramente son de otra ciudad.
+  static List<Shipment> _scoped(
     List<Shipment> items,
     Set<String> assigned,
+    String? city,
   ) {
-    if (assigned.isEmpty) return items;
+    final myCity = _norm(city);
     return [
       for (final s in items)
-        if (!assigned.contains(s.externalId)) s,
+        if (!assigned.contains(s.externalId) &&
+            !_alreadyHandled(s) &&
+            _inMyCity(s, myCity))
+          s,
     ];
+  }
+
+  /// ¿El pedido ya salió de la bandeja del preparador porque YA se preparó/cargó/
+  /// entregó? Lo dice el backend en `progress` (`prepared_at` queda seteado al
+  /// asignar el vehículo, que en el flujo vigente ES preparar). Durable y entre
+  /// reinicios, a diferencia del "asignado local" de sesión. NO oculta un pedido
+  /// solo pre-asignado por un plan publicado (ese trae `vehicleId` pero
+  /// `preparedAt == null`): el preparador todavía debe prepararlo.
+  static bool _alreadyHandled(Shipment s) {
+    final p = s.progress;
+    if (p == null) return false;
+    return p.preparedAt != null || p.loadedAt != null || p.deliveredAt != null;
+  }
+
+  /// ¿El pedido es de la ciudad del preparador? Se descarta SOLO cuando se sabe
+  /// la ciudad del usuario Y el origen del pedido Y son distintas. Si cualquiera
+  /// es desconocido se muestra (no se oculta un pedido legítimo por falta de
+  /// dato): mismo criterio fail-open que el backend.
+  static bool _inMyCity(Shipment s, String? myCity) {
+    if (myCity == null) return true;
+    final origin = _norm(s.originDepartment);
+    if (origin == null) return true;
+    return origin == myCity;
+  }
+
+  static String? _norm(String? v) {
+    final t = v?.trim().toLowerCase();
+    return (t == null || t.isEmpty) ? null : t;
   }
 
   /// Trae la tanda siguiente y la agrega al final. No hace nada si ya no quedan
@@ -85,12 +127,17 @@ class OrdersWorklistNotifier extends AsyncNotifier<OrdersWorklistState> {
           .read(listOrdersToPrepareProvider)
           .call(pages: current.nextPages);
       final assigned = ref.read(locallyAssignedOrdersProvider);
+      final myCity = _norm(ref.read(sessionProvider)?.city);
       // Sin duplicados: las páginas pueden solaparse si el servidor reordena.
       final seen = {for (final s in current.orders) s.id};
       final merged = [
         ...current.orders,
         for (final s in batch.items)
-          if (!assigned.contains(s.externalId) && seen.add(s.id)) s,
+          if (!assigned.contains(s.externalId) &&
+              !_alreadyHandled(s) &&
+              _inMyCity(s, myCity) &&
+              seen.add(s.id))
+            s,
       ];
       state = AsyncData(
         OrdersWorklistState(orders: merged, nextPages: batch.nextPages),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/network/api_exception.dart';
 import 'package:logistics_app/core/widgets/paged.dart';
 import 'package:logistics_app/features/admin/data/admin_remote_data_source.dart';
 import 'package:logistics_app/features/admin/domain/entities/admin_vehicle.dart';
@@ -218,10 +219,22 @@ class FakeAdmin implements AdminRemoteDataSource {
     required String driverId,
     required String vehicleId,
     required DateTime date,
+    bool replace = false,
   }) async {
     _fail();
+    // El camión ya tiene otro chofer ese día: 409 hasta que se confirme.
+    if (vehicleTaken && !replace) {
+      throw const ApiException(status: 409, title: 'conflict');
+    }
     vehicleAssignments.add((driverId: driverId, vehicleId: vehicleId));
+    replaceFlags.add(replace);
   }
+
+  /// El camión elegido ya tiene otro chofer hoy.
+  bool vehicleTaken = false;
+
+  /// `replace` con que se confirmó cada asignación.
+  final List<bool> replaceFlags = [];
 
   @override
   Future<void> removeCrew(String crewId) async {
@@ -273,6 +286,102 @@ class FakeAdmin implements AdminRemoteDataSource {
   Future<void> unblockDay(DateTime date) async {
     _fail();
     unblocked.add(date);
+  }
+
+  final List<({String shipmentId, String reason})> closedTransfers = [];
+
+  @override
+  Future<void> closeTransfer(String shipmentId, String reason) async {
+    _fail();
+    closedTransfers.add((shipmentId: shipmentId, reason: reason));
+  }
+
+  /// Opciones del calendario (franjas, unidades, municipios).
+  DeliveryCalendarOptionsData calendarOptionsValue =
+      const DeliveryCalendarOptionsData(
+        municipalities: [
+          DeliveryCalendarMunicipality(
+            id: 'm1',
+            name: 'Santa Cruz',
+            label: 'Santa Cruz de la Sierra',
+          ),
+          DeliveryCalendarMunicipality(
+            id: 'm2',
+            name: 'Warnes',
+            label: 'Warnes',
+          ),
+        ],
+        timeSlots: ['08:00-12:00', '14:00-18:00'],
+        timeSlotFormat: 'HH:MM-HH:MM',
+        units: [
+          DeliveryCalendarUnitOption(
+            value: DeliveryCalendarUnitOptionValue.deliveries,
+            label: 'Entregas',
+          ),
+        ],
+        defaultWindows: [],
+        weekdays: [1, 2, 3, 4, 5, 6, 7],
+        serviceDays: [1, 2, 3, 4, 5, 6],
+      );
+
+  /// Franjas del día (`null` = el backend no ofrece el detalle por hora).
+  List<CalendarHourSlot>? daySlotsValue;
+  final List<
+    ({
+      DateTime date,
+      String timeSlot,
+      String unit,
+      num quantity,
+      List<String> municipalityIds,
+    })
+  >
+  openedHours = [];
+  final List<({DateTime date, String timeSlot, String reason})> blockedHours =
+      [];
+  final List<({DateTime date, String timeSlot})> unblockedHours = [];
+
+  @override
+  Future<DeliveryCalendarOptionsData> calendarOptions() async {
+    _fail();
+    return calendarOptionsValue;
+  }
+
+  @override
+  Future<void> openHourSlot({
+    required DateTime date,
+    required String timeSlot,
+    required String unit,
+    required num quantity,
+    required List<String> municipalityIds,
+  }) async {
+    _fail();
+    openedHours.add((
+      date: date,
+      timeSlot: timeSlot,
+      unit: unit,
+      quantity: quantity,
+      municipalityIds: municipalityIds,
+    ));
+  }
+
+  @override
+  Future<List<CalendarHourSlot>?> daySlots(DateTime date) async =>
+      daySlotsValue;
+
+  @override
+  Future<void> blockHourSlot(
+    DateTime date,
+    String timeSlot,
+    String reason,
+  ) async {
+    _fail();
+    blockedHours.add((date: date, timeSlot: timeSlot, reason: reason));
+  }
+
+  @override
+  Future<void> unblockHourSlot(DateTime date, String timeSlot) async {
+    _fail();
+    unblockedHours.add((date: date, timeSlot: timeSlot));
   }
 
   @override

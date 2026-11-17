@@ -10,6 +10,7 @@ import '../../../../core/icons/icons.dart';
 import '../../../../core/live_updates/live_updates_promotion.dart';
 import '../../../../core/live_updates/live_updates_service.dart';
 import '../../../../core/live_updates/route_island.dart';
+import '../../../../core/widgets/section_card.dart';
 
 /// Fila "Isla de ruta" de Ajustes (solo rol chofer).
 ///
@@ -58,12 +59,10 @@ class _RouteIslandSettingsTileState
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
-        return const ListTile(
+        return const SectionCard(
           key: Key('routeIslandTile'),
-          contentPadding: EdgeInsets.zero,
-          leading: AnimatedAppIcon(AppIcon.deliver, excludeFromSemantics: true),
-          title: Text('Isla de ruta'),
-          subtitle: Text(
+          title: 'Isla de ruta',
+          child: Text(
             'En iPhone 14 Pro o posterior la ruta aparece en la Dynamic '
             'Island; en otros iPhone (iOS 16.1+) en la pantalla de bloqueo.',
           ),
@@ -92,26 +91,34 @@ class _RouteIslandSettingsTileState
     // tiene la isla del sistema, la otra opción es quedarse sin isla.
     final canPickOverlay = availability.overlayAvailable;
 
-    return Column(
+    return SectionCard(
       key: const Key('routeIslandTile'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: AnimatedAppIcon(
-            AppIcon.deliver,
-            state: mode == RouteIslandMode.none
-                ? AppIconState.idle
-                : AppIconState.active,
-            excludeFromSemantics: true,
+      title: 'Isla de ruta',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Estado, dentro del contenedor (como las demás secciones de Ajustes).
+          Row(
+            children: [
+              AnimatedAppIcon(
+                AppIcon.deliver,
+                state: mode == RouteIslandMode.none
+                    ? AppIconState.idle
+                    : AppIconState.active,
+                excludeFromSemantics: true,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _statusText(mode),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
           ),
-          title: const Text('Isla de ruta'),
-          subtitle: Text(_statusText(mode)),
-        ),
-        if (canPickOverlay)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: SegmentedButton<RouteIslandPreference>(
+          if (canPickOverlay) ...[
+            const SizedBox(height: 12),
+            SegmentedButton<RouteIslandPreference>(
               key: const Key('routeIslandSelector'),
               segments: [
                 ButtonSegment(
@@ -137,11 +144,10 @@ class _RouteIslandSettingsTileState
                     .set(selection.first),
               ),
             ),
-          ),
-        if (systemFixable)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: OutlinedButton(
+          ],
+          if (systemFixable) ...[
+            const SizedBox(height: 10),
+            OutlinedButton(
               key: const Key('routeIslandEnableSystem'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
@@ -149,11 +155,10 @@ class _RouteIslandSettingsTileState
               onPressed: () => unawaited(service.openPromotionSettings()),
               child: const Text('Activar en el sistema'),
             ),
-          ),
-        if (!availability.overlayGranted)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: OutlinedButton(
+          ],
+          if (!availability.overlayGranted) ...[
+            const SizedBox(height: 10),
+            OutlinedButton(
               key: const Key('routeIslandAllowOverlay'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
@@ -161,8 +166,9 @@ class _RouteIslandSettingsTileState
               onPressed: () => unawaited(service.openOverlaySettings()),
               child: const Text('Permitir isla de DisTrack'),
             ),
-          ),
-      ],
+          ],
+        ],
+      ),
     );
   }
 

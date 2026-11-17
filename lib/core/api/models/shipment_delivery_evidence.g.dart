@@ -12,6 +12,8 @@ ShipmentDeliveryEvidence _$ShipmentDeliveryEvidenceFromJson(
   signature: json['signature'] as bool,
   photo: json['photo'] as bool,
   document: json['document'] as bool,
+  withShortage: json['with_shortage'] as bool,
+  missingCount: (json['missing_count'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$ShipmentDeliveryEvidenceToJson(
@@ -20,4 +22,6 @@ Map<String, dynamic> _$ShipmentDeliveryEvidenceToJson(
   'signature': instance.signature,
   'photo': instance.photo,
   'document': instance.document,
+  'with_shortage': instance.withShortage,
+  'missing_count': instance.missingCount,
 };

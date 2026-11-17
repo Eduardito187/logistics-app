@@ -82,3 +82,19 @@ Mismo alcance que `GET /app/telemetry/fleet/live`.
 
 Una sola conexión (`lib/core/realtime/`): siempre escucha `user`; `fleet` y `planning` solo mientras su
 pantalla está a la vista. En segundo plano se desconecta (lo urgente llega por push).
+
+## Segunda tanda: cinco temas más (pedido el 2026-11-15, aceptado por el backend, pendiente de emitir)
+
+Todos son señales: la app vuelve a pedir el endpoint de siempre (debounce 400 ms) y filtra por los ids del
+payload. Un campo ausente o `null` se trata como cambio general.
+
+| Tema | Evento y payload | Qué refresca en la app |
+| --- | --- | --- |
+| `picking` | `picking.updated` {shipment_id, plan_id, vehicle_id, order_reference (pedido)} | Pedidos por preparar; etiquetas y productos del pedido abierto |
+| `store` | `store.updated` {node_id, shipment_id} | Bandeja de la tienda (recojo/recepción) y recepción de un envío |
+| `tracking` | `tracking.updated` {shipment_id, order_reference, status, event} | "Consultar pedido" y Envíos del admin |
+| `operations` | `alerts.updated` {alert_id}, `dashboard.updated` {plan_date} | Alertas de telemetría y tablero del día |
+| `loading` | `loading.updated` {vehicle_id, shipment_id} | Hoja de carga del camión del chofer |
+
+Canales por dimensión de alcance (`<tema>.all`, `.city.<dep>`, `.node.<id>`, `.driver.<id>`, `.vehicle.<id>`),
+siempre tomados de `channels`. `tracking` viene para todos los roles con el alcance de su consulta de pedidos.

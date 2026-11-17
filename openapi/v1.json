@@ -2611,7 +2611,7 @@
         },
         "responses": {
           "201": {
-            "description": "Crew assembled",
+            "description": "Crew assembled (outcome created)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2621,6 +2621,31 @@
                       "$ref": "#/components/schemas/FleetAssembleCrewData"
                     }
                   }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Crew replaced or unchanged (un chofer = un camión por día; reasignar reemplaza)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FleetAssembleCrewData"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El camión ya pertenece a otro chofer ese día; reintentar con replace:true para reemplazar",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -2707,6 +2732,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AcceptedEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El camión ya pertenece a otro chofer ese día; reintentar con replace:true",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -3697,6 +3732,16 @@
           },
           "422": {
             "$ref": "#/components/responses/FleetValidationError"
+          },
+          "403": {
+            "description": "Insufficient role: changing vehicle status is office-only (supervisor/admin).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6092,7 +6137,7 @@
           "notifications"
         ],
         "summary": "List a shipment's notifications (internal app)",
-        "description": "Returns the notification log of a shipment, newest first. App gate (operations/support visibility). The shipment id is passed as a query parameter.\n",
+        "description": "Returns the notification log of a shipment, newest first. App gate (operations/support visibility). The shipment id is passed as a query parameter.\nAlcance por rol: solo se ven las notificaciones de envíos que el usuario puede ver (misma regla que los pedidos: admin/supervisor sin restricción; preparador/planificador por ciudad de origen o destino; tienda por su nodo; chofer/transportista por asignación). Los totales y el no-leído cuentan solo lo visible; una notificación fuera de alcance responde 404 y un envío fuera de alcance devuelve lista vacía.\n",
         "operationId": "appListShipmentNotifications",
         "parameters": [
           {
@@ -6133,7 +6178,7 @@
           "notifications"
         ],
         "summary": "List the global notification log (internal app)",
-        "description": "Returns the latest notifications across the whole operation, newest first. App gate.\n",
+        "description": "Returns the latest notifications across the whole operation, newest first. App gate.\nAlcance por rol: solo se ven las notificaciones de envíos que el usuario puede ver (misma regla que los pedidos: admin/supervisor sin restricción; preparador/planificador por ciudad de origen o destino; tienda por su nodo; chofer/transportista por asignación). Los totales y el no-leído cuentan solo lo visible; una notificación fuera de alcance responde 404 y un envío fuera de alcance devuelve lista vacía.\n",
         "operationId": "appListNotifications",
         "parameters": [
           {
@@ -7308,6 +7353,49 @@
           },
           "404": {
             "$ref": "#/components/responses/PlanningNotFound"
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "planning"
+        ],
+        "operationId": "deletePlan",
+        "summary": "Delete an unpublished plan with all its stops",
+        "description": "Borra un plan SIN publicar (borrador o propuesta) y sus paradas; sus pedidos quedan libres para armar otro viaje. Emite `plans.updated` con `deleted: true`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlanId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Plan deleted (no body)"
+          },
+          "404": {
+            "description": "Plan not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The plan is already published and is read-only",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8656,6 +8744,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8715,6 +8813,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8767,6 +8875,16 @@
           },
           "422": {
             "description": "No route for the vehicle/day, or closing odometer below the starting one",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8885,6 +9003,16 @@
           },
           "422": {
             "$ref": "#/components/responses/BusinessRuleError"
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12802,6 +12930,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12911,6 +13049,16 @@
           },
           "422": {
             "$ref": "#/components/responses/ExecutionValidationError"
+          },
+          "403": {
+            "description": "Not office and not a crew member of this vehicle for the relevant day (out_of_scope_assignment).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -13064,6 +13212,7 @@
           "telemetry"
         ],
         "summary": "Live positions of the whole fleet",
+        "description": "Alcance según el usuario: admin y supervisor ven todas las ciudades; planificador con ciudad, solo los camiones cuya sede (nodo base) es de su departamento; planificador sin ciudad, todas (o lista vacía en modo estricto); otros roles, lista vacía. Los vehículos dados de baja en flota no se devuelven. El ETag depende también del alcance. Tiempo real: `fleet.position` (FleetPositionEvent) y `fleet.removed` (FleetRemovedEvent) por los canales del tema fleet.",
         "operationId": "getLiveFleetPositions",
         "parameters": [
           {
@@ -19864,6 +20013,215 @@
         ]
       }
     },
+    "/app/delivery-calendar/day": {
+      "get": {
+        "tags": [
+          "capacity"
+        ],
+        "operationId": "appGetDeliveryCalendarDay",
+        "summary": "Delivery calendar for a single day (time slots)",
+        "description": "Admin/supervisor/planificador. Bloqueo de día + sus franjas horarias con cupo, consumo, unidad y bloqueo por franja. Sin municipality_id es el consolidado GLOBAL (suma por time_slot+unit de todos los municipios).",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "municipality_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The day with its slots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DeliveryCalendarDay"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error (unknown municipality)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      }
+    },
+    "/app/delivery-calendar/blocked-slots": {
+      "post": {
+        "tags": [
+          "capacity"
+        ],
+        "operationId": "appBlockDeliverySlot",
+        "summary": "Block a single delivery time slot (not the whole day)",
+        "description": "Admin/supervisor/planificador. Bloquea SOLO esa franja; no se ofrece al cliente ni admite reprogramación. Idempotente. Ruta separada de /blocked (día entero) a propósito.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "time_slot",
+                  "reason"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "time_slot": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "08:00-12:00"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "municipality_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "null = bloqueo global de la franja (todas las tiendas)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Slot block accepted (idempotent)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AppBlockDeliverySlotData"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid time_slot or unknown municipality",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "capacity"
+        ],
+        "operationId": "appUnblockDeliverySlot",
+        "summary": "Remove a delivery time-slot block (idempotent)",
+        "description": "Admin/supervisor/planificador. Quita el bloqueo de esa franja; 204 aunque no existiera.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "time_slot"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "time_slot": {
+                    "type": "string"
+                  },
+                  "municipality_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Removed (idempotent)"
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      }
+    },
     "/app/delivery-calendar/blocked": {
       "post": {
         "tags": [
@@ -20206,6 +20564,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "appBearer": []
+          }
+        ]
+      }
+    },
+    "/app/broadcasting/config": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "operationId": "getBroadcastConfig",
+        "summary": "Real-time connection settings of this environment (Pusher protocol)",
+        "description": "El servidor de sockets se publica por el MISMO host y puerto que la API: la app conecta a `ws(s)://<host de la API>/app/<key>` (wss cuando la API es https) y firma los canales privados en `POST /app/broadcasting/auth`. Con `enabled: false` el entorno no tiene tiempo real y la app sigue con su refresco normal.",
+        "responses": {
+          "200": {
+            "description": "Connection settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastConfig"
                 }
               }
             }
@@ -21338,6 +21723,15 @@
             "type": "string",
             "example": "ok"
           },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "created",
+              "replaced",
+              "unchanged"
+            ],
+            "description": "created = tripulación nueva; replaced = reemplazó a la anterior (camión cambiado); unchanged = ya estaba igual (idempotente)."
+          },
           "driver_id": {
             "type": "string",
             "format": "uuid"
@@ -21349,6 +21743,41 @@
           "assembled_for": {
             "type": "string",
             "format": "date"
+          },
+          "crew_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "previous_vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Placa del camión que tenía antes, cuando outcome = replaced."
+          },
+          "helpers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
           }
         }
       },
@@ -21827,6 +22256,14 @@
                 "available": {
                   "type": "boolean",
                   "description": "No bloqueado y dentro del horizonte activo"
+                },
+                "capacity_total": {
+                  "type": "number",
+                  "description": "Cupo total de entregas del día (consolidado o por municipio)."
+                },
+                "capacity_used": {
+                  "type": "number",
+                  "description": "Cupo de entregas ya usado ese día."
                 }
               }
             }
@@ -22357,6 +22794,49 @@
           }
         ]
       },
+      "BroadcastConfig": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "key",
+          "cluster",
+          "path"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "false = entorno sin tiempo real"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Clave PÚBLICA de la app de sockets; null si enabled es false."
+          },
+          "cluster": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Ruta base del WebSocket en el host de la API, p. ej. /app"
+          },
+          "channels": {
+            "type": "object",
+            "x-events": "user: InboxUpdatedEvent, NotificationsUpdatedEvent · fleet: FleetPositionEvent, FleetRemovedEvent · planning: PlanningRunUpdatedEvent, PlansUpdatedEvent · tracking: TrackingUpdatedEvent (además, por pedido, canal private-order.{shipment_id}) · picking: PickingUpdatedEvent · store: StoreUpdatedEvent · operations: DashboardUpdatedEvent, AlertsUpdatedEvent · loading: LoadingUpdatedEvent · route.updated (canal private-user.{id}): {route_id, vehicle_id, off_route?, rerouted?, stops?:[{shipment_id, eta_at}]}",
+            "description": "Tema → canales (con prefijo private-) que ESTE usuario puede escuchar. Temas: user (canal personal: inbox.updated, notifications.updated), fleet (fleet.position), planning (planning.run.updated, plans.updated). Tema ausente = sin tiempo real para esa pantalla. Son exactamente los canales que firma POST /app/broadcasting/auth para esa persona; la app no arma nombres.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "BroadcastAuthRequest": {
         "type": "object",
         "required": [
@@ -22387,6 +22867,238 @@
           "channel_data": {
             "type": "string",
             "description": "Solo en canales de presencia"
+          }
+        }
+      },
+      "NotificationsUpdatedEvent": {
+        "type": "object",
+        "description": "Carga del evento `notifications.updated` en el canal `private-user.{id}`. Solo es la señal para volver a pedir GET /app/notifications y /app/notifications/all (el no-leído sale de meta.unread_count); el contenido nunca viaja por el socket. Llega unos 3 s después del cambio.",
+        "required": [
+          "scope"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "feed",
+              "user"
+            ],
+            "description": "feed = cambió el log (nueva, enviada, escalada, suprimida); user = cambió el estado de lectura del propio usuario (leída / leer todas)."
+          }
+        }
+      },
+      "FleetPositionEvent": {
+        "description": "Carga del evento `fleet.position` (tema fleet: canales `private-fleet.all` / `private-fleet.city.<ciudad>`). Es un objeto idéntico a un elemento de `data` de GET /app/telemetry/fleet/live: se aplica sobre la lista por `vehicle_id`. Como mucho uno por vehículo cada 5 s.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VehicleLive"
+          }
+        ]
+      },
+      "FleetRemovedEvent": {
+        "type": "object",
+        "description": "Carga del evento `fleet.removed` (tema fleet): el vehículo se dio de baja en flota; quitarlo de la lista por id.",
+        "required": [
+          "vehicle_id"
+        ],
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "TrackingUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `tracking.updated`: el seguimiento de un pedido cambió (estado visible —incluidos cancelado, reprogramado y devuelto—, avance por producto o la ruta que lo transporta). Es una señal para volver a pedir el estado. Viaja por `private-order.{shipment_id}` y por el tema `tracking` (`private-tracking.all` / `private-tracking.city.<departamento>`).",
+        "required": [
+          "shipment_id",
+          "status",
+          "event"
+        ],
+        "properties": {
+          "shipment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Referencia del pedido (agrupa hermanos de multishipping); null si no hay una utilizable."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado visible vigente al emitir la señal.",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "IN_PROGRESS",
+              "LOADED",
+              "ON_THE_WAY",
+              "DELIVERED",
+              "FAILED",
+              "CANCELLED",
+              "RESCHEDULED",
+              "RETURNED"
+            ]
+          },
+          "event": {
+            "type": "string",
+            "description": "Hecho de origen: tracking.status_changed, tracking.shipment_placed_on_route o tracking.unit_status_changed."
+          }
+        }
+      },
+      "PickingUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `picking.updated` (tema picking): cambió la lista de preparación de una ciudad (plan publicado/modificado, pedido nuevo o que salió de la lista, camión asignado, escaneo de preparación, etiquetas emitidas/reimpresas). Señal para volver a pedir la lista. Canales `private-picking.all` / `private-picking.city.<departamento>`. shipment_id null = cambió la lista en general.",
+        "properties": {
+          "shipment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "order_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Referencia del pedido (null si no hay una utilizable)."
+          },
+          "plan_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "vehicle_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "StoreUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `store.updated` (tema store): cambió lo que ve una tienda (el chofer dejó el pedido, recepción de unidades en el nodo, entrega en mostrador, pedido cancelado/reprogramado del nodo). Canales `private-store.all` / `private-store.node.<uuid>`.",
+        "required": [
+          "node_id"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Pista del envío; null = cambio general del nodo."
+          }
+        }
+      },
+      "LoadingUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `loading.updated` (tema loading): cambió la carga del camión o su lista de entregas (escaneo de carga, asignar/desenganchar un envío, armar/editar la ruta). Canales `private-loading.all` / `private-loading.city.<departamento>` / `private-loading.driver.<uuid>`. shipment_id null = la lista del vehículo cambió en general.",
+        "required": [
+          "vehicle_id"
+        ],
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shipment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AlertsUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `alerts.updated` (tema operations): se levantó o reconoció una alerta de flota/telemetría. Señal para volver a pedir las alertas activas. Canales `private-operations.all` / `private-operations.city.<departamento>`.",
+        "properties": {
+          "alert_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "DashboardUpdatedEvent": {
+        "type": "object",
+        "description": "Señal `dashboard.updated` (tema operations): cambió una métrica del tablero del día (entrega registrada/fallida, ruta iniciada/cerrada, avance de carga). Señal para recalcular el tablero. Canales `private-operations.all` (+ `private-operations.city.<departamento>` si se resuelve la ciudad).",
+        "required": [
+          "plan_date"
+        ],
+        "properties": {
+          "plan_date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PlanningRunUpdatedEvent": {
+        "type": "object",
+        "description": "Carga del evento `planning.run.updated` (tema planning): cada cambio de estado de la corrida automática (queued, processing, completed, failed).",
+        "required": [
+          "plan_date",
+          "strategy",
+          "status",
+          "run"
+        ],
+        "properties": {
+          "plan_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "run": {
+            "$ref": "#/components/schemas/AutoPlanRun"
+          }
+        }
+      },
+      "PlansUpdatedEvent": {
+        "type": "object",
+        "description": "Carga del evento `plans.updated` (tema planning): se creó, editó (paradas u orden), publicó o borró un plan de ese día. Solo es la señal para volver a pedir la lista o el detalle.",
+        "required": [
+          "plan_date",
+          "plan_id",
+          "deleted"
+        ],
+        "properties": {
+          "plan_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "true cuando ese plan_id se borró (sacarlo de la lista y cerrar su detalle, sin volver a pedirlo); false en cualquier otro cambio."
+          },
+          "plan_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null cuando cambiaron varios planes del día a la vez (mover un pedido entre camiones, corrida automática)."
           }
         }
       },
@@ -23383,10 +24095,45 @@
           }
         }
       },
+      "LatLngPoint": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lng": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "VehicleEta": {
         "type": "object",
         "description": "Dynamic ETA from the latest position. No live traffic source exists (traffic_aware is always false).",
         "properties": {
+          "off_route": {
+            "type": "boolean"
+          },
+          "off_route_since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reroute_geometry": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "Polilínea (posición actual → próxima parada pendiente) para redibujar la ruta cuando el vehículo está fuera de ruta. null salvo off_route=true.",
+            "items": {
+              "$ref": "#/components/schemas/LatLngPoint"
+            }
+          },
           "shipment_id": {
             "type": "string",
             "description": "Only in the per-shipment endpoint"
@@ -26908,6 +27655,26 @@
           "stops"
         ],
         "properties": {
+          "off_route": {
+            "type": "boolean",
+            "description": "Verdad del backend (motor único de ETA) sobre si el camión está fuera de su ruta planificada por desvío sostenido. Reemplaza el cálculo local de la app para el cartel \"Fuera de ruta\"."
+          },
+          "off_route_since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Desde cuándo se sostiene el desvío (ISO 8601), o null."
+          },
+          "reroute_geometry": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "Polilínea (posición actual → próxima parada pendiente) para redibujar la ruta cuando el vehículo está fuera de ruta. null salvo off_route=true.",
+            "items": {
+              "$ref": "#/components/schemas/LatLngPoint"
+            }
+          },
           "started_at": {
             "type": "string",
             "format": "date-time",
@@ -27326,6 +28093,83 @@
           }
         }
       },
+      "DeliveryCalendarDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "blocked",
+          "reason",
+          "slots"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "Bloqueo de día entero (feriado u otro motivo)."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryCalendarSlot"
+            }
+          }
+        }
+      },
+      "DeliveryCalendarSlot": {
+        "type": "object",
+        "required": [
+          "time_slot",
+          "capacity",
+          "used",
+          "unit",
+          "blocked",
+          "reason"
+        ],
+        "properties": {
+          "time_slot": {
+            "type": "string",
+            "example": "08:00-12:00"
+          },
+          "capacity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Cupo definido; null si no hay bucket para la franja."
+          },
+          "used": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "deliveries",
+              "weight",
+              "volume",
+              "appointments"
+            ]
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "true si la franja está bloqueada o lo está el día entero."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "AssembleCrewRequest": {
         "type": "object",
         "required": [
@@ -27340,6 +28184,7 @@
           },
           "helper_ids": {
             "type": "array",
+            "description": "Ausente = conserva los ayudantes de la tripulación anterior; una lista (aun vacía) los reemplaza.",
             "items": {
               "type": "string",
               "format": "uuid"
@@ -27352,6 +28197,24 @@
           "assembled_for": {
             "type": "string",
             "format": "date"
+          },
+          "shift_starts_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "shift_ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "replace": {
+            "type": "boolean",
+            "description": "Confirma quitarle el camión al chofer que ya lo tiene ese día (ante un 409)."
           }
         }
       },
@@ -33520,7 +34383,8 @@
         "required": [
           "signature",
           "photo",
-          "document"
+          "document",
+          "with_shortage"
         ],
         "properties": {
           "signature": {
@@ -33534,6 +34398,17 @@
           "document": {
             "type": "boolean",
             "description": "Hay una foto del documento de identidad del cliente (evidencia de tipo id_document)."
+          },
+          "with_shortage": {
+            "type": "boolean",
+            "description": "El envío entregado se cerró con faltante (traspaso conciliado con diferencias o cerrado a mano por oficina). false en entregas normales."
+          },
+          "missing_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Cuántos productos faltaron (para el tag «Entregado con faltante (N)»). null si no hubo faltante o no se conoce la cantidad; el detalle se ve por el reporte de discrepancias."
           }
         }
       },
@@ -34094,6 +34969,34 @@
             "type": "string",
             "format": "date-time",
             "description": "Instante del reporte en ISO 8601"
+          },
+          "speed_mps": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 0,
+            "description": "Velocidad instantánea en m/s. Opcional; si falta, el backend la deriva de dos posiciones seguidas."
+          },
+          "heading_deg": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 0,
+            "maximum": 360,
+            "description": "Rumbo en grados desde el norte (0..360). Opcional; si falta, se deriva del desplazamiento."
+          },
+          "accuracy_m": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 0,
+            "description": "Precisión horizontal del GPS en metros. Opcional."
           }
         }
       },
@@ -36663,6 +37566,32 @@
           "c2c"
         ],
         "default": "retail"
+      },
+      "AppBlockDeliverySlotData": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "accepted"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "time_slot": {
+            "type": "string"
+          },
+          "municipality_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "blocked": {
+            "type": "boolean"
+          }
+        }
       },
       "PositionAcceptedData": {
         "type": "object",

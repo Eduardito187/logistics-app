@@ -41,6 +41,8 @@ abstract class TelemetryClient {
 
   /// Live positions of the whole fleet.
   ///
+  /// Alcance según el usuario: admin y supervisor ven todas las ciudades; planificador con ciudad, solo los camiones cuya sede (nodo base) es de su departamento; planificador sin ciudad, todas (o lista vacía en modo estricto); otros roles, lista vacía. Los vehículos dados de baja en flota no se devuelven. El ETag depende también del alcance. Tiempo real: `fleet.position` (FleetPositionEvent) y `fleet.removed` (FleetRemovedEvent) por los canales del tema fleet.
+  ///
   /// [since] - Only vehicles whose position changed at/after this server time (pass meta.server_time of the previous call).
   @GET('/app/telemetry/fleet/live')
   Future<GetAppTelemetryFleetLiveResponse> getLiveFleetPositions({

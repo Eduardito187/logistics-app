@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/auth/session.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/performance/cache_for.dart';
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
+import '../../data/last_vehicle_store.dart';
 import '../../domain/usecases/get_delivery_state.dart';
 import '../../domain/usecases/get_shipment_detail.dart';
 import '../../domain/usecases/get_shipment_units.dart';
@@ -28,17 +34,48 @@ final selectedDateProvider = NotifierProvider<SelectedDateNotifier, DateTime>(
   SelectedDateNotifier.new,
 );
 
-/// Asignación del chofer autenticado para la fecha activa: vehículo +
-/// tripulación. El chofer NO elige; se le asigna. 404/sin asignación llega como
-/// error del `AsyncValue` (lo maneja `DriverVehicleGate`).
+/// Asignación VIGENTE del chofer autenticado: vehículo + tripulación. El chofer
+/// NO elige; se le asigna. 404/sin asignación llega como error del `AsyncValue`
+/// (lo maneja `DriverVehicleGate`).
+///
+/// Se pide SIN fecha a propósito (no "hoy"): así el backend devuelve la
+/// cuadrilla de la ruta EN CURSO aunque sea de otro día. Antes se pedía por
+/// `hoy` y a la medianoche —o en una entrega larga/de otra ciudad/multi-día— el
+/// chofer quedaba "sin pedidos asignados" con la entrega todavía abierta. La
+/// asignación la rige el ESTADO de la ruta, no el calendario.
 ///
 /// NO es `autoDispose` a propósito: es un objeto chico que usan todas las
 /// pantallas del chofer (gate, ruta, carga, GPS) y el rastreo automático;
 /// liberarlo al cambiar de pantalla obligaría a pedirlo de nuevo a la red en
 /// cada navegación (y sin señal dejaría al chofer bloqueado en el gate).
-final myCrewProvider = FutureProvider<MyCrew>(
-  (ref) => ref.watch(getMyCrewProvider).call(ref.watch(selectedDateProvider)),
-);
+final myCrewProvider = FutureProvider<MyCrew>((ref) async {
+  // EN TIEMPO REAL: al publicar un plan, el backend arma la tripulación del
+  // camión (auto-crew) y dispara `route.updated` en el canal del usuario. Sin
+  // esto, la tripulación recién creada NO se recargaba: `assignedVehicleId`
+  // seguía en null y el chofer quedaba en "sin vehículo asignado" hasta reabrir
+  // la app, aunque la ruta ya existiera. Al recargarla, el gate entra solo.
+  ref.refreshOnRealtime(RealtimeTopic.user, const {'route.updated'});
+  // Sin fecha = asignación vigente (midnight-safe).
+  final crew = await ref.watch(getMyCrewProvider).call();
+  // Red de seguridad: se recuerda el camión asignado para poder recuperar la
+  // RUTA ABIERTA si más adelante `my-crew` no devuelve asignación (entrega que
+  // cruzó la medianoche o lleva días abierta por un envío largo, un bloqueo o un
+  // problema de ruta). Fire-and-forget: no debe demorar ni romper la carga.
+  final user = ref.read(sessionProvider)?.userName;
+  if (user != null) {
+    unawaited(ref.read(lastVehicleStoreProvider).write(user, crew.vehicle.id));
+  }
+  return crew;
+});
+
+/// Último camión conocido del chofer (persistido por usuario). Respaldo para
+/// recuperar la ruta abierta cuando `my-crew` no trae asignación. `null` si
+/// nunca se guardó uno en este dispositivo.
+final lastKnownVehicleIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(sessionProvider.select((s) => s?.userName));
+  if (user == null) return null;
+  return ref.watch(lastVehicleStoreProvider).read(user);
+});
 
 /// Id del vehículo ASIGNADO al chofer (derivado de la tripulación del día).
 /// `null` mientras carga o cuando no hay asignación. Varias pantallas (ruta,
@@ -50,9 +87,18 @@ final myCrewProvider = FutureProvider<MyCrew>(
 /// `.value` (no `.asData?.value`): durante una recarga o si la recarga falla
 /// sin señal conserva el vehículo anterior; con `asData` el id pasaba a `null`
 /// un instante y la ruta, la carga y el rastreo se caían en cada refresco.
-final assignedVehicleIdProvider = Provider<String?>(
-  (ref) => ref.watch(myCrewProvider.select((crew) => crew.value?.vehicle.id)),
-);
+final assignedVehicleIdProvider = Provider<String?>((ref) {
+  final fromCrew = ref.watch(
+    myCrewProvider.select((crew) => crew.value?.vehicle.id),
+  );
+  if (fromCrew != null) return fromCrew;
+  // Respaldo (red de seguridad): el último camión conocido. Con él,
+  // `driverRouteProvider` pide la RUTA ABIERTA (de cualquier día), así la
+  // operación del chofer NO se cae aunque `my-crew` no devuelva asignación hoy
+  // (entrega que cruzó la medianoche o lleva días abierta). Si no hay ruta
+  // abierta real, el endpoint devuelve vacío y el gate recién ahí bloquea.
+  return ref.watch(lastKnownVehicleIdProvider).value;
+});
 
 /// Choferes activos (para firmar el checklist pre-salida). `autoDispose`: solo
 /// lo usa el checklist; al salir se libera la lista.
@@ -68,18 +114,36 @@ final driversProvider = FutureProvider.autoDispose<List<Driver>>((ref) {
 /// la ruta al instante sin spinner ni request. Al invalidarla (volver de un
 /// POD, "Siguiente entrega") el dato anterior sigue visible mientras se
 /// refresca.
+///
+/// EN TIEMPO REAL: el backend avisa por el canal del usuario (`route.updated`)
+/// cuando cambia la hoja de ruta —una entrega registrada desde otro teléfono,
+/// una parada sumada, quitada o reordenada, la ruta iniciada o cerrada— y la
+/// ruta se vuelve a pedir sola, sin consultar por tiempo.
 final driverRouteProvider = FutureProvider.autoDispose<DriverRoute>((
   ref,
 ) async {
   ref.cacheFor(CacheTtl.short);
   final vehicleId = ref.watch(assignedVehicleIdProvider);
-  final date = ref.watch(selectedDateProvider);
+  ref.onDispose(
+    ref.read(realtimeBusProvider).listen(RealtimeTopic.user, (event) {
+      if (event.name != 'route.updated') return;
+      // De otro camión (el chofer cambió de vehículo): no es esta ruta.
+      final changed = event.data['vehicle_id'];
+      if (changed is String && vehicleId != null && changed != vehicleId) {
+        return;
+      }
+      ref.invalidateSelf();
+    }),
+  );
   if (vehicleId == null) {
     throw const ApiException(status: 0, title: 'Sin vehículo asignado');
   }
+  // Sin fecha = ruta ABIERTA del camión (de cualquier día) → si la entrega
+  // sigue en curso tras la medianoche, no se pierde. La asignación ya la dio
+  // `myCrewProvider` (vigente), que puede ser de otro día.
   final route = await ref
       .watch(getDriverRouteProvider)
-      .call(vehicleId: vehicleId, date: date);
+      .call(vehicleId: vehicleId);
   // Lo que el backend ya devuelve resuelto deja de contarse como resuelto
   // localmente (fuera del build: después del await).
   ref.read(locallySettledStopsProvider.notifier).reconcile(route);
@@ -92,6 +156,13 @@ final vehicleDeliveriesProvider = FutureProvider.autoDispose<List<Delivery>>((
 ) {
   ref.cacheFor(CacheTtl.short);
   final vehicleId = ref.watch(assignedVehicleIdProvider);
+  // EN TIEMPO REAL: cada producto que se carga al camión (o un pedido que se
+  // le suma o se le quita) actualiza la hoja de carga del chofer que espera.
+  ref.refreshOnRealtime(
+    RealtimeTopic.loading,
+    const {'loading.updated'},
+    when: (data) => realtimeMatches(data, 'vehicle_id', vehicleId),
+  );
   if (vehicleId == null) {
     throw const ApiException(status: 0, title: 'Sin vehículo asignado');
   }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../push/local_alerts.dart';
 import '../realtime/realtime_hub.dart';
+import '../../features/notifications/presentation/controllers/inbox_alerts.dart';
 import '../../features/carrier/presentation/carrier_pickup_screen.dart';
+import '../../features/crew/presentation/crew_shipments_screen.dart';
 import '../../features/driver/presentation/active_delivery_screen.dart';
 import '../../features/home/presentation/all_tasks_screen.dart';
 import '../../features/home/presentation/role_home_screen.dart';
@@ -32,6 +35,9 @@ Widget _centerScreenFor(UserRole role) {
       return const CounterPickupScreen();
     case UserRole.carrier:
       return const CarrierPickupScreen();
+    case UserRole.crewMember:
+      // Tripulante: su acción principal es ver los envíos del camión (lectura).
+      return const CrewShipmentsScreen();
     case UserRole.planner:
       return const SupervisorPlansScreen();
     case UserRole.supervisor || UserRole.admin:
@@ -61,6 +67,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Conexión de tiempo real mientras el usuario está adentro (si el entorno
     // tiene sockets; si no, no hace nada).
     ref.watch(realtimeHubProvider);
+    // Un aviso que llega por tiempo real suena y aparece en la barra del
+    // teléfono; al tocarlo se abre la pestaña de avisos.
+    ref.watch(inboxAlertsProvider);
+    ref.read(localAlertsProvider).onTap = () {
+      if (mounted) ref.read(homeTabProvider.notifier).set(3);
+    };
     if (session == null) {
       return const SizedBox.shrink();
     }

@@ -6,6 +6,9 @@ import '../../../core/icons/icons.dart';
 import '../../../core/labels/label_lookup.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/realtime/pusher_socket.dart';
+import '../../../core/realtime/realtime_bus.dart';
+import '../../../core/realtime/realtime_listener.dart';
 import '../../../core/scanning/scanner_screen.dart';
 import '../../../core/widgets/app_snack.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -48,6 +51,32 @@ class _OrderLookupScreenState extends ConsumerState<OrderLookupScreen> {
   /// Sube con cada búsqueda: una respuesta vieja ya no se pinta.
   int _generation = 0;
 
+  /// Última búsqueda hecha (para repetirla cuando el pedido cambia).
+  String? _lastQuery;
+
+  /// Un pedido de los que se ven cambió de estado: se repite la búsqueda sin
+  /// spinner, y el resultado se actualiza en su lugar.
+  Future<void> _onTracking(RealtimeEvent event) async {
+    if (event.name != 'tracking.updated') return;
+    final query = _lastQuery;
+    final shown = _results;
+    if (query == null || shown == null || _loading) return;
+    final changed = event.data['shipment_id'];
+    if (changed is String && !shown.any((order) => order.id == changed)) {
+      return;
+    }
+    final generation = _generation;
+    try {
+      final results = await ref
+          .read(orderLookupDataSourceProvider)
+          .search(query);
+      if (!mounted || generation != _generation) return;
+      setState(() => _results = results);
+    } on Object {
+      // Se queda con lo que se ve.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +97,7 @@ class _OrderLookupScreenState extends ConsumerState<OrderLookupScreen> {
     final query = raw.trim();
     if (query.isEmpty) return;
     final generation = ++_generation;
+    _lastQuery = query;
     setState(() {
       _loading = true;
       _error = null;
@@ -129,53 +159,57 @@ class _OrderLookupScreenState extends ConsumerState<OrderLookupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Consultar pedido')),
-      body: ResponsiveBody(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _search,
-                      focusNode: _focus,
-                      textInputAction: TextInputAction.search,
-                      autocorrect: false,
-                      onSubmitted: _searchFor,
-                      decoration: InputDecoration(
-                        prefixIconConstraints: FieldIcon.prefixConstraints,
-                        prefixIcon: FieldIcon(
-                          icon: AppIcon.search,
-                          focusNode: _focus,
-                        ),
-                        labelText: 'Código del pedido',
-                        hintText: 'Código, cliente o documento',
-                        suffixIcon: IconButton(
-                          tooltip: 'Buscar',
-                          icon: const AnimatedAppIcon(
-                            AppIcon.arrowForward,
-                            size: 20,
+      body: RealtimeListener(
+        topic: RealtimeTopic.tracking,
+        onEvent: _onTracking,
+        child: ResponsiveBody(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _search,
+                        focusNode: _focus,
+                        textInputAction: TextInputAction.search,
+                        autocorrect: false,
+                        onSubmitted: _searchFor,
+                        decoration: InputDecoration(
+                          prefixIconConstraints: FieldIcon.prefixConstraints,
+                          prefixIcon: FieldIcon(
+                            icon: AppIcon.search,
+                            focusNode: _focus,
                           ),
-                          onPressed: () => _searchFor(_search.text),
+                          labelText: 'Código del pedido',
+                          hintText: 'Código, cliente o documento',
+                          suffixIcon: IconButton(
+                            tooltip: 'Buscar',
+                            icon: const AnimatedAppIcon(
+                              AppIcon.arrowForward,
+                              size: 20,
+                            ),
+                            onPressed: () => _searchFor(_search.text),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox.square(
-                    dimension: 56,
-                    child: IconButton.filled(
-                      tooltip: 'Escanear etiqueta',
-                      onPressed: _loading ? null : _scan,
-                      icon: const AnimatedAppIcon(AppIcon.scan),
+                    const SizedBox(width: 8),
+                    SizedBox.square(
+                      dimension: 56,
+                      child: IconButton.filled(
+                        tooltip: 'Escanear etiqueta',
+                        onPressed: _loading ? null : _scan,
+                        icon: const AnimatedAppIcon(AppIcon.scan),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: _body(context)),
-          ],
+              Expanded(child: _body(context)),
+            ],
+          ),
         ),
       ),
     );

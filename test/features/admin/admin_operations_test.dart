@@ -156,12 +156,94 @@ void main() {
       },
     );
 
+    /// Va al mes del día de prueba y lo elige en la grilla.
+    Future<void> openDay(WidgetTester tester) async {
+      final now = DateTime.now();
+      final months = (day.year - now.year) * 12 + day.month - now.month;
+      for (var i = 0; i < months; i++) {
+        await tester.tap(find.byTooltip('Mes siguiente'));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('${day.day}'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('agregar cupos por hora al día elegido', (tester) async {
+      final fake = FakeAdmin(calendar: [Days(date: day, available: true)]);
+      await pumpAdmin(tester, fake, const AdminCalendarScreen());
+      await openDay(tester);
+
+      await tester.tap(find.text('Agregar cupos por hora'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hora'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('14:00 a 18:00').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Cupos'), '12');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar cupos'));
+      await tester.pumpAndSettle();
+
+      final opened = fake.openedHours.single;
+      expect(opened.date, day);
+      expect(opened.timeSlot, '14:00-18:00');
+      expect(opened.quantity, 12);
+      expect(opened.unit, 'deliveries');
+      // "Todos los municipios" manda todos.
+      expect(opened.municipalityIds, ['m1', 'm2']);
+    });
+
+    testWidgets('horas del día: se bloquea una hora, no el día', (
+      tester,
+    ) async {
+      final fake = FakeAdmin(calendar: [Days(date: day, available: true)])
+        ..daySlotsValue = [
+          (
+            timeSlot: '08:00-12:00',
+            capacity: 20,
+            used: 8,
+            blocked: false,
+            reason: null,
+          ),
+        ];
+      await pumpAdmin(tester, fake, const AdminCalendarScreen());
+      await openDay(tester);
+
+      expect(find.text('08:00 a 12:00'), findsOneWidget);
+      expect(find.text('8 de 20 cupos usados'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Bloquear'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Sin chofer');
+      await tester.tap(find.widgetWithText(FilledButton, 'Bloquear'));
+      await tester.pumpAndSettle();
+
+      expect(fake.blockedHours.single, (
+        date: day,
+        timeSlot: '08:00-12:00',
+        reason: 'Sin chofer',
+      ));
+      expect(fake.blocked, isEmpty, reason: 'el día sigue abierto');
+    });
+
+    testWidgets('sin detalle por hora del backend, la sección no aparece', (
+      tester,
+    ) async {
+      final fake = FakeAdmin(calendar: [Days(date: day, available: true)]);
+      await pumpAdmin(tester, fake, const AdminCalendarScreen());
+      await openDay(tester);
+
+      expect(find.text('Horas del día'), findsNothing);
+      expect(find.text('Agregar cupos por hora'), findsOneWidget);
+    });
+
     testWidgets('bloquear un día pide el motivo', (tester) async {
       final fake = FakeAdmin(calendar: [Days(date: day, available: true)]);
       await pumpAdmin(tester, fake, const AdminCalendarScreen());
 
-      expect(find.text('Con cupo'), findsOneWidget);
-      await tester.tap(find.text('Jueves 24/12/2026'));
+      await openDay(tester);
+      expect(find.text('Jueves 24/12/2026'), findsOneWidget);
+      expect(find.text('Con cupo'), findsNWidgets(2)); // leyenda + el día
+      await tester.tap(find.text('Bloquear el día'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Feriado');
       await tester.tap(find.widgetWithText(FilledButton, 'Bloquear'));
@@ -177,8 +259,9 @@ void main() {
       );
       await pumpAdmin(tester, fake, const AdminCalendarScreen());
 
-      expect(find.text('Bloqueado'), findsOneWidget);
-      await tester.tap(find.text('Jueves 24/12/2026'));
+      await openDay(tester);
+      expect(find.text('Motivo: Feriado'), findsOneWidget);
+      await tester.tap(find.text('Desbloquear el día'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Desbloquear'));
       await tester.pumpAndSettle();
@@ -196,9 +279,23 @@ void main() {
       await tester.pumpAndSettle();
       // El selector abre en el mes de hoy: se toca hoy dos veces (rango de
       // un solo día) y se confirma.
-      await tester.tap(find.text('${today.day}').first);
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(DateRangePickerDialog),
+              matching: find.text('${today.day}'),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('${today.day}').first);
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(DateRangePickerDialog),
+              matching: find.text('${today.day}'),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abrir'));
       await tester.pumpAndSettle();
@@ -216,7 +313,11 @@ void main() {
       final fake = FakeAdmin();
       await pumpAdmin(tester, fake, const AdminBroadcastsScreen());
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Tienda'));
+      // El rol es un select.
+      await tester.tap(find.text('Chofer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tienda').last);
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextField, 'Título'),
         'Inventario',

@@ -13,6 +13,8 @@ class ShipmentDeliveryEvidence {
     required this.signature,
     required this.photo,
     required this.document,
+    required this.withShortage,
+    this.missingCount,
   });
 
   factory ShipmentDeliveryEvidence.fromJson(Map<String, Object?> json) =>
@@ -26,6 +28,14 @@ class ShipmentDeliveryEvidence {
 
   /// Hay una foto del documento de identidad del cliente (evidencia de tipo id_document).
   final bool document;
+
+  /// El envío entregado se cerró con faltante (traspaso conciliado con diferencias o cerrado a mano por oficina). false en entregas normales.
+  @JsonKey(name: 'with_shortage')
+  final bool withShortage;
+
+  /// Cuántos productos faltaron (para el tag «Entregado con faltante (N)»). null si no hubo faltante o no se conoce la cantidad; el detalle se ve por el reporte de discrepancias.
+  @JsonKey(name: 'missing_count')
+  final int? missingCount;
 
   Map<String, Object?> toJson() => _$ShipmentDeliveryEvidenceToJson(this);
 }

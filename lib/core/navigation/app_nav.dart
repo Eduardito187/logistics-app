@@ -19,6 +19,11 @@ final homeTabProvider = NotifierProvider<HomeTabNotifier, int>(
   HomeTabNotifier.new,
 );
 
+/// Índice de la pestaña CENTRAL del shell (la acción estrella del rol: para el
+/// chofer, "Entrega en curso"). El `IndexedStack` del shell es
+/// [Inicio(0), Tareas(1), Centro(2), Avisos(3), Perfil(4)].
+const int kHomeCenterTabIndex = 2;
+
 /// Un destino fijo de la barra de navegación inferior. Son universales para
 /// todos los roles (todos tienen inicio, tareas, avisos y perfil); la acción
 /// central (FAB) sí cambia por rol (ver [centerActionFor]).

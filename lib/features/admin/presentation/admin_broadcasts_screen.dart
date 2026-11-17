@@ -8,10 +8,11 @@ import '../../../core/icons/icons.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/layout/responsive_body.dart';
 import '../../../core/widgets/app_snack.dart';
+import '../../../core/widgets/paged_search_list.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../notifications/presentation/widgets/inbox_item_card.dart';
 import '../data/admin_remote_data_source.dart';
 import 'staff_labels.dart';
-import '../../../core/widgets/paged_search_list.dart';
 import 'widgets/staff_pickers.dart';
 
 /// A quién va el aviso.
@@ -87,10 +88,28 @@ class _SendTabState extends ConsumerState<_SendTab>
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    // La vista previa se arma con lo que se va escribiendo.
+    _title.addListener(_refresh);
+    _body.addListener(_refresh);
+  }
+
+  @override
   void dispose() {
     _title.dispose();
     _body.dispose();
     super.dispose();
+  }
+
+  void _refresh() => setState(() {});
+
+  Future<void> _pickNode() async {
+    final choice = await showNodePickerSheet(
+      context,
+      currentNodeId: _node?.nodeId,
+    );
+    if (choice != null && mounted) setState(() => _node = choice);
   }
 
   Future<void> _send() async {
@@ -137,114 +156,188 @@ class _SendTabState extends ConsumerState<_SendTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final theme = Theme.of(context);
     final person = widget.person;
-    return ResponsiveBody(
-      maxWidth: AppBreakpoints.maxFormWidth,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: 'Para quién',
-            child: person != null
-                ? Text(
-                    person.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SegmentedButton<BroadcastAudience>(
-                        segments: const [
-                          ButtonSegment(
-                            value: BroadcastAudience.role,
-                            label: Text('Un rol'),
-                          ),
-                          ButtonSegment(
-                            value: BroadcastAudience.node,
-                            label: Text('Una tienda'),
-                          ),
-                        ],
-                        selected: {_audience},
-                        onSelectionChanged: _busy
-                            ? null
-                            : (s) => setState(() => _audience = s.first),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_audience == BroadcastAudience.role)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
+    final title = _title.text.trim();
+    final body = _body.text.trim();
+    const gap = SizedBox(height: 16);
+    return Column(
+      children: [
+        Expanded(
+          child: ResponsiveBody(
+            maxWidth: AppBreakpoints.maxFormWidth,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                SectionCard(
+                  title: 'Para quién',
+                  child: person != null
+                      ? Row(
                           children: [
-                            for (final role in _roles)
-                              ChoiceChip(
-                                label: Text(staffRoleLabel(role.json ?? '')),
-                                selected: _role == role,
-                                onSelected: _busy
-                                    ? null
-                                    : (_) => setState(() => _role = role),
+                            const AnimatedAppIcon(
+                              AppIcon.profile,
+                              excludeFromSemantics: true,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                person.name,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
+                            ),
                           ],
                         )
-                      else
-                        OutlinedButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () async {
-                                  final choice = await showNodePickerSheet(
-                                    context,
-                                    currentNodeId: _node?.nodeId,
-                                  );
-                                  if (choice != null && mounted) {
-                                    setState(() => _node = choice);
-                                  }
-                                },
-                          icon: const AnimatedAppIcon(AppIcon.pickupStore),
-                          label: Text(_node?.name ?? 'Elegir tienda'),
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            DropdownButtonFormField<BroadcastAudience>(
+                              value: _audience,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Enviar a',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: BroadcastAudience.role,
+                                  child: Text('Todos los de un rol'),
+                                ),
+                                DropdownMenuItem(
+                                  value: BroadcastAudience.node,
+                                  child: Text('El personal de una tienda'),
+                                ),
+                              ],
+                              onChanged: _busy
+                                  ? null
+                                  : (value) => setState(
+                                      () => _audience =
+                                          value ?? BroadcastAudience.role,
+                                    ),
+                            ),
+                            gap,
+                            if (_audience == BroadcastAudience.role)
+                              DropdownButtonFormField<StaffRoleName>(
+                                value: _role,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Rol',
+                                ),
+                                items: [
+                                  for (final role in _roles)
+                                    DropdownMenuItem(
+                                      value: role,
+                                      child: Text(
+                                        staffRoleLabel(role.json ?? ''),
+                                      ),
+                                    ),
+                                ],
+                                onChanged: _busy
+                                    ? null
+                                    : (value) => setState(
+                                        () => _role = value ?? _role,
+                                      ),
+                              )
+                            else
+                              InkWell(
+                                onTap: _busy ? null : _pickNode,
+                                borderRadius: BorderRadius.circular(12),
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Tienda',
+                                    suffixIcon: Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: AnimatedAppIcon(
+                                        AppIcon.expandMore,
+                                        excludeFromSemantics: true,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(_node?.name ?? 'Elegir tienda'),
+                                ),
+                              ),
+                          ],
                         ),
+                ),
+                gap,
+                SectionCard(
+                  title: 'Mensaje',
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _title,
+                        enabled: !_busy,
+                        maxLength: 120,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(labelText: 'Título'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _body,
+                        enabled: !_busy,
+                        maxLength: 1000,
+                        minLines: 4,
+                        maxLines: 8,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: 'Mensaje',
+                          alignLabelWithHint: true,
+                        ),
+                      ),
                     ],
                   ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Mensaje',
-            child: Column(
-              children: [
-                TextField(
-                  controller: _title,
-                  enabled: !_busy,
-                  maxLength: 120,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'Título'),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _body,
-                  enabled: !_busy,
-                  maxLength: 1000,
-                  minLines: 3,
-                  maxLines: 8,
-                  decoration: const InputDecoration(labelText: 'Mensaje'),
-                ),
+                if (title.isNotEmpty || body.isNotEmpty) ...[
+                  gap,
+                  Text(
+                    'Así lo va a ver',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // La misma tarjeta que ve el personal en sus notificaciones.
+                  IgnorePointer(
+                    child: InboxItemCard(
+                      item: StaffInboxItem(
+                        title: title.isEmpty ? 'Título' : title,
+                        body: body.isEmpty ? null : body,
+                        sentAt: DateTime.now(),
+                      ),
+                      read: false,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: _busy ? null : _send,
-              icon: AnimatedAppIcon(
-                AppIcon.send,
-                state: _busy ? AppIconState.loading : AppIconState.idle,
-                excludeFromSemantics: true,
+        ),
+        // FIJO al pie: no hay que deslizar para enviar.
+        Material(
+          elevation: 8,
+          color: theme.colorScheme.surface,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : _send,
+                  icon: AnimatedAppIcon(
+                    AppIcon.send,
+                    state: _busy ? AppIconState.loading : AppIconState.idle,
+                    excludeFromSemantics: true,
+                  ),
+                  label: const Text('Enviar aviso'),
+                ),
               ),
-              label: const Text('Enviar aviso'),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -271,39 +364,65 @@ class _SentTabState extends ConsumerState<_SentTab>
       emptyIcon: AppIcon.send,
       fetch: (_, page) =>
           ref.read(adminRemoteDataSourceProvider).listBroadcasts(page),
-      itemBuilder: (context, item) {
-        final theme = Theme.of(context);
-        final recipients = item.recipientCount ?? 0;
-        final read = item.readCount ?? 0;
-        return SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title ?? 'Aviso',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              if (item.body != null) ...[
-                const SizedBox(height: 4),
-                Text(item.body!, maxLines: 4, overflow: TextOverflow.ellipsis),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                [
-                  if (item.sentAt != null) staffDateTime(item.sentAt!),
-                  'Leído por $read de $recipients',
-                  if (item.sentBy?.name != null) 'Envió ${item.sentBy!.name}',
-                ].join(' · '),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+      itemBuilder: (context, item) => _SentCard(item: item),
+    );
+  }
+}
+
+/// Un aviso enviado: el mensaje completo, cuándo y quién lo envió, y una
+/// barra con cuántos ya lo leyeron.
+class _SentCard extends StatelessWidget {
+  const _SentCard({required this.item});
+
+  final StaffBroadcast item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final recipients = item.recipientCount ?? 0;
+    final read = (item.readCount ?? 0).clamp(0, recipients);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.title ?? 'Aviso',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        );
-      },
+          if (item.body != null) ...[
+            const SizedBox(height: 6),
+            Text(item.body!),
+          ],
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: recipients == 0 ? 0 : read / recipients,
+              minHeight: 8,
+              backgroundColor: scheme.surfaceContainerHighest,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Leído por $read de $recipients',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            [
+              if (item.sentAt != null) inboxWhen(item.sentAt!),
+              if (item.sentBy?.name != null) 'Envió ${item.sentBy!.name}',
+            ].join(' · '),
+            style: muted,
+          ),
+        ],
+      ),
     );
   }
 }

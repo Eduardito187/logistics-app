@@ -12,24 +12,26 @@ class FleetDataSource {
 
   final Ref _ref;
 
-  /// Asignación (vehículo + tripulación) del chofer autenticado para [date]. El
-  /// chofer NO elige: se le asigna. El backend responde 404 cuando la cuenta no
-  /// es chofer o no tiene tripulación armada para esa fecha; se normaliza a
-  /// [ApiException] con status 404 (incluido el caso `data` nulo en un 200).
-  Future<MyCrew> getMyCrew(DateTime date) async {
+  /// Asignación (vehículo + tripulación) del chofer autenticado. El chofer NO
+  /// elige: se le asigna. El backend responde 404 cuando la cuenta no es chofer
+  /// o no tiene asignación vigente; se normaliza a [ApiException] con status 404
+  /// (incluido el caso `data` nulo en un 200).
+  ///
+  /// SIN [date] = asignación VIGENTE: si el chofer tiene una ruta EN CURSO de
+  /// otro día, el backend devuelve ESA cuadrilla (con la fecha de esa ruta)
+  /// hasta que cierre. Es lo que evita que a medianoche se le quite una entrega
+  /// en curso o de varios días. Con [date] explícita se pide ese día puntual.
+  Future<MyCrew> getMyCrew([DateTime? date]) async {
     // El backend espera la fecha en `Y-m-d`; el cliente generado la serializa
     // como datetime ISO (`toIso8601String`) y el backend responde 422. Hasta
     // regenerar el cliente con el tipo correcto, se llama con Dio directo
     // reusando el modelo generado para el parseo (no se escribe DTO a mano).
     final dio = _ref.read(dioProvider);
-    final ymd =
-        '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
     try {
       final res = await dio.get<Map<String, Object?>>(
         '/app/fleet/my-crew',
-        queryParameters: {'date': ymd},
+        // Sin `date` = vigente (midnight-safe); con `date`, ese día en `Y-m-d`.
+        queryParameters: {if (date != null) 'date': _ymd(date)},
       );
       final data = res.data;
       if (data == null) {

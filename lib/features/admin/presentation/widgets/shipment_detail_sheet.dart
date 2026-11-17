@@ -6,12 +6,15 @@ import '../../../../core/api/models/delivery_mode.dart';
 import '../../../../core/api/models/shipment.dart';
 import '../../../../core/api/models/shipment_delivery_evidence.dart';
 import '../../../../core/api/models/shipment_status.dart';
+import '../../../../core/auth/session.dart';
+import '../../../../core/auth/user_role.dart';
 import '../../../../core/icons/icons.dart';
 import '../../../../core/widgets/app_snack.dart';
 import '../../../../core/widgets/product_thumb.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../picking/domain/usecases/assign_order_vehicle.dart';
 import '../../../picking/presentation/widgets/shipment_status_pill.dart';
+import '../../data/admin_remote_data_source.dart';
 import '../staff_labels.dart';
 import 'staff_pickers.dart';
 
@@ -65,6 +68,38 @@ class _ShipmentDetailSheetState extends ConsumerState<ShipmentDetailSheet> {
         'Pedido asignado al camión ${vehicle.displayPlate}.',
       );
       Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (mounted) showErrorSnack(context, error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Traspaso entre sedes que quedó EN CURSO (el chofer lo dejó con
+  /// faltantes y la tienda no concilió): la oficina lo puede cerrar a mano.
+  bool get _closableTransfer =>
+      shipment.deliveryMode == DeliveryMode.transfer &&
+      shipment.status == ShipmentStatus.inExecution &&
+      switch (ref.watch(sessionProvider.select((s) => s?.role))) {
+        UserRole.admin || UserRole.supervisor => true,
+        _ => false,
+      };
+
+  /// Da el traspaso por entregado con faltantes, con un motivo obligatorio.
+  Future<void> _closeTransfer() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => const _CloseTransferDialog(),
+    );
+    if (reason == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(adminRemoteDataSourceProvider)
+          .closeTransfer(shipment.id, reason);
+      if (!mounted) return;
+      showSuccessSnack(context, 'Traspaso cerrado con faltantes.');
+      Navigator.of(context).pop(true);
     } on Object catch (error) {
       if (mounted) showErrorSnack(context, error);
     } finally {
@@ -140,6 +175,17 @@ class _ShipmentDetailSheetState extends ConsumerState<ShipmentDetailSheet> {
                     excludeFromSemantics: true,
                   ),
                   label: const Text('Reprogramar'),
+                ),
+              ],
+              if (_closableTransfer) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _closeTransfer,
+                  icon: const AnimatedAppIcon(
+                    AppIcon.check,
+                    excludeFromSemantics: true,
+                  ),
+                  label: const Text('Cerrar traspaso con faltantes'),
                 ),
               ],
               const SizedBox(height: 16),
@@ -221,18 +267,84 @@ class _EvidenceTags extends StatelessWidget {
       if (evidence.photo) ('Foto de entrega', AppIcon.capture),
       if (evidence.document) ('Foto de documento', AppIcon.badge),
     ];
-    if (tags.isEmpty) {
+    if (tags.isEmpty && !evidence.withShortage) {
       return const Align(
         alignment: Alignment.centerLeft,
         child: StatusPill('Sin evidencia registrada'),
       );
     }
+    final missing = evidence.missingCount;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final (label, icon) in tags)
           StatusPill(label, tone: PillTone.success, icon: icon),
+        // Se entregó pero faltaron productos: se marca aparte, en ámbar.
+        if (evidence.withShortage)
+          StatusPill(
+            missing == null
+                ? 'Entregado con faltante'
+                : 'Entregado con faltante ($missing)',
+            tone: PillTone.warning,
+            icon: AppIcon.incident,
+          ),
+      ],
+    );
+  }
+}
+
+/// Pide el motivo del cierre de un traspaso con faltantes (queda como
+/// constancia).
+class _CloseTransferDialog extends StatefulWidget {
+  const _CloseTransferDialog();
+
+  @override
+  State<_CloseTransferDialog> createState() => _CloseTransferDialogState();
+}
+
+class _CloseTransferDialogState extends State<_CloseTransferDialog> {
+  final TextEditingController _reason = TextEditingController();
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  void _accept() {
+    final value = _reason.text.trim();
+    if (value.isNotEmpty) Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cerrar traspaso con faltantes'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'El traspaso queda como entregado. Los productos que faltaron se '
+            'siguen por el reporte de diferencias.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _reason,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            onSubmitted: (_) => _accept(),
+            decoration: const InputDecoration(labelText: 'Motivo'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _accept, child: const Text('Cerrar traspaso')),
       ],
     );
   }

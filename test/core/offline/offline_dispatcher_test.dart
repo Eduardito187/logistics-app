@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/clients/execution_client.dart';
+import 'package:logistics_app/core/api/clients/telemetry_client.dart';
 import 'package:logistics_app/core/api/clients/tracking_client.dart';
 import 'package:logistics_app/core/api/logistics_api.dart';
+import 'package:logistics_app/core/api/models/app_telemetry_pings_request_body.dart';
 import 'package:logistics_app/core/api/models/app_vehicles_vehicle_id_incidents_request_body.dart';
-import 'package:logistics_app/core/api/models/failed_delivery_request.dart';
 import 'package:logistics_app/core/api/models/node_reception_request.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
 import 'package:logistics_app/core/api/models/proof_of_delivery_request.dart';
@@ -46,14 +47,28 @@ class _RecordingTracking implements TrackingClient {
   }
 }
 
+class _RecordingTelemetry implements TelemetryClient {
+  _RecordingTelemetry(this._rec);
+  final _Recorder _rec;
+  @override
+  dynamic noSuchMethod(Invocation i) {
+    _rec.member = i.memberName;
+    _rec.named = i.namedArguments;
+    return Future<Never>.error(_boom);
+  }
+}
+
 class _RecordingApi extends LogisticsApi {
-  _RecordingApi(this.execRec, this.trackRec) : super(Dio());
+  _RecordingApi(this.execRec, this.trackRec, this.telemetryRec) : super(Dio());
   final _Recorder execRec;
   final _Recorder trackRec;
+  final _Recorder telemetryRec;
   @override
   ExecutionClient get execution => _RecordingExecution(execRec);
   @override
   TrackingClient get tracking => _RecordingTracking(trackRec);
+  @override
+  TelemetryClient get telemetry => _RecordingTelemetry(telemetryRec);
 }
 
 Map<String, Object?> _scanBase() => {
@@ -67,19 +82,36 @@ Map<String, Object?> _scanBase() => {
 void main() {
   late _Recorder execRec;
   late _Recorder trackRec;
+  late _Recorder telemetryRec;
   late _RecordingApi api;
+  // Dio directo para los handlers cuyo contrato aún no está en el cliente
+  // generado (p. ej. recordFailedDelivery). Captura la request y la rechaza con
+  // un DioException, así `run` sigue viendo un DioException para cualquier kind.
+  late Dio dio;
+  RequestOptions? capturedRequest;
 
   setUp(() {
     execRec = _Recorder();
     trackRec = _Recorder();
-    api = _RecordingApi(execRec, trackRec);
+    telemetryRec = _Recorder();
+    api = _RecordingApi(execRec, trackRec, telemetryRec);
+    capturedRequest = null;
+    dio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            capturedRequest = options;
+            handler.reject(DioException(requestOptions: options));
+          },
+        ),
+      );
   });
 
   /// Corre el handler de [kind] con [payload] y espera a que (tras registrar)
   /// propague el DioException del doble.
   Future<void> run(String kind, Map<String, Object?> payload) async {
     await expectLater(
-      offlineHandlers[kind]!(api, 'KEY-1', payload),
+      offlineHandlers[kind]!(api, dio, 'KEY-1', payload),
       throwsA(isA<DioException>()),
     );
   }
@@ -97,6 +129,7 @@ void main() {
         'reportDeliveryIssue',
         'updateDevicePushToken',
         'ingestTruckPosition',
+        'recordVehiclePings',
         'recordNodeReception',
         'receiveUnitAtNode',
       });
@@ -135,15 +168,24 @@ void main() {
       expect(execRec.named[#idempotencyKey], 'KEY-1');
     });
 
-    test('recordFailedDelivery → execution.recordFailedDelivery', () async {
-      await run('recordFailedDelivery', {
-        ..._scanBase(),
-        'reason': 'CUSTOMER_ABSENT',
-      });
-      expect(execRec.member, #recordFailedDelivery);
-      expect(execRec.named[#body], isA<FailedDeliveryRequest>());
-      expect(execRec.named[#idempotencyKey], 'KEY-1');
-    });
+    test(
+      'recordFailedDelivery → POST /app/deliveries/failed (Dio directo)',
+      () async {
+        // `reason` es un CÓDIGO libre (puede ser un motivo que creó el admin,
+        // fuera del enum generado) + `note` opcional. Por eso va por Dio directo.
+        await run('recordFailedDelivery', {
+          ..._scanBase(),
+          'reason': 'ZONA_INSEGURA',
+          'note': 'calle cerrada',
+        });
+        expect(capturedRequest, isNotNull);
+        expect(capturedRequest!.path, '/app/deliveries/failed');
+        final data = capturedRequest!.data as Map<String, Object?>;
+        expect(data['reason'], 'ZONA_INSEGURA');
+        expect(data['note'], 'calle cerrada');
+        expect(capturedRequest!.headers['Idempotency-Key'], 'KEY-1');
+      },
+    );
 
     test('recordProofOfDelivery → execution.recordProofOfDelivery', () async {
       await run('recordProofOfDelivery', {
@@ -205,6 +247,33 @@ void main() {
         // Nota: por diseño (GPS de alta frecuencia) este handler NO reenvía la
         // Idempotency-Key; no debe esperarse en los argumentos.
         expect(trackRec.named.containsKey(#idempotencyKey), isFalse);
+      },
+    );
+
+    test(
+      'recordVehiclePings → telemetry.recordAppVehiclePings con vehicle/route',
+      () async {
+        await run('recordVehiclePings', {
+          '@vehicleId': 'veh-7',
+          '@routeId': 'route-3',
+          'lat': -16.5,
+          'lng': -68.1,
+          'recorded_at': '2026-10-15T12:00:00.000Z',
+          'speed_kph': 36.0,
+          'heading': 90,
+          'fix_id': 'veh-7:2026-10-15T12:00:00.000Z',
+        });
+        expect(telemetryRec.member, #recordAppVehiclePings);
+        final body = telemetryRec.named[#body] as AppTelemetryPingsRequestBody;
+        expect(body.vehicleId, 'veh-7');
+        expect(body.routeId, 'route-3');
+        expect(body.pings, hasLength(1));
+        expect(body.pings.single.lat, -16.5);
+        expect(body.pings.single.speedKph, 36.0);
+        expect(body.pings.single.fixId, 'veh-7:2026-10-15T12:00:00.000Z');
+        // Mismo diseño que el GPS por-envío: sin Idempotency-Key (idempotencia
+        // por fix_id del ping).
+        expect(telemetryRec.named.containsKey(#idempotencyKey), isFalse);
       },
     );
   });

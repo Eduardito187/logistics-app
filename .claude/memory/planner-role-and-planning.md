@@ -45,3 +45,12 @@ chips para eso; ningún UUID a la vista; el SKU va solo, sin la palabra "SKU"; f
 detalles; las hojas (modales) miden lo que su contenido, sin aire abajo; el rol se llama "Preparador" (sin
 "andén"); en un envío entregado, etiquetas de cómo se entregó (firma digital, foto de entrega, foto de
 documento). Ver [[owner-decisions-are-final]], [[admin-role-in-app]].
+
+**Agregado el 2026-11-15 (tarde):** detalle del plan = UNA línea de tiempo de tarjetas (`StopTile` con
+`eta`, `isFirst/isLast`, `footer`); la hora de llegada sale de `planStopEtasProvider(planId)` y, si no hay, de
+`PlannedStop.etaAt`. Se borraron `EtaSection`/`EtaRow` (ya no hay "ETA por parada"). "Publicar plan" /
+"Guardar orden" van FIJOS al pie: el editor publica sus acciones en `planEditorActionsProvider(planId)` y la
+pantalla las dibuja en `bottomNavigationBar` (solo si `canPlan` y el plan no está publicado). "Guardar viaje"
+del asistente también va fijo al pie ("Guardar viaje · N paradas"). **Eliminar plan**: botón en el editor →
+`DELETE /app/plans/{id}` por Dio directo (204; 409 si está publicado), cierra el detalle; si lo borran desde
+otro teléfono (`plans.updated` con `deleted: true`) el detalle se cierra solo.

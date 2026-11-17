@@ -15,10 +15,12 @@ class DriverRouteDataSource {
 
   Future<DriverRoute> getDriverRoute({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   }) async {
     final api = _ref.read(logisticsApiProvider);
     try {
+      // Sin `date`, el cliente omite el query y el backend devuelve la ruta
+      // ABIERTA del camión (de cualquier día) → midnight-safe.
       final response = await api.execution.getDriverRoute(
         vehicleId: vehicleId,
         date: date,

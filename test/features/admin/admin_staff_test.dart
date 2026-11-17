@@ -42,6 +42,7 @@ StaffProfile _profile({
   StaffDriverData? driver,
   String? city,
   String? cityName,
+  CurrentVehicle? currentVehicle,
 }) => StaffProfile(
   id: id,
   name: name,
@@ -58,7 +59,7 @@ StaffProfile _profile({
   createdAt: null,
   personal: const StaffPersonalData(),
   driver: driver,
-  currentVehicle: null,
+  currentVehicle: currentVehicle,
   devices: const [],
 );
 
@@ -201,8 +202,8 @@ void main() {
         find.widgetWithText(TextField, 'Teléfono secundario'),
         '70000001',
       );
-      expect(find.text('Sin fecha'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      expect(find.text('Elegir fecha'), findsOneWidget);
+      await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 
       expect(fake.profileUpdates.single.city, Department.laPaz);
@@ -219,7 +220,7 @@ void main() {
       await tester.tap(find.text('Editar datos personales'));
       await tester.pumpAndSettle();
       expect(find.text('La define la tienda asignada'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 
       expect(fake.profileUpdates.single.changeCity, isFalse);
@@ -281,6 +282,108 @@ void main() {
         vehicleId: 'v1',
       ));
       expect(find.text('Camión 904U10 asignado para hoy.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'cambiar de camión REEMPLAZA: quita el de hoy y arma el nuevo',
+      (tester) async {
+        final fake = FakeAdmin(
+          profile: _profile(
+            id: 7,
+            name: 'Iker Corona',
+            roles: ['chofer'],
+            driverId: 'drv-1',
+            currentVehicle: CurrentVehicle(
+              crewId: 'crew-viejo',
+              vehicleId: 'v0',
+              plate: '904U10',
+              assembledFor: DateTime.now(),
+            ),
+          ),
+          vehicles: const [
+            AdminVehicle(
+              id: 'v2',
+              plate: '131017',
+              status: AdminVehicleStatus.available,
+            ),
+          ],
+        );
+        await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+        await tester.tap(find.text('Cambiar camión'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('131017'));
+        await tester.pumpAndSettle();
+
+        expect(fake.removedCrews, ['crew-viejo']);
+        expect(fake.vehicleAssignments.single, (
+          driverId: 'drv-1',
+          vehicleId: 'v2',
+        ));
+      },
+    );
+
+    testWidgets('la asignación de un día anterior no se toca', (tester) async {
+      final fake = FakeAdmin(
+        profile: _profile(
+          id: 7,
+          name: 'Iker Corona',
+          roles: ['chofer'],
+          driverId: 'drv-1',
+          currentVehicle: CurrentVehicle(
+            crewId: 'crew-ayer',
+            vehicleId: 'v0',
+            plate: '904U10',
+            assembledFor: DateTime.now().subtract(const Duration(days: 1)),
+          ),
+        ),
+        vehicles: const [
+          AdminVehicle(
+            id: 'v2',
+            plate: '131017',
+            status: AdminVehicleStatus.available,
+          ),
+        ],
+      );
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.text('Cambiar camión'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('131017'));
+      await tester.pumpAndSettle();
+
+      expect(fake.removedCrews, isEmpty);
+      expect(fake.vehicleAssignments, hasLength(1));
+    });
+
+    testWidgets('camión con otro chofer hoy: pregunta antes de quitárselo', (
+      tester,
+    ) async {
+      final fake = FakeAdmin(
+        profile: _driver,
+        vehicles: const [
+          AdminVehicle(
+            id: 'v1',
+            plate: '904U10',
+            status: AdminVehicleStatus.available,
+          ),
+        ],
+      )..vehicleTaken = true;
+      await pumpAdmin(tester, fake, const AdminStaffProfileScreen(userId: 7));
+
+      await tester.tap(find.text('Asignar camión'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('904U10'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('El camión 904U10 ya tiene chofer'), findsOneWidget);
+      expect(fake.vehicleAssignments, isEmpty);
+
+      await tester.tap(find.text('Asignar igual'));
+      await tester.pumpAndSettle();
+
+      expect(fake.vehicleAssignments, hasLength(1));
+      expect(fake.replaceFlags, [true]);
     });
 
     testWidgets('documentos: vencido en rojo y sin archivo avisado', (

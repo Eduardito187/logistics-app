@@ -90,8 +90,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   static const Duration minFixInterval = Duration(seconds: 15);
 
   /// Distancia mínima (m) a la última posición encolada para encolar otra; por
-  /// debajo es el mismo lugar (jitter) y solo cuenta el latido.
-  static const double minEnqueueMeters = 25;
+  /// debajo es el mismo lugar (jitter) y solo cuenta el latido. Chico (8 m) para
+  /// que con lecturas cada 2 s el camión en marcha se vea FLUIDO (se encola casi
+  /// cada lectura mientras avanza); parado, el jitter < 8 m no ensucia la cola.
+  static const double minEnqueueMeters = 8;
 
   /// Tope del lote en memoria: llegado a esta cantidad se envía ya.
   static const int maxBatch = 10;
@@ -111,6 +113,17 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// caliente cuando la parada en curso cambia, sin reiniciar el servicio.
   String? _shipmentId;
 
+  /// Camión y ruta del rastreo, para el camino de TELEMETRÍA (`/telemetry/pings`),
+  /// que es el ÚNICO que alimenta el motor de desvío/reruteo del backend (el
+  /// endpoint por-envío solo deja la miga de pan). `vehicleId` es obligatorio
+  /// para ese endpoint; sin él se cae al endpoint por-envío (nunca debería
+  /// faltar: el gate del chofer exige camión). `routeId` ayuda a atar las
+  /// posiciones a la salida en curso; el `driverId` (uuid) no lo tiene la app
+  /// (la sesión guarda un id numérico), así que va nulo (opcional en el backend).
+  String? _vehicleId;
+  String? _routeId;
+  String? _driverId;
+
   /// Observa primer plano / segundo plano para mostrar la notificación del
   /// servicio SOLO cuando hace falta (ver [_onLifecycleChange]).
   AppLifecycleListener? _lifecycle;
@@ -123,6 +136,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   final List<_PendingFix> _batch = <_PendingFix>[];
   DateTime? _lastFlushAt;
   bool _firstFixSent = false;
+
+  /// Ya se pidió la exención de optimización de batería en este proceso: no se
+  /// vuelve a molestar al chofer con el diálogo del sistema una y otra vez.
+  bool _batteryOptAsked = false;
 
   Timer? _flushTimer;
   Timer? _stillTimer;
@@ -289,10 +306,25 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   /// asociado (la parada en curso puede cambiar durante la ruta), de modo que
   /// las posiciones siguientes se encolan con el `shipmentId` vigente.
   ///
-  /// El permiso de segundo plano debe estar concedido antes (el gate de
-  /// ubicación lo exige al entrar a la operación); acá se vuelve a verificar
-  /// para no arrancar un servicio que no podrá leer la ubicación.
-  Future<bool> start({required String shipmentId}) async {
+  /// El permiso de ubicación (primer plano, "mientras se usa la app") debe estar
+  /// concedido antes (el gate lo exige al entrar a la operación); acá se vuelve a
+  /// verificar para no arrancar un servicio que no podrá leer la ubicación. NO se
+  /// exige "Permitir siempre": el foreground service cuenta como uso activo, así
+  /// que con el permiso de primer plano alcanza para rastrear (incluida la app
+  /// minimizada). Exigir "siempre" dejaba bloqueados a los que conceden solo
+  /// "mientras se usa la app" (Android 11+ ni siquiera lo pide por diálogo; en
+  /// Honor/Magic OS la opción queda escondida).
+  Future<bool> start({
+    required String shipmentId,
+    String? vehicleId,
+    String? routeId,
+    String? driverId,
+  }) async {
+    // Camión/ruta vigentes para el camino de telemetría. Se re-apuntan en
+    // caliente (no reinician el servicio ni el stream de GPS).
+    _vehicleId = vehicleId;
+    _routeId = routeId;
+    _driverId = driverId;
     if (state.active) {
       if (_shipmentId != shipmentId) {
         // Cambio de parada: lo juntado del envío anterior sale ya.
@@ -327,7 +359,10 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
   Future<bool> _start(String shipmentId) async {
     _pendingShipmentId = null;
     final location = ref.read(locationServiceProvider);
-    if (!await location.ensureBackgroundPermission()) return false;
+    // Primer plano alcanza (el foreground service mantiene el acceso). Ver el
+    // doc de [start]: exigir "siempre" bloqueaba a Honor y a quien da "mientras
+    // se usa la app".
+    if (!await location.ensurePermission()) return false;
 
     final current = _pendingShipmentId ?? shipmentId;
     _pendingShipmentId = null;
@@ -355,7 +390,29 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     // Si al arrancar el rastreo la app YA está en segundo plano, se levanta el
     // servicio enseguida para no perder posiciones.
     if (_isBackground) unawaited(_startForegroundService());
+    // Pedir que el sistema NO optimice la batería de la app: sin esto, los OEM
+    // agresivos (OnePlus/OxygenOS, Honor/Magic OS, Xiaomi) matan el proceso a
+    // los pocos minutos en segundo plano aunque haya foreground service, y el
+    // chofer vuelve a abrir la app "desde cero". Una sola vez por proceso y solo
+    // si todavía no está exento (así no se molesta a quien ya lo concedió).
+    unawaited(_ensureBatteryUnrestricted());
     return true;
+  }
+
+  /// Pide al sistema la exención de optimización de batería (diálogo del
+  /// sistema) para que el rastreo no se corte en segundo plano. Best-effort: sin
+  /// el plugin (tests) o en una ROM sin esa pantalla, se ignora. Solo una vez
+  /// por proceso y solo si no está ya concedida.
+  Future<void> _ensureBatteryUnrestricted() async {
+    if (_batteryOptAsked) return;
+    _batteryOptAsked = true;
+    try {
+      if (await FlutterForegroundTask.isIgnoringBatteryOptimizations) return;
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+    } on Object {
+      // Sin plugin o ROM sin la pantalla de batería: no es crítico (el FGS sigue
+      // corriendo; en esos equipos el chofer puede excluir la app a mano).
+    }
   }
 
   /// `true` si el teléfono está en ahorro de energía o con batería baja.
@@ -499,18 +556,51 @@ class TruckTrackingService extends Notifier<TruckTrackingState> {
     _batch.clear();
     _lastFlushAt = clock();
     final queue = ref.read(offlineQueueProvider);
+    final vehicleId = _vehicleId;
     for (final item in items) {
-      final payload = <String, Object?>{
-        ...TruckPositionInput(
-          lat: item.fix.lat,
-          lng: item.fix.lng,
-          reportedAt: item.at,
-        ).toJson(),
-        '@shipmentId': item.shipmentId,
-      };
+      // Camino de TELEMETRÍA (el que alimenta el motor de desvío/reruteo): un
+      // VehiclePing por fila + el camión en `@vehicleId`. Si no hay camión
+      // (no debería), respaldo por el endpoint por-envío para no perder la miga
+      // de pan. speed en km/h (el fix lo trae en m/s), heading entero.
+      final Map<String, Object?> payload;
+      final String kind;
+      if (vehicleId != null) {
+        payload = {
+          ...VehiclePing(
+            lat: item.fix.lat,
+            lng: item.fix.lng,
+            recordedAt: item.at,
+            speedKph: item.fix.speedMps == null
+                ? null
+                : item.fix.speedMps! * 3.6,
+            heading: item.fix.headingDeg?.round(),
+            accuracyM: item.fix.accuracy,
+            // Idempotencia por fix: camión + instante (el endpoint no lleva
+            // Idempotency-Key; el backend deduplica por fix_id).
+            fixId: '$vehicleId:${item.at.toUtc().toIso8601String()}',
+          ).toJson(),
+          '@vehicleId': vehicleId,
+          if (_routeId != null) '@routeId': _routeId,
+          if (_driverId != null) '@driverId': _driverId,
+        };
+        kind = 'recordVehiclePings';
+      } else {
+        payload = {
+          ...TruckPositionInput(
+            lat: item.fix.lat,
+            lng: item.fix.lng,
+            reportedAt: item.at,
+            speedMps: item.fix.speedMps,
+            headingDeg: item.fix.headingDeg,
+            accuracyM: item.fix.accuracy,
+          ).toJson(),
+          '@shipmentId': item.shipmentId,
+        };
+        kind = 'ingestTruckPosition';
+      }
       try {
         await queue.submit(
-          kind: 'ingestTruckPosition',
+          kind: kind,
           payload: payload,
           label: 'GPS · ${item.shipmentId}',
           occurredAt: item.at,

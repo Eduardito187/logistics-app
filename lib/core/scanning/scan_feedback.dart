@@ -10,12 +10,24 @@ import '../auth/token_store.dart';
 /// "click" de éxito aun con el teléfono en el bolsillo o con guantes.
 const Duration kScanErrorVibrationGap = Duration(milliseconds: 180);
 
-/// Aviso de lectura correcta: vibración fuerte + sonido corto del sistema.
+/// Pausa entre los dos golpes de vibración del aviso de éxito: encadenarlos
+/// hace un "buzz" más largo y notorio (pedido del dueño: que vibre más), que se
+/// siente con guantes, bajo el sol y con el teléfono en el soporte.
+const Duration kScanSuccessVibrationGap = Duration(milliseconds: 70);
+
+/// Aviso de lectura correcta: vibración FUERTE y notoria + sonido corto del
+/// sistema. Dos impactos fuertes encadenados + la vibración del sistema dan un
+/// buzz más marcado que un solo tick (antes pasaba casi desapercibido con
+/// guantes).
 ///
 /// Nunca lanza: si la plataforma no tiene vibrador o sonido, se ignora (el
 /// escaneo sigue igual, el aviso es un extra).
 Future<void> scanSuccessFeedback() async {
   await _safe(HapticFeedback.heavyImpact);
+  await Future<void>.delayed(kScanSuccessVibrationGap);
+  await _safe(HapticFeedback.heavyImpact);
+  // Vibración del sistema (más larga que el tick háptico): refuerza el aviso.
+  await _safe(HapticFeedback.vibrate);
   await _safe(() => SystemSound.play(SystemSoundType.click));
 }
 

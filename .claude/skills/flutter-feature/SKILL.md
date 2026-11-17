@@ -41,6 +41,16 @@ subagentes/workflows: 8 agentes con `flutter test` a la vez colgaron WSL ~20 min
 código, revisar estáticamente y entregarle los comandos, uno por bloque, para que los corra de a uno.
 Si él lo pide: UN proceso de Flutter a la vez en todo el equipo (`dart_test.yaml` ya limita a `concurrency: 2`).
 
+**🛑 NUNCA correr la suite de tests (regla del dueño, 2026-11-16):** "nunca más vuelves a lanzar la suite de
+test, eso yo lo veo". NO ejecutar `flutter test` (ni la suite completa ni una carpeta) en ninguna sesión.
+El dueño la corre y mira los números él. Esto corrige una interpretación mía anterior de que estaba OK
+correrla desde la sesión principal: NO lo está. Para verificar, usar `mcp__claude-vscode__getDiagnostics`
+(estático, no lanza proceso; el hook ya lo muestra tras cada Edit) y, si hace falta, `flutter analyze` /
+`dart format` para dejar el código limpio y formateado (el formato debe ser el del Dart 3.32 o rompe CI).
+Al cerrar: entregar el código verificado estáticamente + los comandos para que los corra él (`dart format`
+→ `flutter analyze` → `flutter test`), sin ejecutar el último. Sigue firme: nunca builds/emulador/Docker
+sin pedido, nunca desde subagentes en paralelo.
+
 `flutter analyze`/`flutter test` corren en WSL sin más. **Correr/compilar la app también se puede en
 WSL**: ya está montado el toolchain Android (JDK 17 en `~/jdk`, SDK en `~/Android/Sdk`, NDK), con
 Flutter apuntado vía `flutter config --android-sdk ~/Android/Sdk --jdk-dir ~/jdk`. El APK sigue
@@ -114,6 +124,21 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   del paso, Ayuda sin chat). **Foto del POD obligatoria**; firma digital del cliente en pantalla.
 - **1 GB de RAM y pantallas de 320 dp a tablets**: ver "Base común" y probar con `testOnScreens`.
 - **iOS sí** (se compila en Mac/CI; protección de archivos hasta el primer desbloqueo).
+- **Tiempo real, no refresco por tiempo:** lo que tiene que estar al día va por sockets. Nada de
+  `Timer.periodic` para pedir datos en una pantalla nueva → skill **realtime-feature**.
+- **Diseño que el dueño ya corrigió varias veces** (no volver a lo anterior):
+  - Filtros y opciones como **SELECT** (`DropdownButtonFormField`): ciudad, estado, rol, destinatario. Nunca
+    chips ni un campo de texto para eso.
+  - **El botón principal va FIJO al pie** (`bottomNavigationBar` con `SafeArea`, 56 dp), no al final del scroll.
+  - Formularios con varios campos = **pantalla completa** agrupada en `SectionCard` (ver
+    `admin/.../widgets/personal_data_form.dart`), no un `AlertDialog` con campos apilados.
+  - Fotos = **recuadro que se toca y muestra la vista previa** (`DocumentPhotoTile`); documentos de dos caras
+    piden Anverso y Reverso. Sin botones tipo "Sacar foto del anverso".
+  - Listas de paradas/pasos = **línea de tiempo en tarjetas** (`supervisor/.../widgets/stop_tile.dart`).
+  - **Ningún dato cortado** (sin `ellipsis` en pedido, cliente, dirección), **ningún UUID** a la vista, el SKU
+    va solo (sin la palabra "SKU"), foto del producto en los detalles.
+  - Hojas (modales) del alto de su contenido; el camión en mapas es el visto desde arriba del chofer.
+  - Mientras algo carga se muestra carga, **nunca el estado vacío** ("Sin notificaciones" parpadeando).
 
 ## Base común (usar, no reinventar)
 
@@ -133,8 +158,21 @@ chofer, preparador, tienda, transportista, supervisor, admin.
   precarga `prefetchRouteTiles(puntos)`; `openExternalNavigation(lat,lng)` para navegar.
 - **Push/monitoreo/versión:** `pushRegistrationProvider`, `pushTokenProvider`, `crashReporterProvider.breadcrumb('x.y')`
   (sin datos personales), `VersionGate` ya cableado en `app.dart`.
+- **Tiempo real:** `ref.refreshOnRealtime(tema, {eventos}, when:)` en el provider de lectura,
+  `RealtimeListener` / `PagedSearchListState.refreshSilently()` en pantallas (`lib/core/realtime/`). Detalle
+  y temas vigentes en el skill **realtime-feature**.
+- **Aviso en el teléfono sin Firebase:** `localAlertsProvider` (`core/push/local_alerts.dart`).
+- **Caché de lecturas:** `ref.cacheFor(CacheTtl.short|long)` + `ref.watch(sessionProvider.select(...))` para
+  que no sobreviva a otro usuario. Volver a una pantalla no debe mostrar spinner ni vacío.
 - **Widgets:** `AsyncValueView`, `SectionCard`, `StatTile`, `StatusPill(tone:)`, `EmptyState`, `NotificationsButton`,
   `LoadingView`. Tema con alto contraste (`highContrastProvider`, `AppContrast.isHigh`).
+  - **Estados async SIEMPRE con `AsyncValueView` (nunca `.when` a mano):** mientras carga muestra skeleton,
+    nunca el error; con dato lo muestra aunque revalide; el error solo cuando la consulta terminó SIN dato.
+    El dueño rechaza ver "No se pudo cargar" durante la consulta. Si una pantalla filtra el dato antes de
+    pintar, hacelo DENTRO de `data:` (ver `supervisor_plans_screen.dart`) y da un `EmptyState` propio de
+    "nada coincide con el filtro", distinto del vacío real.
+  - **Contenedores de Ajustes = `SectionCard(title:, child:)`** (no un `ListTile`/`Column` suelto, se "sale"
+    del contenedor y no se ve como las demás). Pasó con la isla de ruta.
 - **Impresión:** `labelPrinterProvider.printLabel({zpl, render, jobName, to}) → PrintOutcome` (texto VERAZ; "aceptado"
   nunca = éxito). **Zebra** = ZPL por Bluetooth/USB/WiFi-9100 (+`~HS`). **Oficina (Ricoh/láser)** = `OfficePrinter`:
   Ricoh se detecta y va por **9100 con PDF DIRECTO** (`PdfDirectJobWriter`, `@PJL ENTER LANGUAGE=PDF`) + código de
@@ -164,8 +202,9 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 6. **Flutter 3.32:** no existen `RadioGroup` (usar `groupValue`/`onChanged` por tile) ni
    `DropdownButtonFormField(initialValue:)` (usar `value:`). Formatear con el `dart` de 3.32 (el de 3.13 formatea distinto y rompe CI).
 7. Toda pantalla nueva: test de widget + `testOnScreens` (`test/support/screen_sizes.dart`, 4 tamaños, `withTextScale(1.3)`).
-8. Pedidos al backend: doc en `docs/backend-requests/AAAA-MM-DD-tema.md` + fila en su `README.md` (no hay sesión
-   del backend para mensajear); si hay una abierta (`ListAgents`), mandarle el doc.
+8. Pedidos al backend: contrato concreto por `SendMessage` a la sesión del backend + doc en
+   `docs/backend-requests/AAAA-MM-DD-tema.md` y fila en su `README.md`. Cómo derivar, implementar contra un
+   contrato sin desplegar y diagnosticar datos: skill **backend-coordination**.
 
 ## Regenerar el cliente API
 
@@ -173,11 +212,28 @@ chofer, preparador, tienda, transportista, supervisor, admin.
 (o `scripts/regen_api_client.sh`). Genera en una copia temporal con `C:\sdk\flutter` y `tool/api_gen/`
 (pubspec Dart 3.13), preprocesa el spec con la Python de WSL (la de Windows no tiene PyYAML), parcha
 `MetaSealed?`, corre build_runner, formatea con 3.32 y copia solo `lib/core/api/`. **Avisa si cambió la
-numeración de tipos anónimos `DataN`**: renombrar las referencias de la app/tests y los imports `models/dataN.dart`
-comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
+numeración de tipos anónimos `DataN`** ("[6/7] Revisando tipos anonimos DataN" → "Sin cambios" o la lista):
+renombrar las referencias de la app/tests y los imports `models/dataN.dart` comparando campos (pasó:
+`Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 
 - **Pasar SIEMPRE `-Spec C:\Users\ehhuallata\Documents\APP\logistics\openapi\v1.yaml`**: el valor por defecto
   apunta al backend viejo de WSL. Probar primero con `-DryRun`.
+- **`-DryRun` "falla" con exit 1 pero NO es un error:** el último paso es `git diff --no-index`, que devuelve 1
+  cuando HAY diferencias (lo normal). El dry-run igual generó: mirá el resumen de archivos y los avisos.
+- **No solo `DataN` se renumera: los `HelpersN` anónimos también** (pasó `Helpers2→Helpers3` en `my_crew`,
+  2026-11-16). El script solo chequea `DataN`; tras aplicar, `flutter analyze` caza el resto
+  (`List<Helpers2>` no asigna a `List<Helpers3>`) y se renombra en app/tests.
+- **Un campo que el backend hizo REQUERIDO rompe la app contra un backend AÚN NO DESPLEGADO** (el modelo
+  generado exige el campo; el staging viejo no lo manda → el parseo del objeto entero falla, p. ej. toda la
+  lista de envíos entregados). Avisar al dueño: desplegar backend + app juntos, no la app sola contra staging
+  viejo. Alternativa: pedir al backend que el campo sea nullable (pasó con `delivery_evidence.with_shortage`).
+- **UN SOLO regen coordinado** cuando el backend tiene mucho spec en vuelo sin commitear: regenerar trae TODO
+  de una (acopla trabajo no desplegado y puede renumerar). Esperar la señal "SPEC ESTABLE" del backend (o el
+  commit/deploy del dueño) y regenerar una vez con todo. Ver [[realtime-sockets-contract]], skill
+  **backend-coordination**.
+- **Verificación sin suite:** el dueño NO quiere que corras `flutter test`. Tras el regen, verificá con
+  `flutter analyze` (y el truco de abajo para el cliente generado, que está excluido); el build_runner que
+  corre dentro del regen ya probó que el cliente generado compila. Entregá el comando de tests al dueño.
 - El cliente generado está EXCLUIDO del analizador (`analysis_options.yaml`): `flutter analyze` en verde no
   prueba que compile. Para revisarlo: comentar un momento las exclusiones `lib/core/api/**` y `**/*.g.dart`,
   `dart analyze lib/core/api`, y restaurarlas.
@@ -186,8 +242,8 @@ comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
   (`<OperationId>Data`, `<Schema>Data`), tipos que chocan con Dart (`map` → `MapSettings`), JSON antes que
   multipart. Si un regen falla (Stack Overflow, `class Map`, un enum pisado, `.toJson()` sobre null), el
   arreglo va ahí, nunca a mano en `lib/core/api/`.
-- Tras regenerar: `flutter analyze` + suite completa; los renombres se aplican con un script de Python en el
-  scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
+- Tras regenerar: `flutter analyze` (la suite la corre el dueño); los renombres se aplican con un script de
+  Python en el scratchpad (los heredocs de Git Bash con Dart adentro se rompen).
 
 ## Reglas de negocio vigentes (nov 2026)
 
@@ -200,6 +256,54 @@ comparando campos (pasó: `Data4→Data5`, `Data6→Data7`, `Data21→Data22`).
 - Personal por ciudad; el alcance por rol lo aplica el servidor (`can_process`), no la app.
 - Inspección y odómetro van por SALIDA (`route_id`), no por día: el chofer sale N veces.
 - Lo que decide el dueño se implementa tal cual, sin dejar el flujo viejo "como control".
+
+## Robustez por marca / plataforma (crítico: la app debe andar en TODAS las marcas)
+
+Regla dura del dueño: que la app NO funcione en algunas marcas/teléfonos es crítico. No depender de
+permisos o capacidades específicas de marca.
+
+- **Ubicación: exigir solo PRIMER PLANO ("mientras se usa la app"), NUNCA "Permitir siempre" (background).**
+  El rastreo corre con un **foreground service de tipo `location`** (manifest ya tiene
+  `FOREGROUND_SERVICE_LOCATION` + `foregroundServiceType="location"`), y un FGS cuenta como uso activo → con
+  primer plano alcanza para rastrear (incluida la app minimizada). Exigir `Permission.locationAlways`
+  (ACCESS_BACKGROUND_LOCATION) dejaba BLOQUEADOS a Honor/Magic OS y a quien da solo "mientras se usa la app"
+  (Android 11+ ni lo pide por diálogo). El gate (`LocationPermissionGate`) y `TruckTrackingService._start`
+  usan `ensurePermission()` (primer plano). `ensureBackgroundPermission` sigue en `LocationService` pero NO
+  se usa para gatear. Ver `.claude/memory/location-permission-foreground-honor.md`.
+- **Sin Google Play Services (algunas marcas/regiones):** FCM/maps/Data Layer degradan sin tumbar la app
+  (push "No disponible", etc.). Nunca asumir GMS presente.
+- **Matanza agresiva de procesos (Xiaomi/Honor/HyperOS):** el foreground service mitiga; no romper su
+  configuración (`-Xmx`, wake lock, id de servicio = id de la Live Update).
+
+## Wear OS / smartwatch
+
+- **Widgets del teléfono ≠ tiles del reloj.** Los App Widgets de Android (`lib/core/home_widgets/` + nativo
+  en `android/app/.../widgets/`) YA existen y son del TELÉFONO. El reloj es aparte: un **módulo `:wear`**
+  (nativo, Jetpack Tiles + ProtoLayout). No se "comparte" un widget del teléfono al reloj.
+- **Dos caminos, trade-off real:**
+  1. **Notificación espejada (SIN instalar app de reloj):** el teléfono postea una notificación NORMAL
+     (no-ongoing, que alerta ≥1 vez; `WearMirror.kt`). El reloj la espeja como las de WhatsApp. **Las
+     notificaciones de foreground service (ongoing) NO se espejan** → por eso la de la ruta/isla no llegaba.
+     Es best-effort: depende del ajuste POR-APP del reloj (Galaxy Wearable / Wear OS). No se puede forzar
+     desde la app.
+  2. **App de reloj (`:wear`, Data Layer, SIN login):** el teléfono empuja el resumen (`WearBridge` →
+     DataClient) y el reloj muestra **su propio tile + notificación** (no depende del espejado). Es lo
+     ÚNICO confiable en todas las marcas, pero hay que instalar el `:wear` una vez (`./gradlew
+     :wear:assembleDebug` + `adb install`).
+- **El envío al reloj es AUTOMÁTICO** (en `LiveUpdatesChannel.show()`/`end()`), nunca un botón manual (el
+  dueño lo pidió así; se quitó el botón de Ajustes).
+- **Tile ProtoLayout: simple o no renderiza.** `EdgeContentLayout`/`CircularProgressIndicator`/`PrimaryLayout`/
+  `screenShape` quedaban en BLANCO en algunos relojes. Usar una **caja centrada + texto** (`Box`+`Column`+
+  `Text`), que se ve en redondo y cuadrado. El tile NUNCA debe quedar vacío (default "Sin ruta activa").
+- Ver `.claude/memory/wear-os-data-layer.md`.
+
+## Código nativo (Kotlin / Gradle / Wear): NO se verifica con analyze
+
+`flutter analyze` y `getDiagnostics` solo cubren Dart. El código Kotlin/Gradle (canales, widgets, módulo
+`:wear`) **no se valida acá**: se valida compilando/instalando en el dispositivo (lo corre el dueño).
+Entregar el código + el comando y pedir el error de build si falla (iterar como con NDK/CameraX). Un
+`include(":<módulo>")` nuevo en `settings.gradle.kts` ACOPLA su build al del teléfono: si rompe, comentar
+el include para destrabar.
 
 ## Definición de terminado
 
@@ -244,6 +348,13 @@ en uso (ver regla 0b).
 | `logout`/acción no surte efecto o cuelga en test | `flutter_secure_storage` y otros plugins no existen en widget tests | En `signOut` limpiar estado **síncrono primero**, luego `await` del almacén en try/catch |
 | App no monta en test / push revienta en dispositivo sin Google Play | Firebase lanza **Error** (no Exception) sin plugin o sin credenciales | Bootstrap del push con `catch` amplio (`on Object`); sin `FIREBASE_*` el push queda "No disponible", nunca tumbar la app |
 | `AsyncValue.valueOrNull` no existe | Riverpod 3.x | Usar `.value` (nullable) |
+| "No se pudo cargar / Intentelo nuevamente" en TODAS las pantallas del teléfono | Build de **dev** (localhost:8110) con el backend local caído o sin `adb reverse`: el login entra pero ningún servicio responde | Compilar con `config/staging.json` (OCI, está arriba) para probar en teléfono; `curl` al endpoint, 000 = backend caído. Ver `run-environments-config` |
+| El error "No se pudo cargar" PARPADEA mientras carga o al recargar tras un error | Se usó `.when` (cae al error durante `isLoading`) en vez de `AsyncValueView` | `AsyncValueView`: skeleton mientras `isLoading && !hasValue`, error solo al terminar SIN dato |
+| El chofer pierde la entrega en curso a la medianoche ("sin pedidos asignados") | Se pidió `my-crew`/ruta por fecha=HOY; al cambiar el día queda vacío | Pedir `my-crew` y `vehicles/{id}/route` **sin `?date`** = vigente (lo rige el estado de la ruta). Ver `driver-midnight-open-assignment` |
+| Escribiste un archivo nativo (android/) y "no aparece", o quedó una carpeta hermana rara | El proyecto es `logistics-app` (GUION); el paquete interno es `.../bo/com/dismac/logistics_app` (GUION BAJO). Tipear `logistics_app` como carpeta raíz crea un dir fantasma `…/APP/logistics_app/…` | La raíz es SIEMPRE `…/APP/logistics-app/…`; revisar la ruta COMPLETA antes de `Write` en android/. Si pasó: `rm -rf` solo el `logistics_app` hermano (nunca `logistics-app`) |
+| Instalar un build en el teléfono para que el dueño pruebe (Windows nativo, staging) | Release bloquea cleartext; staging es http → usar **profile** | `export JAVA_HOME="/c/Users/ehhuallata/jdk21/jdk-21.0.12.1+1"` → `flutter.bat build apk --profile --dart-define-from-file=config/staging.json --split-per-abi` → `adb.exe -s <ip:puerto> install -r build/app/outputs/flutter-apk/app-arm64-v8a-profile.apk` (OnePlus=arm64). `-r` conserva la sesión |
+| `Manifest merger failed`: `minSdkVersion 24 cannot be smaller than version 25 declared in library [androidx.wear:wear-ongoing]` (u otra lib minSdk 25) | La lib declara minSdk 25; el proyecto está fijo en 24 (no subirlo) | `xmlns:tools` + `<uses-sdk tools:overrideLibrary="androidx.wear.ongoing"/>` en `app/src/main/AndroidManifest.xml`, y envolver el uso de la lib en try/catch para degradar en API 24. NO bumpear minSdk |
+| El build de fondo dice "exit 0" pero al dueño le FALLA la misma build | Un `flutter build` en background puede reportar 0 por caché/daemon aunque el merge falle en una corrida limpia | No confiar solo en el código de salida: leer el `tail` del log (líneas `√ Built …apk`) y verificar la hora de los APKs antes de decir "compila" |
 | `RadioGroup` / `DropdownButtonFormField(initialValue:)` no existen | El proyecto usa Flutter 3.32 | `groupValue`/`onChanged` en cada `RadioListTile`; `value:` en el dropdown |
 | `package:latlong2/latlong2.dart` no existe | nombre del archivo | Importar `package:latlong2/latlong.dart` |
 | `swagger_parser` falla (`List` no es `Map`) al generar | anchors YAML + `parameters` a nivel path | Preprocesar a JSON (ver "Cliente API generado" / `scripts/preprocess_openapi.py`) |
@@ -314,3 +425,13 @@ en uso (ver regla 0b).
 | Probar staging con una cuenta y el teléfono de esa cuenta se desloguea | Hay 1 sesión activa por tipo de cliente; un login de diagnóstico como app móvil pisa la del teléfono | Loguear el diagnóstico con `device.client_kind: "web"` |
 | Un test de widget falla con `contains(<Map>)` aunque el mapa "es igual" | `contains` compara por identidad los mapas | `contains(equals({...}))` |
 | El análisis pasa pero un test no compila tras regenerar el cliente | Los fakes de `test/` implementan data sources con tipos del cliente (`Role` vs `StaffRoleName`, `DataN`) | Revisar `test/features/*/fake_*.dart` y los helpers `fromJson` junto con cada regen |
+| Un test con `pumpAndSettle` no ve el efecto de un evento con debounce (tiempo real, búsqueda) | `pumpAndSettle` no avanza timers si no hay frames | `await tester.pump(const Duration(milliseconds: 500))` antes |
+| `find.widgetWithText(FilledButton, 'Guardar')` no encuentra el botón fijo al pie | `FilledButton.icon` es una subclase privada | `find.text('Guardar')` o `findButtonWithText<FilledButton>()` |
+| Un test toca "el día 24" y abre otra cosa, o no toca nada | El mismo texto está en la pantalla de atrás (grilla) y en el diálogo de arriba | `find.descendant(of: find.byType(DateRangePickerDialog), matching: ...)` |
+| El test de una pantalla larga no encuentra un campo | `ListView` es perezosa y el campo no se construyó | Agrandar la vista (`tester.view.physicalSize`) o `ensureVisible` |
+| `Cannot use Ref ... inside life-cycles` al cerrar un notifier | `ref.read` dentro de `ref.onDispose` | Guardar la referencia en un campo durante `build` |
+| `AutoDisposeFutureProvider` no existe | Riverpod 3 unificó los tipos | `FutureProvider<T>` (y `AsyncNotifierProvider.autoDispose`) |
+| El heredoc de Bash con código Dart falla ("unexpected EOF"), o Git Bash muere con `add_item ... errno 1` | Comillas y `$` del Dart; el crash es transitorio | Script de parche escrito con Write al scratchpad y corrido con `python`; repetir el comando tras el crash |
+| El chofer da permiso de ubicación pero la app lo deja en la **pantalla bloqueada** (Honor/Magic OS, otros) | El gate exigía "Permitir siempre" (`locationAlways`/ACCESS_BACKGROUND_LOCATION); Android 11+ no lo da por diálogo y Honor lo esconde/reporta mal | Exigir solo PRIMER PLANO (`ensurePermission`): el foreground service de tipo `location` alcanza. Ver sección "Robustez por marca" y `location-permission-foreground-honor` |
+| La notificación de ruta (o la isla) **no se espeja al reloj** (Samsung/Wear OS) pero WhatsApp sí | Es de **foreground service (ongoing)**; los relojes NO espejan las ongoing. La isla es un overlay del teléfono, nunca viaja | Postear una notificación NORMAL aparte (`WearMirror`, no-ongoing, que alerta ≥1 vez). Igual depende del ajuste por-app del reloj. Lo garantizado = app de reloj `:wear` (Data Layer). Ver `wear-os-data-layer` |
+| El **tile de Wear OS queda en blanco** aunque el `:wear` esté instalado | `EdgeContentLayout`/`CircularProgressIndicator`/`PrimaryLayout`/`screenShape` de ProtoLayout no renderizan en algunos relojes | Caja centrada + texto (`Box`+`Column`+`Text`); nunca dejar el tile vacío (default "Sin ruta activa"). Validar compilando en el reloj (no lo cubre `analyze`) |

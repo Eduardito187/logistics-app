@@ -112,4 +112,10 @@ dependencies {
     // BiometricPrompt (huella/rostro) para el inicio de sesión biométrico.
     // 1.1.0 = última estable compatible con AGP 8.7 / compileSdk 36.
     implementation("androidx.biometric:biometric:1.1.0")
+    // androidx.core: NotificationCompat para la notificación espejada al reloj
+    // (WearMirror). Explícito (no transitivo) para no depender de que otro
+    // plugin lo arrastre. Ya no se usa la Ongoing Activity API (androidx.wear):
+    // se quitó porque el chip "ongoing" no se podía cerrar y revivir, que es lo
+    // que pidió el dueño; por eso tampoco hace falta el override de minSdk.
+    implementation("androidx.core:core:1.13.1")
 }

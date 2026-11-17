@@ -18,7 +18,6 @@ import 'package:logistics_app/features/supervisor/presentation/supervisor_fleet_
 import 'package:logistics_app/features/supervisor/presentation/supervisor_plan_detail_screen.dart';
 import 'package:logistics_app/features/supervisor/presentation/supervisor_plans_screen.dart';
 import 'package:logistics_app/features/supervisor/presentation/widgets/alert_card.dart';
-import 'package:logistics_app/features/supervisor/presentation/widgets/eta_section.dart';
 import 'package:logistics_app/features/supervisor/presentation/widgets/fleet_map.dart';
 import 'package:logistics_app/features/supervisor/presentation/widgets/plan_card.dart';
 import 'package:logistics_app/features/supervisor/presentation/widgets/stop_tile.dart';
@@ -181,7 +180,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final scrollable = find.byType(Scrollable).first;
-      // En teléfono la secuencia queda debajo del ETA: se scrollea hasta su
+      // En teléfono la secuencia queda debajo del resumen: se scrollea hasta su
       // título y un poco más para que se construya la primera parada.
       await tester.scrollUntilVisible(
         find.text('Secuencia de paradas'),
@@ -192,9 +191,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(StopTile), findsWidgets);
       if (screen == TestScreen.tabletLandscape) {
-        final eta = tester.getRect(find.byType(EtaSection));
+        // Tablet apaisada: el resumen a la izquierda, el recorrido a la
+        // derecha.
+        final summary = tester.getRect(find.text('Fecha'));
         final stop = tester.getRect(find.byType(StopTile).first);
-        expect(stop.left, greaterThan(eta.right));
+        expect(stop.left, greaterThan(summary.right));
       }
     },
   );

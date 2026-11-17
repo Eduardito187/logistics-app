@@ -18,6 +18,15 @@ import '../../../core/widgets/paged.dart';
 ///
 /// Las listas devuelven [Paged] (ítems + si quedan más páginas) para el
 /// buscador con carga incremental de las pantallas.
+/// Una franja horaria de un día del calendario de entregas.
+typedef CalendarHourSlot = ({
+  String timeSlot,
+  num? capacity,
+  num? used,
+  bool blocked,
+  String? reason,
+});
+
 class AdminRemoteDataSource {
   const AdminRemoteDataSource(this._ref);
 
@@ -285,18 +294,28 @@ class AdminRemoteDataSource {
   );
 
   /// Asigna un camión a un chofer para [date] (arma su tripulación del día).
+  ///
+  /// El backend REEMPLAZA la tripulación que el chofer ya tenía ese día. Si
+  /// el camión ya tiene OTRO chofer ese día responde 409; con [replace] se
+  /// le quita a ese chofer.
   Future<void> assignVehicle({
     required String driverId,
     required String vehicleId,
     required DateTime date,
+    bool replace = false,
   }) => _guard(() async {
-    await _api.fleet.fleetAssembleCrew(
-      body: AssembleCrewRequest(
-        driverId: driverId,
-        vehicleId: vehicleId,
-        assembledFor: date,
-      ),
-    );
+    String two(int n) => n.toString().padLeft(2, '0');
+    await _ref
+        .read(dioProvider)
+        .post<void>(
+          '/app/fleet/crews',
+          data: {
+            'driver_id': driverId,
+            'vehicle_id': vehicleId,
+            'assembled_for': '${date.year}-${two(date.month)}-${two(date.day)}',
+            if (replace) 'replace': true,
+          },
+        );
   });
 
   /// Quita la asignación vigente (tripulación) de un chofer.
@@ -337,6 +356,107 @@ class AdminRemoteDataSource {
       body: AppDeliveryCalendarBlockedRequestBody2(date: date),
     );
   });
+
+  /// Opciones para abrir cupos: franjas horarias, unidades y municipios.
+  Future<DeliveryCalendarOptionsData> calendarOptions() => _guard(
+    () async => (await _api.capacity.getDeliveryCalendarOptions()).data,
+  );
+
+  /// Agrega cupos a UNA franja horaria de un día. Sin [municipalityIds] no
+  /// se puede: el backend los exige (se mandan todos para "todos").
+  Future<void> openHourSlot({
+    required DateTime date,
+    required String timeSlot,
+    required String unit,
+    required num quantity,
+    required List<String> municipalityIds,
+  }) => _guard(() async {
+    await _api.capacity.openDeliverySlots(
+      body: AppDeliveryCalendarOpenRequestBody(
+        municipalityIds: municipalityIds,
+        from: date,
+        to: date,
+        weekdays: [date.weekday],
+        windows: [Windows(timeSlot: timeSlot, unit: unit, quantity: quantity)],
+      ),
+    );
+  });
+
+  static String _ymd(DateTime date) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${date.year}-${two(date.month)}-${two(date.day)}';
+  }
+
+  /// Franjas horarias de un día con sus cupos. `null` si el backend todavía
+  /// no ofrece el detalle por hora (la pantalla no muestra esa sección).
+  Future<List<CalendarHourSlot>?> daySlots(DateTime date) async {
+    try {
+      final res = await _ref
+          .read(dioProvider)
+          .get<Map<String, Object?>>(
+            '/app/delivery-calendar/day',
+            queryParameters: {'date': _ymd(date)},
+          );
+      final data = res.data?['data'];
+      final raw = data is Map ? data['slots'] : null;
+      if (raw is! List) return const [];
+      return [
+        for (final item in raw)
+          if (item is Map && item['time_slot'] is String)
+            (
+              timeSlot: item['time_slot'] as String,
+              capacity: item['capacity'] is num
+                  ? item['capacity'] as num
+                  : null,
+              used: item['used'] is num ? item['used'] as num : null,
+              blocked: item['blocked'] == true,
+              reason: item['reason'] is String
+                  ? item['reason'] as String
+                  : null,
+            ),
+      ];
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 404 || status == 405) return null;
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Bloquea UNA franja horaria de un día (no el día entero).
+  Future<void> blockHourSlot(DateTime date, String timeSlot, String reason) =>
+      _guard(() async {
+        await _ref
+            .read(dioProvider)
+            .post<void>(
+              '/app/delivery-calendar/blocked-slots',
+              data: {
+                'date': _ymd(date),
+                'time_slot': timeSlot,
+                'reason': reason,
+              },
+            );
+      });
+
+  /// Quita el bloqueo de una franja horaria.
+  Future<void> unblockHourSlot(DateTime date, String timeSlot) =>
+      _guard(() async {
+        await _ref
+            .read(dioProvider)
+            .delete<void>(
+              '/app/delivery-calendar/blocked-slots',
+              data: {'date': _ymd(date), 'time_slot': timeSlot},
+            );
+      });
+
+  /// Cierre de oficina de un TRASPASO que quedó en curso con faltantes: se da
+  /// por entregado con un motivo. Solo admin y supervisor.
+  Future<void> closeTransfer(String shipmentId, String reason) =>
+      _guard(() async {
+        await _api.execution.closeTransferWithShortage(
+          shipmentId: shipmentId,
+          body: CloseTransferWithShortageRequest(reason: reason),
+        );
+      });
 
   // --- Avisos al personal ---------------------------------------------------
 

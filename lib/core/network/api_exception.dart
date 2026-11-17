@@ -18,6 +18,7 @@ class ApiException implements Exception {
     this.detail,
     this.type,
     this.code,
+    this.rawCode,
     this.fieldErrors = const {},
     this.isConnectionError = false,
     this.retryAfter,
@@ -32,6 +33,11 @@ class ApiException implements Exception {
   /// Código legible por máquina del catálogo de errores (`ProblemCode`).
   /// `null` si la respuesta no trae `code` (p. ej. un error no-RFC7807 o sin red).
   final ProblemCode? code;
+
+  /// El `code` TAL CUAL llegó, en texto. Sirve para ramificar por códigos de
+  /// dominio que todavía no están en el enum `ProblemCode` (caen en `$unknown`
+  /// hasta regenerar el cliente), p. ej. `out_of_scope_assignment`.
+  final String? rawCode;
 
   /// Errores de validación por campo (422), `{campo: [mensajes]}`.
   final Map<String, List<String>> fieldErrors;
@@ -60,6 +66,11 @@ class ApiException implements Exception {
       code == ProblemCode.insufficientRole ||
       code == ProblemCode.insufficientScope;
 
+  /// El backend rechazó la acción porque el usuario no es de esa asignación
+  /// (p. ej. un chofer pidió un camión que hoy no es suyo):
+  /// `code: out_of_scope_assignment` en un 403.
+  bool get isOutOfScopeAssignment => rawCode == 'out_of_scope_assignment';
+
   bool get isNotFound => status == 404 || code == ProblemCode.notFound;
   bool get isRateLimited => status == 429 || code == ProblemCode.rateLimited;
   bool get isServerError => status >= 500;
@@ -71,6 +82,11 @@ class ApiException implements Exception {
     if (isConnectionError) {
       // Offline invisible: no se revela la falta de señal al usuario.
       return 'No se pudo completar. Intentá de nuevo en un momento.';
+    }
+    if (isOutOfScopeAssignment) {
+      // Chofer pidiendo un camión que hoy no es suyo (o sin camión del día).
+      return 'Este camión no es tuyo hoy. Pedile al supervisor que te asigne '
+          'uno.';
     }
     if (isForbidden) {
       return 'No tenés permiso para esta acción.';
@@ -152,6 +168,7 @@ class ApiException implements Exception {
       detail: rawDetail is String ? rawDetail : null,
       type: problem['type'] as String?,
       code: rawCode is String ? ProblemCode.fromJson(rawCode) : null,
+      rawCode: rawCode is String ? rawCode : null,
       fieldErrors: fieldErrors,
       retryAfter: parseRetryAfter(response.headers.value('retry-after')),
     );

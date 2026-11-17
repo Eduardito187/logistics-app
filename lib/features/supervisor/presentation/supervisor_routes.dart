@@ -4,6 +4,7 @@ import '../../../core/api/models/plan.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
+import 'planning_actions_screen.dart';
 import 'supervisor_alerts_screen.dart';
 import 'supervisor_dashboard_screen.dart';
 import 'supervisor_fleet_screen.dart';
@@ -37,12 +38,14 @@ const List<RoleTask> supervisorTasks = [
     route: '/supervisor/plans',
     roles: {UserRole.supervisor},
   ),
+  // CREAR/gestionar la planificación del día (pantalla propia, no el listado):
+  // planificar automático, armar un viaje y publicar.
   RoleTask(
     id: 'plan-day',
     label: 'Planificación',
-    subtitle: 'Armar, ajustar y publicar los planes',
+    subtitle: 'Planificar el día y publicar',
     appIcon: AppIcon.plans,
-    route: '/supervisor/plans',
+    route: '/supervisor/planning',
     roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
@@ -75,6 +78,10 @@ final List<RouteBase> supervisorRoutes = [
   GoRoute(
     path: '/supervisor/plans',
     builder: (context, state) => const SupervisorPlansScreen(),
+  ),
+  GoRoute(
+    path: '/supervisor/planning',
+    builder: (context, state) => const PlanningActionsScreen(),
   ),
   GoRoute(
     path: '/supervisor/trips/new',

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/realtime/realtime_bus.dart';
+import '../../../../core/realtime/realtime_refresh.dart';
+
 import '../../../../core/api/models/node.dart';
 import '../../../../core/api/models/node_reception_view.dart';
 import '../../../../core/api/models/scan_type.dart';
@@ -37,11 +40,19 @@ final storeShipmentsProvider = Provider.autoDispose<AsyncValue<List<Shipment>>>(
 /// Estado de la recepción de un envío en un nodo. `null` cuando aún no se abrió
 /// (el backend responde 404), lo que la UI usa para ofrecer "Abrir recepción".
 final nodeReceptionProvider = FutureProvider.autoDispose
-    .family<NodeReceptionView?, ReceptionKey>(
-      (ref, key) => ref
+    .family<NodeReceptionView?, ReceptionKey>((ref, key) {
+      // Otra persona de la tienda recibió productos de ESTE envío.
+      ref.refreshOnRealtime(
+        RealtimeTopic.store,
+        const {'store.updated'},
+        when: (data) =>
+            realtimeMatches(data, 'node_id', key.nodeId) &&
+            realtimeMatches(data, 'shipment_id', key.shipmentId),
+      );
+      return ref
           .watch(getNodeReceptionProvider)
-          .call(shipmentId: key.shipmentId, nodeId: key.nodeId),
-    );
+          .call(shipmentId: key.shipmentId, nodeId: key.nodeId);
+    });
 
 /// Productos esperados de un envío (uno por unidad física); insumo de la
 /// recepción y del POD. Caché corta: entrar y salir del detalle no los vuelve a pedir.

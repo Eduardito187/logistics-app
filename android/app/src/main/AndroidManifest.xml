@@ -29,6 +29,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Exención de optimización de batería: sin esto los OEM agresivos
+         (OnePlus/OxygenOS, Honor, Xiaomi) matan el proceso a los pocos minutos
+         en segundo plano aun con foreground service, y la app se reabre "desde
+         cero". Se pide con un diálogo del sistema al arrancar el rastreo. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Notificaciones (Android 13+): push y servicio en primer plano. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Android 16+: notificación de ruta "promovida" (chip en la barra de

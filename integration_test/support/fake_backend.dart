@@ -197,6 +197,7 @@ class FakeBackend {
       ('POST', '/app/auth/logout') => {'message': 'Sesión cerrada.'},
       ('POST', '/app/deliveries/scans/unload') => _unload(body),
       ('POST', '/app/deliveries/proof-of-delivery') => _proofOfDelivery(body),
+      ('POST', '/app/deliveries/photos') => _uploadPhoto(),
       ('POST', '/app/node-receptions/units') => _receiveUnit(body),
       ('POST', '/app/deliveries/scans/preparation') => _preparation(body),
       _ => null,
@@ -355,6 +356,20 @@ class FakeBackend {
     delivered.add(pod.shipmentId);
     _routeProjectionLag.add(pod.shipmentId);
     return {'data': deliveryState(pod.shipmentId)};
+  }
+
+  /// Sube la foto de evidencia (`POST /app/deliveries/photos`): devuelve su
+  /// referencia durable. El cuerpo es multipart; solo importa la respuesta.
+  int _photoUploads = 0;
+  Map<String, Object?> _uploadPhoto() {
+    _photoUploads++;
+    return {
+      'data': {
+        'kind': 'pod',
+        'disk': 'local',
+        'path': 'evidence/pod-$_photoUploads',
+      },
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -547,7 +562,7 @@ class FakeDriverRouteRepository implements DriverRouteRepository {
   @override
   Future<DriverRoute> getDriverRoute({
     required String vehicleId,
-    required DateTime date,
+    DateTime? date,
   }) async => backend.driverRoute();
 
   @override

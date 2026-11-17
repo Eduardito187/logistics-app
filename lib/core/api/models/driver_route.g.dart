@@ -17,6 +17,13 @@ DriverRoute _$DriverRouteFromJson(Map<String, dynamic> json) => DriverRoute(
   stops: (json['stops'] as List<dynamic>)
       .map((e) => DriverRouteStop.fromJson(e as Map<String, dynamic>))
       .toList(),
+  offRoute: json['off_route'] as bool?,
+  offRouteSince: json['off_route_since'] == null
+      ? null
+      : DateTime.parse(json['off_route_since'] as String),
+  rerouteGeometry: (json['reroute_geometry'] as List<dynamic>?)
+      ?.map((e) => LatLngPoint.fromJson(e as Map<String, dynamic>))
+      .toList(),
   startedAt: json['started_at'] == null
       ? null
       : DateTime.parse(json['started_at'] as String),
@@ -35,6 +42,9 @@ DriverRoute _$DriverRouteFromJson(Map<String, dynamic> json) => DriverRoute(
 
 Map<String, dynamic> _$DriverRouteToJson(DriverRoute instance) =>
     <String, dynamic>{
+      'off_route': instance.offRoute,
+      'off_route_since': instance.offRouteSince?.toIso8601String(),
+      'reroute_geometry': instance.rerouteGeometry,
       'started_at': instance.startedAt?.toIso8601String(),
       'closed_at': instance.closedAt?.toIso8601String(),
       'id': instance.id,

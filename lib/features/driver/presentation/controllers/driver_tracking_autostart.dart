@@ -45,17 +45,25 @@ String? _shipmentToTrack(
 /// Decisión del rastreo: `known == false` mientras todavía no hay NINGUNA ruta
 /// (primera carga o primera carga fallida sin señal); en ese caso no se toca el
 /// rastreo (ni se apaga uno ya activo). Con ruta, el envío a rastrear o `null`
-/// para detenerlo. Es un record: solo notifica cuando cambia de verdad.
+/// para detenerlo, más el CAMIÓN y la RUTA (para el camino de telemetría que
+/// alimenta el motor de desvío/reruteo del backend). Es un record: solo notifica
+/// cuando cambia de verdad.
 final trackingDecisionProvider =
-    Provider.autoDispose<({bool known, String? shipmentId})>((ref) {
+    Provider.autoDispose<
+      ({bool known, String? shipmentId, String? vehicleId, String? routeId})
+    >((ref) {
       final route = ref.watch(driverRouteProvider).value;
-      if (route == null) return (known: false, shipmentId: null);
+      if (route == null) {
+        return (known: false, shipmentId: null, vehicleId: null, routeId: null);
+      }
       return (
         known: true,
         shipmentId: _shipmentToTrack(
           route,
           ref.watch(locallySettledStopsProvider),
         ),
+        vehicleId: route.vehicleId,
+        routeId: route.id,
       );
     });
 
@@ -80,40 +88,48 @@ class DriverTrackingAutostart extends ConsumerStatefulWidget {
 
 class _DriverTrackingAutostartState
     extends ConsumerState<DriverTrackingAutostart> {
-  ProviderSubscription<({bool known, String? shipmentId})>? _subscription;
+  ProviderSubscription<
+    ({bool known, String? shipmentId, String? vehicleId, String? routeId})
+  >?
+  _subscription;
 
   @override
   void initState() {
     super.initState();
     // `fireImmediately` aplica el efecto también con el valor inicial, así el
     // rastreo arranca apenas se monta el gate si ya hay parada activa.
-    _subscription = ref.listenManual<({bool known, String? shipmentId})>(
-      trackingDecisionProvider,
-      (previous, next) {
-        // Sin ruta todavía: no se decide nada (no apagar por "cargando").
-        if (!next.known) return;
-        // Mismo envío que antes: nada que hacer (no reiniciar el servicio).
-        if (previous != null &&
-            previous.known &&
-            previous.shipmentId == next.shipmentId) {
-          return;
-        }
-        final tracking = ref.read(truckTrackingProvider.notifier);
-        final current = ref.read(truckTrackingProvider);
-        final shipmentId = next.shipmentId;
-        if (shipmentId != null) {
-          // Al montar el gate de otra pantalla con el rastreo ya andando para
-          // el mismo envío, no se vuelve a llamar a `start`.
-          if (current.active && current.shipmentId == shipmentId) return;
-          unawaited(tracking.start(shipmentId: shipmentId));
-        } else {
-          // Sin filtrar por `active`: el servicio pudo sobrevivir a un reinicio
-          // de la app con el estado en memoria ya limpio.
-          unawaited(tracking.stop());
-        }
-      },
-      fireImmediately: true,
-    );
+    _subscription = ref
+        .listenManual<
+          ({bool known, String? shipmentId, String? vehicleId, String? routeId})
+        >(trackingDecisionProvider, (previous, next) {
+          // Sin ruta todavía: no se decide nada (no apagar por "cargando").
+          if (!next.known) return;
+          // Mismo envío que antes: nada que hacer (no reiniciar el servicio).
+          if (previous != null &&
+              previous.known &&
+              previous.shipmentId == next.shipmentId) {
+            return;
+          }
+          final tracking = ref.read(truckTrackingProvider.notifier);
+          final current = ref.read(truckTrackingProvider);
+          final shipmentId = next.shipmentId;
+          if (shipmentId != null) {
+            // Al montar el gate de otra pantalla con el rastreo ya andando para
+            // el mismo envío, no se vuelve a llamar a `start`.
+            if (current.active && current.shipmentId == shipmentId) return;
+            unawaited(
+              tracking.start(
+                shipmentId: shipmentId,
+                vehicleId: next.vehicleId,
+                routeId: next.routeId,
+              ),
+            );
+          } else {
+            // Sin filtrar por `active`: el servicio pudo sobrevivir a un reinicio
+            // de la app con el estado en memoria ya limpio.
+            unawaited(tracking.stop());
+          }
+        }, fireImmediately: true);
   }
 
   @override

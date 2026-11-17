@@ -82,6 +82,7 @@ void main() {
             signature: true,
             photo: true,
             document: false,
+            withShortage: false,
           ),
         ),
       ],
@@ -95,5 +96,31 @@ void main() {
     expect(find.text('Foto de entrega'), findsOneWidget);
     expect(find.text('Foto de documento'), findsNothing);
     expect(find.text('Asignar a un camión'), findsNothing);
+  });
+
+  testWidgets('entregado con faltante: tag ámbar con el número', (
+    tester,
+  ) async {
+    final fake = FakeAdmin(
+      shipments: [
+        _shipment(
+          ShipmentStatus.delivered,
+          evidence: const ShipmentDeliveryEvidence(
+            signature: true,
+            photo: true,
+            document: false,
+            withShortage: true,
+            missingCount: 2,
+          ),
+        ),
+      ],
+    );
+    await pumpAdmin(tester, fake, const AdminShipmentsScreen());
+
+    await tester.tap(find.text('Pedido SO-900001'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Firma digital'), findsOneWidget);
+    expect(find.text('Entregado con faltante (2)'), findsOneWidget);
   });
 }

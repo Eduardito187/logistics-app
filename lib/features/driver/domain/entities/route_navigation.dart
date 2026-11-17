@@ -28,6 +28,16 @@ class RemainingEstimate {
 
   /// `true` si el camión está a más de [kOffRouteThresholdMeters] del trazo.
   final bool offRoute;
+
+  /// Copia con otro [offRoute]: la usa la pantalla para imponer la verdad del
+  /// BACKEND (que tiene histéresis y la ve también el supervisor) sobre la
+  /// medición local, cuando el backend la informa.
+  RemainingEstimate withOffRoute(bool value) => RemainingEstimate(
+    meters: meters,
+    duration: duration,
+    alongRoute: alongRoute,
+    offRoute: value,
+  );
 }
 
 /// Distancia (m) al trazo a partir de la cual se avisa "Fuera de ruta".

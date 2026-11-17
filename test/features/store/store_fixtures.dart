@@ -3,6 +3,7 @@ import 'package:logistics_app/core/api/models/delivery.dart';
 import 'package:logistics_app/core/api/models/delivery_mode.dart';
 import 'package:logistics_app/core/api/models/delivery_status.dart';
 import 'package:logistics_app/core/api/models/node.dart';
+import 'package:logistics_app/core/api/models/shipment_progress.dart';
 import 'package:logistics_app/core/api/models/node_reception_view.dart';
 import 'package:logistics_app/core/api/models/node_reception_view_corridor.dart';
 import 'package:logistics_app/core/api/models/node_reception_view_status.dart';
@@ -61,8 +62,22 @@ Shipment shipment({
   String? customerPhone,
   int lines = 2,
   DeliveryMode? deliveryMode,
+  DateTime? readyForPickupAt,
 }) => Shipment(
   deliveryMode: deliveryMode,
+  progress: readyForPickupAt == null
+      ? null
+      : ShipmentProgress(
+          vehicleId: null,
+          plate: null,
+          assignedAt: null,
+          preparedAt: null,
+          loadedAt: null,
+          deliveredAt: null,
+          labelsEmittedCount: null,
+          executionStatus: null,
+          readyForPickupAt: readyForPickupAt,
+        ),
   id: id,
   source: OrderSource.sap,
   externalId: externalId,
