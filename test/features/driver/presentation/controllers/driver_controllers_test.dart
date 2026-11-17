@@ -48,6 +48,32 @@ void main() {
   });
 
   test(
+    'assignedVehicleIdProvider cae al último camión conocido sin cuadrilla',
+    () async {
+      // Red de seguridad: si my-crew no devuelve asignación (entrega que cruzó
+      // la medianoche o lleva días abierta), se opera con el último camión
+      // conocido para recuperar su ruta abierta.
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          myCrewProvider.overrideWith(
+            (ref) async => throw const ApiException(status: 404, title: 'x'),
+          ),
+          lastKnownVehicleIdProvider.overrideWith((ref) async => 'v-abierta'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(lastKnownVehicleIdProvider.future);
+      await expectLater(
+        container.read(myCrewProvider.future),
+        throwsA(isA<ApiException>()),
+      );
+      expect(container.read(assignedVehicleIdProvider), 'v-abierta');
+    },
+  );
+
+  test(
     'driverRouteProvider lanza ApiException sin vehículo asignado',
     () async {
       final container = ProviderContainer(
