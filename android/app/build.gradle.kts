@@ -112,4 +112,9 @@ dependencies {
     // BiometricPrompt (huella/rostro) para el inicio de sesión biométrico.
     // 1.1.0 = última estable compatible con AGP 8.7 / compileSdk 36.
     implementation("androidx.biometric:biometric:1.1.0")
+    // Ongoing Activity (Wear): marca la notificación de ruta como "actividad en
+    // curso" para que el reloj (Wear OS) la muestre como un CHIP en la cara del
+    // reloj, SIN instalar ninguna app de reloj. Trae androidx.core
+    // (NotificationCompat). Solo corre en el teléfono. Ver WearMirror.
+    implementation("androidx.wear:wear-ongoing:1.0.0")
 }

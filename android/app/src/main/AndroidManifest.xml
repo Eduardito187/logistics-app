@@ -1,4 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- androidx.wear:wear-ongoing declara minSdk 25 y el proyecto está fijo en
+         24 (regla del proyecto; flutter_secure_storage exige >=23). Se fuerza la
+         librería a 24: el único uso (OngoingActivity en WearMirror, chip de ruta
+         en el reloj) está envuelto en try/catch, así en un hipotético equipo API
+         24 simplemente NO se anota la actividad en curso (la notificación igual
+         se postea y se espeja). No baja el piso real de la app. -->
+    <uses-sdk tools:overrideLibrary="androidx.wear.ongoing"/>
+
     <!-- Red: sincronización offline-first y API. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>

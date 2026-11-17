@@ -1,8 +1,10 @@
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/models/plan_status.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/icons/icons.dart';
 import '../../../core/navigation/role_task.dart';
+import '../../supervisor/presentation/supervisor_plans_screen.dart';
 import 'admin_broadcasts_screen.dart';
 import 'admin_calendar_screen.dart';
 import 'admin_reschedule_screen.dart';
@@ -21,6 +23,24 @@ const List<RoleTask> adminTasks = [
     subtitle: 'Buscar por pedido, cliente o ciudad',
     appIcon: AppIcon.receive,
     route: '/admin/shipments',
+    roles: {UserRole.planner, UserRole.admin},
+  ),
+  // VER (no crear) los planes por estado y las rutas con sus paradas y pedidos.
+  // Crear/planificar vive aparte (tarjeta "Planificación").
+  RoleTask(
+    id: 'admin-plans',
+    label: 'Planes',
+    subtitle: 'Ver por estado · paradas y pedidos',
+    appIcon: AppIcon.plans,
+    route: '/admin/plans',
+    roles: {UserRole.planner, UserRole.admin},
+  ),
+  RoleTask(
+    id: 'admin-routes',
+    label: 'Rutas',
+    subtitle: 'En ejecución · paradas y pedidos',
+    appIcon: AppIcon.route,
+    route: '/admin/routes',
     roles: {UserRole.planner, UserRole.admin},
   ),
   RoleTask(
@@ -71,6 +91,24 @@ final List<RouteBase> adminRoutes = [
   GoRoute(
     path: '/admin/shipments',
     builder: (context, state) => const AdminShipmentsScreen(),
+  ),
+  // "Planes": listado de TODOS los planes del día, filtrable por estado.
+  GoRoute(
+    path: '/admin/plans',
+    builder: (context, state) => const SupervisorPlansScreen(
+      applyPreset: true,
+      titleOverride: 'Planes',
+    ),
+  ),
+  // "Rutas": el mismo listado, pero preseteado a las PUBLICADAS (las que ya son
+  // rutas en ejecución). Tocar una abre su detalle con paradas y pedidos.
+  GoRoute(
+    path: '/admin/routes',
+    builder: (context, state) => const SupervisorPlansScreen(
+      applyPreset: true,
+      presetStatus: PlanStatus.published,
+      titleOverride: 'Rutas',
+    ),
   ),
   GoRoute(
     path: '/admin/vehicles',
