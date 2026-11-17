@@ -83,6 +83,43 @@ void main() {
     expect(find.textContaining('VEH='), findsNothing);
   });
 
+  testWidgets(
+    'SIN cuadrilla pero con ruta EN CURSO recupera la ruta y NO bloquea',
+    (tester) async {
+      // Red de seguridad: aunque `my-crew` no devuelva asignación (p. ej. una
+      // entrega que cruzó la medianoche o lleva días abierta), si hay una ruta
+      // ABIERTA del último camión conocido, el chofer sigue operándola.
+      await pumpScoped(
+        tester,
+        overrides: gateBase(
+          crewError: const ApiException(status: 404, title: 'No crew'),
+          route: buildRoute(vehicleId: 'v-9'),
+        ),
+        child: _gate(),
+      );
+
+      expect(find.text('VEH=v-9'), findsOneWidget);
+      expect(find.byType(NoAssignment), findsNothing);
+      // Sin cuadrilla no hay cabecera de asignación.
+      expect(find.byType(AssignmentHeader), findsNothing);
+    },
+  );
+
+  testWidgets('SIN cuadrilla y con ruta CERRADA sí bloquea', (tester) async {
+    // Una ruta ya completada NO revive el gate: ahí sí es sin asignación.
+    await pumpScoped(
+      tester,
+      overrides: gateBase(
+        crewError: const ApiException(status: 404, title: 'No crew'),
+        route: buildEmptyRoute(), // completada, sin paradas
+      ),
+      child: _gate(),
+    );
+
+    expect(find.byType(NoAssignment), findsOneWidget);
+    expect(find.textContaining('VEH='), findsNothing);
+  });
+
   testWidgets('error de conexión muestra el mensaje de la ApiException', (
     tester,
   ) async {

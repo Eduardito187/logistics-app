@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/export.dart';
+import '../../../../core/auth/session.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/performance/cache_for.dart';
 import '../../../../core/realtime/realtime_bus.dart';
 import '../../../../core/realtime/realtime_refresh.dart';
+import '../../data/last_vehicle_store.dart';
 import '../../domain/usecases/get_delivery_state.dart';
 import '../../domain/usecases/get_shipment_detail.dart';
 import '../../domain/usecases/get_shipment_units.dart';
@@ -44,7 +48,7 @@ final selectedDateProvider = NotifierProvider<SelectedDateNotifier, DateTime>(
 /// pantallas del chofer (gate, ruta, carga, GPS) y el rastreo automático;
 /// liberarlo al cambiar de pantalla obligaría a pedirlo de nuevo a la red en
 /// cada navegación (y sin señal dejaría al chofer bloqueado en el gate).
-final myCrewProvider = FutureProvider<MyCrew>((ref) {
+final myCrewProvider = FutureProvider<MyCrew>((ref) async {
   // EN TIEMPO REAL: al publicar un plan, el backend arma la tripulación del
   // camión (auto-crew) y dispara `route.updated` en el canal del usuario. Sin
   // esto, la tripulación recién creada NO se recargaba: `assignedVehicleId`
@@ -52,7 +56,25 @@ final myCrewProvider = FutureProvider<MyCrew>((ref) {
   // la app, aunque la ruta ya existiera. Al recargarla, el gate entra solo.
   ref.refreshOnRealtime(RealtimeTopic.user, const {'route.updated'});
   // Sin fecha = asignación vigente (midnight-safe).
-  return ref.watch(getMyCrewProvider).call();
+  final crew = await ref.watch(getMyCrewProvider).call();
+  // Red de seguridad: se recuerda el camión asignado para poder recuperar la
+  // RUTA ABIERTA si más adelante `my-crew` no devuelve asignación (entrega que
+  // cruzó la medianoche o lleva días abierta por un envío largo, un bloqueo o un
+  // problema de ruta). Fire-and-forget: no debe demorar ni romper la carga.
+  final user = ref.read(sessionProvider)?.userName;
+  if (user != null) {
+    unawaited(ref.read(lastVehicleStoreProvider).write(user, crew.vehicle.id));
+  }
+  return crew;
+});
+
+/// Último camión conocido del chofer (persistido por usuario). Respaldo para
+/// recuperar la ruta abierta cuando `my-crew` no trae asignación. `null` si
+/// nunca se guardó uno en este dispositivo.
+final lastKnownVehicleIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(sessionProvider.select((s) => s?.userName));
+  if (user == null) return null;
+  return ref.watch(lastVehicleStoreProvider).read(user);
 });
 
 /// Id del vehículo ASIGNADO al chofer (derivado de la tripulación del día).
@@ -65,9 +87,18 @@ final myCrewProvider = FutureProvider<MyCrew>((ref) {
 /// `.value` (no `.asData?.value`): durante una recarga o si la recarga falla
 /// sin señal conserva el vehículo anterior; con `asData` el id pasaba a `null`
 /// un instante y la ruta, la carga y el rastreo se caían en cada refresco.
-final assignedVehicleIdProvider = Provider<String?>(
-  (ref) => ref.watch(myCrewProvider.select((crew) => crew.value?.vehicle.id)),
-);
+final assignedVehicleIdProvider = Provider<String?>((ref) {
+  final fromCrew = ref.watch(
+    myCrewProvider.select((crew) => crew.value?.vehicle.id),
+  );
+  if (fromCrew != null) return fromCrew;
+  // Respaldo (red de seguridad): el último camión conocido. Con él,
+  // `driverRouteProvider` pide la RUTA ABIERTA (de cualquier día), así la
+  // operación del chofer NO se cae aunque `my-crew` no devuelva asignación hoy
+  // (entrega que cruzó la medianoche o lleva días abierta). Si no hay ruta
+  // abierta real, el endpoint devuelve vacío y el gate recién ahí bloquea.
+  return ref.watch(lastKnownVehicleIdProvider).value;
+});
 
 /// Choferes activos (para firmar el checklist pre-salida). `autoDispose`: solo
 /// lo usa el checklist; al salir se libera la lista.

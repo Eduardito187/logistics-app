@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api/export.dart';
 import '../../../core/location/location_permission_gate.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/brand_loader.dart';
@@ -46,47 +47,68 @@ class DriverVehicleGate extends ConsumerWidget {
     // 5xx transitorio). Antes, un error transitorio de `my-crew` tiraba el gate
     // a "camión no asignado" y el mapa dejaba de cargar, aunque el camión ya se
     // conocía. Con esto, una vez cargado, un blip de red NO desasigna el camión:
-    // la ruta y el mapa siguen; el tiempo real / reintento lo corrige. Solo se
-    // bloquea cuando NUNCA hubo camión (sin asignación real / sin red al abrir).
+    // la ruta y el mapa siguen; el tiempo real / reintento lo corrige.
     final myCrew = crew.value;
-    if (myCrew != null) {
-      // La ruta se pide en cuanto hay vehículo, EN PARALELO al chequeo del
-      // permiso de ubicación (que solo condiciona el GPS/mapa, no los datos):
-      // cuando el permiso responde, la ruta ya está llegando o en caché.
-      ref.listen(driverRouteProvider, (_, _) {});
-    }
-    final bare = immersive && myCrew != null;
+
+    // RED DE SEGURIDAD (nunca perder la ruta en curso): la ruta se observa
+    // SIEMPRE. Si `my-crew` no devuelve asignación —una entrega que cruzó la
+    // medianoche, que lleva días abierta por un envío largo, un bloqueo o un
+    // problema de ruta—, `assignedVehicleId` cae al último camión conocido y
+    // acá se recupera su RUTA ABIERTA. El camión con el que se opera sale de la
+    // cuadrilla o, si no hay, de esa ruta recuperada. Solo se bloquea cuando no
+    // hay NI cuadrilla NI ruta abierta (sin asignación real / sin red al abrir).
+    final route = ref.watch(driverRouteProvider);
+    // Solo se recupera una ruta EN CURSO: cubre en progreso, planificada y
+    // SUSPENDIDA (bloqueo o incidente de ruta), que siguen siendo la entrega
+    // del chofer. Una ruta ya CERRADA/COMPLETADA no revive el gate.
+    final candidate = route.value;
+    final openRoute =
+        (candidate != null &&
+            candidate.closedAt == null &&
+            candidate.status != DriverRouteStatus.completed)
+        ? candidate
+        : null;
+    final vehicleId = myCrew?.vehicle.id ?? openRoute?.vehicleId;
+
     final Widget body;
-    if (myCrew != null) {
+    if (vehicleId != null) {
+      // Sin cuadrilla (ruta recuperada por respaldo) no hay cabecera de
+      // asignación que mostrar: se opera directo sobre la ruta.
+      final headerless = immersive || myCrew == null;
       body = LocationPermissionGate(
         child: DriverTrackingAutostart(
-          child: immersive
-              ? builder(context, myCrew.vehicle.id)
+          child: headerless
+              ? builder(context, vehicleId)
               : Column(
                   children: [
                     AssignmentHeader(crew: myCrew),
                     const Divider(height: 1),
-                    Expanded(child: builder(context, myCrew.vehicle.id)),
+                    Expanded(child: builder(context, vehicleId)),
                   ],
                 ),
         ),
       );
-    } else if (crew.isLoading) {
+    } else if (crew.isLoading || route.isLoading) {
       body = const Center(
         child: Padding(padding: EdgeInsets.all(48), child: BrandLoader()),
       );
     } else {
-      // Sin camión conocido Y con error: ahí sí es sin asignación / sin red.
+      // Sin camión conocido NI ruta abierta Y con error: ahí sí es sin
+      // asignación / sin red.
       final error = crew.error;
       body = NoAssignment(
         message: error is ApiException && error.isConnectionError
             ? error.message
             : null,
-        onRetry: () => ref.invalidate(myCrewProvider),
+        onRetry: () {
+          ref.invalidate(myCrewProvider);
+          ref.invalidate(driverRouteProvider);
+        },
       );
     }
+    final bareScaffold = immersive && vehicleId != null;
     return Scaffold(
-      appBar: bare ? null : AppBar(title: Text(title), actions: actions),
+      appBar: bareScaffold ? null : AppBar(title: Text(title), actions: actions),
       body: body,
     );
   }
