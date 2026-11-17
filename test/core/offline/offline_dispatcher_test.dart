@@ -6,7 +6,6 @@ import 'package:logistics_app/core/api/clients/tracking_client.dart';
 import 'package:logistics_app/core/api/logistics_api.dart';
 import 'package:logistics_app/core/api/models/app_telemetry_pings_request_body.dart';
 import 'package:logistics_app/core/api/models/app_vehicles_vehicle_id_incidents_request_body.dart';
-import 'package:logistics_app/core/api/models/failed_delivery_request.dart';
 import 'package:logistics_app/core/api/models/node_reception_request.dart';
 import 'package:logistics_app/core/api/models/preparation_scan_request.dart';
 import 'package:logistics_app/core/api/models/proof_of_delivery_request.dart';
@@ -85,19 +84,34 @@ void main() {
   late _Recorder trackRec;
   late _Recorder telemetryRec;
   late _RecordingApi api;
+  // Dio directo para los handlers cuyo contrato aún no está en el cliente
+  // generado (p. ej. recordFailedDelivery). Captura la request y la rechaza con
+  // un DioException, así `run` sigue viendo un DioException para cualquier kind.
+  late Dio dio;
+  RequestOptions? capturedRequest;
 
   setUp(() {
     execRec = _Recorder();
     trackRec = _Recorder();
     telemetryRec = _Recorder();
     api = _RecordingApi(execRec, trackRec, telemetryRec);
+    capturedRequest = null;
+    dio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            capturedRequest = options;
+            handler.reject(DioException(requestOptions: options));
+          },
+        ),
+      );
   });
 
   /// Corre el handler de [kind] con [payload] y espera a que (tras registrar)
   /// propague el DioException del doble.
   Future<void> run(String kind, Map<String, Object?> payload) async {
     await expectLater(
-      offlineHandlers[kind]!(api, 'KEY-1', payload),
+      offlineHandlers[kind]!(api, dio, 'KEY-1', payload),
       throwsA(isA<DioException>()),
     );
   }
@@ -154,14 +168,20 @@ void main() {
       expect(execRec.named[#idempotencyKey], 'KEY-1');
     });
 
-    test('recordFailedDelivery → execution.recordFailedDelivery', () async {
+    test('recordFailedDelivery → POST /app/deliveries/failed (Dio directo)', () async {
+      // `reason` es un CÓDIGO libre (puede ser un motivo que creó el admin,
+      // fuera del enum generado) + `note` opcional. Por eso va por Dio directo.
       await run('recordFailedDelivery', {
         ..._scanBase(),
-        'reason': 'CUSTOMER_ABSENT',
+        'reason': 'ZONA_INSEGURA',
+        'note': 'calle cerrada',
       });
-      expect(execRec.member, #recordFailedDelivery);
-      expect(execRec.named[#body], isA<FailedDeliveryRequest>());
-      expect(execRec.named[#idempotencyKey], 'KEY-1');
+      expect(capturedRequest, isNotNull);
+      expect(capturedRequest!.path, '/app/deliveries/failed');
+      final data = capturedRequest!.data as Map<String, Object?>;
+      expect(data['reason'], 'ZONA_INSEGURA');
+      expect(data['note'], 'calle cerrada');
+      expect(capturedRequest!.headers['Idempotency-Key'], 'KEY-1');
     });
 
     test('recordProofOfDelivery → execution.recordProofOfDelivery', () async {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_app/core/catalog/failure_reason_option.dart';
+import 'package:logistics_app/core/catalog/failure_reasons_repository.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/media/photo_picker.dart';
@@ -57,6 +59,8 @@ List<Object> _overrides({
   List<String?> scans = const [],
   FakeSignatureFileStore? signatures,
 }) => [
+  // Motivos de fallida servidos sin red (los de fábrica, todos activos).
+  activeFailureReasonsProvider.overrideWith((ref) async => kDefaultFailureReasons),
   photoPickerProvider.overrideWithValue(picker.call),
   photoUploadQueueProvider.overrideWithValue(photos),
   offlineQueueProvider.overrideWithValue(queue),
@@ -277,6 +281,8 @@ void main() {
       expect(photos.enqueued.single.kind, 'damage');
       expect(photos.enqueued.single.filePath, '/tmp/damage.jpg');
       expect(queue.lastKind, 'recordFailedDelivery');
+      // Señal para el backend: la foto ya fue tomada (viaja aparte por su cola).
+      expect(queue.submissions.single['has_photo'], isTrue);
       expect(find.byType(FailedDeliveryScreen), findsNothing);
     });
 
@@ -307,6 +313,8 @@ void main() {
 
       expect(photos.enqueued, isEmpty);
       expect(queue.submissions, hasLength(1));
+      // Sin foto: no se manda la señal `has_photo`.
+      expect(queue.submissions.single.containsKey('has_photo'), isFalse);
     });
   });
 }

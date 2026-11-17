@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logistics_app/core/api/export.dart';
+import 'package:logistics_app/core/catalog/failure_reason_option.dart';
+import 'package:logistics_app/core/catalog/failure_reasons_repository.dart';
 import 'package:logistics_app/core/labels/label_scanner.dart';
 import 'package:logistics_app/core/location/location_service.dart';
 import 'package:logistics_app/core/offline/offline_queue.dart';
@@ -10,6 +12,11 @@ import 'package:logistics_app/features/driver/presentation/failed_delivery_scree
 import '../../../support/fake_code_scanner.dart';
 import '../support/driver_test_support.dart';
 import '../../../support/button_finders.dart';
+
+/// Motivos del catálogo servidos sin red (los de fábrica, todos activos).
+final _reasonsOverride = activeFailureReasonsProvider.overrideWith(
+  (ref) async => kDefaultFailureReasons,
+);
 
 // Entrega fallida: producto + motivo tipado + foto opcional + GPS.
 //
@@ -22,6 +29,7 @@ List<Object> _overrides(
   FakeOfflineQueue? queue,
   GpsFix? fix,
 }) => [
+  _reasonsOverride,
   codeScannerProvider.overrideWithValue(fake.call),
   labelScannerProvider.overrideWithValue(vectorLabelScanner()),
   locationServiceProvider.overrideWithValue(FakeLocationService(fix: fix)),
@@ -40,6 +48,7 @@ void main() {
     await pumpScoped(
       tester,
       child: FailedDeliveryScreen(stop: buildStop()),
+      overrides: [_reasonsOverride],
       tall: true,
     );
 
@@ -62,7 +71,10 @@ void main() {
     await pumpScoped(
       tester,
       child: FailedDeliveryScreen(stop: buildStop()),
-      overrides: [locationServiceProvider.overrideWithValue(location)],
+      overrides: [
+        _reasonsOverride,
+        locationServiceProvider.overrideWithValue(location),
+      ],
       tall: true,
     );
 
@@ -73,6 +85,7 @@ void main() {
     await pumpScoped(
       tester,
       child: FailedDeliveryScreen(stop: buildStop()),
+      overrides: [_reasonsOverride],
       tall: true,
     );
 
@@ -210,5 +223,92 @@ void main() {
     expect(find.text('Escanea el producto.'), findsOneWidget);
     expect(_registerButton(tester).onPressed, isNull);
     expect(queue.submissions, isEmpty);
+  });
+
+  testWidgets(
+    'motivo que pide texto: bloquea hasta escribir la nota y la manda',
+    (tester) async {
+      final queue = FakeOfflineQueue(SubmitOutcome.sent);
+      final custom = activeFailureReasonsProvider.overrideWith(
+        (ref) async => const [
+          FailureReasonOption(
+            code: 'ZONA',
+            label: 'Zona insegura',
+            requiresNote: true,
+            noteLabel: '¿Qué pasó?',
+          ),
+        ],
+      );
+      await pumpPushed(
+        tester,
+        child: FailedDeliveryScreen(stop: buildStop(shipmentId: 'ship-9')),
+        overrides: [
+          custom,
+          codeScannerProvider.overrideWithValue(
+            FakeCodeScanner([validLabelQr()]).call,
+          ),
+          labelScannerProvider.overrideWithValue(vectorLabelScanner()),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(fix: const GpsFix(lat: -17.7, lng: -63.1)),
+          ),
+          offlineQueueProvider.overrideWithValue(queue),
+        ],
+        tall: true,
+      );
+
+      await tester.tap(find.text('Escanear producto'));
+      await tester.pumpAndSettle();
+
+      // La etiqueta del texto que configuró el admin se usa de título.
+      expect(find.text('¿Qué pasó?'), findsWidgets);
+      // Sin la nota, no se puede registrar.
+      expect(_registerButton(tester).onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField), 'Calle cerrada');
+      await tester.pump();
+      expect(_registerButton(tester).onPressed, isNotNull);
+
+      await tester.tap(find.text('Registrar entrega fallida'));
+      await tester.pumpAndSettle();
+
+      final payload = queue.submissions.single;
+      expect(payload['reason'], 'ZONA');
+      expect(payload['note'], 'Calle cerrada');
+      expect(find.byType(FailedDeliveryScreen), findsNothing);
+    },
+  );
+
+  testWidgets('motivo que pide foto: marca la foto obligatoria y bloquea', (
+    tester,
+  ) async {
+    final custom = activeFailureReasonsProvider.overrideWith(
+      (ref) async => const [
+        FailureReasonOption(
+          code: 'DANIO',
+          label: 'Producto dañado',
+          requiresPhoto: true,
+        ),
+      ],
+    );
+    await pumpScoped(
+      tester,
+      child: FailedDeliveryScreen(stop: buildStop()),
+      overrides: [
+        custom,
+        codeScannerProvider.overrideWithValue(
+          FakeCodeScanner([validLabelQr()]).call,
+        ),
+        labelScannerProvider.overrideWithValue(vectorLabelScanner()),
+        locationServiceProvider.overrideWithValue(FakeLocationService()),
+      ],
+      tall: true,
+    );
+
+    await tester.tap(find.text('Escanear producto'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3. Foto (obligatoria)'), findsOneWidget);
+    // Con foto obligatoria y sin foto tomada, el botón queda deshabilitado.
+    expect(_registerButton(tester).onPressed, isNull);
   });
 }

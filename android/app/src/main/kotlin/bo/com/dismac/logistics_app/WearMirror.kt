@@ -27,6 +27,17 @@ import androidx.core.app.NotificationCompat
  * que es la presencia principal), pero igual se espeja al reloj (el bridging no
  * depende de la importancia). No se puede hacer una notificación "solo reloj":
  * el reloj refleja lo del teléfono; lo más discreto posible es esto.
+ *
+ * **Anti-drenaje del reloj (nov 2026, crítico).** La notificación de ruta se
+ * actualiza muy seguido (la distancia "A 2,3 km" tiquea ~cada 10 s). Antes
+ * [show] re-publicaba 4125 en CADA tick → el reloj se despertaba/sincronizaba
+ * cientos de veces por hora y se le iba la batería (86% en 2 h en pruebas). Ahora
+ * [show] solo toca la notificación cuando cambia algo que el reloj realmente
+ * muestra (parada, estado, cliente, avance); la **distancia NO va al reloj** (no
+ * la necesita y es la que más tiquea). Un cambio REAL (avanzó la parada o el
+ * estado, o había sido descartada) **re-alerta** para reaparecer; un cambio menor
+ * (p. ej. solo la hora estimada) actualiza en silencio; si no cambió nada para el
+ * reloj, no se toca la notificación.
  */
 object WearMirror {
     // v2: el canal viejo "route_watch" quedó con importancia DEFAULT en los
@@ -37,6 +48,13 @@ object WearMirror {
     private const val ID = 4125
     private const val BRAND_RED = 0xFFE30613.toInt()
     private const val REQUEST_OPEN = 4126
+
+    // Última firma publicada al reloj (lo que el reloj MUESTRA: título, cliente,
+    // avance, estado) + avance/estado sueltos para decidir si re-alertar. La
+    // distancia NO entra: es la que tiquea cada ~10 s y no se dibuja en el reloj.
+    private var lastSignature: String? = null
+    private var lastDone = -1
+    private var lastStatus: String? = null
 
     /**
      * Postea/actualiza la notificación espejable de la ruta. Recibe el MISMO
@@ -54,14 +72,23 @@ object WearMirror {
         val title = (args["title"] as? String)?.takeIf { it.isNotEmpty() } ?: "Ruta en curso"
         val primary = (args["body"] as? String)?.takeIf { it.isNotEmpty() }
             ?: (args["customer"] as? String ?: "")
-        val extra = (args["subText"] as? String)?.takeIf { it.isNotEmpty() }
         val total = (args["stopCount"] as? Number)?.toInt() ?: 0
         val done = (args["completed"] as? Number)?.toInt()?.coerceIn(0, total) ?: 0
-        val longText = listOf(primary, extra).filter { !it.isNullOrEmpty() }.joinToString("\n")
+        val status = (args["status"] as? String) ?: ""
+        // Lo que el reloj MUESTRA (sin distancia): si no cambió nada de esto y la
+        // notificación sigue en la bandeja, NO se toca → el reloj no se despierta.
+        val signature = "$title|$primary|$total|$done|$status"
 
-        // ¿Sigue visible? Si fue descartada (reloj/telefono), se re-alerta para
-        // que vuelva a aparecer; si sigue ahí, update silencioso.
         val stillVisible = isVisible(manager)
+        if (signature == lastSignature && stillVisible) return
+
+        // Cambio REAL para el reloj = avanzó la parada o cambió el estado, o había
+        // sido descartada → re-alerta para REAPARECER (aunque la hayas cerrado).
+        // Cambio menor (p. ej. solo la hora estimada en el título) → silencioso.
+        val meaningful = done != lastDone || status != lastStatus || !stillVisible
+        lastSignature = signature
+        lastDone = done
+        lastStatus = status
 
         val touch = PendingIntent.getActivity(
             context,
@@ -74,13 +101,14 @@ object WearMirror {
             .setSmallIcon(R.drawable.ic_stat_route)
             .setContentTitle(title)
             .setContentText(primary)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(longText))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(primary))
             // NO-ongoing: descartable, para poder "revivirla" tras cerrarla.
             .setOngoing(false)
             // Espejable al reloj (no local-only).
             .setLocalOnly(false)
-            // Silenciosa si sigue visible; re-alerta si volvió de un descarte.
-            .setOnlyAlertOnce(stillVisible)
+            // Silenciosa en cambios menores; re-alerta (reaparece) cuando avanza
+            // la parada/estado o si había sido descartada.
+            .setOnlyAlertOnce(!meaningful)
             .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
             .setColor(BRAND_RED)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -97,6 +125,9 @@ object WearMirror {
 
     /** Quita la notificación del reloj (fin de ruta). */
     fun clear(context: Context) {
+        lastSignature = null
+        lastDone = -1
+        lastStatus = null
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)
             ?.cancel(ID)
     }

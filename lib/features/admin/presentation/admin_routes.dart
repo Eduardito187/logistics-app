@@ -7,6 +7,7 @@ import '../../../core/navigation/role_task.dart';
 import '../../supervisor/presentation/supervisor_plans_screen.dart';
 import 'admin_broadcasts_screen.dart';
 import 'admin_calendar_screen.dart';
+import 'admin_failure_reasons_screen.dart';
 import 'admin_reschedule_screen.dart';
 import 'admin_shipments_screen.dart';
 import 'admin_staff_profile_screen.dart';
@@ -83,6 +84,14 @@ const List<RoleTask> adminTasks = [
     route: '/admin/broadcasts',
     roles: {UserRole.admin},
   ),
+  RoleTask(
+    id: 'admin-failure-reasons',
+    label: 'Motivos de no entrega',
+    subtitle: 'Crear, mostrar y pedir foto o texto',
+    appIcon: AppIcon.cancel,
+    route: '/admin/failure-reasons',
+    roles: {UserRole.admin},
+  ),
 ];
 
 /// Rutas del módulo de administración. Las que reciben contexto lo toman de
@@ -135,5 +144,9 @@ final List<RouteBase> adminRoutes = [
     path: '/admin/broadcasts',
     builder: (context, state) =>
         AdminBroadcastsScreen(person: state.extra as BroadcastPerson?),
+  ),
+  GoRoute(
+    path: '/admin/failure-reasons',
+    builder: (context, state) => const AdminFailureReasonsScreen(),
   ),
 ];

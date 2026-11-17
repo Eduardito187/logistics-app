@@ -30,6 +30,7 @@ export 'submit_outcome.dart';
 typedef OfflineActionHandler =
     Future<void> Function(
       LogisticsApi api,
+      Dio dio,
       String idempotencyKey,
       Map<String, Object?> payload,
     );
@@ -229,8 +230,9 @@ class OfflineQueue {
       throw StateError('Acción offline desconocida: $kind');
     }
     final api = _ref.read(logisticsApiProvider);
+    final dio = _ref.read(dioProvider);
     try {
-      await handler(api, id, payload);
+      await handler(api, dio, id, payload);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
